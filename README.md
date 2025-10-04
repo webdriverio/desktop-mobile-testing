@@ -1,2 +1,2 @@
-# desktop-testing
-Integration services for desktop testing on Electron, Tauri and Flutter with WebdriverIO
+# crosspletform-testing
+Integration services for cross-platform testing on Electron, Tauri and Flutter with WebdriverIO
