@@ -7,6 +7,8 @@
   "scripts": {
     "clean": "pnpm dlx shx rm -rf ./logs ./node_modules pnpm-lock.yaml",
     "init-e2es": "tsx scripts/build-apps.ts",
+    "logs": "tsx scripts/show-logs.ts",
+    "logs:follow": "tsx scripts/show-logs.ts --follow",
     "test": "tsx scripts/run-matrix.ts",
     "test:e2e:builder-cjs": "cross-env DEBUG=wdio-electron-service:launcher WDIO_VERBOSE=true PLATFORM=builder MODULE_TYPE=cjs BINARY=true tsx scripts/run-matrix.ts",
     "test:e2e:builder-esm": "cross-env DEBUG=wdio-electron-service:launcher WDIO_VERBOSE=true PLATFORM=builder MODULE_TYPE=esm BINARY=true tsx scripts/run-matrix.ts",
@@ -27,9 +29,7 @@
     "test:e2e:window": "cross-env TEST_TYPE=window tsx scripts/run-matrix.ts",
     "test:e2e:multiremote": "cross-env TEST_TYPE=multiremote tsx scripts/run-matrix.ts",
     "test:e2e:standalone": "cross-env TEST_TYPE=standalone tsx scripts/run-matrix.ts",
-    "test:e2e:mac-universal": "cross-env MAC_UNIVERSAL=true tsx scripts/run-matrix.ts",
-    "logs": "tsx scripts/show-logs.ts",
-    "logs:follow": "tsx scripts/show-logs.ts --follow"
+    "test:e2e:mac-universal": "cross-env MAC_UNIVERSAL=true tsx scripts/run-matrix.ts"
   },
   "dependencies": {
     "@wdio/cli": "catalog:default",
