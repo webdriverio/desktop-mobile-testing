@@ -1,2 +1,2 @@
-turbo run test --filter='./packages/*' --force
+turbo run test --filter=./packages/* --force
 

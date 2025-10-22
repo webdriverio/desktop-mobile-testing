@@ -205,3 +205,45 @@ $ pnpm build
 ---
 
 *Updated: October 22, 2025 - Fixture Build Fix*
+
+---
+
+## 🪟 Update: Windows Compatibility Fix
+
+**Issue:** Build failing on Windows CI with error:
+```
+x No package found with name ''./e2e'' in workspace
+```
+
+**Root Cause:**
+Windows command line doesn't handle single quotes the same way as Unix systems. The single quotes in `--filter='./packages/*'` were being interpreted literally, causing the filter pattern to fail.
+
+**Solution:**
+Removed quotes from Turborepo filter arguments:
+
+```diff
+- "build": "turbo run build --filter='./packages/*' --filter='./e2e'"
++ "build": "turbo run build --filter=./packages/* --filter=./e2e"
+```
+
+Also updated `.husky/pre-push`:
+```diff
+- turbo run test --filter='./packages/*' --force
++ turbo run test --filter=./packages/* --force
+```
+
+**Cross-Platform Compatibility:**
+Turborepo doesn't require quotes for glob patterns. The unquoted version works on:
+- ✅ Linux
+- ✅ macOS
+- ✅ Windows
+
+**Verification:**
+```bash
+$ pnpm build
+✅ Tasks: 5 successful, 5 total (131ms)
+```
+
+---
+
+*Updated: October 22, 2025 - Windows Compatibility*
