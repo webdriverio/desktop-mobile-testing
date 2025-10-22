@@ -1,5 +1,29 @@
 # Specification: Flutter Service Core Architecture
 
+> **🚨 CRITICAL UPDATE - January 2025**
+>
+> **SPEC STATUS:** BLOCKED - Research Phase
+>
+> **Issues Discovered:**
+> 1. Item #2 (Shared Core Utilities) was cancelled - No base classes to extend
+> 2. **Flutter Driver deprecated** in Flutter 3.19 - Original Appium integration broken
+> 3. Need to validate new `appium-flutter-integration-driver` works before proceeding
+>
+> **Current Action:** 1-week research spike to validate technical approach
+> - Testing: `appium-flutter-integration-driver` (designed for integration_test)
+> - Goal: Prove WebDriverIO integration works on Android + macOS
+> - Decision: GO/NO-GO by end of week 1
+>
+> **Documents:**
+> - Research findings: `RESEARCH.md`
+> - Critical blocker analysis: `CRITICAL_BLOCKER.md`
+> - MVP spec (if feasible): `MVP_SPEC.md`
+>
+> **DO NOT implement this spec as written** - It assumes deprecated flutter_driver.
+> Spec will be revised based on research outcome.
+
+---
+
 ## Goal
 
 Implement `@wdio/flutter-service` as a convenience layer over existing Appium Flutter Driver integration, providing automatic binary detection, simplified capability configuration, and WebdriverIO command wrappers for Flutter-specific interactions across all five platforms (iOS, Android, Windows, macOS, Linux).

@@ -57,8 +57,5 @@ coverage
 # Vitest
 .vitest
 
-# Agent OS (planning files - not part of the monorepo)
-agent-os/
-.claude/
 
 
