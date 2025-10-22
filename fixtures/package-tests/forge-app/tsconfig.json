@@ -14,7 +14,7 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["node", "wdio-electron-service", "@wdio/globals/types", "@wdio/mocha-framework"]
+    "types": ["node", "@wdio/electron-service", "@wdio/globals/types", "@wdio/mocha-framework"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx", "electron.vite.config.ts"]
 }

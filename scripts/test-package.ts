@@ -122,7 +122,7 @@ async function buildAndPackService(): Promise<{
     const servicePath = findTgzFile(serviceDir, 'wdio-electron-service-');
     const utilsPath = findTgzFile(utilsDir, 'wdio-electron-utils-');
     const typesPath = findTgzFile(typesDir, 'wdio-electron-types-');
-    const cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-cdp-bridge-');
+    const cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-');
 
     log(`📦 Packages packed:`);
     log(`   Service: ${servicePath}`);
@@ -178,6 +178,7 @@ async function testExample(
     packageJson.pnpm = {
       ...packageJson.pnpm,
       overrides: {
+        '@wdio/electron-service': `file:${packages.servicePath}`,
         '@wdio/electron-utils': `file:${packages.utilsPath}`,
         '@wdio/electron-types': `file:${packages.typesPath}`,
         '@wdio/electron-cdp-bridge': `file:${packages.cdpBridgePath}`,
@@ -252,7 +253,7 @@ async function main() {
         servicePath: findTgzFile(serviceDir, 'wdio-electron-service-'),
         utilsPath: findTgzFile(utilsDir, 'wdio-electron-utils-'),
         typesPath: findTgzFile(typesDir, 'wdio-electron-types-'),
-        cdpBridgePath: findTgzFile(cdpBridgeDir, 'wdio-cdp-bridge-'),
+        cdpBridgePath: findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-'),
       };
       log(`📦 Using existing packages:`);
       log(`   Service: ${packages.servicePath}`);
