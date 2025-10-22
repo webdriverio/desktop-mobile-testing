@@ -184,14 +184,14 @@ pnpm lint:fix
 
 ## Contributing
 
-Check the issues or [raise a new one](https://github.com/webdriverio-community/wdio-electron-service/issues/new) for discussion:
+Check the issues or [raise a new one](https://github.com/webdriverio/desktop-mobile-testing/issues/new) for discussion:
 
-**[Help Wanted Issues](https://github.com/webdriverio-community/wdio-electron-service/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22help+wanted%22)**
-**[Good First Issues](https://github.com/webdriverio-community/wdio-electron-service/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22)**
+**[Help Wanted Issues](https://github.com/webdriverio/desktop-mobile-testing/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22help+wanted%22)**
+**[Good First Issues](https://github.com/webdriverio/desktop-mobile-testing/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22)**
 
 ## Release
 
-Project maintainers can publish a release or pre-release of the npm package by manually running the [`Manual NPM Publish`](https://github.com/webdriverio-community/wdio-electron-service/actions/workflows/release.yml) GitHub workflow. They will choose the release type to trigger a `major` , `minor`, or `patch` release following [Semantic Versioning](https://semver.org/), or a pre-release.
+Project maintainers can publish a release or pre-release of the npm package by manually running the [`Manual NPM Publish`](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/release.yml) GitHub workflow. They will choose the release type to trigger a `major` , `minor`, or `patch` release following [Semantic Versioning](https://semver.org/), or a pre-release.
 
 For detailed information about our release management process, including milestone structure, labeling system, and workflow, see the [Release Management](./release-management.md) documentation.
 
@@ -207,7 +207,7 @@ Project maintainers can publish releases using GitHub Actions workflows. The pro
 
 ### Publishing Pre-releases
 
-To publish a pre-release, run the [pre-release workflow](https://github.com/webdriverio-community/wdio-electron-service/actions/workflows/pre-release.yml):
+To publish a pre-release, run the [pre-release workflow](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/pre-release.yml):
 
 1. Select the branch:
    - `feature` for next major (automatically resolves to current feature branch, e.g., feature/v9)
@@ -221,7 +221,7 @@ To publish a pre-release, run the [pre-release workflow](https://github.com/webd
 
 ### Publishing Releases
 
-To publish a release, run the [release workflow](https://github.com/webdriverio-community/wdio-electron-service/actions/workflows/release.yml):
+To publish a release, run the [release workflow](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/release.yml):
 
 1. Select the branch:
    - `main` for current stable releases
@@ -315,7 +315,7 @@ Will backport changes from v8 to v7
 ================================================================================
 PR: #904 - ci: workaround for CI on linux
 Author: mato533
-URL: https://github.com/webdriverio-community/wdio-electron-service/pull/904
+URL: https://github.com/webdriverio/desktop-mobile-testing/pull/904
 --------------------------------------------------------------------------------
 ✔ Do you want to backport this PR? Yes, I want to backport this PR.
 Backporting sha 94bb9daa9ff24fce172f3fdf6d99ede98984a91e from v8 to v7
@@ -327,7 +327,7 @@ Backporting sha 94bb9daa9ff24fce172f3fdf6d99ede98984a91e from v8 to v7
 ================================================================================
 PR: #908 - ci: add support to release multiple versions
 Author: mato533
-URL: https://github.com/webdriverio-community/wdio-electron-service/pull/908
+URL: https://github.com/webdriverio/desktop-mobile-testing/pull/908
 --------------------------------------------------------------------------------
 ✔ Do you want to backport this PR? Yes, I want to backport this PR.
 Backporting sha 7976224f74bd57ebafa38819d05ac4f937c957fe from v8 to v7
@@ -351,7 +351,7 @@ After successfully backporting changes:
    git push origin v7  # Replace with current maintenance branch
    ```
 
-2. Create a patch release using the [release workflow](https://github.com/webdriverio-community/wdio-electron-service/actions/workflows/release.yml):
+2. Create a patch release using the [release workflow](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/release.yml):
    - Select `maintenance` as the branch type
    - Choose `patch` as the release type
    - The workflow will automatically detect the current maintenance branch
