@@ -1,5 +1,26 @@
 # Specification: Shared Core Utilities Package
 
+> **⚠️ SPECIFICATION CANCELLED - January 2025**
+>
+> This specification was cancelled after implementation revealed it to be a premature abstraction (YAGNI violation).
+>
+> **Key Learnings:**
+> - Base classes (BaseLauncher, BaseService) added 43 lines of boilerplate without reducing code
+> - Abstractions were created from a single implementation (Electron) before validating reuse patterns
+> - Concrete utilities (ConfigReader, BinaryDetector, WindowManager) remain unused by Electron service
+> - The utilities are valuable for NEW services but retrofitting existing working code adds no value
+>
+> **Revised Approach:**
+> - New services (Flutter, Tauri, Neutralino) should copy useful patterns from Electron service
+> - Extract shared utilities only AFTER identifying actual duplication across 2-3 services
+> - Follow "Rule of Three" - don't abstract until pattern appears in 3+ places
+> - Revisit in Item #6 of roadmap after implementing Flutter and Neutralino services
+>
+> **Reference Implementation:**
+> The extracted utilities (1,241 lines, 125 tests) remain in git history as reference for future extraction decisions.
+
+---
+
 ## Goal
 
 Create a framework-agnostic `@wdio/native-utils` package that extracts common functionality from the Electron service, enabling 50%+ code reuse across Flutter, Neutralino, and Tauri service implementations while maintaining clean separation between generic and framework-specific code.
