@@ -21,6 +21,7 @@
     "test:unit": "turbo run test:unit",
     "test:integration": "turbo run test:integration",
     "test:coverage": "turbo run test:coverage",
+    "test:package": "pnpx cross-env DEBUG=@wdio/electron-service tsx ./scripts/test-package.ts",
     "lint": "biome check --formatter-enabled=false --linter-enabled=true . && eslint --cache \"**/*.{j,mj,cj,t}s\"",
     "lint:fix": "biome check --write --formatter-enabled=false --linter-enabled=true . && eslint --cache --fix \"**/*.{j,mj,cj,t}s\"",
     "format": "biome format --write .",

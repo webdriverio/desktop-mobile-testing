@@ -59,6 +59,110 @@
     "dev": {
       "persistent": true,
       "cache": false
+    },
+    "@repo/e2e#init-e2es": {
+      "dependsOn": ["@wdio/electron-service#build"]
+    },
+    "@repo/e2e#build": {
+      "dependsOn": ["@wdio/electron-service#build"]
+    },
+    "@repo/e2e#test:e2e:builder-cjs": {
+      "dependsOn": ["example-builder-cjs#build", "@repo/e2e#init-e2es", "@repo/e2e#test:e2e:builder-esm"]
+    },
+    "@repo/e2e#test:e2e:builder-esm": {
+      "dependsOn": ["example-builder-esm#build", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e:forge-cjs": {
+      "dependsOn": ["example-forge-cjs#build", "@repo/e2e#init-e2es", "@repo/e2e#test:e2e:forge-esm"]
+    },
+    "@repo/e2e#test:e2e:forge-esm": {
+      "dependsOn": ["example-forge-esm#build", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e:no-binary-cjs": {
+      "dependsOn": ["example-no-binary-cjs#build", "@repo/e2e#init-e2es", "@repo/e2e#test:e2e:no-binary-esm"]
+    },
+    "@repo/e2e#test:e2e:no-binary-esm": {
+      "dependsOn": ["example-no-binary-esm#build", "example-no-binary-cjs#build", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e-mac-universal:forge-cjs": {
+      "dependsOn": [
+        "example-forge-cjs#build:mac-universal",
+        "@repo/e2e#init-e2es",
+        "@repo/e2e#test:e2e-mac-universal:forge-esm"
+      ]
+    },
+    "@repo/e2e#test:e2e-mac-universal:forge-esm": {
+      "dependsOn": ["example-forge-esm#build:mac-universal", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e-mac-universal:builder-cjs": {
+      "dependsOn": [
+        "example-builder-cjs#build:mac-universal",
+        "@repo/e2e#init-e2es",
+        "@repo/e2e#test:e2e-mac-universal:builder-esm"
+      ]
+    },
+    "@repo/e2e#test:e2e-mac-universal:builder-esm": {
+      "dependsOn": ["example-builder-esm#build:mac-universal", "@repo/e2e#init-e2es"]
+    },
+    "@wdio/bundler#build": {
+      "dependsOn": ["typecheck"],
+      "outputs": ["dist/**"]
+    },
+    "@wdio/electron-types#build": {
+      "dependsOn": ["@wdio/bundler#build", "typecheck"],
+      "outputs": ["dist/**"]
+    },
+    "@wdio/electron-utils#build": {
+      "dependsOn": ["@wdio/electron-types#build", "typecheck"],
+      "outputs": ["dist/**"]
+    },
+    "@wdio/electron-cdp-bridge#build": {
+      "dependsOn": ["@wdio/electron-utils#build", "typecheck"],
+      "outputs": ["dist/**"]
+    },
+    "@wdio/electron-service#build": {
+      "dependsOn": ["@wdio/electron-cdp-bridge#build"],
+      "outputs": ["dist/**"]
+    },
+    "example-builder-cjs#build": {
+      "dependsOn": ["^build", "example-builder-esm#build"],
+      "outputs": ["dist/**"]
+    },
+    "example-builder-esm#build": {
+      "dependsOn": ["^build", "@repo/e2e#test:e2e:no-binary-cjs"],
+      "outputs": ["dist/**"]
+    },
+    "example-forge-cjs#build": {
+      "dependsOn": ["^build", "example-forge-esm#build"],
+      "outputs": ["out/**"]
+    },
+    "example-forge-esm#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["out/**"]
+    },
+    "example-no-binary-cjs#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "example-no-binary-esm#build": {
+      "dependsOn": ["^build", "example-no-binary-cjs#build"],
+      "outputs": ["dist/**"]
+    },
+    "example-builder-cjs#build:mac-universal": {
+      "dependsOn": ["^build", "example-builder-esm#build:mac-universal"],
+      "outputs": ["dist/**"]
+    },
+    "example-builder-esm#build:mac-universal": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "example-forge-cjs#build:mac-universal": {
+      "dependsOn": ["^build", "example-forge-esm#build:mac-universal"],
+      "outputs": ["out/**"]
+    },
+    "example-forge-esm#build:mac-universal": {
+      "dependsOn": ["^build", "example-builder-cjs#build:mac-universal"],
+      "outputs": ["out/**"]
     }
   }
 }

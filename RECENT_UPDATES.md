@@ -293,3 +293,70 @@ Coverage: 94.29% statements, 88.68% branches, 97.36% functions
 ---
 
 *Updated: October 22, 2025 - Unit Test Fix*
+
+---
+
+## 📦 Update: Missing test:package Script
+
+**Issue:** Windows CI failing with:
+```
+ERR_PNPM_NO_SCRIPT  Missing script: test:package
+Command "test:package" not found
+```
+
+**Solution:**
+Added the missing `test:package` script to root `package.json`:
+
+```json
+"test:package": "pnpm dlx cross-env DEBUG=@wdio/electron-service tsx ./scripts/test-package.ts"
+```
+
+**What This Script Does:**
+- Runs the `test-package.ts` script
+- Tests service packages in isolated environments (outside the workspace)
+- Uses `cross-env` for Windows compatibility
+- Enables debug logging with `DEBUG=@wdio/electron-service`
+
+**Note:** This script was present in the original repo but wasn't migrated to our root package.json.
+
+**Status:** ✅ All CI scripts now available
+
+---
+
+*Updated: October 22, 2025 - test:package Script*
+
+---
+
+## 📋 Update: Complete Turbo Tasks Migration
+
+**Issue:** Missing E2E tasks in turbo.json
+**Error:** `Could not find task 'init-e2es' in project`
+
+**Solution:**
+Migrated all 38 tasks from original repo's turbo.json:
+
+**E2E Tasks Added (12):**
+- `@repo/e2e#init-e2es` - Initialize E2E test apps
+- `@repo/e2e#build` - Build E2E test infrastructure
+- `@repo/e2e#test:e2e:builder-cjs/esm` - Builder E2E tests
+- `@repo/e2e#test:e2e:forge-cjs/esm` - Forge E2E tests
+- `@repo/e2e#test:e2e:no-binary-cjs/esm` - No-binary E2E tests
+- `@repo/e2e#test:e2e-mac-universal:*` - macOS universal binary tests (4 tasks)
+
+**Package Build Tasks (5):**
+- Explicit dependency chains for all packages
+- `@wdio/bundler` → `electron-types` → `electron-utils` → `electron-cdp-bridge` → `electron-service`
+
+**Example App Build Tasks (10):**
+- Build tasks for all 6 E2E fixture apps (builder, forge, no-binary × cjs/esm)
+- macOS universal binary builds (4 tasks)
+
+**Bonus Fixes:**
+1. Removed unused `@ts-expect-error` in `src/fuses.ts`
+2. Added `@ts-ignore` for `electron-to-chromium` import (package.json exports issue)
+
+**Status:** ✅ All tasks migrated, typecheck passing
+
+---
+
+*Updated: October 22, 2025 - Turbo Tasks Migration*
