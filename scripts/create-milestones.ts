@@ -37,7 +37,7 @@ const octokit = new Octokit({
  * Get the current version from package.json
  */
 async function getCurrentVersion(): Promise<string> {
-  const packageJsonPath = path.join(process.cwd(), 'packages/wdio-electron-service/package.json');
+  const packageJsonPath = path.join(process.cwd(), 'packages/electron-service/package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   return packageJson.version;
 }

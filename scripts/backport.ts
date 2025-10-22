@@ -11,7 +11,7 @@ import shell from 'shelljs';
 // Dynamically determine versions from package.json
 const determineVersions = async () => {
   try {
-    const pkgPath = path.join(process.cwd(), 'packages/wdio-electron-service/package.json');
+    const pkgPath = path.join(process.cwd(), 'packages/electron-service/package.json');
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
     const maintenanceMajorVersion = parseInt(pkg.version.split('.')[0], 10);
     const currentMajorVersion = maintenanceMajorVersion + 1;

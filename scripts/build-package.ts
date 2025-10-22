@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const BUNDLER_PATH = resolve(__dirname, '../packages/@wdio_electron-bundler');
+const BUNDLER_PATH = resolve(__dirname, '../packages/bundler');
 const BUNDLER_CLI = resolve(BUNDLER_PATH, 'dist/cli.js');
 const BUNDLER_PACKAGE_JSON = resolve(BUNDLER_PATH, 'package.json');
 
