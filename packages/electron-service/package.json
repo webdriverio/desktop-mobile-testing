@@ -1,0 +1,94 @@
+{
+  "name": "@wdio/electron-service",
+  "version": "9.2.0",
+  "description": "WebdriverIO service to enable Electron testing",
+  "author": "Sam Maister <goosewobbler@protonmail.com>",
+  "homepage": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": [
+      {
+        "import": {
+          "types": "./dist/esm/index.d.ts",
+          "default": "./dist/esm/index.js"
+        },
+        "require": {
+          "types": "./dist/cjs/index.d.ts",
+          "default": "./dist/cjs/index.js"
+        }
+      },
+      "./dist/cjs/index.js"
+    ]
+  },
+  "engines": {
+    "node": ">=18 || >=20"
+  },
+  "scripts": {
+    "clean": "shx rm -rf dist coverage .turbo",
+    "build": "tsx ../../scripts/build-package.ts",
+    "dev": "tsx ../../scripts/build-package.ts --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --coverage",
+    "test:unit": "vitest run --coverage",
+    "test:dev": "vitest --coverage",
+    "lint": "biome check ."
+  },
+  "keywords": ["webdriverio", "wdio", "wdio-service", "electron", "chromedriver", "tests"],
+  "peerDependencies": {
+    "electron": "*",
+    "webdriverio": ">9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": true
+    },
+    "webdriverio": {
+      "optional": false
+    }
+  },
+  "dependencies": {
+    "@babel/parser": "^7.28.4",
+    "@electron/fuses": "^2.0.0",
+    "@vitest/spy": "^3.2.4",
+    "@wdio/electron-cdp-bridge": "workspace:*",
+    "@wdio/electron-types": "workspace:*",
+    "@wdio/electron-utils": "workspace:*",
+    "@wdio/globals": "catalog:default",
+    "@wdio/logger": "catalog:default",
+    "compare-versions": "^6.1.1",
+    "debug": "^4.4.3",
+    "electron-to-chromium": "^1.5.234",
+    "fast-copy": "^3.0.2",
+    "get-port": "^7.1.0",
+    "puppeteer-core": "^22.15.0",
+    "read-package-up": "^11.0.0",
+    "recast": "^0.23.9",
+    "tinyspy": "^4.0.4",
+    "webdriverio": "catalog:default"
+  },
+  "devDependencies": {
+    "@electron-forge/shared-types": "^7.10.2",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^24.7.2",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@wdio/types": "catalog:default",
+    "builder-util": "^26.0.11",
+    "electron": "catalog:default",
+    "jsdom": "^27.0.0",
+    "nock": "^14.0.10",
+    "shx": "^0.4.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "files": ["dist"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
+    "directory": "packages/electron-service"
+  }
+}

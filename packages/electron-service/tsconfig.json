@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/cjs", "node_modules", "coverage", "dist", "test"],
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "declarationMap": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node", "vitest/jsdom"],
+    "typeRoots": ["./node_modules", "./node_modules/@types", "../../@types"]
+  }
+}

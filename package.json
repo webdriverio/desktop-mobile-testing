@@ -1,0 +1,54 @@
+{
+  "name": "wdio-desktop-mobile-testing-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WebdriverIO services for cross-platform testing on Electron, Flutter, Neutralino, and Tauri",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git"
+  },
+  "license": "MIT",
+  "author": "WebdriverIO Community",
+  "engines": {
+    "node": ">=18 || >=20",
+    "pnpm": ">=10.12.0"
+  },
+  "packageManager": "pnpm@10.12.0",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:coverage": "turbo run test:coverage",
+    "lint": "biome check --formatter-enabled=false --linter-enabled=true . && eslint --cache \"**/*.{j,mj,cj,t}s\"",
+    "lint:fix": "biome check --write --formatter-enabled=false --linter-enabled=true . && eslint --cache --fix \"**/*.{j,mj,cj,t}s\"",
+    "format": "biome format --write .",
+    "format:check": "biome check --formatter-enabled=true --linter-enabled=false .",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && pnpm clean:cache && pnpm dlx shx rm -rf node_modules",
+    "clean:cache": "turbo daemon stop && pnpm dlx shx rm -rf .turbo .eslintcache",
+    "dev": "turbo run dev",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.5",
+    "@types/node": "^24.7.2",
+    "@typescript-eslint/parser": "^8.46.0",
+    "@vitest/eslint-plugin": "^1.3.16",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.37.0",
+    "eslint-plugin-wdio": "^9.16.2",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4",
+    "shx": "^0.4.0",
+    "tsx": "^4.20.6",
+    "turbo": "2.5.6",
+    "typescript": "^5.9.3"
+  },
+  "lint-staged": {
+    "**/*.{j,t}s": ["biome check --write", "eslint --fix --cache"],
+    "**/*.{yml,md,json}": ["biome format --write ."]
+  }
+}

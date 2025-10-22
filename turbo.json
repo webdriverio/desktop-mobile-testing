@@ -1,0 +1,64 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "//#format:check": {
+      "dependsOn": [],
+      "inputs": ["**/*.{j,t}s", "**/*.{yml,md,json}", "package.json"],
+      "cache": false
+    },
+    "//#format": {
+      "dependsOn": [],
+      "inputs": ["**/*.{j,t}s", "**/*.{yml,md,json}", "package.json"],
+      "cache": false
+    },
+    "//#lint": {
+      "dependsOn": [],
+      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.json", "package.json"],
+      "outputs": [".eslintcache"]
+    },
+    "//#lint:fix": {
+      "dependsOn": [],
+      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.json", "package.json"],
+      "outputs": [".eslintcache"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "lint": {
+      "dependsOn": [],
+      "cache": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    },
+    "clean:dist": {
+      "cache": false
+    },
+    "dev": {
+      "persistent": true,
+      "cache": false
+    }
+  }
+}

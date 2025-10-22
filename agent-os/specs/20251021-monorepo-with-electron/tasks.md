@@ -46,14 +46,14 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.1 Repository Foundation (1 day)
 
-- [ ] **1.1.1 Initialize repository state**
+- [x] **1.1.1 Initialize repository state**
   - **Effort:** S
   - **Links to:** NFR3
   - Verify git repository is clean
   - Ensure on `main` branch
   - Document starting commit hash
 
-- [ ] **1.1.2 Create root directory structure**
+- [x] **1.1.2 Create root directory structure**
   - **Effort:** S
   - **Links to:** FR1, FR4
   - Create `packages/` directory
@@ -64,7 +64,7 @@ Task Group 6 (CI/CD Setup)
   - Create `.github/workflows/` directory
   - Create `.husky/` directory
 
-- [ ] **1.1.3 Create core root files**
+- [x] **1.1.3 Create core root files**
   - **Effort:** S
   - **Links to:** TR1, NFR4
   - Create `.gitignore` (node_modules, dist, .turbo, coverage)
@@ -74,7 +74,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.2 Package Manager Setup (1 day)
 
-- [ ] **1.2.1 Configure pnpm workspace**
+- [x] **1.2.1 Configure pnpm workspace**
   - **Effort:** M
   - **Links to:** FR1, TR1
   - Create `pnpm-workspace.yaml`:
@@ -93,14 +93,14 @@ Task Group 6 (CI/CD Setup)
   - Set packageManager in root package.json
   - Run `pnpm install` to verify workspace
 
-- [ ] **1.2.2 Set up dependency catalog (optional)**
+- [x] **1.2.2 Set up dependency catalog (optional)**
   - **Effort:** S
   - **Links to:** TR1, NFR5
   - Create pnpm catalog in `pnpm-workspace.yaml`
   - Define common dependency versions
   - Document catalog usage pattern
 
-- [ ] **1.2.3 Create root package.json**
+- [x] **1.2.3 Create root package.json**
   - **Effort:** M
   - **Links to:** FR1, TR1
   - Set up workspace scripts
@@ -110,7 +110,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.3 Turborepo Configuration (1 day)
 
-- [ ] **1.3.1 Install and configure Turborepo**
+- [x] **1.3.1 Install and configure Turborepo**
   - **Effort:** M
   - **Links to:** FR2, NFR2
   - Install `turbo` package
@@ -136,7 +136,7 @@ Task Group 6 (CI/CD Setup)
   - Configure cache options
   - Test pipeline execution
 
-- [ ] **1.3.2 Configure Turborepo caching**
+- [x] **1.3.2 Configure Turborepo caching**
   - **Effort:** S
   - **Links to:** NFR2
   - Set up local caching (.turbo/)
@@ -145,7 +145,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.4 TypeScript Configuration (1 day)
 
-- [ ] **1.4.1 Create base TypeScript configs**
+- [x] **1.4.1 Create base TypeScript configs**
   - **Effort:** M
   - **Links to:** FR3, TR5
   - Create `tsconfig.base.json` (ESM):
@@ -175,7 +175,7 @@ Task Group 6 (CI/CD Setup)
     }
     ```
 
-- [ ] **1.4.2 Set up shared type definitions**
+- [x] **1.4.2 Set up shared type definitions**
   - **Effort:** S
   - **Links to:** FR3
   - Create `types/` directory in root
@@ -184,7 +184,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.5 Code Quality Tools (1 day)
 
-- [ ] **1.5.1 Configure Biome**
+- [x] **1.5.1 Configure Biome**
   - **Effort:** M
   - **Links to:** TR2, NFR4
   - Install Biome
@@ -206,7 +206,7 @@ Task Group 6 (CI/CD Setup)
     ```
   - Test formatting and linting
 
-- [ ] **1.5.2 Configure ESLint**
+- [x] **1.5.2 Configure ESLint**
   - **Effort:** M
   - **Links to:** TR2, NFR4
   - Install ESLint and plugins
@@ -217,7 +217,7 @@ Task Group 6 (CI/CD Setup)
   - Configure rules for TypeScript
   - Test linting
 
-- [ ] **1.5.3 Set up pre-commit hooks**
+- [x] **1.5.3 Set up pre-commit hooks**
   - **Effort:** M
   - **Links to:** TR2, NFR3
   - Install Husky
@@ -235,7 +235,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.6 Testing Framework (1 day)
 
-- [ ] **1.6.1 Configure Vitest**
+- [x] **1.6.1 Configure Vitest**
   - **Effort:** M
   - **Links to:** TR3, FR7
   - Install Vitest and dependencies
@@ -261,7 +261,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.7 Package Structure Template (1 day)
 
-- [ ] **1.7.1 Create package structure template**
+- [x] **1.7.1 Create package structure template**
   - **Effort:** M
   - **Links to:** FR4
   - Document standard package structure
@@ -269,7 +269,7 @@ Task Group 6 (CI/CD Setup)
   - Define build scripts pattern
   - Document exports pattern (ESM/CJS)
 
-- [ ] **1.7.2 Create example scaffold package**
+- [x] **1.7.2 Create example scaffold package**
   - **Effort:** M
   - **Links to:** FR4, NFR3
   - Create `packages/@wdio/example-package/` as template
@@ -280,13 +280,30 @@ Task Group 6 (CI/CD Setup)
 
 #### 1.8 Documentation (ongoing)
 
-- [ ] **1.8.1 Create monorepo setup documentation**
+- [x] **1.8.1 Create monorepo setup documentation**
   - **Effort:** M
   - **Links to:** FR11, NFR3
   - Document setup instructions
   - Document development workflow
   - Document build commands
   - Document testing approach
+
+- [x] **1.8.2 Document package structure conventions**
+  - **Effort:** M
+  - **Links to:** FR4, FR11
+  - Write `docs/package-structure.md`
+  - Document naming conventions
+  - Document required package.json fields
+  - Document build patterns
+
+- [x] **1.8.3 Create contribution guidelines**
+  - **Effort:** M
+  - **Links to:** FR11, NFR3
+  - Write `CONTRIBUTING.md`
+  - Document Git workflow
+  - Document commit message conventions
+  - Document PR process
+  - Document coding standards
 
 ---
 
@@ -301,13 +318,13 @@ Task Group 6 (CI/CD Setup)
 
 #### 2.1 Package Migration (@wdio/electron-utils)
 
-- [ ] **2.1.1 Copy source code**
+- [x] **2.1.1 Copy source code**
   - **Effort:** S
   - **Links to:** FR5
   - Copy `/Users/sam/Workspace/wdio-electron-service/packages/@wdio_electron-utils/src/` to `packages/@wdio/electron-utils/src/`
   - Verify all files copied
 
-- [ ] **2.1.2 Create package.json**
+- [x] **2.1.2 Create package.json**
   - **Effort:** M
   - **Links to:** FR5, TR1
   - Create `packages/@wdio/electron-utils/package.json`
@@ -316,13 +333,13 @@ Task Group 6 (CI/CD Setup)
   - Set up build scripts
   - Use workspace protocol for dependencies
 
-- [ ] **2.1.3 Create TypeScript configs**
+- [x] **2.1.3 Create TypeScript configs**
   - **Effort:** S
   - **Links to:** FR3
   - Create `tsconfig.json` (extends base ESM)
   - Create `tsconfig.cjs.json` (extends base CJS)
 
-- [ ] **2.1.4 Migrate tests**
+- [x] **2.1.4 Migrate tests**
   - **Effort:** M
   - **Links to:** FR7
   - Copy tests from standalone repo
@@ -330,13 +347,13 @@ Task Group 6 (CI/CD Setup)
   - Create `vitest.config.ts`
   - Run tests and verify passing
 
-- [ ] **2.1.5 Update imports (if needed)**
+- [x] **2.1.5 Update imports (if needed)**
   - **Effort:** S
   - **Links to:** FR5
   - Update internal imports for monorepo
   - Verify no broken imports
 
-- [ ] **2.1.6 Build and validate**
+- [x] **2.1.6 Build and validate**
   - **Effort:** M
   - **Links to:** FR5, TR4
   - Run `pnpm build`
@@ -347,14 +364,14 @@ Task Group 6 (CI/CD Setup)
 
 #### 2.2 Testing and Validation
 
-- [ ] **2.2.1 Run package tests**
+- [x] **2.2.1 Run package tests**
   - **Effort:** M
   - **Links to:** FR7, NFR4
   - Run `pnpm test`
   - Verify all tests pass
   - Check coverage meets 80%+ threshold
 
-- [ ] **2.2.2 Turborepo integration**
+- [x] **2.2.2 Turborepo integration**
   - **Effort:** S
   - **Links to:** FR2
   - Verify `turbo build` includes package
@@ -375,32 +392,32 @@ Task Group 6 (CI/CD Setup)
 
 #### 3.1 Package Migration (@wdio/electron-cdp-bridge)
 
-- [ ] **3.1.1 Copy source code**
+- [x] **3.1.1 Copy source code**
   - **Effort:** S
   - **Links to:** FR5
   - Copy CDP bridge source to `packages/@wdio/electron-cdp-bridge/src/`
 
-- [ ] **3.1.2 Create package.json**
+- [x] **3.1.2 Create package.json**
   - **Effort:** M
   - **Links to:** FR5, TR6
   - Create package.json with dual exports
   - Add workspace dependency on @wdio/electron-utils (`workspace:*`)
   - Configure peer dependencies
 
-- [ ] **3.1.3 Create TypeScript configs**
+- [x] **3.1.3 Create TypeScript configs**
   - **Effort:** S
   - **Links to:** FR3
   - Create tsconfig.json (ESM)
   - Create tsconfig.cjs.json (CJS)
 
-- [ ] **3.1.4 Migrate tests**
+- [x] **3.1.4 Migrate tests**
   - **Effort:** M
   - **Links to:** FR7
   - Copy integration tests
   - Update imports to workspace packages
   - Update test configuration
 
-- [ ] **3.1.5 Build and validate**
+- [x] **3.1.5 Build and validate**
   - **Effort:** M
   - **Links to:** FR5
   - Build package (ESM + CJS)
@@ -409,14 +426,14 @@ Task Group 6 (CI/CD Setup)
 
 #### 3.2 Feature Validation
 
-- [ ] **3.2.1 Validate CDP connection**
+- [x] **3.2.1 Validate CDP connection**
   - **Effort:** M
   - **Links to:** FR6
   - Test CDP bridge connection
   - Test main process execution
   - Verify error handling
 
-- [ ] **3.2.2 Run tests and verify coverage**
+- [x] **3.2.2 Run tests and verify coverage**
   - **Effort:** M
   - **Links to:** FR7
   - Run all tests
@@ -436,13 +453,13 @@ Task Group 6 (CI/CD Setup)
 
 #### 4.1 Package Migration (wdio-electron-service)
 
-- [ ] **4.1.1 Copy source code**
+- [x] **4.1.1 Copy source code**
   - **Effort:** M
   - **Links to:** FR5
   - Copy service source to `packages/wdio-electron-service/src/`
   - Verify all files (launcher, service, commands, types)
 
-- [ ] **4.1.2 Create package.json**
+- [x] **4.1.2 Create package.json**
   - **Effort:** M
   - **Links to:** FR5, TR6
   - Create package.json with dual exports
@@ -452,19 +469,19 @@ Task Group 6 (CI/CD Setup)
   - Configure peer dependencies (WebdriverIO, Electron)
   - Set up build scripts
 
-- [ ] **4.1.3 Update imports**
+- [x] **4.1.3 Update imports**
   - **Effort:** M
   - **Links to:** FR5
   - Update imports to use workspace packages
   - Verify no circular dependencies
   - Test import resolution
 
-- [ ] **4.1.4 Create TypeScript configs**
+- [x] **4.1.4 Create TypeScript configs**
   - **Effort:** S
   - **Links to:** FR3
   - Create tsconfig.json and tsconfig.cjs.json
 
-- [ ] **4.1.5 Migrate tests**
+- [x] **4.1.5 Migrate tests**
   - **Effort:** L
   - **Links to:** FR7
   - Copy all service tests
@@ -472,7 +489,7 @@ Task Group 6 (CI/CD Setup)
   - Update test imports
   - Update mocks for workspace packages
 
-- [ ] **4.1.6 Build and validate**
+- [x] **4.1.6 Build and validate**
   - **Effort:** M
   - **Links to:** FR5, TR4
   - Build ESM and CJS bundles
@@ -481,7 +498,7 @@ Task Group 6 (CI/CD Setup)
 
 #### 4.2 Feature Validation
 
-- [ ] **4.2.1 Validate binary detection**
+- [x] **4.2.1 Validate binary detection**
   - **Effort:** M
   - **Links to:** FR6
   - Test Electron Forge detection
@@ -489,14 +506,14 @@ Task Group 6 (CI/CD Setup)
   - Test unpackaged app detection
   - Test manual path configuration
 
-- [ ] **4.2.2 Validate Chromedriver management**
+- [x] **4.2.2 Validate Chromedriver management**
   - **Effort:** M
   - **Links to:** FR6
   - Test automatic download
   - Test version mapping
   - Test manual configuration
 
-- [ ] **4.2.3 Validate API mocking system**
+- [x] **4.2.3 Validate API mocking system**
   - **Effort:** M
   - **Links to:** FR6
   - Test mock creation
@@ -504,14 +521,14 @@ Task Group 6 (CI/CD Setup)
   - Test mock inspection
   - Test global mock management
 
-- [ ] **4.2.4 Validate window management**
+- [x] **4.2.4 Validate window management**
   - **Effort:** M
   - **Links to:** FR6
   - Test automatic window focus
   - Test manual window control
   - Test multiremote scenarios
 
-- [ ] **4.2.5 Validate platform-specific features**
+- [x] **4.2.5 Validate platform-specific features**
   - **Effort:** M
   - **Links to:** FR6
   - Test AppArmor workaround (Linux)
@@ -520,14 +537,14 @@ Task Group 6 (CI/CD Setup)
 
 #### 4.3 Testing and Coverage
 
-- [ ] **4.3.1 Run all package tests**
+- [x] **4.3.1 Run all package tests**
   - **Effort:** M
   - **Links to:** FR7
   - Run unit tests
   - Run integration tests
   - Verify all tests pass
 
-- [ ] **4.3.2 Verify coverage**
+- [x] **4.3.2 Verify coverage**
   - **Effort:** M
   - **Links to:** FR7, NFR4
   - Generate coverage reports
