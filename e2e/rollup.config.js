@@ -12,7 +12,7 @@ export default defineConfig([
       format: 'esm',
     },
     plugins: [tsPlugin],
-    external: ['@wdio/globals', '@vitest/spy', 'wdio-electron-service'],
+    external: ['@wdio/globals', '@vitest/spy', '@wdio/electron-service'],
   },
   {
     input: 'test/application.spec.ts',
@@ -21,7 +21,7 @@ export default defineConfig([
       format: 'esm',
     },
     plugins: [tsPlugin],
-    external: ['@wdio/globals', 'wdio-electron-service'],
+    external: ['@wdio/globals', '@wdio/electron-service'],
   },
   {
     input: 'test/dom.spec.ts',
@@ -30,7 +30,7 @@ export default defineConfig([
       format: 'esm',
     },
     plugins: [tsPlugin],
-    external: ['@wdio/globals', 'wdio-electron-service'],
+    external: ['@wdio/globals', '@wdio/electron-service'],
   },
   {
     input: 'test/interaction.spec.ts',
@@ -39,6 +39,6 @@ export default defineConfig([
       format: 'esm',
     },
     plugins: [tsPlugin],
-    external: ['@wdio/globals', 'wdio-electron-service'],
+    external: ['@wdio/globals', '@wdio/electron-service'],
   },
 ]);

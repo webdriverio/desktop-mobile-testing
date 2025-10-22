@@ -10,8 +10,8 @@ The service now uses only the Chrome DevTools Protocol (CDP) to communicate with
 
 The following imports are no longer provided in v9:
 
-- `wdio-electron-service/preload`
-- `wdio-electron-service/main`
+- `@wdio/electron-service/preload`
+- `@wdio/electron-service/main`
 
 Unlike the IPC bridge, the CDP bridge functions without requiring these modules. If your application imported these helpers, remove the imports; your tests should continue to work using the standard service API.
 

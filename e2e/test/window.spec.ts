@@ -1,5 +1,5 @@
+import { browser } from '@wdio/electron-service';
 import { expect } from '@wdio/globals';
-import { browser } from 'wdio-electron-service';
 
 describe('application window tests', () => {
   it('should launch the application splash screen window', async () => {

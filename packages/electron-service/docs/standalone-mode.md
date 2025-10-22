@@ -7,7 +7,7 @@ The `startWdioSession` method accepts `ElectronServiceCapabilities`, which are t
 The method creates a new WDIO session using your configuration and returns the WebdriverIO browser object:
 
 ```TS
-import { startWdioSession } from 'wdio-electron-service';
+import { startWdioSession } from '@wdio/electron-service';
 
 const browser = await startWdioSession([{
   'browserName': 'electron', // you need to specify browserName

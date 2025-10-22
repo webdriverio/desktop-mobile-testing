@@ -1,6 +1,6 @@
 import type { Mock } from '@vitest/spy';
+import { browser } from '@wdio/electron-service';
 import { $, expect } from '@wdio/globals';
-import { browser } from 'wdio-electron-service';
 
 // Check if we're running in no-binary mode
 const isBinary = process.env.BINARY !== 'false';

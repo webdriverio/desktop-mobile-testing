@@ -115,7 +115,7 @@ This error occurs when importing the `browser` object directly at the top level 
 
 ```typescript
 // ❌ This may cause "TypeError: logger is not a function"
-import { browser } from "wdio-electron-service";
+import { browser } from "@wdio/electron-service";
 
 describe("My Tests", () => {
   it("should work", async () => {
@@ -132,13 +132,13 @@ The solution is to use dynamic import within a `before` hook to ensure the servi
 // ✅ Correct approach - dynamic import in before hook
 import type { Mock } from "@vitest/spy";
 import { $, expect } from "@wdio/globals";
-import type { browser as WdioBrowser } from "wdio-electron-service";
+import type { browser as WdioBrowser } from "@wdio/electron-service";
 
 let browser: typeof WdioBrowser;
 
 describe("My Tests", () => {
   before(async () => {
-    ({ browser } = await import("wdio-electron-service"));
+    ({ browser } = await import("@wdio/electron-service"));
   });
 
   it("should work", async () => {
@@ -147,13 +147,13 @@ describe("My Tests", () => {
 });
 ```
 
-**Note for Service Contributors:** If you're working within the wdio-electron-service repository itself, you can use pnpm overrides to link to the workspace version:
+**Note for Service Contributors:** If you're working within the wdio-desktop-mobile-testing repository itself, you can use pnpm overrides to link to the workspace version:
 
 ```json
 {
   "pnpm": {
     "overrides": {
-      "wdio-electron-service": "workspace:*"
+      "@wdio/electron-service": "workspace:*"
     }
   }
 }

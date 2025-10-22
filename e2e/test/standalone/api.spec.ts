@@ -2,12 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import url from 'node:url';
+import { startWdioSession } from '@wdio/electron-service';
 import { getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/electron-utils';
 import { xvfb } from '@wdio/xvfb';
 import type * as Electron from 'electron';
-
 import type { NormalizedPackageJson } from 'read-package-up';
-import { startWdioSession } from 'wdio-electron-service';
 
 // Get the directory name once at the top
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
