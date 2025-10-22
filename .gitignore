@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+lerna-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage
+*.lcov
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# dotenv environment variables file
+.env
+.env.test
+.env.local
+
+# Build outputs
+dist
+out
+build
+
+# Turbo files
+.turbo
+
+# OS files
+.DS_Store
+
+# IDE files
+.vscode
+.idea
+
+# Test coverage
+coverage
+
+# Vitest
+.vitest
+
+# Agent OS (planning files - not part of the monorepo)
+agent-os/
+.claude/
+
+

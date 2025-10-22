@@ -1,0 +1,252 @@
+# Package Structure Guidelines
+
+This document describes the standard structure and conventions for packages in this monorepo.
+
+## Standard Package Structure
+
+All packages should follow this structure:
+
+```
+packages/package-name/
+├── src/
+│   ├── index.ts                      # Main entry point
+│   ├── launcher.ts                   # Launcher (if service)
+│   ├── service.ts                    # Service (if service)
+│   ├── types.ts                      # Type definitions
+│   └── utils/                        # Utility functions
+│       └── logger.ts
+├── test/
+│   ├── launcher.spec.ts              # Launcher tests
+│   ├── service.spec.ts               # Service tests
+│   └── utils.spec.ts                 # Utility tests
+├── dist/
+│   ├── esm/                          # ESM build output
+│   │   ├── index.js
+│   │   └── index.d.ts
+│   └── cjs/                          # CJS build output
+│       ├── index.js
+│       └── index.d.ts
+├── package.json                      # Package manifest
+├── tsconfig.json                     # TypeScript config (extends base)
+├── tsconfig.cjs.json                 # TypeScript CJS config
+├── vitest.config.ts                  # Vitest config
+└── README.md                         # Package documentation
+```
+
+## Package Naming Conventions
+
+### Service Packages
+
+Service packages that extend WebdriverIO should use the `wdio-` prefix:
+
+- `wdio-electron-service`
+- `wdio-flutter-service`
+- `wdio-neutralino-service`
+- `wdio-tauri-service`
+
+### Utility Packages
+
+Utility packages should use the `@wdio/` scope:
+
+- `@wdio/electron-utils`
+- `@wdio/electron-cdp-bridge`
+- `@wdio/native-utils`
+
+## package.json Template
+
+```json
+{
+  "name": "@wdio/package-name",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Package description",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "engines": {
+    "node": "^18.12.0 || ^20.0.0"
+  },
+  "scripts": {
+    "build": "pnpm build:esm && pnpm build:cjs",
+    "build:esm": "tsc -p tsconfig.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "clean": "shx rm -rf dist coverage .turbo"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "catalog:default",
+    "@vitest/coverage-v8": "catalog:default",
+    "typescript": "catalog:default",
+    "vitest": "catalog:default"
+  },
+  "peerDependencies": {
+    "webdriverio": "^9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
+    "directory": "packages/package-name"
+  },
+  "license": "MIT"
+}
+```
+
+## TypeScript Configuration
+
+Each package should have two TypeScript configurations:
+
+### tsconfig.json (ESM)
+
+```json
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist/esm",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
+}
+```
+
+### tsconfig.cjs.json (CJS)
+
+```json
+{
+  "extends": "../../tsconfig.base.cjs.json",
+  "compilerOptions": {
+    "outDir": "./dist/cjs",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
+}
+```
+
+## Vitest Configuration
+
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'node',
+    include: ['test/**/*.spec.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
+    },
+  },
+});
+```
+
+## Build Scripts
+
+Packages should build to both ESM and CJS formats:
+
+```bash
+# Build both formats
+pnpm build
+
+# Build ESM only
+pnpm build:esm
+
+# Build CJS only
+pnpm build:cjs
+```
+
+## Testing
+
+All packages must maintain 80%+ test coverage:
+
+```bash
+# Run tests
+pnpm test
+
+# Run tests with coverage
+pnpm test:coverage
+```
+
+## Dependencies
+
+### Use Workspace Protocol
+
+For internal dependencies, use the `workspace:*` protocol:
+
+```json
+{
+  "dependencies": {
+    "@wdio/native-utils": "workspace:*"
+  }
+}
+```
+
+### Use Catalog for Common Dependencies
+
+For common external dependencies, use the catalog reference:
+
+```json
+{
+  "devDependencies": {
+    "typescript": "catalog:default",
+    "vitest": "catalog:default"
+  }
+}
+```
+
+## README Template
+
+Each package should have a comprehensive README with:
+
+1. **Description** - What the package does
+2. **Installation** - How to install
+3. **Usage** - Basic usage examples
+4. **API** - API documentation
+5. **Configuration** - Configuration options
+6. **Examples** - Code examples
+7. **Contributing** - Contribution guidelines
+8. **License** - License information
+
+## Publishing
+
+Packages are published from the monorepo using Turborepo:
+
+```bash
+# Publish all packages
+pnpm turbo release
+```
+
+## Best Practices
+
+1. **Keep packages focused** - Each package should have a single responsibility
+2. **Minimize dependencies** - Only add necessary dependencies
+3. **Write comprehensive tests** - Maintain 80%+ coverage
+4. **Document public APIs** - Use JSDoc comments
+5. **Follow TypeScript strict mode** - Enable strict type checking
+6. **Use semantic versioning** - Follow semver for versions
+7. **Avoid breaking changes** - Maintain backward compatibility when possible
+
+

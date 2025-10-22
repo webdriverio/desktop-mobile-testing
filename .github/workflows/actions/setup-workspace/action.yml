@@ -1,0 +1,31 @@
+name: 'Setup Development Environment'
+description: 'Sets up Node.js environment with PNPM for CI/CD workflows'
+inputs:
+  node-version:
+    description: 'Node.js version to use for the environment (e.g., "20")'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 🧰 Setup PNPM Package Manager
+      uses: pnpm/action-setup@v4
+      with:
+        run_install: false
+
+    - name: 🛠️ Setup Node.js ${{ inputs.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'pnpm'
+        cache-dependency-path: '**/pnpm-lock.yaml'
+
+    - name: 📦 Install Project Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: 🔧 Configure Git Identity
+      shell: bash
+      run: |
+        git config --global user.email "bot@webdriver.io"
+        git config --global user.name "WebdriverIO Release Bot"

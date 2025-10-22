@@ -1,0 +1,2 @@
+turbo run test --filter=./packages/* --force
+

@@ -1,0 +1,42 @@
+name: Manual Pre-Release Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch for pre-release'
+        required: true
+        default: 'feature'
+        type: choice
+        options:
+          - feature
+          - main
+          - maintenance
+      prerelease_version:
+        description: 'The new prerelease version to create.'
+        required: true
+        default: 'prerelease'
+        type: choice
+        options:
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
+      dry_run:
+        description: 'Do not touch or write anything. Show the commands.'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  pre-release:
+    name: Pre-release
+    uses: ./.github/workflows/_release-orchestration.reusable.yml
+    with:
+      branch: ${{ inputs.branch }}
+      release_version: ${{ inputs.prerelease_version }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets:
+      github_bot_token: ${{ secrets.GITHUB_TOKEN }}
+      npm_token: ${{ secrets.NPM_TOKEN }}
+      deploy_key: ${{ secrets.DEPLOY_KEY }}

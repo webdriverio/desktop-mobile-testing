@@ -1,0 +1,80 @@
+{
+  "name": "wdio-desktop-mobile-testing-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WebdriverIO services for cross-platform testing on Electron, Flutter, Neutralino, and Tauri",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git"
+  },
+  "license": "MIT",
+  "author": "WebdriverIO Community",
+  "engines": {
+    "node": ">=18 || >=20",
+    "pnpm": ">=10.12.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "electron-nightly"]
+  },
+  "packageManager": "pnpm@10.12.0",
+  "scripts": {
+    "backport": "tsx ./scripts/backport.ts",
+    "build": "turbo run build --filter=./packages/* --filter=./e2e",
+    "catalog:default": "tsx ./scripts/switch-catalog.ts default",
+    "catalog:minimum": "tsx ./scripts/switch-catalog.ts minimum",
+    "catalog:next": "tsx ./scripts/switch-catalog.ts next",
+    "catalog:update": "tsx ./scripts/update-catalogs.ts",
+    "catalog:update:dry": "tsx ./scripts/update-catalogs.ts --dry-run",
+    "ci:e2e:clean": "turbo run clean --filter=example*",
+    "ci:e2e:logs": "cd e2e && pnpm logs",
+    "clean": "turbo run clean && pnpm clean:cache && pnpm dlx shx rm -rf node_modules",
+    "clean:cache": "turbo daemon stop && pnpm dlx shx rm -rf .turbo .eslintcache",
+    "dev": "turbo run dev",
+    "e2e": "pnpm --filter @repo/e2e run test",
+    "e2e:builder": "pnpm --filter @repo/e2e run test:e2e:builder",
+    "e2e:cjs": "pnpm --filter @repo/e2e run test:e2e:cjs",
+    "e2e:esm": "pnpm --filter @repo/e2e run test:e2e:esm",
+    "e2e:forge": "pnpm --filter @repo/e2e run test:e2e:forge",
+    "e2e:multiremote": "pnpm --filter @repo/e2e run test:e2e:multiremote",
+    "e2e:no-binary": "pnpm --filter @repo/e2e run test:e2e:no-binary",
+    "e2e:standalone": "pnpm --filter @repo/e2e run test:e2e:standalone",
+    "e2e:window": "pnpm --filter @repo/e2e run test:e2e:window",
+    "format": "biome format --write .",
+    "format:check": "biome check --formatter-enabled=true --linter-enabled=false .",
+    "graph": "pnpm graph:e2e && pnpm graph:e2e:mac-universal",
+    "graph:e2e": "tsx ./scripts/create-task-graph.ts ./.github/assets/e2e-graph.png test:e2e:forge-cjs test:e2e:forge-esm test:e2e:builder-cjs test:e2e:builder-esm test:e2e:no-binary-cjs test:e2e:no-binary-esm",
+    "graph:e2e:mac-universal": "tsx ./scripts/create-task-graph.ts ./.github/assets/e2e-graph-mac-universal.png test:e2e-mac-universal:builder-cjs test:e2e-mac-universal:builder-esm test:e2e-mac-universal:forge-cjs test:e2e-mac-universal:forge-esm",
+    "lint": "biome check --formatter-enabled=false --linter-enabled=true . && eslint --cache \"**/*.{j,mj,cj,t}s\"",
+    "lint:fix": "biome check --write --formatter-enabled=false --linter-enabled=true . && eslint --cache --fix \"**/*.{j,mj,cj,t}s\"",
+    "prepare": "husky",
+    "release": "turbo run release --filter=@wdio/electron-service --filter=@wdio/* --only --concurrency=1",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "test:integration": "turbo run test:integration",
+    "test:package": "pnpx cross-env DEBUG=@wdio/electron-service tsx ./scripts/test-package.ts",
+    "test:unit": "turbo run test:unit",
+    "typecheck": "turbo run typecheck",
+    "update:all": "pnpm catalog:update --default && pnpm catalog:update --next && pnpm up -iLr"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.5",
+    "@types/node": "^24.7.2",
+    "@typescript-eslint/parser": "^8.46.0",
+    "@vitest/eslint-plugin": "^1.3.16",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.37.0",
+    "eslint-plugin-wdio": "^9.16.2",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4",
+    "shx": "^0.4.0",
+    "tsx": "^4.20.6",
+    "turbo": "2.5.6",
+    "typescript": "^5.9.3"
+  },
+  "lint-staged": {
+    "**/*.{j,t}s": ["biome check --write", "eslint --fix --cache"],
+    "**/*.{yml,md,json}": ["biome format --write ."]
+  }
+}
