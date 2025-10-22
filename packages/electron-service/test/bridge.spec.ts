@@ -1,5 +1,5 @@
 import os from 'node:os';
-import { CdpBridge } from '@wdio/cdp-bridge';
+import { CdpBridge } from '@wdio/electron-cdp-bridge';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ElectronCdpBridge, getDebuggerEndpoint } from '../src/bridge.js';
 
@@ -56,8 +56,8 @@ describe('getDebuggerEndpoint', () => {
 });
 
 describe('ElectronCdpBridge', () => {
-  vi.mock('@wdio/cdp-bridge', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('@wdio/cdp-bridge')>();
+  vi.mock('@wdio/electron-cdp-bridge', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@wdio/electron-cdp-bridge')>();
     actual.CdpBridge.prototype.connect = vi.fn();
     actual.CdpBridge.prototype.send = vi.fn();
     actual.CdpBridge.prototype.on = vi.fn();

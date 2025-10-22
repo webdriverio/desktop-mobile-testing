@@ -247,3 +247,49 @@ $ pnpm build
 ---
 
 *Updated: October 22, 2025 - Windows Compatibility*
+
+---
+
+## 🧪 Update: Unit Test Package Name Fix
+
+**Issue:** Unit test failing with import resolution error:
+```
+Failed to resolve import "@wdio/cdp-bridge" from "test/bridge.spec.ts"
+```
+
+**Root Cause:**
+The test file `packages/electron-service/test/bridge.spec.ts` was importing from the old package name `@wdio/cdp-bridge` instead of the correct name `@wdio/electron-cdp-bridge`.
+
+**Solution:**
+Updated all 3 occurrences in `test/bridge.spec.ts`:
+
+1. Import statement:
+   ```diff
+   - import { CdpBridge } from '@wdio/cdp-bridge';
+   + import { CdpBridge } from '@wdio/electron-cdp-bridge';
+   ```
+
+2. Mock declaration:
+   ```diff
+   - vi.mock('@wdio/cdp-bridge', async (importOriginal) => {
+   + vi.mock('@wdio/electron-cdp-bridge', async (importOriginal) => {
+   ```
+
+3. Type import in mock:
+   ```diff
+   - const actual = await importOriginal<typeof import('@wdio/cdp-bridge')>();
+   + const actual = await importOriginal<typeof import('@wdio/electron-cdp-bridge')>();
+   ```
+
+**Test Results:**
+```bash
+Test Files: 17 passed (17)
+Tests: 172 passed (172)
+Coverage: 94.29% statements, 88.68% branches, 97.36% functions
+```
+
+**Status:** ✅ All unit tests passing with 94%+ coverage
+
+---
+
+*Updated: October 22, 2025 - Unit Test Fix*
