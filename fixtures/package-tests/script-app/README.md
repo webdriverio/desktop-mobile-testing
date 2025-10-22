@@ -109,7 +109,7 @@ This example teaches:
 
 ## 🚦 Getting Started
 
-1. **Clone and install**:
+1. **Install**:
 
    ```bash
    cd fixtures/package-tests/script-app
@@ -127,12 +127,3 @@ This example teaches:
    pnpm test
    ```
 
-## 💡 Next Steps
-
-After mastering this setup, consider:
-
-- **forge-app** - For official Electron toolchain
-- **builder-app** - For professional packaging
-- Adding TypeScript for better development experience
-- Implementing auto-updater functionality
-- Adding more sophisticated IPC patterns
