@@ -463,11 +463,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/electron-types':
-        specifier: 9.1.2
-        version: 9.1.2
+        specifier: workspace:*
+        version: link:../../../packages/electron-types
       '@wdio/electron-utils':
-        specifier: 9.1.2
-        version: 9.1.2
+        specifier: workspace:*
+        version: link:../../../packages/electron-utils
       '@wdio/globals':
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
@@ -2080,13 +2080,6 @@ packages:
   '@wdio/dot-reporter@9.20.0':
     resolution: {integrity: sha512-lRhihDQ56dApJcKOIEkVHThl8t2e5h7f3FW3JVmMLcGgbbkkLgXqVWPpbEGJcLld3wL4CipAPojVE/YEWp80hw==}
     engines: {node: '>=18.20.0'}
-
-  '@wdio/electron-types@9.1.2':
-    resolution: {integrity: sha512-CpT6Z7irN0SWddXI2W81mXwOOINCpGTrKbLkYWoN59+l/K5JQnxmuVyJwkzPfPT+mI1HeW5U7VuSJ4iNtW3pWw==}
-
-  '@wdio/electron-utils@9.1.2':
-    resolution: {integrity: sha512-oOA+0tuz7bcw2Wg5jwOGItsmcj2eTM5V5g36wCL31sfSJ160r1fHYc1uJOLCvqvu/hLuJ2pX3QCt1s5Z9X1XjQ==}
-    engines: {node: '>=18 || >=20'}
 
   '@wdio/globals@9.17.0':
     resolution: {integrity: sha512-i38o7wlipLllNrk2hzdDfAmk6nrqm3lR2MtAgWgtHbwznZAKkB84KpkNFfmUXw5Kg3iP1zKlSjwZpKqenuLc+Q==}
@@ -7149,25 +7142,6 @@ snapshots:
       '@wdio/reporter': 9.20.0
       '@wdio/types': 9.20.0
       chalk: 5.6.2
-
-  '@wdio/electron-types@9.1.2':
-    dependencies:
-      '@vitest/spy': 3.2.4
-
-  '@wdio/electron-utils@9.1.2':
-    dependencies:
-      '@electron/packager': 18.4.4
-      '@wdio/logger': 9.18.0
-      debug: 4.4.3(supports-color@8.1.1)
-      esbuild: 0.25.11
-      find-versions: 6.0.0
-      json5: 2.2.3
-      read-package-up: 11.0.0
-      smol-toml: 1.4.2
-      tsx: 4.20.6
-      yaml: 2.8.1
-    transitivePeerDependencies:
-      - supports-color
 
   '@wdio/globals@9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))':
     dependencies:
