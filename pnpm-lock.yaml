@@ -87,10 +87,10 @@ importers:
         specifier: catalog:default
         version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
-        specifier: workspace:*
+        specifier: link:../packages/electron-service
         version: link:../packages/electron-service
       '@wdio/electron-utils':
-        specifier: workspace:*
+        specifier: link:../packages/electron-utils
         version: link:../packages/electron-utils
       '@wdio/globals':
         specifier: catalog:default

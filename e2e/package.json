@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@wdio/cli": "catalog:default",
-    "@wdio/electron-service": "workspace:*",
+    "@wdio/electron-service": "link:../packages/electron-service",
     "@wdio/electron-utils": "workspace:*",
     "@wdio/globals": "catalog:default",
     "@wdio/local-runner": "catalog:default",
