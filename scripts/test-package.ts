@@ -86,7 +86,7 @@ async function buildAndPackService(): Promise<{
     execCommand('pnpm build', rootDir, 'Building all packages');
 
     // Pack the dependencies first
-    const utilsDir = normalize(join(rootDir, 'packages', 'electron-utils'));
+    const utilsDir = normalize(join(rootDir, 'packages', 'native-utils'));
     const typesDir = normalize(join(rootDir, 'packages', 'electron-types'));
     const cdpBridgeDir = normalize(join(rootDir, 'packages', 'electron-cdp-bridge'));
 
@@ -120,7 +120,7 @@ async function buildAndPackService(): Promise<{
     };
 
     const servicePath = findTgzFile(serviceDir, 'wdio-electron-service-');
-    const utilsPath = findTgzFile(utilsDir, 'wdio-electron-utils-');
+    const utilsPath = findTgzFile(utilsDir, 'wdio-native-utils-');
     const typesPath = findTgzFile(typesDir, 'wdio-electron-types-');
     const cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-');
 
@@ -245,13 +245,13 @@ async function main() {
         return normalize(join(dir, tgzFile));
       };
 
-      const utilsDir = normalize(join(rootDir, 'packages', 'electron-utils'));
+      const utilsDir = normalize(join(rootDir, 'packages', 'native-utils'));
       const typesDir = normalize(join(rootDir, 'packages', 'electron-types'));
       const cdpBridgeDir = normalize(join(rootDir, 'packages', 'electron-cdp-bridge'));
 
       packages = {
         servicePath: findTgzFile(serviceDir, 'wdio-electron-service-'),
-        utilsPath: findTgzFile(utilsDir, 'wdio-electron-utils-'),
+        utilsPath: findTgzFile(utilsDir, 'wdio-native-utils-'),
         typesPath: findTgzFile(typesDir, 'wdio-electron-types-'),
         cdpBridgePath: findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-'),
       };
@@ -270,17 +270,19 @@ async function main() {
       throw new Error(`Packages directory not found: ${packagesDir}`);
     }
 
-    const packages = readdirSync(packagesDir, { withFileTypes: true })
+    const packageTestDirs = readdirSync(packagesDir, { withFileTypes: true })
       .filter((dirent) => dirent.isDirectory())
       .map((dirent) => dirent.name)
       .filter((name) => !name.startsWith('.'));
 
     // Filter packages if specific one requested
-    const packagesToTest = options.package ? packages.filter((name) => name === options.package) : packages;
+    const packagesToTest = options.package
+      ? packageTestDirs.filter((name) => name === options.package)
+      : packageTestDirs;
 
     if (packagesToTest.length === 0) {
       if (options.package) {
-        throw new Error(`Package '${options.package}' not found. Available: ${packages.join(', ')}`);
+        throw new Error(`Package '${options.package}' not found. Available: ${packageTestDirs.join(', ')}`);
       } else {
         throw new Error(`No packages found in ${packagesDir}`);
       }
