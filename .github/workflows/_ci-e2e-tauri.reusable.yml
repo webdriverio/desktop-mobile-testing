@@ -122,7 +122,7 @@ jobs:
       - name: 🏗️ Build Tauri Test Applications
         if: runner.os != 'macOS'
         shell: bash
-        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel --verbosity=2
+        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
 
       # Dynamically generate the Tauri test commands to run
       # Since we only have one Tauri app (basic), no module type filtering needed
@@ -152,7 +152,7 @@ jobs:
       - name: 🧪 Execute Tauri E2E Tests
         if: runner.os != 'macOS'
         shell: bash
-        run: pnpm exec turbo run init-e2es ${{ steps.gen-test.outputs.result }} --only --verbosity=2 --log-order=stream
+        run: pnpm exec turbo run init-e2es ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure
