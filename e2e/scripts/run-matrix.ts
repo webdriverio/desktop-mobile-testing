@@ -42,6 +42,9 @@ function generateTestVariants(): TestVariant[] {
     ? [process.env.FRAMEWORK as 'electron' | 'tauri']
     : ['electron', 'tauri'];
 
+  console.log(`🔍 Debug: FRAMEWORK env var: ${process.env.FRAMEWORK}`);
+  console.log(`🔍 Debug: Generated frameworks: ${frameworks.join(', ')}`);
+
   const electronApps: Array<'builder' | 'forge' | 'no-binary'> = ['builder', 'forge', 'no-binary'];
   const tauriApps: Array<'basic'> = ['basic'];
   const moduleTypes: Array<'cjs' | 'esm'> = ['cjs', 'esm'];
@@ -78,6 +81,13 @@ function generateTestVariants(): TestVariant[] {
       }
     }
   }
+
+  console.log(`🔍 Debug: Generated ${variants.length} variants:`);
+  variants.forEach((variant, index) => {
+    console.log(
+      `  ${index + 1}. ${variant.framework}-${variant.app}-${variant.moduleType}-${variant.testType}-${variant.binary ? 'binary' : 'no-binary'}`,
+    );
+  });
 
   return variants;
 }
