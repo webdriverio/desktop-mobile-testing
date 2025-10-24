@@ -112,7 +112,7 @@ jobs:
             const generateTauriBuildFilter = (scenario) => {
               return scenario
                 .split(',')
-                .map((s) => `--filter=tauri-${s.trim()}`)
+                .map((s) => `--filter=${s.trim()}-app`)
                 .join(' ');
             };
             return generateTauriBuildFilter('${{ inputs.scenario }}');
