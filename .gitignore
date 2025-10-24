@@ -57,5 +57,7 @@ coverage
 # Vitest
 .vitest
 
+# Tauri build files
+**/src-tauri/target/*
 
 
