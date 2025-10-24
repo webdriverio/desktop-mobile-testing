@@ -54,7 +54,10 @@ function generateTestVariants(): TestVariant[] {
     const apps = framework === 'electron' ? electronApps : tauriApps;
 
     for (const app of apps) {
-      for (const moduleType of moduleTypes) {
+      // Tauri apps are always ESM, Electron apps support both CJS and ESM
+      const frameworkModuleTypes: Array<'cjs' | 'esm'> = framework === 'tauri' ? ['esm'] : moduleTypes;
+
+      for (const moduleType of frameworkModuleTypes) {
         for (const testType of testTypes) {
           // no-binary app is always non-binary for Electron
           // Tauri apps are always binary

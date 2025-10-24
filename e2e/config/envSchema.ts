@@ -105,7 +105,7 @@ export class EnvironmentContext {
     }
 
     if (this.framework === 'tauri') {
-      return this.app;
+      return `${this.app}-app`;
     }
 
     return this.isNoBinary ? `no-binary-${this.moduleType}` : `${this.platform}-${this.moduleType}`;
