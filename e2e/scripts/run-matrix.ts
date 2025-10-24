@@ -37,7 +37,11 @@ function getTestName(variant: TestVariant): string {
  * Generate all possible test variants
  */
 function generateTestVariants(): TestVariant[] {
-  const frameworks: Array<'electron' | 'tauri'> = ['electron', 'tauri'];
+  // If FRAMEWORK is set, only generate variants for that framework
+  const frameworks: Array<'electron' | 'tauri'> = process.env.FRAMEWORK
+    ? [process.env.FRAMEWORK as 'electron' | 'tauri']
+    : ['electron', 'tauri'];
+
   const electronApps: Array<'builder' | 'forge' | 'no-binary'> = ['builder', 'forge', 'no-binary'];
   const tauriApps: Array<'basic'> = ['basic'];
   const moduleTypes: Array<'cjs' | 'esm'> = ['cjs', 'esm'];
