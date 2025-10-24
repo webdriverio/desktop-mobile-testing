@@ -52,31 +52,20 @@ jobs:
   e2e-tauri:
     name: Tauri E2E Tests
     runs-on: ${{ inputs.os }}
+    # Skip Tauri E2E tests on macOS due to WKWebView WebDriver limitations
+    if: inputs.os != 'macos'
     strategy:
       # Continue with other tests even if one fails
       fail-fast: false
     steps:
-      # Check if we're on macOS and skip with clear messaging
-      - name: 🍎 Check macOS Limitation
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          echo "::warning::Tauri E2E tests are not supported on macOS due to WKWebView WebDriver limitations"
-          echo "::notice::WKWebView (used by Tauri on macOS) does not support WebDriver protocol"
-          echo "::notice::Tauri testing is only supported on Linux and Windows"
-          echo "::notice::See: https://github.com/tauri-apps/tauri-driver#limitations"
-          echo "✅ Skipping Tauri E2E tests on macOS"
-          exit 78
       # Standard checkout with SSH key for private repositories
       - name: 👷 Checkout Repository
-        if: runner.os != 'macOS'
         uses: actions/checkout@v5
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       # Set up Node.js and PNPM using the reusable action
       - name: 🛠️ Setup Development Environment
-        if: runner.os != 'macOS'
         uses: ./.github/workflows/actions/setup-workspace
         with:
           node-version: ${{ inputs.node-version }}
@@ -108,7 +97,6 @@ jobs:
       # Download the pre-built packages from the build job
       # This ensures all tests use the same build artifacts
       - name: 📦 Download Build Artifacts
-        if: runner.os != 'macOS'
         uses: ./.github/workflows/actions/download-archive
         with:
           name: wdio-electron-service
@@ -119,7 +107,7 @@ jobs:
 
       # Display build information if available
       - name: 📊 Show Build Information
-        if: runner.os != 'macOS' && inputs.build_id != '' && inputs.artifact_size != ''
+        if: inputs.build_id != '' && inputs.artifact_size != ''
         shell: bash
         run: |
           echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
@@ -127,7 +115,6 @@ jobs:
       # Dynamically generate the Turbo filter for building Tauri test applications
       # Since we only have one Tauri app (basic), we don't need type filtering
       - name: 🪄 Generate Build Filter for Tauri Test Apps
-        if: runner.os != 'macOS'
         id: gen-build
         uses: actions/github-script@v8
         with:
@@ -144,14 +131,12 @@ jobs:
       # Build the Tauri test applications using Turbo with the generated filter
       # This builds only the necessary test apps for the current test configuration
       - name: 🏗️ Build Tauri Test Applications
-        if: runner.os != 'macOS'
         shell: bash
         run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
 
       # Dynamically generate the Tauri test commands to run
       # Since we only have one Tauri app (basic), no module type filtering needed
       - name: 🪄 Generate Tauri Test Execution Plan
-        if: runner.os != 'macOS'
         id: gen-test
         uses: actions/github-script@v8
         with:
@@ -174,20 +159,19 @@ jobs:
       # Run the Tauri E2E tests using Turbo with the generated test commands
       # First initializes the E2E environment, then runs the specific tests
       - name: 🧪 Execute Tauri E2E Tests
-        if: runner.os != 'macOS'
         shell: bash
         run: pnpm exec turbo run init-e2es ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure
-        if: runner.os != 'macOS' && failure()
+        if: failure()
         shell: bash
         run: pnpm run ci:e2e:logs
 
       # Upload logs as artifacts on failure for later analysis
       # This helps debug issues without cluttering the GitHub Actions console
       - name: 📦 Upload Test Logs on Failure
-        if: runner.os != 'macOS' && failure()
+        if: failure()
         uses: ./.github/workflows/actions/upload-archive
         with:
           name: e2e-tauri-logs-${{ inputs.os }}-${{ inputs.scenario }}-${{ inputs.test-type }}
@@ -197,7 +181,7 @@ jobs:
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment
       - name: 🐛 Debug Build on Failure
-        if: runner.os != 'macOS' && failure()
+        if: failure()
         uses: goosewobbler/vscode-server-action@v1.3.0
         with:
           timeout: '300000'
