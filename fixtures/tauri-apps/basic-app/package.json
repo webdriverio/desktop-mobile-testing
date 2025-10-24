@@ -6,8 +6,9 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build": "tauri build",
-    "build:debug": "tauri build --debug",
+    "build:web": "node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('index.html','dist/index.html');\"",
+    "build": "npm run build:web && tauri build",
+    "build:debug": "npm run build:web && tauri build --debug",
     "test": "wdio run ./wdio.conf.ts"
   },
   "dependencies": {
