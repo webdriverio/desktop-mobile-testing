@@ -53,7 +53,7 @@ jobs:
     name: Tauri E2E Tests
     runs-on: ${{ inputs.os }}
     # Skip Tauri E2E tests on macOS due to WKWebView WebDriver limitations
-    if: inputs.os != 'macos'
+    if: inputs.os != 'macos-latest'
     strategy:
       # Continue with other tests even if one fails
       fail-fast: false
