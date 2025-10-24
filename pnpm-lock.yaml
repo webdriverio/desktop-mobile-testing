@@ -101,6 +101,9 @@ importers:
       '@wdio/native-utils':
         specifier: workspace:*
         version: link:../packages/native-utils
+      '@wdio/tauri-service':
+        specifier: link:../packages/tauri-service
+        version: link:../packages/tauri-service
       '@wdio/xvfb':
         specifier: catalog:default
         version: 9.20.0
