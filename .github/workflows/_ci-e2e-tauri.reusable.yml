@@ -66,7 +66,7 @@ jobs:
           echo "::notice::Tauri testing is only supported on Linux and Windows"
           echo "::notice::See: https://github.com/tauri-apps/tauri-driver#limitations"
           echo "✅ Skipping Tauri E2E tests on macOS"
-          exit 0
+          exit 78
       # Standard checkout with SSH key for private repositories
       - name: 👷 Checkout Repository
         if: runner.os != 'macOS'
