@@ -118,12 +118,12 @@
       "dependsOn": ["@wdio/bundler#build", "typecheck"],
       "outputs": ["dist/**"]
     },
-    "@wdio/electron-utils#build": {
+    "@wdio/native-utils#build": {
       "dependsOn": ["@wdio/electron-types#build", "typecheck"],
       "outputs": ["dist/**"]
     },
     "@wdio/electron-cdp-bridge#build": {
-      "dependsOn": ["@wdio/electron-utils#build", "typecheck"],
+      "dependsOn": ["@wdio/native-utils#build", "typecheck"],
       "outputs": ["dist/**"]
     },
     "@wdio/electron-service#build": {

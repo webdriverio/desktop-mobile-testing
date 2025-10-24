@@ -102,7 +102,7 @@ async function buildAndPackService(): Promise<{
       throw new Error(`CDP Bridge directory does not exist: ${cdpBridgeDir}`);
     }
 
-    execCommand('pnpm pack', utilsDir, 'Packing @wdio/electron-utils');
+    execCommand('pnpm pack', utilsDir, 'Packing @wdio/native-utils');
     execCommand('pnpm pack', typesDir, 'Packing @wdio/electron-types');
     execCommand('pnpm pack', cdpBridgeDir, 'Packing @wdio/electron-cdp-bridge');
 
@@ -179,7 +179,7 @@ async function testExample(
       ...packageJson.pnpm,
       overrides: {
         '@wdio/electron-service': `file:${packages.servicePath}`,
-        '@wdio/electron-utils': `file:${packages.utilsPath}`,
+        '@wdio/native-utils': `file:${packages.utilsPath}`,
         '@wdio/electron-types': `file:${packages.typesPath}`,
         '@wdio/electron-cdp-bridge': `file:${packages.cdpBridgePath}`,
       },
