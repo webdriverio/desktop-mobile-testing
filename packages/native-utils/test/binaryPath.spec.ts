@@ -96,14 +96,40 @@ function testBinaryPath(options: TestBinaryPathOptions) {
   testFn(`${title}`, async () => {
     const currentProcess = { platform } as NodeJS.Process;
     // Mock all possible paths for the current platform
-    const allPossiblePaths = [binaryPath];
-    if (platform === 'linux') {
-      // For Linux, also mock the kebab-case version of the path
+    const allPossiblePaths = [] as string[];
+
+    // For Forge builds, we need to mock all possible architecture paths
+    if (isForge) {
       const appName = configObj.packagerConfig?.name || configObj.productName || 'my-app';
-      const kebabCaseName = appName.toLowerCase().replace(/ /g, '-');
-      const kebabCasePath = binaryPath.replace(appName, kebabCaseName);
-      allPossiblePaths.push(kebabCasePath);
+
+      // Generate paths for all possible architectures that Forge might create
+      const archs = ['x64', 'armv7l', 'arm64']; // These are the archs returned by allOfficialArchsForPlatformAndVersion
+      const possibleNames = [appName];
+      if (platform === 'linux') {
+        possibleNames.push(appName.toLowerCase().replace(/ /g, '-'));
+      }
+
+      for (const arch of archs) {
+        for (const name of possibleNames) {
+          // Generate the correct path structure for each architecture
+          const archPath = binaryPath.replace(`-${platform}-x64`, `-${platform}-${arch}`).replace(appName, name);
+          if (!allPossiblePaths.includes(archPath)) {
+            allPossiblePaths.push(archPath);
+          }
+        }
+      }
+    } else {
+      // For non-Forge builds, just use the original path
+      allPossiblePaths.push(binaryPath);
+      if (platform === 'linux') {
+        // For Linux, also mock the kebab-case version of the path
+        const appName = configObj.packagerConfig?.name || configObj.productName || 'my-app';
+        const kebabCaseName = appName.toLowerCase().replace(/ /g, '-');
+        const kebabCasePath = binaryPath.replace(appName, kebabCaseName);
+        allPossiblePaths.push(kebabCasePath);
+      }
     }
+
     mockBinaryPath(allPossiblePaths);
 
     const result = await getBinaryPath(
@@ -219,7 +245,7 @@ describe('getBinaryPath', () => {
     testForgeBinaryPath({
       platform: 'linux',
       arch: 'x64',
-      binaryPath: '/path/to/out/builder-app-linux-x64/builder-app',
+      binaryPath: '/path/to/out/builder-app-example-linux-x64/builder-app-example',
       configObj: { packagerConfig: { name: 'Builder App Example' } },
     });
   });
