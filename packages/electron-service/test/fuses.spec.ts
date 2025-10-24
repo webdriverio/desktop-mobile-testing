@@ -18,7 +18,7 @@ vi.mock('@electron/fuses', () => ({
   getCurrentFuseWire: vi.fn(),
 }));
 
-vi.mock('@wdio/electron-utils', () => import('./mocks/electron-utils.js'));
+vi.mock('@wdio/native-utils', () => import('./mocks/electron-utils.js'));
 
 describe('fuses', () => {
   beforeEach(() => {

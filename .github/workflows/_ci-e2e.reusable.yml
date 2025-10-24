@@ -96,7 +96,7 @@ jobs:
             const generateBuildFilter = (scenario, type) => {
               return scenario
                 .split(',')
-                .map((s) => `--filter=example-${s.trim()}-${type}`)
+                .map((s) => `--filter=electron-${s.trim()}-${type}`)
                 .join(' ');
             };
             return generateBuildFilter('${{ inputs.scenario }}', '${{ inputs.type }}');

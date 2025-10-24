@@ -1,5 +1,5 @@
 import type { ElectronServiceCapabilities, ElectronServiceGlobalOptions } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('service');
 

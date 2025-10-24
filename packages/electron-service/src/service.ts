@@ -7,7 +7,7 @@ import type {
   ElectronType,
   ExecuteOpts,
 } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 import type { Capabilities, Services } from '@wdio/types';
 import { ElectronCdpBridge, getDebuggerEndpoint } from './bridge.js';
 import { clearAllMocks } from './commands/clearAllMocks.js';

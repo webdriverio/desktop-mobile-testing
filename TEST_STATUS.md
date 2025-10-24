@@ -33,7 +33,7 @@ All code, tests, and infrastructure have been successfully migrated from `wdio-e
 **4. Documentation**
 - ✅ Complete docs migrated to `packages/electron-service/docs/`
   - Configuration guides
-  - API documentation  
+  - API documentation
   - Migration guides
   - Development documentation
   - Troubleshooting guides
@@ -62,11 +62,11 @@ Failed downloading chromedriver v140.0.7339.133
 2025-10-22T13:39:48.736Z wdio-electron-service:launcher {
   browserName: 'chrome',
   'wdio:electronServiceOptions': {
-    appBinaryPath: '.../example-forge-esm.app/Contents/MacOS/example-forge-esm',
+    appBinaryPath: '.../electron-forge-esm.app/Contents/MacOS/electron-forge-esm',
     appArgs: [ '--foo', '--bar=baz', '--browser=A' ]
   },
   'goog:chromeOptions': {
-    binary: '.../example-forge-esm',
+    binary: '.../electron-forge-esm',
     windowTypes: [ 'app', 'webview' ]
   },
   browserVersion: '140.0.7339.133'  ← Correctly detected!
@@ -111,7 +111,7 @@ pnpm turbo build --filter='./packages/*'
 cd fixtures/package-tests/script-app && pnpm build
 # Result: Build successful
 
-cd fixtures/e2e-apps/forge-esm && pnpm build:bundle  
+cd fixtures/electron-apps/forge-esm && pnpm build:bundle
 # Result: Build successful
 ```
 
@@ -148,7 +148,7 @@ The only blocker is a temporary external issue (chromedriver availability for ve
 
 All infrastructure is in place and functional:
 - ✅ Monorepo setup
-- ✅ Package migration  
+- ✅ Package migration
 - ✅ CI/CD pipeline
 - ✅ Test infrastructure
 - ✅ Documentation

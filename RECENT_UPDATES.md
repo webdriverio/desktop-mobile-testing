@@ -19,7 +19,7 @@
 - ✅ **Pre-commit hook:** `pnpx lint-staged --allow-empty`
   - Runs Biome formatting and ESLint on staged files
   - Same as original repo
-  
+
 - ✅ **Pre-push hook:** `turbo run test --filter='./packages/*' --force`
   - Updated from: `--filter=wdio-electron-service` (single package)
   - Updated to: `--filter='./packages/*'` (all packages)
@@ -29,7 +29,7 @@
 ### 3. Biome Configuration (biome.jsonc)
 - ✅ **Fixed syntax errors:**
   - Changed `"include"` → `"includes"` in overrides
-  
+
 - ✅ **Replaced with complete configuration from wdio-electron-service:**
   - VCS integration settings
   - File includes/ignores patterns
@@ -37,15 +37,15 @@
   - Complete linter rules
   - HTML formatter settings
   - Import organization (assist)
-  
+
 - ✅ **Enhanced linter rules:**
   - Complexity checks: `noAdjacentSpacesInRegex`, `noExtraBooleanCast`, `noUselessCatch`, `noUselessEscapeInRegex`
   - TypeScript rules: `noCommonJs`, `noNamespace`, `useArrayLiterals`, `useAsConstAssertion`
   - Correctness: `noUnusedVariables` (error)
   - Suspicious: `noExplicitAny` (warn), `noExtraNonNullAssertion` (error)
-  
+
 - ✅ **Special overrides:**
-  - CJS fixtures: CommonJS allowed in `fixtures/e2e-apps/*-cjs/`
+  - CJS fixtures: CommonJS allowed in `fixtures/electron-apps/*-cjs/`
   - Test files: `noExplicitAny` disabled for `**/*.spec.ts` and `**/mocks/*.ts`
   - Import organization enabled via assist
 
@@ -137,7 +137,7 @@ $ Both repos: chromedriver 404 (external issue)
 **Fixed Scripts:**
 - ✅ `scripts/build-package.ts` - Updated bundler path, added `shell: true`
 - ✅ `scripts/test-package.ts` - Updated 6 directory references
-- ✅ `scripts/publish.ts` - Updated 4 directory references  
+- ✅ `scripts/publish.ts` - Updated 4 directory references
 - ✅ `scripts/create-milestones.ts` - Updated package.json path
 - ✅ `scripts/backport.ts` - Updated package.json path
 
@@ -170,7 +170,7 @@ $ pnpm turbo build --filter='./packages/*'
 
 **Issue:** CI trying to build `fixtures/package-tests/*` apps, causing Electron Forge/Builder errors.
 
-**Root Cause:** 
+**Root Cause:**
 The `fixtures/package-tests/*` apps (builder-app, forge-app, script-app) should NOT be part of the workspace. They are minimal test apps used ONLY by `scripts/test-package.ts` in isolated environments, not built during CI.
 
 **Solution:**
@@ -191,7 +191,7 @@ The `fixtures/package-tests/*` apps (builder-app, forge-app, script-app) should 
 **Workspace Structure:**
 - ✅ `packages/*` - Built by CI
 - ✅ `e2e` - Built by CI
-- ✅ `fixtures/e2e-apps/*` - Built as E2E test dependencies
+- ✅ `fixtures/electron-apps/*` - Built as E2E test dependencies
 - ⚠️ `fixtures/package-tests/*` - NOT in workspace, used only by test-package.ts script
 
 **Verification:**

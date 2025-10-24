@@ -1,5 +1,5 @@
 import EventEmitter from 'node:events';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('bridge');
 

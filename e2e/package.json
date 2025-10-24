@@ -29,12 +29,17 @@
     "test:e2e:window": "cross-env TEST_TYPE=window tsx scripts/run-matrix.ts",
     "test:e2e:multiremote": "cross-env TEST_TYPE=multiremote tsx scripts/run-matrix.ts",
     "test:e2e:standalone": "cross-env TEST_TYPE=standalone tsx scripts/run-matrix.ts",
-    "test:e2e:mac-universal": "cross-env MAC_UNIVERSAL=true tsx scripts/run-matrix.ts"
+    "test:e2e:mac-universal": "cross-env MAC_UNIVERSAL=true tsx scripts/run-matrix.ts",
+    "test:e2e:tauri:basic": "cross-env FRAMEWORK=tauri APP=basic tsx scripts/run-matrix.ts",
+    "test:e2e:tauri:basic:window": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=window tsx scripts/run-matrix.ts",
+    "test:e2e:tauri:basic:multiremote": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=multiremote tsx scripts/run-matrix.ts",
+    "test:e2e:tauri:basic:standalone": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standalone tsx scripts/run-matrix.ts"
   },
   "dependencies": {
     "@wdio/cli": "catalog:default",
     "@wdio/electron-service": "link:../packages/electron-service",
-    "@wdio/electron-utils": "workspace:*",
+    "@wdio/tauri-service": "link:../packages/tauri-service",
+    "@wdio/native-utils": "workspace:*",
     "@wdio/globals": "catalog:default",
     "@wdio/local-runner": "catalog:default",
     "@wdio/mocha-framework": "catalog:default",

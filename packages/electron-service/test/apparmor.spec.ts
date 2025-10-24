@@ -6,7 +6,7 @@ import { applyApparmorWorkaround } from '../src/apparmor.js';
 // Mock dependencies
 vi.mock('node:child_process');
 vi.mock('node:fs');
-vi.mock('@wdio/electron-utils', () => ({
+vi.mock('@wdio/native-utils', () => ({
   createLogger: vi.fn(() => ({
     debug: vi.fn(),
     info: vi.fn(),

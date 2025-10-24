@@ -7,7 +7,8 @@ import { z } from 'zod';
  */
 export const EnvSchema = z.object({
   // Core test configuration
-  PLATFORM: z.enum(['builder', 'forge', 'no-binary']).default('builder'),
+  FRAMEWORK: z.enum(['electron', 'tauri']).default('electron'),
+  APP: z.enum(['builder', 'forge', 'no-binary', 'basic']).default('builder'),
   MODULE_TYPE: z.enum(['cjs', 'esm']).default('esm'),
   TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone']).default('standard'),
   BINARY: z.enum(['true', 'false']).default('true'),
@@ -51,8 +52,16 @@ export function validateEnvironment(env: Record<string, string | undefined> = pr
 export class EnvironmentContext {
   constructor(public readonly env: TestEnvironment) {}
 
+  get framework(): 'electron' | 'tauri' {
+    return this.env.FRAMEWORK;
+  }
+
+  get app(): 'builder' | 'forge' | 'no-binary' | 'basic' {
+    return this.env.APP;
+  }
+
   get platform(): 'builder' | 'forge' | 'no-binary' {
-    return this.env.PLATFORM;
+    return this.env.APP;
   }
 
   get moduleType(): 'cjs' | 'esm' {
@@ -95,6 +104,10 @@ export class EnvironmentContext {
       return this.env.EXAMPLE_DIR;
     }
 
+    if (this.framework === 'tauri') {
+      return this.app;
+    }
+
     return this.isNoBinary ? `no-binary-${this.moduleType}` : `${this.platform}-${this.moduleType}`;
   }
 
@@ -102,26 +115,41 @@ export class EnvironmentContext {
    * Get the full app directory path
    */
   get appDirPath(): string {
-    return path.join(process.cwd(), '..', 'fixtures', 'e2e-apps', this.appDirName);
+    const fixturesDir = this.framework === 'tauri' ? 'tauri-apps' : 'electron-apps';
+    return path.join(process.cwd(), '..', 'fixtures', fixturesDir, this.appDirName);
   }
 
   /**
    * Validate environment compatibility
    */
   validateCompatibility(): void {
-    // Mac Universal mode validation
+    // Framework-specific validation
+    if (this.framework === 'tauri') {
+      if (!['basic'].includes(this.app)) {
+        throw new Error(`Tauri framework only supports 'basic' app, got: ${this.app}`);
+      }
+    } else if (this.framework === 'electron') {
+      if (!['builder', 'forge', 'no-binary'].includes(this.app)) {
+        throw new Error(`Electron framework only supports 'builder', 'forge', and 'no-binary' apps, got: ${this.app}`);
+      }
+    }
+
+    // Mac Universal mode validation (Electron only)
     if (this.isMacUniversal) {
-      if (!['builder', 'forge'].includes(this.platform)) {
-        throw new Error(`MAC_UNIVERSAL mode only supports builder and forge platforms, got: ${this.platform}`);
+      if (this.framework !== 'electron') {
+        throw new Error('MAC_UNIVERSAL mode only supports Electron framework');
+      }
+      if (!['builder', 'forge'].includes(this.app)) {
+        throw new Error(`MAC_UNIVERSAL mode only supports builder and forge apps, got: ${this.app}`);
       }
       if (!this.isBinary) {
         throw new Error('MAC_UNIVERSAL mode requires binary mode (BINARY=true)');
       }
     }
 
-    // No-binary validation
-    if (this.platform === 'no-binary' && this.isBinary) {
-      throw new Error('no-binary platform cannot be used with binary mode');
+    // No-binary validation (Electron only)
+    if (this.framework === 'electron' && this.app === 'no-binary' && this.isBinary) {
+      throw new Error('no-binary app cannot be used with binary mode');
     }
 
     // Test type validation
@@ -137,7 +165,8 @@ export class EnvironmentContext {
     const merged = { ...this.env, ...overrides };
 
     return {
-      PLATFORM: merged.PLATFORM,
+      FRAMEWORK: merged.FRAMEWORK,
+      APP: merged.APP,
       MODULE_TYPE: merged.MODULE_TYPE,
       TEST_TYPE: merged.TEST_TYPE,
       BINARY: merged.BINARY,
@@ -154,7 +183,7 @@ export class EnvironmentContext {
    * Get human-readable description of this environment
    */
   toString(): string {
-    const parts = [this.platform, this.moduleType, this.testType, this.isBinary ? 'binary' : 'no-binary'];
+    const parts = [this.framework, this.app, this.moduleType, this.testType, this.isBinary ? 'binary' : 'no-binary'];
 
     if (this.isMacUniversal) parts.push('mac-universal');
     if (this.isSplashEnabled) parts.push('splash');

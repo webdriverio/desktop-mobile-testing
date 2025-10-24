@@ -1,6 +1,6 @@
 import os from 'node:os';
 import { CdpBridge } from '@wdio/electron-cdp-bridge';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('bridge');
 

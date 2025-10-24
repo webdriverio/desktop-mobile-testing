@@ -1,7 +1,7 @@
 import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import type { ElectronServiceGlobalOptions } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('launcher');
 

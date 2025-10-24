@@ -106,23 +106,29 @@ export class BuildManager {
    */
   async buildAppsForEnvironment(): Promise<void> {
     const envContext = createEnvironmentContext();
-    const appsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
 
     console.log(`🏗️ Building apps for environment: ${envContext.toString()}`);
 
-    // Determine which apps to build based on environment
+    // Determine which apps to build based on framework
     const appsToBuild: string[] = [];
 
-    if (envContext.platform === 'no-binary') {
-      appsToBuild.push(join(appsDir, `no-binary-${envContext.moduleType}`));
+    if (envContext.framework === 'tauri') {
+      const tauriAppsDir = join(process.cwd(), '..', 'fixtures', 'tauri-apps');
+      appsToBuild.push(join(tauriAppsDir, envContext.app));
     } else {
-      appsToBuild.push(join(appsDir, `${envContext.platform}-${envContext.moduleType}`));
-    }
+      const electronAppsDir = join(process.cwd(), '..', 'fixtures', 'electron-apps');
 
-    // If Mac Universal, also build the other module type
-    if (envContext.isMacUniversal) {
-      const otherModuleType = envContext.moduleType === 'cjs' ? 'esm' : 'cjs';
-      appsToBuild.push(join(appsDir, `${envContext.platform}-${otherModuleType}`));
+      if (envContext.app === 'no-binary') {
+        appsToBuild.push(join(electronAppsDir, `no-binary-${envContext.moduleType}`));
+      } else {
+        appsToBuild.push(join(electronAppsDir, `${envContext.app}-${envContext.moduleType}`));
+      }
+
+      // If Mac Universal, also build the other module type
+      if (envContext.isMacUniversal) {
+        const otherModuleType = envContext.moduleType === 'cjs' ? 'esm' : 'cjs';
+        appsToBuild.push(join(electronAppsDir, `${envContext.app}-${otherModuleType}`));
+      }
     }
 
     console.log(`📦 Apps to build: ${appsToBuild.map((p) => p.split('/').pop()).join(', ')}`);
@@ -137,17 +143,33 @@ export class BuildManager {
    * Build all apps (for comprehensive testing)
    */
   async buildAllApps(): Promise<void> {
-    const appsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const appDirs = ['builder-cjs', 'builder-esm', 'forge-cjs', 'forge-esm', 'no-binary-cjs', 'no-binary-esm'];
-
     console.log('🏗️ Building all apps...');
 
-    for (const appDir of appDirs) {
-      const appPath = join(appsDir, appDir);
+    // Build Electron apps
+    const electronAppsDir = join(process.cwd(), '..', 'fixtures', 'electron-apps');
+    const electronAppDirs = ['builder-cjs', 'builder-esm', 'forge-cjs', 'forge-esm', 'no-binary-cjs', 'no-binary-esm'];
+
+    console.log('📦 Building Electron apps...');
+    for (const appDir of electronAppDirs) {
+      const appPath = join(electronAppsDir, appDir);
       if (dirExists(appPath)) {
         await this.ensureAppBuilt(appPath);
       } else {
-        console.warn(`⚠️ App directory not found: ${appPath}`);
+        console.warn(`⚠️ Electron app directory not found: ${appPath}`);
+      }
+    }
+
+    // Build Tauri apps
+    const tauriAppsDir = join(process.cwd(), '..', 'fixtures', 'tauri-apps');
+    const tauriAppDirs = ['basic'];
+
+    console.log('📦 Building Tauri apps...');
+    for (const appDir of tauriAppDirs) {
+      const appPath = join(tauriAppsDir, appDir);
+      if (dirExists(appPath)) {
+        await this.ensureAppBuilt(appPath);
+      } else {
+        console.warn(`⚠️ Tauri app directory not found: ${appPath}`);
       }
     }
   }
@@ -167,6 +189,61 @@ export class BuildManager {
    * Check if app has valid build artifacts
    */
   private hasValidBuildArtifacts(appPath: string): boolean {
+    // Check if this is a Tauri app
+    const tauriConfigPath = join(appPath, 'src-tauri', 'tauri.conf.json');
+    const isTauriApp = fileExists(tauriConfigPath);
+
+    if (isTauriApp) {
+      return this.hasValidTauriBuildArtifacts(appPath);
+    } else {
+      return this.hasValidElectronBuildArtifacts(appPath);
+    }
+  }
+
+  /**
+   * Check if Tauri app has valid build artifacts
+   */
+  private hasValidTauriBuildArtifacts(appPath: string): boolean {
+    const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'release');
+
+    if (!dirExists(tauriTargetDir)) {
+      console.log(`🔍 Debug: No Tauri target directory found at ${tauriTargetDir}`);
+      return false;
+    }
+
+    try {
+      // Check for Tauri binary based on platform
+      let binaryPath: string;
+      if (process.platform === 'win32') {
+        binaryPath = join(tauriTargetDir, 'tauri-basic-app.exe');
+      } else if (process.platform === 'darwin') {
+        // Skip macOS Tauri tests due to WKWebView limitations
+        console.log(`🔍 Debug: Skipping macOS Tauri binary check due to WKWebView limitations`);
+        return false;
+      } else if (process.platform === 'linux') {
+        binaryPath = join(tauriTargetDir, 'tauri-basic-app');
+      } else {
+        console.log(`🔍 Debug: Unsupported platform for Tauri: ${process.platform}`);
+        return false;
+      }
+
+      if (!fileExists(binaryPath)) {
+        console.log(`🔍 Debug: Tauri binary not found at ${binaryPath}`);
+        return false;
+      }
+
+      console.log(`✅ Valid Tauri build artifacts found at ${appPath}`);
+      return true;
+    } catch (error) {
+      console.log(`🔍 Debug: Error checking Tauri build artifacts at ${appPath}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if Electron app has valid build artifacts
+   */
+  private hasValidElectronBuildArtifacts(appPath: string): boolean {
     // Check if dist directory exists and has content
     const distPath = join(appPath, 'dist');
     if (!dirExists(distPath)) {
@@ -208,10 +285,10 @@ export class BuildManager {
         }
       }
 
-      console.log(`✅ Valid build artifacts found at ${appPath}`);
+      console.log(`✅ Valid Electron build artifacts found at ${appPath}`);
       return true;
     } catch (error) {
-      console.log(`🔍 Debug: Error checking build artifacts at ${appPath}:`, error);
+      console.log(`🔍 Debug: Error checking Electron build artifacts at ${appPath}:`, error);
       return false;
     }
   }
@@ -290,13 +367,15 @@ export class BuildManager {
    * Clean built apps (remove dist directories)
    */
   async cleanApps(): Promise<void> {
-    const appsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const appDirs = ['builder-cjs', 'builder-esm', 'forge-cjs', 'forge-esm', 'no-binary-cjs', 'no-binary-esm'];
-
     console.log('🧹 Cleaning app build artifacts...');
 
-    for (const appDir of appDirs) {
-      const appPath = join(appsDir, appDir);
+    // Clean Electron apps
+    const electronAppsDir = join(process.cwd(), '..', 'fixtures', 'electron-apps');
+    const electronAppDirs = ['builder-cjs', 'builder-esm', 'forge-cjs', 'forge-esm', 'no-binary-cjs', 'no-binary-esm'];
+
+    console.log('🧹 Cleaning Electron apps...');
+    for (const appDir of electronAppDirs) {
+      const appPath = join(electronAppsDir, appDir);
       const distPath = join(appPath, 'dist');
       const outPath = join(appPath, 'out');
 
@@ -310,7 +389,26 @@ export class BuildManager {
           console.log(`  Cleaned: ${appDir}/out`);
         }
       } catch (error) {
-        console.warn(`Warning: Failed to clean ${appDir}:`, error);
+        console.warn(`Warning: Failed to clean Electron ${appDir}:`, error);
+      }
+    }
+
+    // Clean Tauri apps
+    const tauriAppsDir = join(process.cwd(), '..', 'fixtures', 'tauri-apps');
+    const tauriAppDirs = ['basic'];
+
+    console.log('🧹 Cleaning Tauri apps...');
+    for (const appDir of tauriAppDirs) {
+      const appPath = join(tauriAppsDir, appDir);
+      const targetPath = join(appPath, 'src-tauri', 'target');
+
+      try {
+        if (dirExists(targetPath)) {
+          execSync(`rm -rf "${targetPath}"`, { stdio: 'inherit' });
+          console.log(`  Cleaned: ${appDir}/src-tauri/target`);
+        }
+      } catch (error) {
+        console.warn(`Warning: Failed to clean Tauri ${appDir}:`, error);
       }
     }
 
@@ -341,7 +439,8 @@ OPTIONS:
 ENVIRONMENT VARIABLES:
   FORCE_REBUILD=true   Force rebuild (same as --force)
   FORCE_BUILD=true     Force rebuild (alias for FORCE_REBUILD)
-  PLATFORM=<platform>  Target platform (builder, forge, no-binary)
+  FRAMEWORK=<framework> Target framework (electron, tauri)
+  APP=<app>            Target app (builder, forge, no-binary, basic, advanced)
   MODULE_TYPE=<type>   Module type (cjs, esm)
 
 EXAMPLES:

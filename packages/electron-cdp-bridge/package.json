@@ -39,7 +39,7 @@
     "lint": "biome check ."
   },
   "dependencies": {
-    "@wdio/electron-utils": "workspace:*",
+    "@wdio/native-utils": "workspace:*",
     "wait-port": "^1.1.0",
     "ws": "^8.18.3"
   },

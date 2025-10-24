@@ -272,7 +272,7 @@ Task Group 6 (CI/CD Setup)
 - [x] **1.7.2 Create example scaffold package**
   - **Effort:** M
   - **Links to:** FR4, NFR3
-  - Create `packages/@wdio/example-package/` as template
+  - Create `packages/@wdio/electron-service/` as template
   - Implement minimal TypeScript code
   - Add basic tests
   - Verify builds (ESM + CJS)

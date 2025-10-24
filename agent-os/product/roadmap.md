@@ -43,11 +43,13 @@
 - ~~Item 2: Shared Core Utilities~~ - CANCELLED (premature abstraction)
 
 **Q2 2026: Service Development (Weeks 5-21)**
-- Item 3: Flutter Service (Team A) - Mobile + Desktop - 12-17 weeks (complete service with E2E + CI)
-- Item 4: Neutralino Service (Team B) - Desktop - 13-17 weeks (complete service with E2E + CI)
+- ~~Item 3: Flutter Service~~ - PARKED (awaiting further research on driver alternatives)
+- Item 4: Neutralino Service (Team A) - Desktop - 13-17 weeks (complete service with E2E + CI)
 
 **Q3 2026: Tauri Service (Weeks 22-37)**
-- Item 5: Tauri Service - Desktop + Experimental Mobile - 12-16 weeks (complete service with E2E + CI)
+- Item 5: Tauri Service - Desktop (Windows/Linux only) - 6 weeks (high-feature service with 90%+ Electron parity)
+- ✅ **High Value:** 90%+ feature parity with Electron service via Rust crates
+- ⚠️ **Platform Limitation:** macOS not supported due to WKWebView driver limitations
 
 **Q4 2026: Stabilization (Weeks 38+)**
 - Items 6-9: Shared utilities extraction (from proven patterns), advanced features, performance, community growth

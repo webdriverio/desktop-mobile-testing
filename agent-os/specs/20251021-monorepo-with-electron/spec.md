@@ -271,7 +271,7 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm build:e2e-apps
+      - run: pnpm build:electron-apps
       - run: pnpm turbo test:e2e
 ```
 

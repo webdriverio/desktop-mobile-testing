@@ -1,15 +1,15 @@
 # Example Applications
 
-This directory contains simple example Electron applications that serve two purposes:
+This directory contains simple package test Electron applications that serve two purposes:
 
 1. Demonstrate different ways to use `wdio-electron-service` in real-world applications
 2. Serve as package tests to validate basic service functionality during development
 
-These examples are intentionally minimal and unlikely to be expanded in scope; the E2E test suite used for fully testing service functionality can be found in the [e2e](/e2e) directory and the apps which are tested by that suite are in the [e2e-apps](/fixtures/e2e-apps/) directory.
+These package tests are intentionally minimal and unlikely to be expanded in scope; the E2E test suite used for fully testing service functionality can be found in the [e2e](/e2e) directory and the apps which are tested by that suite are in the [electron-apps](/fixtures/electron-apps/) directory.
 
-Note that the examples are fully self-contained with no dependency on other parts of the repo, this is to ensure that they can be copied to a temporary directory and executed as part of the [package testing](/scripts/test-examples.ts).
+Note that the package tests are fully self-contained with no dependency on other parts of the repo, this is to ensure that they can be copied to a temporary directory and executed as part of the [package testing](/scripts/test-package.ts).
 
-## Available Examples
+## Available Package Tests
 
 ### [builder-app](./builder-app/)
 
@@ -71,7 +71,7 @@ All examples demonstrate:
 Each example can be run independently:
 
 ```bash
-cd <example-directory>
+cd <package-directory>
 
 # Install dependencies
 pnpm install

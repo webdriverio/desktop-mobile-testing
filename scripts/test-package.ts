@@ -1,13 +1,13 @@
 #!/usr/bin/env tsx
 /**
- * Script to test the wdio-electron-service package in the example apps
- * Usage: pnpx tsx scripts/test-package.ts [--example=<example-name>] [--skip-build]
+ * Script to test the wdio-electron-service package in the package test apps
+ * Usage: pnpx tsx scripts/test-package.ts [--package=<package-name>] [--skip-build]
  *
  * Examples:
  * pnpx tsx scripts/test-package.ts
- * pnpx tsx scripts/test-package.ts --example=builder-app
- * pnpx tsx scripts/test-package.ts --example=forge-app --skip-build
- * pnpx tsx scripts/test-package.ts --example=script-app
+ * pnpx tsx scripts/test-package.ts --package=builder-app
+ * pnpx tsx scripts/test-package.ts --package=forge-app --skip-build
+ * pnpx tsx scripts/test-package.ts --package=script-app
  */
 
 import { execSync } from 'node:child_process';
@@ -42,7 +42,7 @@ const rootDir = normalize(join(__dirname, '..'));
 const serviceDir = normalize(join(rootDir, 'packages', 'electron-service'));
 
 interface TestOptions {
-  example?: string;
+  package?: string;
   skipBuild?: boolean;
 }
 
@@ -141,35 +141,35 @@ async function buildAndPackService(): Promise<{
 }
 
 async function testExample(
-  examplePath: string,
+  packagePath: string,
   packages: { servicePath: string; utilsPath: string; typesPath: string; cdpBridgePath: string },
 ) {
-  const exampleName = examplePath.split(/[/\\]/).pop();
-  if (!exampleName) {
-    throw new Error(`Invalid example path: ${examplePath}`);
+  const packageName = packagePath.split(/[/\\]/).pop();
+  if (!packageName) {
+    throw new Error(`Invalid package path: ${packagePath}`);
   }
 
-  log(`Testing example: ${exampleName}`);
+  log(`Testing package: ${packageName}`);
 
-  if (!existsSync(examplePath)) {
-    throw new Error(`Example not found: ${examplePath}`);
+  if (!existsSync(packagePath)) {
+    throw new Error(`Package not found: ${packagePath}`);
   }
 
   // Create isolated test environment to avoid pnpm hoisting issues
   const tempDir = normalize(join(tmpdir(), `wdio-electron-test-${Date.now()}`));
-  const exampleDir = normalize(join(tempDir, exampleName));
+  const packageDir = normalize(join(tempDir, packageName));
 
   try {
     log(`Creating isolated test environment at ${tempDir}`);
     mkdirSync(tempDir, { recursive: true });
-    cpSync(examplePath, exampleDir, { recursive: true });
+    cpSync(packagePath, packageDir, { recursive: true });
 
     // Create .pnpmrc to prevent hoisting and ensure proper resolution
-    const pnpmrcPath = join(exampleDir, '.pnpmrc');
+    const pnpmrcPath = join(packageDir, '.pnpmrc');
     writeFileSync(pnpmrcPath, 'hoist=false\nnode-linker=isolated\n');
 
     // Add pnpm overrides to package.json to force local package versions
-    const packageJsonPath = join(exampleDir, 'package.json');
+    const packageJsonPath = join(packageDir, 'package.json');
     if (!existsSync(packageJsonPath)) {
       throw new Error(`package.json not found at ${packageJsonPath}`);
     }
@@ -188,25 +188,25 @@ async function testExample(
     writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
     // Install all dependencies with pnpm
-    execCommand('pnpm install', exampleDir, `Installing dependencies for ${exampleName}`);
+    execCommand('pnpm install', packageDir, `Installing dependencies for ${packageName}`);
 
     // Install local packages
     const addCommand = `pnpm add ${packages.typesPath} ${packages.utilsPath} ${packages.cdpBridgePath} ${packages.servicePath}`;
-    execCommand(addCommand, exampleDir, `Installing local packages for ${exampleName}`);
+    execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
 
     // Build the app if needed
     if (
       packageJson.scripts?.build &&
-      (exampleName.includes('builder') || exampleName.includes('forge') || exampleName.includes('script'))
+      (packageName.includes('builder') || packageName.includes('forge') || packageName.includes('script'))
     ) {
-      execCommand('pnpm build', exampleDir, `Building ${exampleName} app`);
+      execCommand('pnpm build', packageDir, `Building ${packageName} app`);
     }
 
-    execCommand('pnpm test', exampleDir, `Running tests for ${exampleName}`);
+    execCommand('pnpm test', packageDir, `Running tests for ${packageName}`);
 
-    log(`✅ ${exampleName} tests passed!`);
+    log(`✅ ${packageName} tests passed!`);
   } catch (error) {
-    console.error(`❌ Error testing ${exampleName}:`);
+    console.error(`❌ Error testing ${packageName}:`);
     if (error instanceof Error) {
       console.error(error.message);
     }
@@ -228,7 +228,7 @@ async function main() {
   try {
     const args = process.argv.slice(2);
     const options: TestOptions = {
-      example: args.find((arg) => arg.startsWith('--example='))?.split('=')[1],
+      package: args.find((arg) => arg.startsWith('--package='))?.split('=')[1],
       skipBuild: args.includes('--skip-build'),
     };
 
@@ -264,47 +264,47 @@ async function main() {
       packages = await buildAndPackService();
     }
 
-    // Find examples to test
-    const examplesDir = normalize(join(rootDir, 'fixtures', 'package-tests'));
-    if (!existsSync(examplesDir)) {
-      throw new Error(`Examples directory not found: ${examplesDir}`);
+    // Find packages to test
+    const packagesDir = normalize(join(rootDir, 'fixtures', 'package-tests'));
+    if (!existsSync(packagesDir)) {
+      throw new Error(`Packages directory not found: ${packagesDir}`);
     }
 
-    const examples = readdirSync(examplesDir, { withFileTypes: true })
+    const packages = readdirSync(packagesDir, { withFileTypes: true })
       .filter((dirent) => dirent.isDirectory())
       .map((dirent) => dirent.name)
       .filter((name) => !name.startsWith('.'));
 
-    // Filter examples if specific one requested
-    const examplesToTest = options.example ? examples.filter((name) => name === options.example) : examples;
+    // Filter packages if specific one requested
+    const packagesToTest = options.package ? packages.filter((name) => name === options.package) : packages;
 
-    if (examplesToTest.length === 0) {
-      if (options.example) {
-        throw new Error(`Example '${options.example}' not found. Available: ${examples.join(', ')}`);
+    if (packagesToTest.length === 0) {
+      if (options.package) {
+        throw new Error(`Package '${options.package}' not found. Available: ${packages.join(', ')}`);
       } else {
-        throw new Error(`No examples found in ${examplesDir}`);
+        throw new Error(`No packages found in ${packagesDir}`);
       }
     }
 
-    log(`Found examples to test: ${examplesToTest.join(', ')}`);
+    log(`Found packages to test: ${packagesToTest.join(', ')}`);
 
-    // Test each example
-    for (const example of examplesToTest) {
-      const examplePath = normalize(join(examplesDir, example));
+    // Test each package
+    for (const packageName of packagesToTest) {
+      const packagePath = normalize(join(packagesDir, packageName));
 
       // Skip if it's just a placeholder (no package.json)
-      const packageJsonPath = join(examplePath, 'package.json');
+      const packageJsonPath = join(packagePath, 'package.json');
       if (!existsSync(packageJsonPath)) {
-        log(`⏭️  Skipping ${example} (no package.json found)`);
+        log(`⏭️  Skipping ${packageName} (no package.json found)`);
         continue;
       }
 
-      await testExample(examplePath, packages);
+      await testExample(packagePath, packages);
     }
 
-    log(`🎉 All example tests completed successfully!`);
+    log(`🎉 All package tests completed successfully!`);
   } catch (error) {
-    console.error('❌ Example testing failed:');
+    console.error('❌ Package testing failed:');
     if (error instanceof Error) {
       console.error(error.message);
     }

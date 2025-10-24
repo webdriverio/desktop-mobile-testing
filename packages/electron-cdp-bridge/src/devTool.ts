@@ -1,5 +1,5 @@
 import http, { type ClientRequest, type RequestOptions } from 'node:http';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('bridge');
 

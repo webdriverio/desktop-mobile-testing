@@ -76,7 +76,7 @@
       }
     },
     {
-      "includes": ["fixtures/e2e-apps/*-cjs/**/*.ts"],
+      "includes": ["fixtures/electron-apps/*-cjs/**/*.ts"],
       "linter": { "rules": { "style": { "noCommonJs": "off" } } }
     },
     // Unit & Integration tests

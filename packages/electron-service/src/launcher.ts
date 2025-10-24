@@ -5,7 +5,7 @@ import type {
   ElectronServiceGlobalOptions,
   PathGenerationError,
 } from '@wdio/electron-types';
-import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/electron-utils';
+import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
 
 const log = createLogger('launcher');
 

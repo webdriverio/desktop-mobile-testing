@@ -151,7 +151,7 @@ See [package-structure.md](./package-structure.md) for detailed guidelines.
 Quick steps:
 
 1. Create package directory: `packages/@wdio/my-package/`
-2. Copy structure from `packages/@wdio/example-package/`
+2. Copy structure from `packages/@wdio/electron-service/`
 3. Update `package.json` with your package details
 4. Implement your code in `src/`
 5. Add tests in `test/`
@@ -300,7 +300,7 @@ Workspace settings (`.vscode/settings.json`):
 
 - Read [package-structure.md](./package-structure.md) for package conventions
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines
-- Check out example packages in `packages/@wdio/example-package/`
+- Check out example packages in `packages/@wdio/electron-service/`
 - Explore the Electron service implementation in `packages/wdio-electron-service/`
 
 ## Getting Help

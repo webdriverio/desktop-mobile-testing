@@ -26,7 +26,7 @@ vi.mock('node:fs/promises', () => {
     },
   };
 });
-vi.mock('@wdio/electron-utils', async () => {
+vi.mock('@wdio/native-utils', async () => {
   const mockUtilsModule = await import('./mocks/electron-utils.js');
 
   // Configure the specific mocks needed for launcher tests
@@ -62,7 +62,7 @@ vi.mock('@wdio/electron-utils', async () => {
   return mockUtilsModule;
 });
 
-// Log mock is included in the main @wdio/electron-utils mock above
+// Log mock is included in the main @wdio/native-utils mock above
 
 vi.mock('get-port', async () => {
   return {
