@@ -19,7 +19,17 @@ console.log('🔍 Debug: Starting standalone test with binary mode:', isBinary);
 
 const exampleDir = process.env.EXAMPLE_DIR || 'forge-esm';
 // Fixed path to use correct fixtures/electron-apps location
-const packageJsonPath = path.join(__dirname, '..', '..', '..', 'fixtures', 'electron-apps', exampleDir, 'package.json');
+const packageJsonPath = path.join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'fixtures',
+  'electron-apps',
+  exampleDir,
+  'package.json',
+);
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, { encoding: 'utf-8' })) as NormalizedPackageJson;
 const pkg = { packageJson, path: packageJsonPath };
 const electronVersion = await getElectronVersion(pkg);
