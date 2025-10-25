@@ -35,7 +35,8 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tauri.basic"
+      "identifier": "com.tauri.basic",
+      "icon": ["icons/icon.ico", "icons/icon.png"]
     },
     "security": {
       "csp": null
