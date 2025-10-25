@@ -27,15 +27,6 @@ struct FileOperationOptions {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ProcessInfo {
-    pid: u32,
-    command: String,
-    args: Vec<String>,
-    cwd: String,
-    status: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct PlatformInfo {
     os: String,
     arch: String,
