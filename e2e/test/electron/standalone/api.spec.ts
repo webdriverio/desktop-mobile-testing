@@ -58,6 +58,7 @@ if (isBinary) {
     '..',
     '..',
     '..',
+    '..',
     'fixtures',
     'electron-apps',
     exampleDir,
