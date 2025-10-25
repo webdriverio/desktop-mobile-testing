@@ -84,8 +84,17 @@
     "@repo/e2e#test:e2e:no-binary-esm": {
       "dependsOn": ["electron-no-binary-esm#build", "electron-no-binary-cjs#build", "@repo/e2e#init-e2es"]
     },
-    "@repo/e2e#test:e2e:tauri-basic": {
-      "dependsOn": ["tauri-basic-app#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+    "@repo/e2e#test:e2e:tauri:basic": {
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e:tauri:basic:window": {
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e:tauri:basic:multiremote": {
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+    },
+    "@repo/e2e#test:e2e:tauri:basic:standalone": {
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
     },
     "@repo/e2e#test:e2e:tauri-advanced": {
       "dependsOn": ["tauri-advanced-app#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
@@ -174,7 +183,7 @@
       "dependsOn": ["^build", "electron-builder-cjs#build:mac-universal"],
       "outputs": ["out/**"]
     },
-    "tauri-basic-app#build": {
+    "tauri-basic#build": {
       "dependsOn": ["^build"],
       "outputs": ["src-tauri/target/**"]
     },

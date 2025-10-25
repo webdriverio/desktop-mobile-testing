@@ -8,7 +8,7 @@ packages:
   - fixtures/electron-apps/forge-esm
   - fixtures/electron-apps/no-binary-cjs
   - fixtures/electron-apps/no-binary-esm
-  - fixtures/tauri-apps/basic-app
+  - fixtures/tauri-apps/basic
   - fixtures/package-tests/builder-app
   - fixtures/package-tests/forge-app
   - fixtures/package-tests/script-app

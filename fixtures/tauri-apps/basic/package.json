@@ -6,6 +6,7 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
+    "clean:dist": "rm -rf dist",
     "build:web": "node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('index.html','dist/index.html');\"",
     "build": "npm run build:web && tauri build",
     "build:debug": "npm run build:web && tauri build --debug",

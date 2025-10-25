@@ -538,7 +538,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  fixtures/tauri-apps/basic-app:
+  fixtures/tauri-apps/basic:
     dependencies:
       '@tauri-apps/api':
         specifier: ^1.5.0
