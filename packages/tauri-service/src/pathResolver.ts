@@ -17,7 +17,22 @@ export async function getTauriBinaryPath(
   log.debug(`Resolving Tauri binary path for: ${appPath}`);
   log.debug(`Platform: ${platform}, Arch: ${arch}`);
 
-  const appInfo = await getTauriAppInfo(appPath);
+  // If appPath points to a binary, resolve to the app directory
+  let appDir: string;
+  if (appPath.includes('target/release') || appPath.includes('target/debug')) {
+    // Extract app directory from binary path
+    const pathParts = appPath.split('/');
+    const targetIndex = pathParts.indexOf('target');
+    if (targetIndex > 0) {
+      appDir = pathParts.slice(0, targetIndex).join('/');
+    } else {
+      appDir = appPath;
+    }
+  } else {
+    appDir = appPath;
+  }
+
+  const appInfo = await getTauriAppInfo(appDir);
 
   // Platform-specific binary paths
   let binaryPath: string;
