@@ -120,6 +120,12 @@ jobs:
             libxcb-ewmh-dev \
             libxcb-dri2-0-dev
 
+      - name: 🚗 Install tauri-driver
+        shell: bash
+        run: |
+          echo "Installing tauri-driver..."
+          cargo install tauri-driver
+
       # Download the pre-built packages from the build job
       # This ensures all tests use the same build artifacts
       - name: 📦 Download Build Artifacts
