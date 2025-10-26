@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@wdio/logger": "catalog:default",
+    "@wdio/native-utils": "workspace:*",
     "@wdio/types": "catalog:default",
     "debug": "^4.4.3",
     "webdriverio": "catalog:default"
