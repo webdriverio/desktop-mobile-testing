@@ -1,10 +1,10 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { createLogger } from './log.js';
+import { join, sep } from 'node:path';
+import { createLogger } from '@wdio/native-utils';
 import type { TauriAppInfo } from './types.js';
 
-const log = createLogger('utils');
+const log = createLogger('tauri-service', 'utils');
 
 /**
  * Get Tauri binary path for the given app directory
@@ -19,14 +19,14 @@ export async function getTauriBinaryPath(
 
   // If appPath points to a binary, resolve to the app directory
   let appDir: string;
-  if (appPath.includes('target/release') || appPath.includes('target/debug')) {
+  if (appPath.includes('target') && (appPath.includes('release') || appPath.includes('debug'))) {
     // Extract app directory from binary path
     // Go up from target/release to src-tauri, then up one more to the app root
-    const pathParts = appPath.split('/');
+    const pathParts = appPath.split(sep);
     const targetIndex = pathParts.indexOf('target');
     if (targetIndex > 0) {
       // Go up from target to src-tauri, then up one more to app root
-      appDir = pathParts.slice(0, targetIndex - 1).join('/');
+      appDir = pathParts.slice(0, targetIndex - 1).join(sep);
     } else {
       appDir = appPath;
     }
@@ -142,4 +142,47 @@ export function getTauriDriverPath(): string {
 
     throw new Error('tauri-driver not found. Please install it with: cargo install tauri-driver');
   }
+}
+
+/**
+ * Get WebKitWebDriver path for Linux
+ * This is required by tauri-driver on Linux systems
+ */
+export function getWebKitWebDriverPath(): string | undefined {
+  // Only needed on Linux
+  if (process.platform !== 'linux') {
+    return undefined;
+  }
+
+  // Try to find WebKitWebDriver in PATH
+  try {
+    const result = execSync('which WebKitWebDriver', { encoding: 'utf8' });
+    const path = result.trim();
+    if (path && existsSync(path)) {
+      log.debug(`Found WebKitWebDriver at: ${path}`);
+      return path;
+    }
+  } catch {
+    log.debug('WebKitWebDriver not found in PATH');
+  }
+
+  // Fallback to common Linux installation paths
+  const commonPaths = [
+    '/usr/bin/WebKitWebDriver',
+    '/usr/local/bin/WebKitWebDriver',
+    '/usr/lib/webkit2gtk-4.0/WebKitWebDriver',
+    '/usr/lib/webkit2gtk-4.1/WebKitWebDriver',
+  ];
+
+  for (const path of commonPaths) {
+    if (existsSync(path)) {
+      log.debug(`Found WebKitWebDriver at: ${path}`);
+      return path;
+    }
+  }
+
+  log.warn(
+    'WebKitWebDriver not found. Please install it with: sudo apt-get install webkit2gtk-driver (or equivalent for your Linux distribution)',
+  );
+  return undefined;
 }
