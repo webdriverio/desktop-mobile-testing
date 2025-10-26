@@ -118,8 +118,17 @@ export default class TauriLaunchService {
 
     log.debug(`Starting tauri-driver on port ${port}`);
 
+    // Prepare tauri-driver arguments
+    const args = ['--port', port.toString()];
+
+    // Add native driver path if specified in options
+    if (this.options.nativeDriverPath) {
+      args.push('--native-driver', this.options.nativeDriverPath);
+      log.debug(`Using native driver: ${this.options.nativeDriverPath}`);
+    }
+
     return new Promise((resolve, reject) => {
-      this.tauriDriverProcess = spawn(tauriDriverPath, ['--port', port.toString()], {
+      this.tauriDriverProcess = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
       });

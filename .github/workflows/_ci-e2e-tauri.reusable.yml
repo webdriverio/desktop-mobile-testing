@@ -126,6 +126,16 @@ jobs:
           echo "Installing tauri-driver..."
           cargo install tauri-driver
 
+      - name: 🌐 Install WebKit WebDriver (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Installing WebKit WebDriver for Linux..."
+          sudo apt-get install -y webkit2gtk-driver
+          # Verify installation
+          which WebKitWebDriver || echo "WebKitWebDriver not found in PATH"
+          WebKitWebDriver --version || echo "WebKitWebDriver version check failed"
+
       # Download the pre-built packages from the build job
       # This ensures all tests use the same build artifacts
       - name: 📦 Download Build Artifacts

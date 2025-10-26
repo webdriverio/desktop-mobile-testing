@@ -46,6 +46,7 @@ export interface TauriServiceGlobalOptions {
   commandTimeout?: number;
   startTimeout?: number;
   tauriDriverPort?: number;
+  nativeDriverPath?: string;
 }
 
 /**

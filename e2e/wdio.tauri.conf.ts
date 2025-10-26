@@ -219,7 +219,14 @@ export const config = {
   connectionRetryTimeout: 120000,
   connectionRetryCount: 3,
   autoXvfb: true,
-  services: ['@wdio/tauri-service'],
+  services: [
+    [
+      '@wdio/tauri-service',
+      {
+        nativeDriverPath: process.platform === 'linux' ? 'WebKitWebDriver' : undefined,
+      },
+    ],
+  ],
   framework: 'mocha',
   reporters: ['spec'],
   mochaOpts: {
