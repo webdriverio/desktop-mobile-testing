@@ -29,11 +29,23 @@ export default class TauriLaunchService {
   async onPrepare(_config: Options.Testrunner, capabilities: TauriCapabilities[]): Promise<void> {
     log.debug('Preparing Tauri service...');
 
-    // Validate capabilities
+    // Validate and convert capabilities
     for (const cap of capabilities) {
       if (cap.browserName !== 'tauri') {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
+
+      // Convert browserName to a valid WebDriverIO browser (similar to Electron service)
+      cap.browserName = 'chrome' as TauriCapabilities['browserName'];
+
+      // Add Chrome options for tauri-driver
+      cap['goog:chromeOptions'] = {
+        binary: await getTauriDriverPath(),
+        args: ['--remote-debugging-port=0', '--no-sandbox', '--disable-dev-shm-usage'],
+      };
+
+      // Disable WebDriver Bidi session
+      cap['wdio:enforceWebDriverClassic'] = true;
     }
 
     // Start tauri-driver
