@@ -129,10 +129,10 @@ jobs:
             return generateTestCommand('${{ inputs.scenario }}', '${{ inputs.type }}');
 
       # Run the E2E tests using Turbo with the generated test commands
-      # First initializes the E2E environment, then runs the specific tests
+      # Each test builds its own apps with correct environment context
       - name: 🧪 Execute E2E Tests
         shell: bash
-        run: pnpm exec turbo run init-e2es ${{ steps.gen-test.outputs.result }} --only --log-order=stream
+        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure

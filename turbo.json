@@ -60,64 +60,53 @@
       "persistent": true,
       "cache": false
     },
-    "@repo/e2e#init-e2es": {
-      "dependsOn": ["@wdio/electron-service#build", "@wdio/tauri-service#build"]
-    },
     "@repo/e2e#build": {
       "dependsOn": ["@wdio/electron-service#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:builder-cjs": {
-      "dependsOn": ["electron-builder-cjs#build", "@repo/e2e#init-e2es", "@repo/e2e#test:e2e:builder-esm"]
+      "dependsOn": ["electron-builder-cjs#build", "@repo/e2e#test:e2e:builder-esm"]
     },
     "@repo/e2e#test:e2e:builder-esm": {
-      "dependsOn": ["electron-builder-esm#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["electron-builder-esm#build"]
     },
     "@repo/e2e#test:e2e:forge-cjs": {
-      "dependsOn": ["electron-forge-cjs#build", "@repo/e2e#init-e2es", "@repo/e2e#test:e2e:forge-esm"]
+      "dependsOn": ["electron-forge-cjs#build", "@repo/e2e#test:e2e:forge-esm"]
     },
     "@repo/e2e#test:e2e:forge-esm": {
-      "dependsOn": ["electron-forge-esm#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["electron-forge-esm#build"]
     },
     "@repo/e2e#test:e2e:no-binary-cjs": {
-      "dependsOn": ["electron-no-binary-cjs#build", "@repo/e2e#init-e2es", "@repo/e2e#test:e2e:no-binary-esm"]
+      "dependsOn": ["electron-no-binary-cjs#build", "@repo/e2e#test:e2e:no-binary-esm"]
     },
     "@repo/e2e#test:e2e:no-binary-esm": {
-      "dependsOn": ["electron-no-binary-esm#build", "electron-no-binary-cjs#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["electron-no-binary-esm#build", "electron-no-binary-cjs#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic:window": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic:multiremote": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic:standalone": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri-advanced": {
-      "dependsOn": ["tauri-advanced-app#build", "@wdio/tauri-service#build", "@repo/e2e#init-e2es"]
+      "dependsOn": ["tauri-advanced-app#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e-mac-universal:forge-cjs": {
-      "dependsOn": [
-        "electron-forge-cjs#build:mac-universal",
-        "@repo/e2e#init-e2es",
-        "@repo/e2e#test:e2e-mac-universal:forge-esm"
-      ]
+      "dependsOn": ["electron-forge-cjs#build:mac-universal", "@repo/e2e#test:e2e-mac-universal:forge-esm"]
     },
     "@repo/e2e#test:e2e-mac-universal:forge-esm": {
-      "dependsOn": ["electron-forge-esm#build:mac-universal", "@repo/e2e#init-e2es"]
+      "dependsOn": ["electron-forge-esm#build:mac-universal"]
     },
     "@repo/e2e#test:e2e-mac-universal:builder-cjs": {
-      "dependsOn": [
-        "electron-builder-cjs#build:mac-universal",
-        "@repo/e2e#init-e2es",
-        "@repo/e2e#test:e2e-mac-universal:builder-esm"
-      ]
+      "dependsOn": ["electron-builder-cjs#build:mac-universal", "@repo/e2e#test:e2e-mac-universal:builder-esm"]
     },
     "@repo/e2e#test:e2e-mac-universal:builder-esm": {
-      "dependsOn": ["electron-builder-esm#build:mac-universal", "@repo/e2e#init-e2es"]
+      "dependsOn": ["electron-builder-esm#build:mac-universal"]
     },
     "@wdio/bundler#build": {
       "dependsOn": ["typecheck"],
