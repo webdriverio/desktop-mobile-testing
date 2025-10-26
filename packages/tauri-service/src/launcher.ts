@@ -1,4 +1,5 @@
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath, isTauriAppBuilt } from './pathResolver.js';
@@ -72,36 +73,43 @@ export default class TauriLaunchService {
       log.debug(`App binary: ${appBinaryPath}`);
       log.debug(`App args: ${JSON.stringify(appArgs)}`);
 
+      // Build Chrome args array
+      const chromeArgs = [
+        '--remote-debugging-port=0',
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService,NetworkServiceInProcess',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--disable-hang-monitor',
+        '--disable-prompt-on-repost',
+        '--disable-sync',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-extensions-with-background-pages',
+        // Add Tauri app args after Chrome args
+        ...appArgs,
+      ];
+
+      log.info(`🚀 Chrome args (${chromeArgs.length} total):`);
+      for (let i = 0; i < chromeArgs.length; i++) {
+        log.debug(`  [${i}] ${chromeArgs[i]}`);
+      }
+
       // Set up Chrome options to use the Tauri app binary
-      // Chrome args go first, then app args are passed to the binary
       cap['goog:chromeOptions'] = {
         binary: appBinaryPath,
-        args: [
-          '--remote-debugging-port=0',
-          '--no-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-software-rasterizer',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI',
-          '--disable-ipc-flooding-protection',
-          '--enable-features=NetworkService,NetworkServiceInProcess',
-          '--force-color-profile=srgb',
-          '--metrics-recording-only',
-          '--mute-audio',
-          '--disable-hang-monitor',
-          '--disable-prompt-on-repost',
-          '--disable-sync',
-          '--disable-extensions',
-          '--disable-default-apps',
-          '--disable-breakpad',
-          '--disable-client-side-phishing-detection',
-          '--disable-component-extensions-with-background-pages',
-          // Add Tauri app args after Chrome args
-          ...appArgs,
-        ],
+        args: chromeArgs,
         prefs: {
           'profile.password_manager_leak_detection': false,
           'profile.default_content_setting_values.notifications': 2,
@@ -139,7 +147,146 @@ export default class TauriLaunchService {
       throw new Error(`Tauri app is not built: ${appPath}. Please build the app first.`);
     }
 
+    // Run environment diagnostics
+    await this.diagnoseEnvironment(this.appBinaryPath);
+
     log.debug(`Tauri worker session started: ${cid}`);
+  }
+
+  /**
+   * Diagnose the environment before running tests
+   */
+  private async diagnoseEnvironment(binaryPath: string): Promise<void> {
+    log.info('🔍 Running Tauri environment diagnostics...');
+
+    // 1. Check platform and environment
+    log.info(`Platform: ${process.platform} ${process.arch}`);
+    log.info(`Node version: ${process.version}`);
+    log.info(`DISPLAY: ${process.env.DISPLAY || 'not set'}`);
+    log.info(`XVFB running: ${process.env.XVFB_RUN || 'unknown'}`);
+
+    // 2. Check binary file permissions
+    try {
+      const stats = statSync(binaryPath);
+      const mode = (stats.mode & 0o777).toString(8);
+      log.info(`Binary permissions: ${mode}`);
+      log.info(`Binary is executable: ${(stats.mode & 0o111) !== 0}`);
+      log.info(`Binary size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+    } catch (error) {
+      log.error(`Failed to stat binary: ${error instanceof Error ? error.message : error}`);
+    }
+
+    // 3. Check shared library dependencies (Linux only)
+    if (process.platform === 'linux') {
+      try {
+        log.info('Checking shared library dependencies...');
+        const lddOutput = execSync(`ldd "${binaryPath}"`, { encoding: 'utf8', timeout: 5000 });
+        const missing = lddOutput.split('\n').filter((line) => line.includes('not found'));
+
+        if (missing.length > 0) {
+          log.error('❌ Missing shared libraries:');
+          for (const line of missing) {
+            log.error(`  ${line.trim()}`);
+          }
+        } else {
+          log.info('✅ All shared libraries found');
+        }
+
+        // Show webkit2gtk specifically since it's critical for Tauri
+        const webkitLibs = lddOutput.split('\n').filter((line) => line.includes('webkit'));
+        if (webkitLibs.length > 0) {
+          log.info('WebKit libraries:');
+          for (const line of webkitLibs) {
+            log.info(`  ${line.trim()}`);
+          }
+        }
+      } catch (error) {
+        log.warn(`Could not check shared libraries: ${error instanceof Error ? error.message : error}`);
+      }
+    }
+
+    // 4. Try to execute binary with --help to see if it runs at all
+    if (process.platform === 'linux') {
+      try {
+        log.info('Testing if binary can execute at all...');
+        const testOutput = execSync(
+          `DISPLAY=${process.env.DISPLAY || ':99'} "${binaryPath}" --help 2>&1 || echo "failed"`,
+          {
+            encoding: 'utf8',
+            timeout: 3000,
+          },
+        );
+
+        if (testOutput.includes('failed') || testOutput.includes('error')) {
+          log.error(`❌ Binary failed to execute:\n${testOutput}`);
+        } else {
+          log.info('✅ Binary can execute');
+        }
+      } catch (error) {
+        log.warn(`Could not test binary execution: ${error instanceof Error ? error.message : error}`);
+      }
+    }
+
+    // 5. Try to get binary version/info
+    try {
+      log.info('Checking if binary responds to --version...');
+      const versionOutput = execSync(`"${binaryPath}" --version 2>&1 || true`, {
+        encoding: 'utf8',
+        timeout: 5000,
+      });
+      if (versionOutput.trim()) {
+        log.info(`Binary version output: ${versionOutput.trim()}`);
+      }
+    } catch (error) {
+      log.debug(`Binary does not respond to --version: ${error instanceof Error ? error.message : error}`);
+    }
+
+    // 6. Check Chrome/Chromium dependencies (Linux only)
+    if (process.platform === 'linux') {
+      log.info('Checking for Chrome/Chromium dependencies...');
+
+      const requiredPackages = [
+        'libgtk-3-0',
+        'libgbm1',
+        'libasound2',
+        'libatk-bridge2.0-0',
+        'libcups2',
+        'libdrm2',
+        'libxkbcommon0',
+        'libxcomposite1',
+        'libxdamage1',
+        'libxrandr2',
+      ];
+
+      for (const pkg of requiredPackages) {
+        try {
+          execSync(`dpkg -s ${pkg} > /dev/null 2>&1`, { timeout: 1000 });
+          log.debug(`✅ ${pkg} is installed`);
+        } catch {
+          log.warn(`⚠️  ${pkg} may not be installed`);
+        }
+      }
+    }
+
+    // 7. Check WebKitWebDriver availability (Linux only)
+    if (process.platform === 'linux') {
+      const webkitDriver = getWebKitWebDriverPath();
+      if (webkitDriver) {
+        log.info(`✅ WebKitWebDriver found: ${webkitDriver}`);
+      } else {
+        log.warn('⚠️  WebKitWebDriver not found - tests may fail');
+      }
+    }
+
+    // 8. Check available disk space
+    try {
+      const df = execSync('df -h . 2>&1 || true', { encoding: 'utf8', timeout: 2000 });
+      log.info(`Disk space:\n${df}`);
+    } catch {
+      // Ignore
+    }
+
+    log.info('✅ Diagnostics complete\n');
   }
 
   /**
