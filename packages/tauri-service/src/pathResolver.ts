@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { chmodSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriAppInfo } from './types.js';
@@ -96,6 +96,16 @@ export async function getTauriBinaryPath(
       possiblePaths.map((p) => `  - ${p}`).join('\n') +
       `\n\nMake sure the app is built with: pnpm run build`;
     throw new Error(errorMsg);
+  }
+
+  // Ensure the binary is executable on Unix-like systems
+  if (platform !== 'win32') {
+    try {
+      log.debug(`Setting execute permissions on: ${binaryPath}`);
+      chmodSync(binaryPath, 0o755);
+    } catch (error) {
+      log.warn(`Failed to set execute permissions: ${error instanceof Error ? error.message : error}`);
+    }
   }
 
   return binaryPath;

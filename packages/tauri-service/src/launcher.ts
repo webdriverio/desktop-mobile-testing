@@ -67,10 +67,45 @@ export default class TauriLaunchService {
 
       const appBinaryPath = await getTauriBinaryPath(appPath);
 
+      // Get Tauri app args from capabilities
+      const appArgs = cap['tauri:options']?.args || [];
+      log.debug(`App binary: ${appBinaryPath}`);
+      log.debug(`App args: ${JSON.stringify(appArgs)}`);
+
       // Set up Chrome options to use the Tauri app binary
+      // Chrome args go first, then app args are passed to the binary
       cap['goog:chromeOptions'] = {
         binary: appBinaryPath,
-        args: ['--remote-debugging-port=0', '--no-sandbox', '--disable-dev-shm-usage'],
+        args: [
+          '--remote-debugging-port=0',
+          '--no-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-software-rasterizer',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--enable-features=NetworkService,NetworkServiceInProcess',
+          '--force-color-profile=srgb',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--disable-extensions',
+          '--disable-default-apps',
+          '--disable-breakpad',
+          '--disable-client-side-phishing-detection',
+          '--disable-component-extensions-with-background-pages',
+          // Add Tauri app args after Chrome args
+          ...appArgs,
+        ],
+        prefs: {
+          'profile.password_manager_leak_detection': false,
+          'profile.default_content_setting_values.notifications': 2,
+        },
       };
 
       // Disable WebDriver Bidi session
