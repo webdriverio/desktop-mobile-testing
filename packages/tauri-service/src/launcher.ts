@@ -35,12 +35,23 @@ export default class TauriLaunchService {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
 
-      // Convert browserName to a valid WebDriverIO browser (similar to Electron service)
+      // Convert browserName to Chrome (WebDriverIO doesn't natively support 'tauri')
       cap.browserName = 'chrome' as TauriCapabilities['browserName'];
 
-      // Add Chrome options for tauri-driver
+      // Set a default browser version for Tauri
+      cap.browserVersion = cap.browserVersion || '120.0.6099.109';
+
+      // Get Tauri app binary path from tauri:options
+      const appPath = cap['tauri:options']?.application;
+      if (!appPath) {
+        throw new Error('Tauri application path not specified in tauri:options.application');
+      }
+
+      const appBinaryPath = await getTauriBinaryPath(appPath);
+
+      // Set up Chrome options to use the Tauri app binary
       cap['goog:chromeOptions'] = {
-        binary: await getTauriDriverPath(),
+        binary: appBinaryPath,
         args: ['--remote-debugging-port=0', '--no-sandbox', '--disable-dev-shm-usage'],
       };
 
@@ -48,7 +59,7 @@ export default class TauriLaunchService {
       cap['wdio:enforceWebDriverClassic'] = true;
     }
 
-    // Start tauri-driver
+    // Start tauri-driver as a proxy
     await this.startTauriDriver();
 
     log.debug('Tauri service prepared successfully');
@@ -60,7 +71,7 @@ export default class TauriLaunchService {
   async onWorkerStart(cid: string, caps: TauriCapabilities): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
 
-    // Resolve app binary path
+    // App binary path is already resolved in onPrepare
     const appPath = caps['tauri:options']?.application;
     if (!appPath) {
       throw new Error('Tauri application path not specified in capabilities');
