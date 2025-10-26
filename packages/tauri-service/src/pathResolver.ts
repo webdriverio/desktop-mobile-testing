@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriAppInfo } from './types.js';
@@ -39,21 +39,63 @@ export async function getTauriBinaryPath(
 
   // Platform-specific binary paths
   let binaryPath: string;
+  const possiblePaths: string[] = [];
 
   if (platform === 'win32') {
-    binaryPath = join(appInfo.targetDir, `${appInfo.name}.exe`);
+    // Try raw .exe first
+    possiblePaths.push(join(appInfo.targetDir, `${appInfo.name}.exe`));
+
+    // Fall back to bundled MSI/NSIS if raw .exe doesn't exist
+    const msiDir = join(appInfo.targetDir, 'bundle', 'msi');
+    const nsisDir = join(appInfo.targetDir, 'bundle', 'nsis');
+
+    // Check for .exe in NSIS bundle directory
+    if (existsSync(nsisDir)) {
+      const exeFiles = readdirSync(nsisDir).filter((f: string) => f.endsWith('.exe') && !f.includes('-setup'));
+      for (const exe of exeFiles) {
+        possiblePaths.push(join(nsisDir, exe));
+      }
+    }
+
+    // MSI installers need to be extracted, so they're less useful for testing
+    // But we'll note them for error messages
+    if (existsSync(msiDir)) {
+      const msiFiles = readdirSync(msiDir).filter((f: string) => f.endsWith('.msi'));
+      for (const msi of msiFiles) {
+        possiblePaths.push(join(msiDir, msi));
+      }
+    }
   } else if (platform === 'darwin') {
-    binaryPath = join(appInfo.targetDir, 'bundle', 'macos', `${appInfo.name}.app`);
+    possiblePaths.push(join(appInfo.targetDir, 'bundle', 'macos', `${appInfo.name}.app`));
   } else if (platform === 'linux') {
-    binaryPath = join(appInfo.targetDir, appInfo.name.toLowerCase());
+    // Try raw binary first (from cargo build or tauri build without bundling)
+    possiblePaths.push(join(appInfo.targetDir, appInfo.name.toLowerCase()));
+    possiblePaths.push(join(appInfo.targetDir, appInfo.name));
+
+    // Fall back to bundled AppImage if raw binary doesn't exist
+    const bundleDir = join(appInfo.targetDir, 'bundle', 'appimage');
+    if (existsSync(bundleDir)) {
+      const appImageFiles = readdirSync(bundleDir).filter((f: string) => f.endsWith('.AppImage'));
+      for (const appImage of appImageFiles) {
+        possiblePaths.push(join(bundleDir, appImage));
+      }
+    }
   } else {
     throw new Error(`Unsupported platform for Tauri: ${platform}`);
   }
 
+  // Find the first path that exists
+  binaryPath = possiblePaths.find((path) => existsSync(path)) || possiblePaths[0];
+
+  log.debug(`Checked paths: ${possiblePaths.join(', ')}`);
   log.debug(`Resolved binary path: ${binaryPath}`);
 
   if (!existsSync(binaryPath)) {
-    throw new Error(`Tauri binary not found: ${binaryPath}. Make sure the app is built.`);
+    const errorMsg =
+      `Tauri binary not found. Checked the following locations:\n` +
+      possiblePaths.map((p) => `  - ${p}`).join('\n') +
+      `\n\nMake sure the app is built with: pnpm run build`;
+    throw new Error(errorMsg);
   }
 
   return binaryPath;
@@ -91,33 +133,14 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
 
 /**
  * Check if Tauri app is built
+ * This reuses getTauriBinaryPath which checks all possible locations
  */
 export async function isTauriAppBuilt(appPath: string): Promise<boolean> {
   try {
-    const appInfo = await getTauriAppInfo(appPath);
-    const targetDir = appInfo.targetDir;
-
-    if (!existsSync(targetDir)) {
-      return false;
-    }
-
-    // Check for platform-specific binary
-    const platform = process.platform;
-    let binaryPath: string;
-
-    if (platform === 'win32') {
-      binaryPath = join(targetDir, `${appInfo.name}.exe`);
-    } else if (platform === 'darwin') {
-      binaryPath = join(targetDir, 'bundle', 'macos', `${appInfo.name}.app`);
-    } else if (platform === 'linux') {
-      binaryPath = join(targetDir, appInfo.name.toLowerCase());
-    } else {
-      return false;
-    }
-
-    return existsSync(binaryPath);
+    await getTauriBinaryPath(appPath);
+    return true;
   } catch (error) {
-    log.debug(`Error checking if Tauri app is built: ${error}`);
+    log.debug(`Tauri app not built: ${error instanceof Error ? error.message : error}`);
     return false;
   }
 }
@@ -126,13 +149,33 @@ export async function isTauriAppBuilt(appPath: string): Promise<boolean> {
  * Get Tauri driver path
  */
 export function getTauriDriverPath(): string {
+  const isWindows = process.platform === 'win32';
+
   // Try to find tauri-driver in PATH
   try {
-    const result = execSync('which tauri-driver', { encoding: 'utf8' });
-    return result.trim();
+    // On Windows, use 'where' instead of 'which' for proper path format
+    const command = isWindows ? 'where tauri-driver' : 'which tauri-driver';
+    const result = execSync(command, { encoding: 'utf8' });
+    const path = result.trim().split('\n')[0]; // 'where' can return multiple paths
+
+    // On Windows, convert Git Bash-style paths (/c/...) to Windows paths (C:\...)
+    if (isWindows && path.startsWith('/')) {
+      return convertGitBashPathToWindows(path);
+    }
+
+    return path;
   } catch {
     // Fallback to common installation paths
-    const commonPaths = ['/usr/local/bin/tauri-driver', '/opt/homebrew/bin/tauri-driver', '~/.cargo/bin/tauri-driver'];
+    const commonPaths = isWindows
+      ? [
+          join(process.env.USERPROFILE || 'C:\\Users\\Default', '.cargo', 'bin', 'tauri-driver.exe'),
+          'C:\\Users\\runneradmin\\.cargo\\bin\\tauri-driver.exe', // GitHub Actions default
+        ]
+      : [
+          '/usr/local/bin/tauri-driver',
+          '/opt/homebrew/bin/tauri-driver',
+          join(process.env.HOME || '~', '.cargo/bin/tauri-driver'),
+        ];
 
     for (const path of commonPaths) {
       if (existsSync(path)) {
@@ -142,6 +185,20 @@ export function getTauriDriverPath(): string {
 
     throw new Error('tauri-driver not found. Please install it with: cargo install tauri-driver');
   }
+}
+
+/**
+ * Convert Git Bash-style paths to Windows paths
+ * Example: /c/Users/foo -> C:\Users\foo
+ */
+function convertGitBashPathToWindows(gitBashPath: string): string {
+  // Match pattern like /c/Users/...
+  const match = gitBashPath.match(/^\/([a-z])\/(.+)$/i);
+  if (match) {
+    const [, driveLetter, restOfPath] = match;
+    return `${driveLetter.toUpperCase()}:\\${restOfPath.replace(/\//g, '\\')}`;
+  }
+  return gitBashPath;
 }
 
 /**
