@@ -26,11 +26,19 @@ export default class TauriLaunchService {
   /**
    * Prepare the Tauri service
    */
-  async onPrepare(_config: Options.Testrunner, capabilities: TauriCapabilities[]): Promise<void> {
+  async onPrepare(
+    _config: Options.Testrunner,
+    capabilities: TauriCapabilities[] | TauriCapabilities[][],
+  ): Promise<void> {
     log.debug('Preparing Tauri service...');
 
+    // Flatten capabilities array (handles both standard and multiremote)
+    const flatCapabilities = Array.isArray(capabilities[0])
+      ? (capabilities as TauriCapabilities[][]).flat()
+      : (capabilities as TauriCapabilities[]);
+
     // Validate and convert capabilities
-    for (const cap of capabilities) {
+    for (const cap of flatCapabilities) {
       if (cap.browserName !== 'tauri') {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
