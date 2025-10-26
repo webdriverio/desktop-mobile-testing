@@ -28,10 +28,16 @@ export default class TauriLaunchService {
    * Prepare the Tauri service
    */
   async onPrepare(
-    _config: Options.Testrunner,
+    config: Options.Testrunner,
     capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
+
+    // Configure WDIO to connect to tauri-driver instead of spawning ChromeDriver
+    const tauriDriverPort = this.options.tauriDriverPort || 4444;
+    config.hostname = config.hostname || 'localhost';
+    config.port = config.port || tauriDriverPort;
+    log.info(`Configuring WDIO to connect to tauri-driver at ${config.hostname}:${config.port}`);
 
     // Check for unsupported platforms
     if (process.platform === 'darwin') {
@@ -131,6 +137,13 @@ export default class TauriLaunchService {
    */
   async onWorkerStart(cid: string, caps: TauriCapabilities): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
+
+    // On Linux, ensure DISPLAY is set in the worker process environment
+    // This is needed for ChromeDriver and any diagnostic commands
+    if (process.platform === 'linux' && !process.env.DISPLAY) {
+      process.env.DISPLAY = ':99';
+      log.info(`Set DISPLAY=${process.env.DISPLAY} in worker process for ChromeDriver and diagnostics`);
+    }
 
     // App binary path is already resolved in onPrepare
     const appPath = caps['tauri:options']?.application;
@@ -330,9 +343,17 @@ export default class TauriLaunchService {
     }
 
     return new Promise((resolve, reject) => {
+      // On Linux, explicitly set DISPLAY for xvfb compatibility
+      const env = { ...process.env };
+      if (process.platform === 'linux') {
+        env.DISPLAY = env.DISPLAY || ':99';
+        log.info(`Setting DISPLAY=${env.DISPLAY} for tauri-driver and children`);
+      }
+
       this.tauriDriverProcess = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
+        env,
       });
 
       this.tauriDriverProcess.stdout?.on('data', (data: Buffer) => {
