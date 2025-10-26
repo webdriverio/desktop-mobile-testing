@@ -855,6 +855,9 @@ importers:
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0
+      '@wdio/native-utils':
+        specifier: workspace:*
+        version: link:../native-utils
       '@wdio/types':
         specifier: catalog:default
         version: 9.20.0
