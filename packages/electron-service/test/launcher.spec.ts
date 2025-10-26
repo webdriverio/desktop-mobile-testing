@@ -72,6 +72,9 @@ vi.mock('get-port', async () => {
 
 beforeEach(async () => {
   mockProcessProperty('platform', 'darwin');
+  // Ensure the launcher logger is created before importing the service
+  const { createLogger } = await import('./mocks/electron-utils.js');
+  createLogger('electron-service');
   LaunchService = (await import('../src/launcher.js')).default;
   options = {
     appBinaryPath: 'workspace/my-test-app/dist/my-test-app',
@@ -234,7 +237,7 @@ describe('Electron Launch Service', () => {
           },
         ];
         await instance?.onPrepare({} as never, capabilities);
-        const mockLogger = getMockLogger('launcher');
+        const mockLogger = getMockLogger('electron-service');
         expect(mockLogger?.info).toHaveBeenCalledWith(
           'Both appEntryPoint and appBinaryPath are set, using appEntryPoint (appBinaryPath ignored)',
         );
