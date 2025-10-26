@@ -3,7 +3,7 @@ import path from 'node:path';
 import { PNPM_CATALOG_PREFIX, PNPM_WORKSPACE_YAML } from './constants.js';
 import { createLogger } from './log.js';
 
-const log = createLogger('utils');
+const log = createLogger('electron-service', 'utils');
 
 type PnpmWorkspace = {
   catalog?: { [key: string]: string };

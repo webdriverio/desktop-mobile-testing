@@ -1,6 +1,6 @@
 import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('fuses');
+const log = createLogger('electron-service', 'fuses');
 
 export interface FuseCheckResult {
   canUseCdpBridge: boolean;

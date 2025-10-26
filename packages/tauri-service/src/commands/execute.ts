@@ -1,7 +1,7 @@
-import { createLogger } from '../log.js';
+import { createLogger } from '@wdio/native-utils';
 import type { TauriCommandContext, TauriResult } from '../types.js';
 
-const log = createLogger('service');
+const log = createLogger('tauri-service', 'service');
 
 /**
  * Execute a Tauri command

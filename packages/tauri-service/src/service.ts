@@ -1,5 +1,5 @@
+import { createLogger } from '@wdio/native-utils';
 import { executeTauriCommand, isTauriApiAvailable } from './commands/execute.js';
-import { createLogger } from './log.js';
 import type { TauriCapabilities, TauriResult, TauriServiceOptions } from './types.js';
 
 /**
@@ -15,7 +15,7 @@ interface TauriAPI {
   restoreAllMocks: () => Promise<void>;
 }
 
-const log = createLogger('service');
+const log = createLogger('tauri-service', 'service');
 
 /**
  * Tauri worker service

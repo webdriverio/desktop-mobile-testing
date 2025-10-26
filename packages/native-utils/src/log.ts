@@ -8,13 +8,22 @@ const createWdioLogger = (logger as unknown as { default: typeof logger }).defau
 
 const areaCache = new Map<string, Logger>();
 
-export function createLogger(area?: LogArea): Logger {
-  const areaKey = area ?? '';
+/**
+ * Create a logger for a specific service and area
+ * @param serviceName - Name of the service (e.g., 'electron-service', 'tauri-service')
+ * @param area - Optional area within the service (e.g., 'launcher', 'bridge')
+ */
+export function createLogger(serviceName: string, area?: LogArea): Logger {
+  if (!serviceName) {
+    throw new Error('serviceName is required when creating a logger');
+  }
+
+  const areaKey = `${serviceName}:${area ?? ''}`;
   const cached = areaCache.get(areaKey);
   if (cached) return cached;
   const areaSuffix = area ? `:${area}` : '';
-  const areaDebug = debug(`wdio-electron-service${areaSuffix}`);
-  const areaLogger = createWdioLogger(`electron-service${areaSuffix}`);
+  const areaDebug = debug(`wdio-${serviceName}${areaSuffix}`);
+  const areaLogger = createWdioLogger(`${serviceName}${areaSuffix}`);
 
   const wrapped: Logger = {
     ...areaLogger,

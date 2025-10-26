@@ -10,7 +10,7 @@ import {
 } from './constants.js';
 import { createLogger } from './log.js';
 
-const log = createLogger('config');
+const log = createLogger('electron-service', 'config');
 
 /**
  * Determine build information about the Electron application

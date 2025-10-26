@@ -23,7 +23,7 @@ import mockStore from './mockStore.js';
 import { ServiceConfig } from './serviceConfig.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
 
-const log = createLogger('service');
+const log = createLogger('electron-service', 'service');
 
 const isInternalCommand = (args: unknown[]) => Boolean((args.at(-1) as ExecuteOpts)?.internal);
 

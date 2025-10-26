@@ -1,10 +1,10 @@
 import { spawn } from 'node:child_process';
+import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
-import { createLogger } from './log.js';
-import { getTauriBinaryPath, getTauriDriverPath, isTauriAppBuilt } from './pathResolver.js';
+import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath, isTauriAppBuilt } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
-const log = createLogger('launcher');
+const log = createLogger('tauri-service', 'launcher');
 
 /**
  * Tauri launcher service
@@ -28,17 +28,27 @@ export default class TauriLaunchService {
    */
   async onPrepare(
     _config: Options.Testrunner,
-    capabilities: TauriCapabilities[] | TauriCapabilities[][],
+    capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
 
-    // Flatten capabilities array (handles both standard and multiremote)
-    const flatCapabilities = Array.isArray(capabilities[0])
-      ? (capabilities as TauriCapabilities[][]).flat()
-      : (capabilities as TauriCapabilities[]);
+    // Check for unsupported platforms
+    if (process.platform === 'darwin') {
+      const errorMessage =
+        'Tauri testing is not supported on macOS due to WKWebView WebDriver limitations. ' +
+        'Please run tests on Windows or Linux. ' +
+        'For more information, see: https://v2.tauri.app/develop/tests/webdriver/';
+      log.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    // Handle both standard array and multiremote object capabilities
+    const capsList = Array.isArray(capabilities)
+      ? capabilities
+      : Object.values(capabilities).map((multiremoteOption) => multiremoteOption.capabilities);
 
     // Validate and convert capabilities
-    for (const cap of flatCapabilities) {
+    for (const cap of capsList) {
       if (cap.browserName !== 'tauri') {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
@@ -129,10 +139,12 @@ export default class TauriLaunchService {
     // Prepare tauri-driver arguments
     const args = ['--port', port.toString()];
 
-    // Add native driver path if specified in options
-    if (this.options.nativeDriverPath) {
-      args.push('--native-driver', this.options.nativeDriverPath);
-      log.debug(`Using native driver: ${this.options.nativeDriverPath}`);
+    // Resolve native driver path (WebKitWebDriver on Linux)
+    const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
+
+    if (nativeDriverPath) {
+      args.push('--native-driver', nativeDriverPath);
+      log.debug(`Using native driver: ${nativeDriverPath}`);
     }
 
     return new Promise((resolve, reject) => {

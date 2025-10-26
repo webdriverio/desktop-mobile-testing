@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import type { ElectronServiceGlobalOptions } from '@wdio/electron-types';
 import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('launcher');
+const log = createLogger('electron-service', 'launcher');
 
 /**
  * Checks if AppArmor is active and the unprivileged user namespace restriction is enabled

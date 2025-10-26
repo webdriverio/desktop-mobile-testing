@@ -5,7 +5,7 @@ import { APP_NAME_DETECTION_ERROR } from '../constants.js';
 import { createLogger } from '../log.js';
 import { readConfig } from './read.js';
 
-const log = createLogger('config');
+const log = createLogger('electron-service', 'config');
 
 export async function getConfig(pkg: NormalizedReadResult): Promise<BuilderBuildInfo | undefined> {
   const rootDir = path.dirname(pkg.path);

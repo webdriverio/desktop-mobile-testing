@@ -1,6 +1,6 @@
 import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('service');
+const log = createLogger('electron-service', 'service');
 
 import { compareVersions } from 'compare-versions';
 import { fullVersions } from 'electron-to-chromium';

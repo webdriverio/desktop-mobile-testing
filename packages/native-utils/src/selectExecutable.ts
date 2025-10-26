@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import type { PathValidationAttempt, PathValidationError, PathValidationResult } from '@wdio/electron-types';
 import { createLogger } from './log.js';
 
-const log = createLogger('utils');
+const log = createLogger('electron-service', 'utils');
 
 function getValidationError(error: Error, path: string): PathValidationError {
   const nodeError = error as NodeJS.ErrnoException;

@@ -1,10 +1,10 @@
+import { createLogger } from '@wdio/native-utils';
 import { remote } from 'webdriverio';
 import TauriLaunchService from './launcher.js';
-import { createLogger } from './log.js';
 import TauriWorkerService from './service.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
-const log = createLogger('service');
+const log = createLogger('tauri-service', 'service');
 
 /**
  * Initialize Tauri service in standalone mode

@@ -5,7 +5,7 @@ import { APP_NAME_DETECTION_ERROR } from '../constants.js';
 import { createLogger } from '../log.js';
 import { readConfig } from './read.js';
 
-const log = createLogger('config');
+const log = createLogger('electron-service', 'config');
 
 function forgeBuildInfo(forgeConfig: ForgeConfig, pkg: NormalizedReadResult): ForgeBuildInfo {
   log.debug(`Forge configuration detected: \n${JSON.stringify(forgeConfig)}`);
