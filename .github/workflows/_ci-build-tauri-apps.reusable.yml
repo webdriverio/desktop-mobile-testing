@@ -84,7 +84,31 @@ jobs:
             libsoup2.4-dev \
             libjavascriptcoregtk-4.0-dev \
             libjavascriptcoregtk-4.1-dev \
-            libssl-dev
+            libssl-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxrender-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxdamage-dev \
+            libxinerama-dev \
+            libxcb1-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxcb-render0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinerama0-dev \
+            libxcb-xkb-dev \
+            libxcb-image0-dev \
+            libxcb-util0-dev \
+            libxcb-icccm4-dev \
+            libxcb-ewmh-dev \
+            libxcb-dri2-0-dev
 
       # Generate build information for tracking
       - name: 📊 Generate Build Information

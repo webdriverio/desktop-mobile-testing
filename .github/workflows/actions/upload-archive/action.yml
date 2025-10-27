@@ -91,13 +91,25 @@ runs:
         $fileCount = (Get-ChildItem -Path "${{ inputs.paths }}" -File -Recurse | Where-Object { $_.FullName -notmatch "node_modules" -and $_.FullName -notmatch "\\\..*\\|/\..*/" }).Count
 
         # Compress files using PowerShell (excluding node_modules and hidden files)
-        $files = Get-ChildItem -Path "${{ inputs.paths }}" -Recurse | Where-Object { 
-          $_.FullName -notmatch "node_modules" -and 
+        $files = Get-ChildItem -Path "${{ inputs.paths }}" -Recurse | Where-Object {
+          $_.FullName -notmatch "node_modules" -and
           $_.FullName -notmatch "\\\..*\\|/\..*/" -and
           !$_.PSIsContainer
         }
-        
+
         if ($files.Count -gt 0) {
+          # Normalize file timestamps to avoid ZIP timestamp issues (valid range: 1980-2107)
+          # This is needed for Rust target directories which can have files outside this range
+          $validDate = Get-Date "2020-01-01"
+          foreach ($file in $files) {
+            try {
+              if ($file.LastWriteTime -lt (Get-Date "1980-01-01") -or $file.LastWriteTime -gt (Get-Date "2107-12-31")) {
+                $file.LastWriteTime = $validDate
+              }
+            } catch {
+              # If we can't set the timestamp, just skip it
+            }
+          }
           Compress-Archive -Path $files.FullName -DestinationPath "${{ inputs.output }}" -Force
         } else {
           # Create empty archive if no files found
