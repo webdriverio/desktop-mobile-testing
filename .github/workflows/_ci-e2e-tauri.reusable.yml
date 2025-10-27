@@ -210,12 +210,13 @@ jobs:
         shell: bash
         run: pnpm exec turbo run build --filter=@wdio/tauri-service
 
-      # Run the Tauri E2E tests using Turbo with the generated test commands
-      # Use --no-deps to skip rebuilding Tauri apps (we downloaded pre-built binaries)
+      # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
+      # This skips rebuilding Tauri apps since we downloaded pre-built binaries
       # tauri-driver is started per worker and has access to xvfb via WDIO's autoXvfb
       - name: 🧪 Execute Tauri E2E Tests
         shell: bash
-        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --filter=@repo/e2e --no-deps --log-order=stream
+        working-directory: e2e
+        run: pnpm run ${{ steps.gen-test.outputs.result }}
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure
