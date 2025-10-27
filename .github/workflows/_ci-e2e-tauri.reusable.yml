@@ -160,7 +160,7 @@ jobs:
           name: tauri-apps-${{ runner.os }}
           path: .
           filename: tauri-apps-${{ runner.os }}-artifact.zip
-          cache_key_prefix: tauri-apps-${{ runner.os }}
+          cache_key_prefix: tauri-apps
           exact_cache_key: ${{ inputs.tauri_cache_key || github.run_id && format('{0}-{1}-{2}{3}', runner.os, 'tauri-apps', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
       # Verify Tauri binaries were extracted correctly

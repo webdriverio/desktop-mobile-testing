@@ -134,5 +134,5 @@ jobs:
           name: tauri-apps-${{ runner.os }}
           output: tauri-apps-${{ runner.os }}/artifact.zip
           paths: fixtures/tauri-apps/*/src-tauri/target
-          cache_key_prefix: tauri-apps-${{ runner.os }}
+          cache_key_prefix: tauri-apps
           retention_days: '90'
