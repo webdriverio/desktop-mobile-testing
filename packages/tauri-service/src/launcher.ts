@@ -28,7 +28,7 @@ export default class TauriLaunchService {
    * Prepare the Tauri service
    */
   async onPrepare(
-    config: Options.Testrunner,
+    _config: Options.Testrunner,
     capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
@@ -81,14 +81,10 @@ export default class TauriLaunchService {
       }
     }
 
-    // Only start tauri-driver if hostname/port are set (centralized mode)
-    // Otherwise, workers will start their own instances
-    if (config.hostname && config.port) {
-      log.info(`Starting tauri-driver in centralized mode at ${config.hostname}:${config.port}`);
-      await this.startTauriDriver();
-    } else {
-      log.info('Tauri service will start tauri-driver per worker (distributed mode)');
-    }
+    // Start tauri-driver in onPrepare (centralized mode)
+    // Note: On Linux CI, the entire test command should be wrapped with xvfb-run
+    // so that this process has display access
+    await this.startTauriDriver();
 
     log.debug('Tauri service prepared successfully');
   }
@@ -96,20 +92,8 @@ export default class TauriLaunchService {
   /**
    * Start worker session
    */
-  async onWorkerStart(
-    cid: string,
-    caps: TauriCapabilities | TauriCapabilities[],
-    config?: Options.Testrunner,
-  ): Promise<void> {
+  async onWorkerStart(cid: string, caps: TauriCapabilities | TauriCapabilities[]): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
-
-    // Start tauri-driver per worker if in distributed mode (no hostname/port set)
-    // This runs in worker context which has xvfb access via autoXvfb
-    if (!config?.hostname && !config?.port) {
-      log.info(`Starting tauri-driver for worker ${cid} (distributed mode)`);
-      // Worker will use dynamic port assignment
-      await this.startTauriDriver();
-    }
 
     // Log DISPLAY status
     if (process.platform === 'linux') {
@@ -195,41 +179,9 @@ export default class TauriLaunchService {
       }
     }
 
-    // 4. Try to execute binary with --help to see if it runs at all
-    if (process.platform === 'linux') {
-      try {
-        log.info('Testing if binary can execute at all...');
-        const testOutput = execSync(
-          `DISPLAY=${process.env.DISPLAY || ':99'} "${binaryPath}" --help 2>&1 || echo "failed"`,
-          {
-            encoding: 'utf8',
-            timeout: 3000,
-          },
-        );
-
-        if (testOutput.includes('failed') || testOutput.includes('error')) {
-          log.error(`❌ Binary failed to execute:\n${testOutput}`);
-        } else {
-          log.info('✅ Binary can execute');
-        }
-      } catch (error) {
-        log.warn(`Could not test binary execution: ${error instanceof Error ? error.message : error}`);
-      }
-    }
-
-    // 5. Try to get binary version/info
-    try {
-      log.info('Checking if binary responds to --version...');
-      const versionOutput = execSync(`"${binaryPath}" --version 2>&1 || true`, {
-        encoding: 'utf8',
-        timeout: 5000,
-      });
-      if (versionOutput.trim()) {
-        log.info(`Binary version output: ${versionOutput.trim()}`);
-      }
-    } catch (error) {
-      log.debug(`Binary does not respond to --version: ${error instanceof Error ? error.message : error}`);
-    }
+    // Skip execution tests - Tauri binary needs display which may not be available
+    // in onWorkerStart. The binary will be tested during actual session creation.
+    log.info('Skipping binary execution tests (require display, tested during session creation)');
 
     // 6. Check Chrome/Chromium dependencies (Linux only)
     if (process.platform === 'linux') {

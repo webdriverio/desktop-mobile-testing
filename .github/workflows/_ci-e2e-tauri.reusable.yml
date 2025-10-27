@@ -211,12 +211,19 @@ jobs:
         run: pnpm exec turbo run build --filter=@wdio/tauri-service
 
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
+      # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
+      # tauri-driver launches apps during session creation, needs display in launcher context
       # This skips rebuilding Tauri apps since we downloaded pre-built binaries
-      # tauri-driver is started per worker and has access to xvfb via WDIO's autoXvfb
       - name: 🧪 Execute Tauri E2E Tests
         shell: bash
         working-directory: e2e
-        run: pnpm run ${{ steps.gen-test.outputs.result }}
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+              pnpm run ${{ steps.gen-test.outputs.result }}
+          else
+            pnpm run ${{ steps.gen-test.outputs.result }}
+          fi
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure
