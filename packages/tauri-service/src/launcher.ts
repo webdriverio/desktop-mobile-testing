@@ -35,7 +35,7 @@ export default class TauriLaunchService {
 
     // Configure WDIO to connect to tauri-driver instead of spawning ChromeDriver
     const tauriDriverPort = this.options.tauriDriverPort || 4444;
-    config.hostname = config.hostname || 'localhost';
+    config.hostname = config.hostname || '127.0.0.1';
     config.port = config.port || tauriDriverPort;
     log.info(`Configuring WDIO to connect to tauri-driver at ${config.hostname}:${config.port}`);
 
@@ -54,76 +54,29 @@ export default class TauriLaunchService {
       ? capabilities
       : Object.values(capabilities).map((multiremoteOption) => multiremoteOption.capabilities);
 
-    // Validate and convert capabilities
+    // Validate capabilities
     for (const cap of capsList) {
       if (cap.browserName !== 'tauri') {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
 
-      // Convert browserName to Chrome (WebDriverIO doesn't natively support 'tauri')
-      cap.browserName = 'chrome' as TauriCapabilities['browserName'];
-
-      // Set a default browser version for Tauri
-      cap.browserVersion = cap.browserVersion || '120.0.6099.109';
-
       // Get Tauri app binary path from tauri:options
-      const appPath = cap['tauri:options']?.application;
-      if (!appPath) {
+      const tauriOptions = cap['tauri:options'];
+      if (!tauriOptions?.application) {
         throw new Error('Tauri application path not specified in tauri:options.application');
       }
 
-      const appBinaryPath = await getTauriBinaryPath(appPath);
-
-      // Get Tauri app args from capabilities
-      const appArgs = cap['tauri:options']?.args || [];
+      const appBinaryPath = await getTauriBinaryPath(tauriOptions.application);
       log.debug(`App binary: ${appBinaryPath}`);
-      log.debug(`App args: ${JSON.stringify(appArgs)}`);
 
-      // Build Chrome args array
-      const chromeArgs = [
-        '--remote-debugging-port=0',
-        '--no-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection',
-        '--enable-features=NetworkService,NetworkServiceInProcess',
-        '--force-color-profile=srgb',
-        '--metrics-recording-only',
-        '--mute-audio',
-        '--disable-hang-monitor',
-        '--disable-prompt-on-repost',
-        '--disable-sync',
-        '--disable-extensions',
-        '--disable-default-apps',
-        '--disable-breakpad',
-        '--disable-client-side-phishing-detection',
-        '--disable-component-extensions-with-background-pages',
-        // Add Tauri app args after Chrome args
-        ...appArgs,
-      ];
-
-      log.info(`🚀 Chrome args (${chromeArgs.length} total):`);
-      for (let i = 0; i < chromeArgs.length; i++) {
-        log.debug(`  [${i}] ${chromeArgs[i]}`);
+      // Validate app args if provided
+      const appArgs = tauriOptions.args || [];
+      if (appArgs.length > 0) {
+        log.debug(`App args: ${JSON.stringify(appArgs)}`);
       }
 
-      // Set up Chrome options to use the Tauri app binary
-      cap['goog:chromeOptions'] = {
-        binary: appBinaryPath,
-        args: chromeArgs,
-        prefs: {
-          'profile.password_manager_leak_detection': false,
-          'profile.default_content_setting_values.notifications': 2,
-        },
-      };
-
-      // Disable WebDriver Bidi session
-      cap['wdio:enforceWebDriverClassic'] = true;
+      // Update the application path to the resolved binary path
+      tauriOptions.application = appBinaryPath;
     }
 
     // Start tauri-driver as a proxy
