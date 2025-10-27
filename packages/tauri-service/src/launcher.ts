@@ -95,21 +95,25 @@ export default class TauriLaunchService {
   /**
    * Start worker session
    */
-  async onWorkerStart(cid: string, caps: TauriCapabilities): Promise<void> {
+  async onWorkerStart(cid: string, caps: TauriCapabilities | TauriCapabilities[]): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
 
-    // On Linux, ensure DISPLAY is set in the worker process environment
-    // This is needed for ChromeDriver and any diagnostic commands
-    if (process.platform === 'linux' && !process.env.DISPLAY) {
-      process.env.DISPLAY = ':99';
-      log.info(`Set DISPLAY=${process.env.DISPLAY} in worker process for ChromeDriver and diagnostics`);
+    // Log DISPLAY status but don't set it - let WDIO's autoXvfb handle it
+    // Setting it here prevents xvfb-run from wrapping the worker
+    if (process.platform === 'linux') {
+      log.info(`DISPLAY environment: ${process.env.DISPLAY || 'not set (xvfb-run will set it)'}`);
     }
+
+    // For multiremote, caps might be an array - get the first one for diagnostics
+    const firstCap = Array.isArray(caps) ? caps[0] : caps;
 
     // App binary path is already resolved in onPrepare
     // The application path now points directly to the binary (not the app directory)
-    const appBinaryPath = caps['tauri:options']?.application;
+    const appBinaryPath = firstCap?.['tauri:options']?.application;
     if (!appBinaryPath) {
-      throw new Error('Tauri application path not specified in capabilities');
+      log.warn('Tauri application path not found in capabilities, skipping diagnostics');
+      log.debug(`Capabilities structure: ${JSON.stringify(firstCap, null, 2)}`);
+      return;
     }
 
     this.appBinaryPath = appBinaryPath;
@@ -117,7 +121,8 @@ export default class TauriLaunchService {
 
     // Verify the binary exists (it should, since we resolved it in onPrepare)
     if (!existsSync(this.appBinaryPath)) {
-      throw new Error(`Tauri binary not found: ${this.appBinaryPath}`);
+      log.error(`Tauri binary not found: ${this.appBinaryPath}`);
+      return;
     }
 
     // Run environment diagnostics
