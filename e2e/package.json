@@ -29,7 +29,7 @@
     "test:e2e:multiremote": "cross-env TEST_TYPE=multiremote tsx scripts/run-matrix.ts",
     "test:e2e:standalone": "cross-env TEST_TYPE=standalone tsx scripts/run-matrix.ts",
     "test:e2e:mac-universal": "cross-env MAC_UNIVERSAL=true tsx scripts/run-matrix.ts",
-    "test:e2e:tauri:basic": "cross-env FRAMEWORK=tauri APP=basic tsx scripts/run-matrix.ts",
+    "test:e2e:tauri:basic": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standard tsx scripts/run-matrix.ts",
     "test:e2e:tauri:basic:window": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=window tsx scripts/run-matrix.ts",
     "test:e2e:tauri:basic:multiremote": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=multiremote tsx scripts/run-matrix.ts",
     "test:e2e:tauri:basic:standalone": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standalone tsx scripts/run-matrix.ts"

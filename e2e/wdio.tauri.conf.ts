@@ -119,9 +119,10 @@ switch (envContext.testType) {
     specs = ['./test/tauri/standalone/api.spec.ts'];
     break;
   default:
+    // Standard tests - core functionality without specialized test modes
+    // Note: window.spec.ts has its own dedicated test-type job
     specs = [
       './test/tauri/commands.spec.ts',
-      './test/tauri/window.spec.ts',
       './test/tauri/filesystem.spec.ts',
       './test/tauri/platform.spec.ts',
       './test/tauri/backend-access.spec.ts',
