@@ -168,12 +168,49 @@ jobs:
         shell: bash
         run: |
           echo "Checking for Tauri binaries in fixtures/tauri-apps/*/src-tauri/target/"
-          if [ -d "fixtures/tauri-apps" ]; then
-            find fixtures/tauri-apps -name "target" -type d || echo "No target directories found"
-          else
+
+          if [ ! -d "fixtures/tauri-apps" ]; then
             echo "::error::fixtures/tauri-apps directory not found!"
             exit 1
           fi
+
+          # Find all target directories
+          TARGET_DIRS=$(find fixtures/tauri-apps -name "target" -type d 2>/dev/null || true)
+
+          if [ -z "$TARGET_DIRS" ]; then
+            echo "::error::No target directories found! Binaries were not extracted correctly."
+            echo "Directory contents:"
+            ls -la fixtures/tauri-apps/ || true
+            ls -la fixtures/tauri-apps/*/src-tauri/ || true
+            exit 1
+          fi
+
+          echo "✅ Found target directories:"
+          echo "$TARGET_DIRS"
+
+          # Verify binaries exist
+          BINARY_COUNT=0
+          for target_dir in $TARGET_DIRS; do
+            if [ "${{ runner.os }}" = "Windows" ]; then
+              if [ -f "$target_dir/release/*.exe" ] || compgen -G "$target_dir/release/*.exe" > /dev/null; then
+                BINARY_COUNT=$((BINARY_COUNT + 1))
+                echo "  ✅ Found Windows binary in $target_dir/release/"
+              fi
+            else
+              # Check for executable files on Linux/Mac
+              if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
+                BINARY_COUNT=$((BINARY_COUNT + 1))
+                echo "  ✅ Found binary in $target_dir/release/"
+              fi
+            fi
+          done
+
+          if [ "$BINARY_COUNT" -eq 0 ]; then
+            echo "::error::No binaries found in target directories!"
+            exit 1
+          fi
+
+          echo "✅ Verification complete: Found $BINARY_COUNT app(s) with binaries"
 
       # Display build information if available
       - name: 📊 Show Build Information
@@ -205,11 +242,6 @@ jobs:
             };
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
-      # Build the tauri-service package (needed for tests)
-      - name: 🔧 Build Tauri Service Package
-        shell: bash
-        run: pnpm exec turbo run build --filter=@wdio/tauri-service
-
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
       # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
       # tauri-driver launches apps during session creation, needs display in launcher context
@@ -217,9 +249,15 @@ jobs:
       - name: 🧪 Execute Tauri E2E Tests
         shell: bash
         working-directory: e2e
+        env:
+          # Enable Rust backtraces for debugging Tauri/GTK issues
+          RUST_BACKTRACE: '1'
+          # Disable AT-SPI accessibility bus warnings
+          NO_AT_BRIDGE: '1'
         run: |
           if [ "${{ runner.os }}" = "Linux" ]; then
-            xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
               pnpm run ${{ steps.gen-test.outputs.result }}
           else
             pnpm run ${{ steps.gen-test.outputs.result }}
