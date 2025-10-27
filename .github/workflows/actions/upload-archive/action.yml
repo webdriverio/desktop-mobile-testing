@@ -90,29 +90,30 @@ runs:
         # Get file count before compression (for validation)
         $fileCount = (Get-ChildItem -Path "${{ inputs.paths }}" -File -Recurse | Where-Object { $_.FullName -notmatch "node_modules" -and $_.FullName -notmatch "\\\..*\\|/\..*/" }).Count
 
-        # Compress files using PowerShell (excluding node_modules and hidden files)
-        $files = Get-ChildItem -Path "${{ inputs.paths }}" -Recurse | Where-Object {
-          $_.FullName -notmatch "node_modules" -and
-          $_.FullName -notmatch "\\\..*\\|/\..*/" -and
-          !$_.PSIsContainer
-        }
+        # Normalize file timestamps BEFORE compression (for Rust target directories)
+        $paths = "${{ inputs.paths }}" -split ' '
+        $validDate = Get-Date "2020-01-01"
 
-        if ($files.Count -gt 0) {
-          # Normalize file timestamps to avoid ZIP timestamp issues (valid range: 1980-2107)
-          # This is needed for Rust target directories which can have files outside this range
-          $validDate = Get-Date "2020-01-01"
-          foreach ($file in $files) {
-            try {
-              if ($file.LastWriteTime -lt (Get-Date "1980-01-01") -or $file.LastWriteTime -gt (Get-Date "2107-12-31")) {
-                $file.LastWriteTime = $validDate
+        foreach ($path in $paths) {
+          if (Test-Path $path) {
+            Get-ChildItem -Path $path -File -Recurse | ForEach-Object {
+              try {
+                if ($_.LastWriteTime -lt (Get-Date "1980-01-01") -or $_.LastWriteTime -gt (Get-Date "2107-12-31")) {
+                  $_.LastWriteTime = $validDate
+                }
+              } catch {
+                # If we can't set the timestamp, skip it
               }
-            } catch {
-              # If we can't set the timestamp, just skip it
             }
           }
-          Compress-Archive -Path $files.FullName -DestinationPath "${{ inputs.output }}" -Force
+        }
+
+        # Compress directories preserving structure
+        # Use paths directly instead of individual files to maintain directory hierarchy
+        if ($paths.Count -gt 0) {
+          Compress-Archive -Path $paths -DestinationPath "${{ inputs.output }}" -Force
         } else {
-          # Create empty archive if no files found
+          # Create empty archive if no paths found
           Compress-Archive -Path @() -DestinationPath "${{ inputs.output }}" -Force
         }
 
