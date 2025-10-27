@@ -153,14 +153,27 @@ jobs:
 
       # Download the pre-built Tauri app binaries from the OS-specific build job
       # This is much faster than rebuilding Tauri apps for each test type
+      # Extract to repository root so files end up in fixtures/tauri-apps/*/src-tauri/target/
       - name: 📦 Download Tauri App Binaries
         uses: ./.github/workflows/actions/download-archive
         with:
           name: tauri-apps-${{ runner.os }}
-          path: tauri-apps-${{ runner.os }}
-          filename: artifact.zip
+          path: .
+          filename: tauri-apps-${{ runner.os }}-artifact.zip
           cache_key_prefix: tauri-apps-${{ runner.os }}
           exact_cache_key: ${{ inputs.tauri_cache_key || github.run_id && format('{0}-{1}-{2}{3}', runner.os, 'tauri-apps', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+
+      # Verify Tauri binaries were extracted correctly
+      - name: ✅ Verify Tauri Binaries
+        shell: bash
+        run: |
+          echo "Checking for Tauri binaries in fixtures/tauri-apps/*/src-tauri/target/"
+          if [ -d "fixtures/tauri-apps" ]; then
+            find fixtures/tauri-apps -name "target" -type d || echo "No target directories found"
+          else
+            echo "::error::fixtures/tauri-apps directory not found!"
+            exit 1
+          fi
 
       # Display build information if available
       - name: 📊 Show Build Information
