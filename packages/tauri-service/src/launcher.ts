@@ -85,6 +85,12 @@ export default class TauriLaunchService {
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete (cap as { browserName?: string }).browserName;
       }
+
+      // For standalone mode, we need to set hostname and port in capabilities
+      // as well as in config, since remote() uses capabilities directly
+      const tauriDriverPort = this.options.tauriDriverPort || 4444;
+      cap.hostname = cap.hostname || config.hostname || '127.0.0.1';
+      cap.port = cap.port || config.port || tauriDriverPort;
     }
 
     // Start tauri-driver as a proxy
