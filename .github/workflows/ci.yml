@@ -127,34 +127,68 @@ jobs:
     with:
       os: 'windows-latest'
 
-  # Tauri E2E test matrix strategy:
-  # - Run tests across 3 operating systems (Linux, Windows, macOS)
-  # - macOS tests are skipped with clear messaging about WKWebView limitations
-  # - Test 1 scenario (basic) - only one Tauri app exists
-  # - Test different test types (standard, window, multiremote, standalone)
-  # - Download pre-built Tauri binaries from the build-tauri-apps jobs
-  e2e-tauri-matrix:
-    name: E2E - Tauri [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build, build-tauri-apps-linux, build-tauri-apps-windows]
+  # Tauri E2E tests for Linux - only waits for Linux build
+  # This allows Linux tests to start immediately after Linux build completes
+  e2e-tauri-linux-matrix:
+    name: E2E - Tauri [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    needs: [build, build-tauri-apps-linux]
     strategy:
       fail-fast: false
       matrix:
-        # Test on all operating systems (macOS will be skipped with clear messaging)
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
-        # Test Tauri scenarios
         scenario: ['tauri-basic']
-        # Test different test types
         test-type: ['standard', 'window', 'multiremote', 'standalone']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
-      os: ${{ matrix.os }}
+      os: 'ubuntu-latest'
       node-version: '20'
       scenario: ${{ matrix.scenario }}
       test-type: ${{ matrix.test-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ matrix.os == 'ubuntu-latest' && needs.build-tauri-apps-linux.outputs.cache_key || matrix.os == 'windows-latest' && needs.build-tauri-apps-windows.outputs.cache_key || '' }}
+      tauri_cache_key: ${{ needs.build-tauri-apps-linux.outputs.cache_key }}
+
+  # Tauri E2E tests for Windows - only waits for Windows build
+  # This allows Windows tests to start immediately after Windows build completes
+  e2e-tauri-windows-matrix:
+    name: E2E - Tauri [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    needs: [build, build-tauri-apps-windows]
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ['tauri-basic']
+        test-type: ['standard', 'window', 'multiremote', 'standalone']
+    uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
+    with:
+      os: 'windows-latest'
+      node-version: '20'
+      scenario: ${{ matrix.scenario }}
+      test-type: ${{ matrix.test-type }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-apps-windows.outputs.cache_key }}
+
+  # Tauri E2E tests for macOS - skipped with clear messaging
+  # macOS is not supported due to WKWebView WebDriver limitations
+  e2e-tauri-macos-matrix:
+    name: E2E - Tauri [macOS] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ['tauri-basic']
+        test-type: ['standard', 'window', 'multiremote', 'standalone']
+    uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
+    with:
+      os: 'macos-latest'
+      node-version: '20'
+      scenario: ${{ matrix.scenario }}
+      test-type: ${{ matrix.test-type }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ''
 
   # Mac Universal builds require special handling
   # These are separate from regular macOS tests because they use a different build command

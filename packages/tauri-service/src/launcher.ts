@@ -308,11 +308,13 @@ export default class TauriLaunchService {
     }
 
     return new Promise((resolve, reject) => {
-      // On Linux, explicitly set DISPLAY for xvfb compatibility
+      // Don't manually set DISPLAY - let tauri-driver inherit from environment
+      // or handle display connection itself. Setting DISPLAY here causes
+      // authorization issues because we don't have matching XAUTHORITY credentials
       const env = { ...process.env };
+
       if (process.platform === 'linux') {
-        env.DISPLAY = env.DISPLAY || ':99';
-        log.info(`Setting DISPLAY=${env.DISPLAY} for tauri-driver and children`);
+        log.info(`Starting tauri-driver (DISPLAY from environment: ${env.DISPLAY || 'not set'})`);
       }
 
       this.tauriDriverProcess = spawn(tauriDriverPath, args, {

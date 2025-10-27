@@ -219,7 +219,9 @@ export const config = {
   waitforTimeout: 10000,
   connectionRetryTimeout: 120000,
   connectionRetryCount: 3,
-  autoXvfb: true,
+  // Don't use WDIO's autoXvfb - we wrap the entire test command with xvfb-run in CI
+  // so that tauri-driver (started in onPrepare) has access to the display
+  autoXvfb: false,
   services: [['@wdio/tauri-service']],
   framework: 'mocha',
   reporters: ['spec'],
