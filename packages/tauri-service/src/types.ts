@@ -25,7 +25,7 @@ export interface TauriServiceOptions {
  * Tauri service capabilities
  */
 export interface TauriCapabilities extends WebdriverIO.Capabilities {
-  browserName: 'tauri';
+  browserName?: 'tauri';
   'tauri:options'?: {
     application: string;
     args?: string[];

@@ -131,7 +131,7 @@ switch (envContext.testType) {
 
 // Configure capabilities
 type TauriCapability = {
-  browserName: 'tauri';
+  browserName?: 'tauri';
   'tauri:options': {
     application: string;
     args?: string[];
@@ -160,7 +160,6 @@ if (envContext.isMultiremote) {
   capabilities = {
     browserA: {
       capabilities: {
-        browserName: 'tauri',
         'tauri:options': {
           application: appBinaryPath,
           args: ['--foo', '--bar=baz', '--browser=A'],
@@ -173,7 +172,6 @@ if (envContext.isMultiremote) {
     },
     browserB: {
       capabilities: {
-        browserName: 'tauri',
         'tauri:options': {
           application: appBinaryPath,
           args: ['--foo', '--bar=baz', '--browser=B'],
@@ -189,7 +187,6 @@ if (envContext.isMultiremote) {
   // Tauri standard configuration
   capabilities = [
     {
-      browserName: 'tauri',
       'tauri:options': {
         application: appBinaryPath,
         args: ['foo', 'bar=baz'],

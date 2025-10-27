@@ -56,7 +56,8 @@ export default class TauriLaunchService {
 
     // Validate capabilities
     for (const cap of capsList) {
-      if (cap.browserName !== 'tauri') {
+      // Validate that browserName is either not set or set to 'tauri'
+      if (cap.browserName && cap.browserName !== 'tauri') {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
 
@@ -78,10 +79,12 @@ export default class TauriLaunchService {
       // Update the application path to the resolved binary path
       tauriOptions.application = appBinaryPath;
 
-      // Remove browserName so WDIO doesn't try to spawn a driver
+      // Ensure browserName is not set (WDIO would try to spawn a driver for it)
       // When hostname and port are set, WDIO connects directly to tauri-driver
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete (cap as { browserName?: string }).browserName;
+      if (cap.browserName) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete (cap as { browserName?: string }).browserName;
+      }
     }
 
     // Start tauri-driver as a proxy
