@@ -1,0 +1,114 @@
+name: Build Tauri Apps
+description: 'Builds Tauri test applications and creates shareable artifacts for E2E testing'
+
+on:
+  workflow_call:
+    # Make this a reusable workflow, no value needed
+    # https://docs.github.com/en/actions/using-workflows/reusing-workflows
+    inputs:
+      os:
+        description: 'OS of runner'
+        required: true
+        type: string
+      build-command:
+        description: 'Build command for Tauri apps (build or build:debug)'
+        type: string
+        default: 'build'
+    outputs:
+      build_id:
+        description: 'Unique identifier for this build'
+        value: ${{ jobs.build-tauri-apps.outputs.build_id }}
+      build_date:
+        description: 'Timestamp when the build completed'
+        value: ${{ jobs.build-tauri-apps.outputs.build_date }}
+      artifact_size:
+        description: 'Size of the build artifact in bytes'
+        value: ${{ jobs.build-tauri-apps.outputs.artifact_size }}
+      cache_key:
+        description: 'Cache key used for artifact uploads, can be passed to download actions'
+        value: ${{ jobs.build-tauri-apps.outputs.cache_key }}
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  TURBO_DAEMON: false
+
+jobs:
+  # This job builds all Tauri test applications for the specified OS
+  # Unlike package builds, each OS creates its own artifacts since binaries are platform-specific
+  build-tauri-apps:
+    name: Build Tauri Apps
+    runs-on: ${{ inputs.os }}
+    outputs:
+      build_id: ${{ steps.build-info.outputs.build_id }}
+      build_date: ${{ steps.build-info.outputs.build_date }}
+      artifact_size: ${{ steps.upload-archive.outputs.size || '0' }}
+      cache_key: ${{ steps.upload-archive.outputs.cache_key }}
+    steps:
+      # Standard checkout with SSH key for private repositories
+      - name: 👷 Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      # Set up Node.js and PNPM using the reusable action
+      - name: 🛠️ Setup Development Environment
+        uses: ./.github/workflows/actions/setup-workspace
+        with:
+          node-version: '20'
+
+      # Install Rust toolchain for Tauri compilation
+      - name: 🦀 Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Install Tauri dependencies on Linux
+      - name: 🦀 Install Tauri Dependencies (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Installing Tauri dependencies for Linux..."
+          sudo tee -a /etc/apt/sources.list > /dev/null <<EOT
+          deb http://archive.ubuntu.com/ubuntu jammy main universe
+          EOT
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev \
+            libsoup-2.4-1 \
+            libsoup2.4-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libssl-dev
+
+      # Generate build information for tracking
+      - name: 📊 Generate Build Information
+        id: build-info
+        shell: bash
+        run: |
+          echo "build_id=$(date +%s)-${{ github.run_id }}-${{ runner.os }}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      # Build all Tauri test applications using Turbo
+      # This creates the binaries in src-tauri/target/release (or debug)
+      - name: 🏗️ Build All Tauri Apps
+        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-*-app --only --parallel
+        shell: bash
+
+      # Upload Tauri app binaries as artifacts
+      # Each OS uploads its own artifacts since binaries are platform-specific
+      # Using GitHub Actions cache with ~90 day retention (vs. 1 day for regular artifacts)
+      - name: 📦 Upload Tauri App Binaries
+        id: upload-archive
+        uses: ./.github/workflows/actions/upload-archive
+        with:
+          name: tauri-apps-${{ runner.os }}
+          output: tauri-apps-${{ runner.os }}/artifact.zip
+          paths: fixtures/tauri-apps/*/src-tauri/target
+          cache_key_prefix: tauri-apps-${{ runner.os }}
+          retention_days: '90'

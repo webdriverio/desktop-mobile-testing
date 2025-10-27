@@ -35,7 +35,11 @@ on:
         type: string
         required: false
       cache_key:
-        description: 'Cache key to use for downloading artifacts'
+        description: 'Cache key to use for downloading package artifacts'
+        type: string
+        required: false
+      tauri_cache_key:
+        description: 'Cache key to use for downloading Tauri app binaries'
         type: string
         required: false
 
@@ -138,7 +142,7 @@ jobs:
 
       # Download the pre-built packages from the build job
       # This ensures all tests use the same build artifacts
-      - name: 📦 Download Build Artifacts
+      - name: 📦 Download Package Build Artifacts
         uses: ./.github/workflows/actions/download-archive
         with:
           name: wdio-electron-service
@@ -147,34 +151,24 @@ jobs:
           cache_key_prefix: wdio-electron-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
+      # Download the pre-built Tauri app binaries from the OS-specific build job
+      # This is much faster than rebuilding Tauri apps for each test type
+      - name: 📦 Download Tauri App Binaries
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: tauri-apps-${{ runner.os }}
+          path: tauri-apps-${{ runner.os }}
+          filename: artifact.zip
+          cache_key_prefix: tauri-apps-${{ runner.os }}
+          exact_cache_key: ${{ inputs.tauri_cache_key || github.run_id && format('{0}-{1}-{2}{3}', runner.os, 'tauri-apps', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+
       # Display build information if available
       - name: 📊 Show Build Information
         if: inputs.build_id != '' && inputs.artifact_size != ''
         shell: bash
         run: |
-          echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
-
-      # Dynamically generate the Turbo filter for building Tauri test applications
-      # Since we only have one Tauri app (basic), we don't need type filtering
-      - name: 🪄 Generate Build Filter for Tauri Test Apps
-        id: gen-build
-        uses: actions/github-script@v8
-        with:
-          result-encoding: string
-          script: |
-            const generateTauriBuildFilter = (scenario) => {
-              return scenario
-                .split(',')
-                .map((s) => `--filter=${s.trim()}-app`)
-                .join(' ');
-            };
-            return generateTauriBuildFilter('${{ inputs.scenario }}');
-
-      # Build the Tauri test applications using Turbo with the generated filter
-      # This builds only the necessary test apps for the current test configuration
-      - name: 🏗️ Build Tauri Test Applications
-        shell: bash
-        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
+          echo "::notice::Package build: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
+          echo "::notice::Tauri binaries: Using pre-built binaries for ${{ runner.os }}"
 
       # Dynamically generate the Tauri test commands to run
       # Since we only have one Tauri app (basic), no module type filtering needed

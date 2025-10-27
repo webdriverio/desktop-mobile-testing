@@ -111,14 +111,31 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
+  # Build Tauri apps once per OS (parallel with other jobs)
+  # These binaries are reused by all test types on that OS
+  build-tauri-apps-linux:
+    name: Build Tauri Apps [Linux]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-apps.reusable.yml
+    with:
+      os: 'ubuntu-latest'
+
+  build-tauri-apps-windows:
+    name: Build Tauri Apps [Windows]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-apps.reusable.yml
+    with:
+      os: 'windows-latest'
+
   # Tauri E2E test matrix strategy:
   # - Run tests across 3 operating systems (Linux, Windows, macOS)
   # - macOS tests are skipped with clear messaging about WKWebView limitations
   # - Test 1 scenario (basic) - only one Tauri app exists
   # - Test different test types (standard, window, multiremote, standalone)
+  # - Download pre-built Tauri binaries from the build-tauri-apps jobs
   e2e-tauri-matrix:
     name: E2E - Tauri [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build]
+    needs: [build, build-tauri-apps-linux, build-tauri-apps-windows]
     strategy:
       fail-fast: false
       matrix:
@@ -137,6 +154,7 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ matrix.os == 'ubuntu-latest' && needs.build-tauri-apps-linux.outputs.cache_key || matrix.os == 'windows-latest' && needs.build-tauri-apps-windows.outputs.cache_key || '' }}
 
   # Mac Universal builds require special handling
   # These are separate from regular macOS tests because they use a different build command
