@@ -130,7 +130,7 @@ runs:
 
     # Handle cache miss
     - name: ⚠️ Handle Cache Miss
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-standard.outputs.cache-hit != 'true' && steps.cache-restore-agnostic.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true' && (steps.cache-restore-pattern.outputs.cache-hit != 'true' || steps.verify-pattern.outputs.valid != 'true')
+      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-standard.outputs.cache-hit != 'true' && steps.cache-restore-agnostic.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true' && steps.cache-restore-pattern.outputs.cache-hit != 'true'
       shell: bash
       run: |
         if [ -n "${{ inputs.use_cache }}" ] && [ "${{ inputs.use_cache }}" = "true-only" ]; then
@@ -156,7 +156,7 @@ runs:
           SOURCE="OS-agnostic key cache"
         elif [ "${{ steps.cache-restore-linux.outputs.cache-hit }}" == "true" ]; then
           SOURCE="Linux key cache"
-        elif [ "${{ steps.cache-restore-pattern.outputs.cache-hit }}" == "true" && "${{ steps.verify-pattern.outputs.valid }}" == "true" ]; then
+        elif [ "${{ steps.cache-restore-pattern.outputs.cache-hit }}" == "true" ]; then
           SOURCE="pattern key cache"
         else
           SOURCE="GitHub artifact (fallback)"
