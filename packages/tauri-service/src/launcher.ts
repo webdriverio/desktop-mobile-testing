@@ -1,8 +1,8 @@
 import { execSync, spawn } from 'node:child_process';
-import { statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
-import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath, isTauriAppBuilt } from './pathResolver.js';
+import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
@@ -77,6 +77,11 @@ export default class TauriLaunchService {
 
       // Update the application path to the resolved binary path
       tauriOptions.application = appBinaryPath;
+
+      // Remove browserName so WDIO doesn't try to spawn a driver
+      // When hostname and port are set, WDIO connects directly to tauri-driver
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (cap as { browserName?: string }).browserName;
     }
 
     // Start tauri-driver as a proxy
@@ -99,18 +104,18 @@ export default class TauriLaunchService {
     }
 
     // App binary path is already resolved in onPrepare
-    const appPath = caps['tauri:options']?.application;
-    if (!appPath) {
+    // The application path now points directly to the binary (not the app directory)
+    const appBinaryPath = caps['tauri:options']?.application;
+    if (!appBinaryPath) {
       throw new Error('Tauri application path not specified in capabilities');
     }
 
-    this.appBinaryPath = await getTauriBinaryPath(appPath);
-    log.debug(`Resolved app binary path: ${this.appBinaryPath}`);
+    this.appBinaryPath = appBinaryPath;
+    log.debug(`Using app binary path: ${this.appBinaryPath}`);
 
-    // Check if app is built
-    const isBuilt = await isTauriAppBuilt(appPath);
-    if (!isBuilt) {
-      throw new Error(`Tauri app is not built: ${appPath}. Please build the app first.`);
+    // Verify the binary exists (it should, since we resolved it in onPrepare)
+    if (!existsSync(this.appBinaryPath)) {
+      throw new Error(`Tauri binary not found: ${this.appBinaryPath}`);
     }
 
     // Run environment diagnostics
