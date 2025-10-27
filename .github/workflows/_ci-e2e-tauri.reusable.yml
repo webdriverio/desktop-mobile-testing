@@ -206,17 +206,10 @@ jobs:
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
       # Run the Tauri E2E tests using Turbo with the generated test commands
-      # On Linux, wrap entire command with xvfb-run so tauri-driver (started in onPrepare)
-      # has access to the display. WDIO's autoXvfb only wraps workers, not the launcher.
+      # tauri-driver is started per worker and has access to xvfb via WDIO's autoXvfb
       - name: 🧪 Execute Tauri E2E Tests
         shell: bash
-        run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
-              pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
-          else
-            pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
-          fi
+        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure

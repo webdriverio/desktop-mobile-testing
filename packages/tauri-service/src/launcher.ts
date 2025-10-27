@@ -33,11 +33,6 @@ export default class TauriLaunchService {
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
 
-    // Log connection info (hostname and port should be set in wdio config)
-    const hostname = config.hostname || '127.0.0.1';
-    const port = config.port || this.options.tauriDriverPort || 4444;
-    log.info(`WDIO will connect to tauri-driver at ${hostname}:${port}`);
-
     // Check for unsupported platforms
     if (process.platform === 'darwin') {
       const errorMessage =
@@ -86,8 +81,14 @@ export default class TauriLaunchService {
       }
     }
 
-    // Start tauri-driver as a proxy
-    await this.startTauriDriver();
+    // Only start tauri-driver if hostname/port are set (centralized mode)
+    // Otherwise, workers will start their own instances
+    if (config.hostname && config.port) {
+      log.info(`Starting tauri-driver in centralized mode at ${config.hostname}:${config.port}`);
+      await this.startTauriDriver();
+    } else {
+      log.info('Tauri service will start tauri-driver per worker (distributed mode)');
+    }
 
     log.debug('Tauri service prepared successfully');
   }
@@ -95,13 +96,24 @@ export default class TauriLaunchService {
   /**
    * Start worker session
    */
-  async onWorkerStart(cid: string, caps: TauriCapabilities | TauriCapabilities[]): Promise<void> {
+  async onWorkerStart(
+    cid: string,
+    caps: TauriCapabilities | TauriCapabilities[],
+    config?: Options.Testrunner,
+  ): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
 
-    // Log DISPLAY status but don't set it - let WDIO's autoXvfb handle it
-    // Setting it here prevents xvfb-run from wrapping the worker
+    // Start tauri-driver per worker if in distributed mode (no hostname/port set)
+    // This runs in worker context which has xvfb access via autoXvfb
+    if (!config?.hostname && !config?.port) {
+      log.info(`Starting tauri-driver for worker ${cid} (distributed mode)`);
+      // Worker will use dynamic port assignment
+      await this.startTauriDriver();
+    }
+
+    // Log DISPLAY status
     if (process.platform === 'linux') {
-      log.info(`DISPLAY environment: ${process.env.DISPLAY || 'not set (xvfb-run will set it)'}`);
+      log.info(`Worker ${cid} DISPLAY: ${process.env.DISPLAY || 'not set'}`);
     }
 
     // For multiremote, caps might be an array - get the first one for diagnostics

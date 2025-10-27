@@ -210,18 +210,16 @@ export const config = {
   exclude: [],
   maxInstances: 1,
   capabilities,
-  // Connect to tauri-driver instead of spawning a browser driver
-  hostname: '127.0.0.1',
-  port: 4444,
+  // Don't set hostname/port - let tauri-service start tauri-driver per worker
+  // This allows tauri-driver to run in worker context with xvfb access
   logLevel: envContext.env.WDIO_VERBOSE === 'true' ? 'debug' : 'info',
   bail: 0,
   baseUrl: '',
   waitforTimeout: 10000,
   connectionRetryTimeout: 120000,
   connectionRetryCount: 3,
-  // Don't use WDIO's autoXvfb - we wrap the entire test command with xvfb-run in CI
-  // so that tauri-driver (started in onPrepare) has access to the display
-  autoXvfb: false,
+  // Enable autoXvfb so workers (and tauri-driver) have display access
+  autoXvfb: true,
   services: [['@wdio/tauri-service']],
   framework: 'mocha',
   reporters: ['spec'],
