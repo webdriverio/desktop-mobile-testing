@@ -33,11 +33,10 @@ export default class TauriLaunchService {
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
 
-    // Configure WDIO to connect to tauri-driver instead of spawning ChromeDriver
-    const tauriDriverPort = this.options.tauriDriverPort || 4444;
-    config.hostname = config.hostname || '127.0.0.1';
-    config.port = config.port || tauriDriverPort;
-    log.info(`Configuring WDIO to connect to tauri-driver at ${config.hostname}:${config.port}`);
+    // Log connection info (hostname and port should be set in wdio config)
+    const hostname = config.hostname || '127.0.0.1';
+    const port = config.port || this.options.tauriDriverPort || 4444;
+    log.info(`WDIO will connect to tauri-driver at ${hostname}:${port}`);
 
     // Check for unsupported platforms
     if (process.platform === 'darwin') {
@@ -80,17 +79,11 @@ export default class TauriLaunchService {
       tauriOptions.application = appBinaryPath;
 
       // Ensure browserName is not set (WDIO would try to spawn a driver for it)
-      // When hostname and port are set, WDIO connects directly to tauri-driver
+      // When hostname and port are set in config, WDIO connects directly to tauri-driver
       if (cap.browserName) {
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete (cap as { browserName?: string }).browserName;
       }
-
-      // For standalone mode, we need to set hostname and port in capabilities
-      // as well as in config, since remote() uses capabilities directly
-      const tauriDriverPort = this.options.tauriDriverPort || 4444;
-      cap.hostname = cap.hostname || config.hostname || '127.0.0.1';
-      cap.port = cap.port || config.port || tauriDriverPort;
     }
 
     // Start tauri-driver as a proxy
