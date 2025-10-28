@@ -108,40 +108,66 @@ async fn take_screenshot(_options: Option<ScreenshotOptions>) -> Result<String, 
 
 #[tauri::command]
 async fn read_file(path: String, _options: Option<FileOperationOptions>) -> Result<String, String> {
+    let log_msg = format!("🔍 Rust: read_file called with path: '{}'\n", path);
+    let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
     println!("🔍 Rust: read_file called with path: '{}'", path);
+
     let result = std::fs::read_to_string(&path).map_err(|e| {
         let error_msg = format!("Failed to read file '{}': {}", path, e);
-        println!("🔍 Rust: read_file error: {}", error_msg);
+        let log_msg = format!("🔍 Rust: read_file error: {}\n", error_msg);
+        let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
         error_msg
     });
     if result.is_ok() {
-        println!("🔍 Rust: read_file succeeded for path: '{}', content length: {}", path, result.as_ref().unwrap().len());
+        let log_msg = format!("🔍 Rust: read_file succeeded for path: '{}', content length: {}\n", path, result.as_ref().unwrap().len());
+        let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
     }
     result
 }
 
 #[tauri::command]
 async fn write_file(path: String, contents: String, _options: Option<FileOperationOptions>) -> Result<(), String> {
+    let log_msg = format!("🔍 Rust: write_file called with path: '{}', contents length: {}\n", path, contents.len());
+    let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
     println!("🔍 Rust: write_file called with path: '{}', contents length: {}", path, contents.len());
+
     std::fs::write(&path, contents).map_err(|e| {
         let error_msg = format!("Failed to write file '{}': {}", path, e);
-        println!("🔍 Rust: write_file error: {}", error_msg);
+        let log_msg = format!("🔍 Rust: write_file error: {}\n", error_msg);
+        let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
         error_msg
     })?;
-    println!("🔍 Rust: write_file succeeded for path: '{}'", path);
+
+    let log_msg = format!("🔍 Rust: write_file succeeded for path: '{}'\n", path);
+    let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
     Ok(())
 }
 
 #[tauri::command]
 async fn delete_file(path: String) -> Result<(), String> {
+    let log_msg = format!("🔍 Rust: delete_file called with path: '{}'\n", path);
+    let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
     println!("🔍 Rust: delete_file called with path: '{}'", path);
+
     std::fs::remove_file(&path).map_err(|e| {
         let error_msg = format!("Failed to delete file '{}': {}", path, e);
-        println!("🔍 Rust: delete_file error: {}", error_msg);
+        let log_msg = format!("🔍 Rust: delete_file error: {}\n", error_msg);
+        let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
         error_msg
     })?;
-    println!("🔍 Rust: delete_file succeeded for path: '{}'", path);
+
+    let log_msg = format!("🔍 Rust: delete_file succeeded for path: '{}'\n", path);
+    let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
     Ok(())
+}
+
+#[tauri::command]
+async fn get_current_dir() -> Result<String, String> {
+    println!("🔍 Rust: get_current_dir called");
+    let _ = std::fs::write("/tmp/tauri-debug.log", "🔍 Rust: get_current_dir called\n");
+    std::env::current_dir()
+        .map(|path| path.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -190,6 +216,8 @@ async fn write_clipboard(content: String) -> Result<(), String> {
 }
 
 fn main() {
+    let _ = std::fs::write("/tmp/tauri-debug.log", "🔍 Rust: Tauri app starting...\n");
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_window_bounds,
@@ -202,6 +230,7 @@ fn main() {
             read_file,
             write_file,
             delete_file,
+            get_current_dir,
             get_platform_info,
             read_clipboard,
             write_clipboard

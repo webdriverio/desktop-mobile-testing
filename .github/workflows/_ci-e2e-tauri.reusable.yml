@@ -263,6 +263,18 @@ jobs:
             pnpm run ${{ steps.gen-test.outputs.result }}
           fi
 
+      # Show Rust debug logs
+      - name: 🔍 Show Rust Debug Logs
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Rust Debug Log ==="
+          if [ -f /tmp/tauri-debug.log ]; then
+            cat /tmp/tauri-debug.log
+          else
+            echo "No Rust debug log found at /tmp/tauri-debug.log"
+          fi
+
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure
         if: failure()

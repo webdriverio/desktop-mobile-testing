@@ -20,9 +20,16 @@ describe('Tauri API', () => {
   });
 
   it('should execute commands with parameters', async () => {
+    // First, check the current working directory
+    console.log('🔍 Testing get_current_dir command');
+    const dirResult = await browser.tauri.execute('get_current_dir');
+    console.log('🔍 get_current_dir result:', JSON.stringify(dirResult, null, 2));
+    expect(dirResult.success).to.be.true;
+    console.log('🔍 Current working directory:', dirResult.data);
+
     // Test file write command with parameters
-    // Use a path in the current working directory instead of /tmp
-    const testPath = `./tauri-test-${Date.now()}.txt`;
+    // Use an absolute path to avoid working directory issues
+    const testPath = `/tmp/tauri-test-${Date.now()}.txt`;
     const testContent = 'Hello, Tauri!';
 
     console.log('🔍 Testing write_file command with path:', testPath);
