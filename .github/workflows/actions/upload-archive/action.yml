@@ -91,18 +91,30 @@ runs:
         $fileCount = (Get-ChildItem -Path "${{ inputs.paths }}" -File -Recurse | Where-Object { $_.FullName -notmatch "node_modules" -and $_.FullName -notmatch "\\\..*\\|/\..*/" }).Count
 
         # Normalize file timestamps BEFORE compression (for Rust target directories)
+        # ZIP format only supports dates between 1980-01-01 and 2107-12-31
         $paths = "${{ inputs.paths }}" -split ' '
         $validDate = Get-Date "2020-01-01"
+        $minDate = Get-Date "1980-01-01"
+        $maxDate = Get-Date "2107-12-31"
 
         foreach ($path in $paths) {
           if (Test-Path $path) {
-            Get-ChildItem -Path $path -File -Recurse | ForEach-Object {
+            # Normalize timestamps for both files and directories
+            Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
               try {
-                if ($_.LastWriteTime -lt (Get-Date "1980-01-01") -or $_.LastWriteTime -gt (Get-Date "2107-12-31")) {
+                # Normalize all three timestamp properties
+                if ($_.LastWriteTime -lt $minDate -or $_.LastWriteTime -gt $maxDate) {
                   $_.LastWriteTime = $validDate
                 }
+                if ($_.CreationTime -lt $minDate -or $_.CreationTime -gt $maxDate) {
+                  $_.CreationTime = $validDate
+                }
+                if ($_.LastAccessTime -lt $minDate -or $_.LastAccessTime -gt $maxDate) {
+                  $_.LastAccessTime = $validDate
+                }
               } catch {
-                # If we can't set the timestamp, skip it
+                # If we can't set timestamps, log and skip
+                Write-Host "::debug::Could not normalize timestamps for: $($_.FullName)"
               }
             }
           }
@@ -110,11 +122,35 @@ runs:
 
         # Compress directories preserving structure
         # Use paths directly instead of individual files to maintain directory hierarchy
-        if ($paths.Count -gt 0) {
-          Compress-Archive -Path $paths -DestinationPath "${{ inputs.output }}" -Force
-        } else {
-          # Create empty archive if no paths found
-          Compress-Archive -Path @() -DestinationPath "${{ inputs.output }}" -Force
+        try {
+          if ($paths.Count -gt 0) {
+            Compress-Archive -Path $paths -DestinationPath "${{ inputs.output }}" -Force -ErrorAction Stop
+          } else {
+            # Create empty archive if no paths found
+            Compress-Archive -Path @() -DestinationPath "${{ inputs.output }}" -Force -ErrorAction Stop
+          }
+        } catch {
+          Write-Host "::error::Failed to create archive: $_"
+          Write-Host "::error::This may be due to file timestamps outside the ZIP format range (1980-2107)"
+
+          # Try to find files with problematic timestamps
+          Write-Host "Checking for files with invalid timestamps..."
+          foreach ($path in $paths) {
+            if (Test-Path $path) {
+              Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | Where-Object {
+                $_.LastWriteTime -lt $minDate -or $_.LastWriteTime -gt $maxDate -or
+                $_.CreationTime -lt $minDate -or $_.CreationTime -gt $maxDate -or
+                $_.LastAccessTime -lt $minDate -or $_.LastAccessTime -gt $maxDate
+              } | ForEach-Object {
+                Write-Host "::warning::Invalid timestamp on: $($_.FullName)"
+                Write-Host "  LastWriteTime: $($_.LastWriteTime)"
+                Write-Host "  CreationTime: $($_.CreationTime)"
+                Write-Host "  LastAccessTime: $($_.LastAccessTime)"
+              }
+            }
+          }
+
+          throw
         }
 
         # Get archive size for reporting
