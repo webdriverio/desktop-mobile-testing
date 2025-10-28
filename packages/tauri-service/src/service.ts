@@ -42,30 +42,53 @@ export default class TauriWorkerService {
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
 
-      // Check Tauri API availability for each multiremote instance
-      for (const instanceName of mrBrowser.instances) {
-        const mrInstance = mrBrowser.getInstance(instanceName);
-        const isAvailable = await isTauriApiAvailable(mrInstance);
-        if (!isAvailable) {
-          throw new Error(
-            `Tauri API is not available for instance ${instanceName}. Make sure the Tauri app is running and tauri-driver is connected.`,
-          );
-        }
+      // For multiremote, add a small delay to ensure all instances are ready
+      log.debug(`Initializing ${mrBrowser.instances.length} multiremote instances`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Add Tauri API to each multiremote instance
-        this.addTauriApi(mrInstance);
+      // Add Tauri API to the root multiremote object first (for browserA.tauri, browserB.tauri access)
+      this.addTauriApi(browser as unknown as WebdriverIO.Browser);
+      log.debug('Tauri API added to root multiremote object');
+
+      // Check Tauri API availability and add API to each individual multiremote instance
+      for (const instanceName of mrBrowser.instances) {
+        try {
+          const mrInstance = mrBrowser.getInstance(instanceName);
+          log.debug(`Checking Tauri API availability for instance: ${instanceName}`);
+
+          const isAvailable = await isTauriApiAvailable(mrInstance);
+          if (!isAvailable) {
+            throw new Error(
+              `Tauri API is not available for instance ${instanceName}. Make sure the Tauri app is running and tauri-driver is connected.`,
+            );
+          }
+
+          // Add Tauri API to each individual multiremote instance
+          this.addTauriApi(mrInstance);
+          log.debug(`Tauri API added to instance: ${instanceName}`);
+        } catch (error) {
+          log.error(`Failed to initialize Tauri API for instance ${instanceName}: ${error}`);
+          throw error;
+        }
       }
     } else {
       // Standard browser
-      const isAvailable = await isTauriApiAvailable(browser as WebdriverIO.Browser);
-      if (!isAvailable) {
-        throw new Error(
-          'Tauri API is not available. Make sure the Tauri app is running and tauri-driver is connected.',
-        );
-      }
+      try {
+        log.debug('Checking Tauri API availability for standard browser');
+        const isAvailable = await isTauriApiAvailable(browser as WebdriverIO.Browser);
+        if (!isAvailable) {
+          throw new Error(
+            'Tauri API is not available. Make sure the Tauri app is running and tauri-driver is connected.',
+          );
+        }
 
-      // Add Tauri API to browser object
-      this.addTauriApi(browser as WebdriverIO.Browser);
+        // Add Tauri API to browser object
+        this.addTauriApi(browser as WebdriverIO.Browser);
+        log.debug('Tauri API added to standard browser');
+      } catch (error) {
+        log.error(`Failed to initialize Tauri API for standard browser: ${error}`);
+        throw error;
+      }
     }
 
     log.debug('Tauri worker service initialized');
@@ -109,7 +132,16 @@ export default class TauriWorkerService {
    */
   private addTauriApi(browser: WebdriverIO.Browser): void {
     // Extend browser object with Tauri API - matches Electron service exactly
-    (browser as WebdriverIO.Browser & { tauri: TauriAPI }).tauri = {
+    (browser as WebdriverIO.Browser & { tauri: TauriAPI }).tauri = this.getTauriAPI(browser);
+    log.debug('Tauri API added to browser object');
+  }
+
+  /**
+   * Get Tauri API object for a browser instance
+   * Handles both standard and multiremote browsers
+   */
+  private getTauriAPI(browser: WebdriverIO.Browser): TauriAPI {
+    return {
       // Core execution - matches browser.electron.execute
       execute: <T = unknown>(command: string, ...args: unknown[]): Promise<TauriResult<T>> => {
         return executeTauriCommand<T>(browser, command, ...args);
@@ -149,7 +181,5 @@ export default class TauriWorkerService {
         log.debug(`restoreAllMocks called for ${apiName || 'all'} - mocking not yet implemented`);
       },
     };
-
-    log.debug('Tauri API added to browser object');
   }
 }

@@ -71,8 +71,8 @@ async function getTauriConfigContext(): Promise<TauriConfigContext> {
     throw new Error(`Tauri config not found: ${tauriConfigPath}`);
   }
 
-  const tauriConfig = safeJsonParse(readFileSync(tauriConfigPath, 'utf-8'));
-  const productName = tauriConfig?.package?.productName || 'tauri-app';
+  const tauriConfig = safeJsonParse(readFileSync(tauriConfigPath, 'utf-8'), {});
+  const productName = (tauriConfig as { package?: { productName?: string } })?.package?.productName || 'tauri-app';
 
   // Platform-specific binary paths
   let appBinaryPath: string;
@@ -181,6 +181,7 @@ if (envContext.isMultiremote) {
   // Tauri standard configuration
   capabilities = [
     {
+      browserName: 'tauri',
       'tauri:options': {
         application: appBinaryPath,
         args: ['foo', 'bar=baz'],
