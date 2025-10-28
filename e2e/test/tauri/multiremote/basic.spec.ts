@@ -20,15 +20,15 @@ describe('Tauri Multiremote', () => {
     const boundsA = { x: 100, y: 100, width: 400, height: 300 };
     const boundsB = { x: 500, y: 100, width: 400, height: 300 };
 
-    const resultA = await browserA.tauri.setWindowBounds(boundsA);
-    const resultB = await browserB.tauri.setWindowBounds(boundsB);
+    const resultA = await browserA.tauri.execute('set_window_bounds', boundsA);
+    const resultB = await browserB.tauri.execute('set_window_bounds', boundsB);
 
     expect(resultA.success).to.be.true;
     expect(resultB.success).to.be.true;
 
     // Verify the bounds were set independently
-    const boundsResultA = await browserA.tauri.getWindowBounds();
-    const boundsResultB = await browserB.tauri.getWindowBounds();
+    const boundsResultA = await browserA.tauri.execute('get_window_bounds');
+    const boundsResultB = await browserB.tauri.execute('get_window_bounds');
 
     expect(boundsResultA.data).to.deep.include(boundsA);
     expect(boundsResultB.data).to.deep.include(boundsB);
@@ -39,15 +39,15 @@ describe('Tauri Multiremote', () => {
     const contentA = 'Content for browser A';
     const contentB = 'Content for browser B';
 
-    const resultA = await browserA.tauri.writeClipboard(contentA);
-    const resultB = await browserB.tauri.writeClipboard(contentB);
+    const resultA = await browserA.tauri.execute('write_clipboard', contentA);
+    const resultB = await browserB.tauri.execute('write_clipboard', contentB);
 
     expect(resultA.success).to.be.true;
     expect(resultB.success).to.be.true;
 
     // Verify each instance has its own clipboard content
-    const readResultA = await browserA.tauri.readClipboard();
-    const readResultB = await browserB.tauri.readClipboard();
+    const readResultA = await browserA.tauri.execute('read_clipboard');
+    const readResultB = await browserB.tauri.execute('read_clipboard');
 
     expect(readResultA.data).to.equal(contentA);
     expect(readResultB.data).to.equal(contentB);
