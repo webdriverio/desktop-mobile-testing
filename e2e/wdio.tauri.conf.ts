@@ -109,9 +109,6 @@ const { envContext, appBinaryPath } = context;
 // Configure specs based on test type
 let specs: string[] = [];
 switch (envContext.testType) {
-  case 'window':
-    specs = ['./test/tauri/window.spec.ts'];
-    break;
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
     break;
@@ -120,13 +117,7 @@ switch (envContext.testType) {
     break;
   default:
     // Standard tests - core functionality without specialized test modes
-    // Note: window.spec.ts has its own dedicated test-type job
-    specs = [
-      './test/tauri/commands.spec.ts',
-      './test/tauri/filesystem.spec.ts',
-      './test/tauri/platform.spec.ts',
-      './test/tauri/backend-access.spec.ts',
-    ];
+    specs = ['./test/tauri/api.spec.ts'];
     break;
 }
 
@@ -161,6 +152,7 @@ if (envContext.isMultiremote) {
   capabilities = {
     browserA: {
       capabilities: {
+        browserName: 'tauri',
         'tauri:options': {
           application: appBinaryPath,
           args: ['--foo', '--bar=baz', '--browser=A'],
@@ -173,6 +165,7 @@ if (envContext.isMultiremote) {
     },
     browserB: {
       capabilities: {
+        browserName: 'tauri',
         'tauri:options': {
           application: appBinaryPath,
           args: ['--foo', '--bar=baz', '--browser=B'],
