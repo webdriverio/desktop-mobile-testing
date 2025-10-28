@@ -157,7 +157,7 @@ jobs:
       - name: 📦 Download Tauri App Binaries
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-apps
+          name: tauri-apps-${{ runner.os }}
           path: tauri-apps-${{ runner.os }}
           filename: artifact.zip
           cache_key_prefix: tauri-apps
