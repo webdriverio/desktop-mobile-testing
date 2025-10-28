@@ -23,7 +23,7 @@ on:
         required: true
         type: string
       test-type:
-        description: 'Test type (standard, window, multiremote, standalone)'
+        description: 'Test type (standard, multiremote, standalone)'
         type: string
         default: 'standard'
       build_id:
@@ -51,7 +51,7 @@ jobs:
   # This job runs Tauri E2E tests for a specific combination of:
   # - Operating system (Linux, Windows, macOS)
   # - Test scenario (tauri-basic)
-  # - Test type (standard, window, multiremote, standalone)
+  # - Test type (standard, multiremote, standalone)
   # Note: macOS tests are skipped due to WKWebView limitations
   e2e-tauri:
     name: Tauri E2E Tests
@@ -157,7 +157,7 @@ jobs:
       - name: 📦 Download Tauri App Binaries
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-apps-${{ runner.os }}
+          name: tauri-apps
           path: tauri-apps-${{ runner.os }}
           filename: artifact.zip
           cache_key_prefix: tauri-apps

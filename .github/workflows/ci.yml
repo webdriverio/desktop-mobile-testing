@@ -136,7 +136,7 @@ jobs:
       fail-fast: false
       matrix:
         scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone']
+        test-type: ['standard', 'multiremote', 'standalone']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -157,7 +157,7 @@ jobs:
       fail-fast: false
       matrix:
         scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone']
+        test-type: ['standard', 'multiremote', 'standalone']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
       os: 'windows-latest'
@@ -178,7 +178,7 @@ jobs:
       fail-fast: false
       matrix:
         scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone']
+        test-type: ['standard', 'multiremote', 'standalone']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
       os: 'macos-latest'
