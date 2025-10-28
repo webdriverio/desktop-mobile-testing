@@ -531,6 +531,13 @@ ENVIRONMENT VARIABLES:
 
 // Main execution
 async function main(): Promise<void> {
+  // Prevent duplicate execution
+  if (process.env.WDIO_MATRIX_EXECUTING) {
+    console.log('⚠️ Script already executing, skipping duplicate run');
+    return;
+  }
+  process.env.WDIO_MATRIX_EXECUTING = 'true';
+
   console.log('🚀 WebdriverIO Desktop Service E2E Test Matrix');
   console.log('Arguments:', process.argv.slice(2));
 
@@ -540,11 +547,6 @@ async function main(): Promise<void> {
   // Run tests
   await runTests();
 }
-
-console.log('🔍 Debug: Starting test execution at', new Date().toISOString());
-console.log('🔍 Debug: Node.js version:', process.version);
-console.log('🔍 Debug: Platform:', process.platform, process.arch);
-console.log('🔍 Debug: Process arguments:', process.argv.join(' '));
 
 // Run the tests
 main().catch((error) => {
