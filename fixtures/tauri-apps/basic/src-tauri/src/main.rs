@@ -108,18 +108,39 @@ async fn take_screenshot(_options: Option<ScreenshotOptions>) -> Result<String, 
 
 #[tauri::command]
 async fn read_file(path: String, _options: Option<FileOperationOptions>) -> Result<String, String> {
-    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+    println!("🔍 Rust: read_file called with path: '{}'", path);
+    let result = std::fs::read_to_string(&path).map_err(|e| {
+        let error_msg = format!("Failed to read file '{}': {}", path, e);
+        println!("🔍 Rust: read_file error: {}", error_msg);
+        error_msg
+    });
+    if result.is_ok() {
+        println!("🔍 Rust: read_file succeeded for path: '{}', content length: {}", path, result.as_ref().unwrap().len());
+    }
+    result
 }
 
 #[tauri::command]
 async fn write_file(path: String, contents: String, _options: Option<FileOperationOptions>) -> Result<(), String> {
-    std::fs::write(&path, contents).map_err(|e| e.to_string())?;
+    println!("🔍 Rust: write_file called with path: '{}', contents length: {}", path, contents.len());
+    std::fs::write(&path, contents).map_err(|e| {
+        let error_msg = format!("Failed to write file '{}': {}", path, e);
+        println!("🔍 Rust: write_file error: {}", error_msg);
+        error_msg
+    })?;
+    println!("🔍 Rust: write_file succeeded for path: '{}'", path);
     Ok(())
 }
 
 #[tauri::command]
 async fn delete_file(path: String) -> Result<(), String> {
-    std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    println!("🔍 Rust: delete_file called with path: '{}'", path);
+    std::fs::remove_file(&path).map_err(|e| {
+        let error_msg = format!("Failed to delete file '{}': {}", path, e);
+        println!("🔍 Rust: delete_file error: {}", error_msg);
+        error_msg
+    })?;
+    println!("🔍 Rust: delete_file succeeded for path: '{}'", path);
     Ok(())
 }
 

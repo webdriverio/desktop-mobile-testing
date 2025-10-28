@@ -21,17 +21,25 @@ describe('Tauri API', () => {
 
   it('should execute commands with parameters', async () => {
     // Test file write command with parameters
-    const testPath = `/tmp/tauri-test-${Date.now()}.txt`;
+    // Use a path in the current working directory instead of /tmp
+    const testPath = `./tauri-test-${Date.now()}.txt`;
     const testContent = 'Hello, Tauri!';
+
+    console.log('🔍 Testing write_file command with path:', testPath);
     const result = await browser.tauri.execute('write_file', testPath, testContent);
+    console.log('🔍 write_file result:', JSON.stringify(result, null, 2));
     expect(result.success).to.be.true;
 
     // Verify with read
+    console.log('🔍 Testing read_file command with path:', testPath);
     const readResult = await browser.tauri.execute('read_file', testPath);
+    console.log('🔍 read_file result:', JSON.stringify(readResult, null, 2));
     expect(readResult.success).to.be.true;
     expect(readResult.data).to.equal(testContent);
 
     // Cleanup
-    await browser.tauri.execute('delete_file', testPath);
+    console.log('🔍 Testing delete_file command with path:', testPath);
+    const deleteResult = await browser.tauri.execute('delete_file', testPath);
+    console.log('🔍 delete_file result:', JSON.stringify(deleteResult, null, 2));
   });
 });
