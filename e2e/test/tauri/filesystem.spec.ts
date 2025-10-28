@@ -22,33 +22,35 @@ describe('Tauri Filesystem Operations', () => {
   });
 
   it('should read file content', async () => {
-    const result = await browser.tauri.readFile(testFilePath);
+    const result = await browser.tauri.execute('read_file', testFilePath);
     expect(result.success).to.be.true;
     expect(result.data).to.equal('Hello, Tauri!');
   });
 
   it('should write file content', async () => {
     const newContent = 'Updated content from Tauri test';
-    const result = await browser.tauri.writeFile(testFilePath, newContent);
+    const result = await browser.tauri.execute('write_file', testFilePath, newContent);
     expect(result.success).to.be.true;
 
     // Verify the content was written
-    const readResult = await browser.tauri.readFile(testFilePath);
+    const readResult = await browser.tauri.execute('read_file', testFilePath);
     expect(readResult.success).to.be.true;
     expect(readResult.data).to.equal(newContent);
   });
 
   it('should delete file', async () => {
-    const result = await browser.tauri.deleteFile(testFilePath);
+    const result = await browser.tauri.execute('delete_file', testFilePath);
     expect(result.success).to.be.true;
 
     // Verify the file was deleted
-    const readResult = await browser.tauri.readFile(testFilePath);
+    const readResult = await browser.tauri.execute('read_file', testFilePath);
     expect(readResult.success).to.be.false;
   });
 
   it('should handle file operations with options', async () => {
-    const result = await browser.tauri.writeFile(testFilePath, 'Content with options', { encoding: 'utf8' });
+    const result = await browser.tauri.execute('write_file', testFilePath, 'Content with options', {
+      encoding: 'utf8',
+    });
     expect(result.success).to.be.true;
   });
 });

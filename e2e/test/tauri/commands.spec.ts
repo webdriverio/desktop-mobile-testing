@@ -5,8 +5,11 @@ describe('Tauri Commands', () => {
     // Test basic command execution using generic execute pattern
     const result = await browser.tauri.execute('get_platform_info');
     expect(result.success).to.be.true;
-    expect(result.data).to.have.property('platform');
+    expect(result.data).to.have.property('os');
     expect(result.data).to.have.property('arch');
+    expect(result.data).to.have.property('hostname');
+    expect(result.data).to.have.property('memory');
+    expect(result.data).to.have.property('cpu');
   });
 
   it('should handle command errors gracefully', async () => {
@@ -17,9 +20,18 @@ describe('Tauri Commands', () => {
   });
 
   it('should execute commands with parameters', async () => {
-    // Test command with parameters
-    const result = await browser.tauri.execute('echo', { message: 'Hello, Tauri!' });
+    // Test file write command with parameters
+    const testPath = `/tmp/tauri-test-${Date.now()}.txt`;
+    const testContent = 'Hello, Tauri!';
+    const result = await browser.tauri.execute('write_file', testPath, testContent);
     expect(result.success).to.be.true;
-    expect(result.data).to.equal('Hello, Tauri!');
+
+    // Verify with read
+    const readResult = await browser.tauri.execute('read_file', testPath);
+    expect(readResult.success).to.be.true;
+    expect(readResult.data).to.equal(testContent);
+
+    // Cleanup
+    await browser.tauri.execute('delete_file', testPath);
   });
 });
