@@ -1,8 +1,8 @@
 import { expect } from 'chai';
 
-describe('Tauri Commands', () => {
-  it('should execute basic Tauri commands', async () => {
-    // Test basic command execution using generic execute pattern
+describe('Tauri API', () => {
+  it('should execute basic commands', async () => {
+    // Test basic command execution using the execute API
     const result = await browser.tauri.execute('get_platform_info');
     expect(result.success).to.be.true;
     expect(result.data).to.have.property('os');
