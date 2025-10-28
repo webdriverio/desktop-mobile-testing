@@ -131,7 +131,7 @@ jobs:
         id: upload-archive
         uses: ./.github/workflows/actions/upload-archive
         with:
-          name: tauri-apps-${{ runner.os }}
+          name: tauri-apps
           output: tauri-apps-${{ runner.os }}/artifact.zip
           paths: fixtures/tauri-apps/*/src-tauri/target
           cache_key_prefix: tauri-apps

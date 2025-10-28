@@ -163,12 +163,15 @@ runs:
         fi
 
         # Check if file exists and get size
-        if [ -f "${{ inputs.path }}/${{ inputs.filename }}" ]; then
-          FILE_SIZE=$(stat -c%s "${{ inputs.path }}/${{ inputs.filename }}" 2>/dev/null || stat -f%z "${{ inputs.path }}/${{ inputs.filename }}" 2>/dev/null || ls -l "${{ inputs.path }}/${{ inputs.filename }}" | awk '{print $5}')
-          HUMAN_SIZE=$(du -h "${{ inputs.path }}/${{ inputs.filename }}" | cut -f1)
+        FILE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
+        NORMALIZED_FILE_PATH=$(echo "$FILE_PATH" | sed 's|\\|/|g')
+
+        if [ -f "$NORMALIZED_FILE_PATH" ]; then
+          FILE_SIZE=$(stat -c%s "$NORMALIZED_FILE_PATH" 2>/dev/null || stat -f%z "$NORMALIZED_FILE_PATH" 2>/dev/null || ls -l "$NORMALIZED_FILE_PATH" | awk '{print $5}')
+          HUMAN_SIZE=$(du -h "$NORMALIZED_FILE_PATH" | cut -f1)
 
           # Test zip file integrity
-          unzip -t "${{ inputs.path }}/${{ inputs.filename }}" > /dev/null 2>&1
+          unzip -t "$NORMALIZED_FILE_PATH" > /dev/null 2>&1
           if [ $? -eq 0 ]; then
             ZIP_VALID="VALID"
           else
@@ -183,7 +186,7 @@ runs:
           echo "exists=true" >> $GITHUB_OUTPUT
           echo "success=true" >> $GITHUB_OUTPUT
         else
-          echo "::error::File not found: ${{ inputs.path }}/${{ inputs.filename }}"
+          echo "::error::File not found: $NORMALIZED_FILE_PATH"
           echo "exists=false" >> $GITHUB_OUTPUT
           echo "success=false" >> $GITHUB_OUTPUT
           exit 1
@@ -218,16 +221,18 @@ runs:
         done
 
         # Find the downloaded zip (handles different behavior of gh run download)
-        ZIP_FILES=$(find "${{ inputs.path }}" -type f -name "*.zip" | sort)
+        NORMALIZED_PATH=$(echo "${{ inputs.path }}" | sed 's|\\|/|g')
+        ZIP_FILES=$(find "$NORMALIZED_PATH" -type f -name "*.zip" | sort)
         FIRST_ZIP=$(echo "$ZIP_FILES" | head -n 1)
+        EXPECTED_PATH="$NORMALIZED_PATH/${{ inputs.filename }}"
 
-        if [ -n "$FIRST_ZIP" ] && [ "$FIRST_ZIP" != "${{ inputs.path }}/${{ inputs.filename }}" ]; then
+        if [ -n "$FIRST_ZIP" ] && [ "$FIRST_ZIP" != "$EXPECTED_PATH" ]; then
           # Move the file to the expected location
-          mv "$FIRST_ZIP" "${{ inputs.path }}/${{ inputs.filename }}"
+          mv "$FIRST_ZIP" "$EXPECTED_PATH"
         fi
 
         # Check if the file exists
-        if [ -f "${{ inputs.path }}/${{ inputs.filename }}" ]; then
+        if [ -f "$EXPECTED_PATH" ]; then
           echo "valid=true" >> $GITHUB_OUTPUT
           echo "success=true" >> $GITHUB_OUTPUT
           echo "::notice::Successfully downloaded ${{ inputs.name }} from GitHub Artifacts"
@@ -247,13 +252,17 @@ runs:
       shell: bash
       run: |
         # Ensure the archive exists
-        if [ ! -f "${{ inputs.path }}/${{ inputs.filename }}" ]; then
-          echo "::error::Archive not found for extraction: ${{ inputs.path }}/${{ inputs.filename }}"
+        ARCHIVE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
+        if [ ! -f "$ARCHIVE_PATH" ]; then
+          echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
           exit 1
         fi
 
+        # Normalize path separators for cross-platform compatibility
+        NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
+
         # Extract to workspace root directory
-        cd "${{ github.workspace }}" && unzip -q -o "${{ inputs.path }}/${{ inputs.filename }}"
+        cd "${{ github.workspace }}" && unzip -q -o "$NORMALIZED_PATH"
 
         # Check extraction success
         if [ $? -eq 0 ]; then
