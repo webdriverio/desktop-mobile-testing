@@ -57,6 +57,16 @@ runs:
         echo "agnostic_pattern=${AGNOSTIC_PATTERN}" >> $GITHUB_OUTPUT
 
     # Restore cache with exact key (if provided)
+    # Normalize path for cache operations
+    - name: 🔧 Normalize Path
+      id: normalize-path
+      shell: bash
+      run: |
+        # Normalize path separators for cross-platform compatibility
+        NORMALIZED_PATH=$(echo "${{ inputs.path }}/${{ inputs.filename }}" | sed 's|\\|/|g')
+        echo "normalized_path=$NORMALIZED_PATH" >> $GITHUB_OUTPUT
+
+    # Restore cache with exact key (if provided)
     - name: 🗄️ Restore with Exact Key
       id: cache-restore-exact
       if: inputs.exact_cache_key != ''
@@ -64,7 +74,7 @@ runs:
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
-        path: ${{ inputs.path }}/${{ inputs.filename }}
+        path: ${{ steps.normalize-path.outputs.normalized_path }}
         key: ${{ inputs.exact_cache_key }}
         enableCrossOsArchive: true
         lookup-only: false
@@ -78,7 +88,7 @@ runs:
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
-        path: ${{ inputs.path }}/${{ inputs.filename }}
+        path: ${{ steps.normalize-path.outputs.normalized_path }}
         key: ${{ steps.generate-keys.outputs.standard_key }}
         enableCrossOsArchive: true
         lookup-only: false
@@ -92,7 +102,7 @@ runs:
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
-        path: ${{ inputs.path }}/${{ inputs.filename }}
+        path: ${{ steps.normalize-path.outputs.normalized_path }}
         key: ${{ steps.generate-keys.outputs.agnostic_key }}
         enableCrossOsArchive: true
         lookup-only: false
@@ -106,7 +116,7 @@ runs:
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
-        path: ${{ inputs.path }}/${{ inputs.filename }}
+        path: ${{ steps.normalize-path.outputs.normalized_path }}
         key: ${{ steps.generate-keys.outputs.linux_key }}
         enableCrossOsArchive: true
         lookup-only: false
@@ -120,7 +130,7 @@ runs:
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
-        path: ${{ inputs.path }}/${{ inputs.filename }}
+        path: ${{ steps.normalize-path.outputs.normalized_path }}
         key: ${{ steps.generate-keys.outputs.pattern_key || format('{0}-{1}-{2}-', runner.os, inputs.cache_key_prefix, inputs.name) }}
         restore-keys: |
           ${{ steps.generate-keys.outputs.pattern_key || format('{0}-{1}-{2}-', runner.os, inputs.cache_key_prefix, inputs.name) }}
