@@ -216,9 +216,10 @@ async fn write_clipboard(content: String) -> Result<(), String> {
 }
 
 fn main() {
-    let _ = std::fs::write("/tmp/tauri-debug.log", "🔍 Rust: Tauri app starting...\n");
-
+    let _ = std::fs::write("/tmp/tauri-debug.log", "🔍 Rust: Tauri v2 app starting...\n");
+    
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             get_window_bounds,
             set_window_bounds,

@@ -275,6 +275,14 @@ jobs:
             echo "No Rust debug log found at /tmp/tauri-debug.log"
           fi
 
+          echo ""
+          echo "=== Tauri App Process Info ==="
+          ps aux | grep tauri || echo "No tauri processes found"
+
+          echo ""
+          echo "=== System Logs (last 50 lines) ==="
+          journalctl --no-pager -n 50 || echo "No system logs available"
+
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure
         if: failure()

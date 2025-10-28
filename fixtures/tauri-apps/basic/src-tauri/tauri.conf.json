@@ -1,51 +1,27 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "tauri-basic-app",
+  "version": "0.1.0",
+  "identifier": "com.tauri.basic",
   "build": {
+    "frontendDist": "../dist",
     "beforeDevCommand": "",
-    "beforeBuildCommand": "",
-    "devPath": "../index.html",
-    "distDir": "../dist",
-    "withGlobalTauri": true
+    "beforeBuildCommand": ""
   },
-  "package": {
-    "productName": "tauri-basic-app",
-    "version": "0.1.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": true,
-      "window": {
-        "all": true
-      },
-      "fs": {
-        "all": true
-      },
-      "process": {
-        "all": true
-      },
-      "clipboard": {
-        "all": true
-      },
-      "os": {
-        "all": true
-      },
-      "path": {
-        "all": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.tauri.basic",
-      "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
-    },
+  "app": {
     "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
+      "csp": {
+        "default-src": ["'self'"],
+        "connect-src": ["'self'", "ipc:*", "plugin:*", "tauri:*"],
+        "img-src": ["'self'", "asset:", "https://asset.localhost", "data:"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "style-src": ["'self'", "'unsafe-inline'"]
+      },
+      "capabilities": ["default"]
     },
     "windows": [
       {
+        "label": "main",
         "title": "Tauri Basic App",
         "width": 800,
         "height": 600,
@@ -59,5 +35,10 @@
       "port": 4444,
       "args": []
     }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
   }
 }

@@ -125,8 +125,9 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
     const configContent = readFileSync(tauriConfigPath, 'utf-8');
     const config = JSON.parse(configContent);
 
-    const productName = config.package?.productName || 'tauri-app';
-    const version = config.package?.version || '1.0.0';
+    // Tauri v2 has productName and version at root level
+    const productName = config.productName || config.package?.productName || 'tauri-app';
+    const version = config.version || config.package?.version || '1.0.0';
     const targetDir = join(appPath, 'src-tauri', 'target', 'release');
 
     return {
