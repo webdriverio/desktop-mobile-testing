@@ -18,6 +18,14 @@ export async function executeTauriCommand<T = unknown>(
     const result = await browser.execute(
       (cmd: string, ...cmdArgs: unknown[]) => {
         console.log('🔍 Executing Tauri command:', cmd, 'with args:', cmdArgs);
+        console.log(
+          '🔍 Args types:',
+          cmdArgs.map((arg) => typeof arg),
+        );
+        console.log(
+          '🔍 Args JSON:',
+          cmdArgs.map((arg) => JSON.stringify(arg)),
+        );
 
         // Tauri v2 uses window.__TAURI__.core.invoke
         // @ts-expect-error - Tauri command API injected at runtime

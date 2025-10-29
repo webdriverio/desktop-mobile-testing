@@ -33,13 +33,13 @@ describe('Tauri API', () => {
     const testContent = 'Hello, Tauri!';
 
     console.log('🔍 Testing write_file command with path:', testPath);
-    const result = await browser.tauri.execute('write_file', testPath, testContent);
+    const result = await browser.tauri.execute('write_file', testPath, testContent, null);
     console.log('🔍 write_file result:', JSON.stringify(result, null, 2));
     expect(result.success).to.be.true;
 
     // Verify with read
     console.log('🔍 Testing read_file command with path:', testPath);
-    const readResult = await browser.tauri.execute('read_file', testPath);
+    const readResult = await browser.tauri.execute('read_file', testPath, null);
     console.log('🔍 read_file result:', JSON.stringify(readResult, null, 2));
     expect(readResult.success).to.be.true;
     expect(readResult.data).to.equal(testContent);

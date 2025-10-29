@@ -127,9 +127,9 @@ async fn read_file(path: String, _options: Option<FileOperationOptions>) -> Resu
 
 #[tauri::command]
 async fn write_file(path: String, contents: String, _options: Option<FileOperationOptions>) -> Result<(), String> {
-    let log_msg = format!("🔍 Rust: write_file called with path: '{}', contents length: {}\n", path, contents.len());
+    let log_msg = format!("🔍 Rust: write_file called with path: '{}', contents length: {}, options: {:?}\n", path, contents.len(), _options);
     let _ = std::fs::write("/tmp/tauri-debug.log", log_msg.as_bytes());
-    println!("🔍 Rust: write_file called with path: '{}', contents length: {}", path, contents.len());
+    println!("🔍 Rust: write_file called with path: '{}', contents length: {}, options: {:?}", path, contents.len(), _options);
 
     std::fs::write(&path, contents).map_err(|e| {
         let error_msg = format!("Failed to write file '{}': {}", path, e);
@@ -169,6 +169,7 @@ async fn get_current_dir() -> Result<String, String> {
         .map(|path| path.to_string_lossy().to_string())
         .map_err(|e| e.to_string())
 }
+
 
 #[tauri::command]
 async fn get_platform_info() -> Result<PlatformInfo, String> {
