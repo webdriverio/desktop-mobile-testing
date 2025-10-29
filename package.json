@@ -57,6 +57,9 @@
     "test:coverage": "turbo run test:coverage",
     "test:integration": "turbo run test:integration",
     "test:package": "pnpx cross-env DEBUG=@wdio/electron-service tsx ./scripts/test-package.ts",
+    "test:smart": "tsx scripts/smart-test-runner.ts",
+    "test:smart:dry": "tsx scripts/smart-test-runner.ts --dry-run",
+    "test:smart:verbose": "tsx scripts/smart-test-runner.ts --verbose",
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
     "update:all": "pnpm catalog:update --default && pnpm catalog:update --next && pnpm up -iLr"
