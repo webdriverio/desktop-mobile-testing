@@ -19,6 +19,7 @@
       },
       "capabilities": ["default"]
     },
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
