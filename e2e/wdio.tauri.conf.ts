@@ -140,13 +140,15 @@ type TauriCapability = {
   };
 };
 
+type InstanceConfig = {
+  capabilities: TauriCapability;
+  hostname?: string;
+  port?: number;
+};
+
 type MultiremoteCapabilities = {
-  browserA: {
-    capabilities: TauriCapability;
-  };
-  browserB: {
-    capabilities: TauriCapability;
-  };
+  browserA: InstanceConfig;
+  browserB: InstanceConfig;
 };
 
 type StandardCapabilities = TauriCapability[];
@@ -169,6 +171,8 @@ if (envContext.isMultiremote) {
           appArgs: ['--browser=A'],
         },
       },
+      hostname: '127.0.0.1',
+      port: 4444,
     },
     browserB: {
       capabilities: {
@@ -182,6 +186,8 @@ if (envContext.isMultiremote) {
           appArgs: ['--browser=B'],
         },
       },
+      hostname: '127.0.0.1',
+      port: 4445,
     },
   };
 } else {
@@ -212,8 +218,7 @@ export const config = {
   maxInstances: 1,
   capabilities,
   // Connect to tauri-driver instead of spawning a browser driver
-  hostname: '127.0.0.1',
-  port: 4444,
+  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
   logLevel: 'debug',
   bail: 0,
   baseUrl: '',
