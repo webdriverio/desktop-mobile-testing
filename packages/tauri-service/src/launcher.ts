@@ -136,35 +136,7 @@ export default class TauriLaunchService {
     log.debug('Tauri service prepared successfully');
   }
 
-  /**
-   * Set up data directory isolation for multiremote instances
-   */
-  private setupDataDirectoryIsolation(capabilities: TauriCapabilities | TauriCapabilities[]): void {
-    if (Array.isArray(capabilities)) {
-      // Standard capabilities array - no isolation needed
-      log.debug('Standard Tauri session (not multiremote)');
-      return;
-    }
-
-    // Multiremote capabilities object - set up isolation for each instance
-    const capKeys = Object.keys(capabilities);
-    if (capKeys.length === 0) {
-      log.warn('No capabilities found in multiremote object');
-      return;
-    }
-
-    log.info(`Setting up data directory isolation for ${capKeys.length} multiremote instances`);
-
-    // Log all instances for debugging (actual env is set per spawned driver)
-    for (const key of capKeys) {
-      const cap = (capabilities as any)[key].capabilities;
-      const instanceId = extractInstanceId(cap);
-      if (instanceId) {
-        const dataDir = generateDataDirectory(instanceId);
-        log.debug(`Instance ${key} (ID: ${instanceId}) would use data dir: ${dataDir}`);
-      }
-    }
-  }
+  // (data directory isolation is handled per spawned driver; no pre-setup needed)
 
   /**
    * Start worker session
