@@ -26,6 +26,12 @@ interface TauriConfigContext {
 async function getTauriConfigContext(): Promise<TauriConfigContext> {
   console.log('🔍 Creating WDIO Tauri configuration context...');
 
+  // Check platform first - skip macOS Tauri tests due to WKWebView limitations
+  if (process.platform === 'darwin') {
+    console.log('⚠️ Skipping Tauri tests on macOS due to WKWebView WebDriver limitations');
+    process.exit(78); // Exit code 78 indicates skipped tests
+  }
+
   // Parse and validate environment
   const envContext = createEnvironmentContext();
 
@@ -72,17 +78,17 @@ async function getTauriConfigContext(): Promise<TauriConfigContext> {
   }
 
   const tauriConfig = safeJsonParse(readFileSync(tauriConfigPath, 'utf-8'), {});
-  const productName = (tauriConfig as { package?: { productName?: string } })?.package?.productName || 'tauri-app';
+  const productName = (tauriConfig as { productName?: string })?.productName || 'tauri-app';
+
+  console.log('🔍 Tauri config debug:');
+  console.log('  Config path:', tauriConfigPath);
+  console.log('  productName:', (tauriConfig as { productName?: string })?.productName);
+  console.log('  Resolved productName:', productName);
 
   // Platform-specific binary paths
   let appBinaryPath: string;
   if (process.platform === 'win32') {
     appBinaryPath = join(tauriTargetDir, `${productName}.exe`);
-  } else if (process.platform === 'darwin') {
-    // Skip macOS Tauri tests due to WKWebView limitations
-    throw new Error(
-      `Tauri testing is not supported on macOS due to WKWebView WebDriver limitations. Please run tests on Windows or Linux.`,
-    );
   } else if (process.platform === 'linux') {
     appBinaryPath = join(tauriTargetDir, productName.toLowerCase());
   } else {

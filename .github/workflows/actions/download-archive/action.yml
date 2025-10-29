@@ -25,6 +25,17 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # Check if this is a rerun of a previous workflow run
+    - name: 🔄 Check for Rerun
+      id: check-rerun
+      shell: bash
+      run: |
+        if [ "${{ github.run_attempt }}" -gt 1 ]; then
+          echo "rerun_suffix=-rerun${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        else
+          echo "rerun_suffix=" >> $GITHUB_OUTPUT
+        fi
+
     # Generate standard cache keys
     - name: 🔑 Generate Cache Keys
       id: generate-keys
@@ -35,17 +46,22 @@ runs:
         NAME="${{ inputs.name }}"
         OS="${{ runner.os }}"
         RUN_ID="${{ github.run_id }}"
+        RERUN_SUFFIX="${{ steps.check-rerun.outputs.rerun_suffix }}"
 
-        # Generate standard key (os-specific)
-        STANDARD_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}"
+        # Generate platform-specific key (no cross-platform sharing to avoid path issues)
+        PLATFORM_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
+        echo "platform_key=${PLATFORM_KEY}" >> $GITHUB_OUTPUT
+
+        # Generate standard key (os-specific) for backward compatibility
+        STANDARD_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         echo "standard_key=${STANDARD_KEY}" >> $GITHUB_OUTPUT
 
         # Generate OS-agnostic key
-        AGNOSTIC_KEY="${CACHE_PREFIX}-${NAME}-${RUN_ID}"
+        AGNOSTIC_KEY="${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         echo "agnostic_key=${AGNOSTIC_KEY}" >> $GITHUB_OUTPUT
 
         # Generate Linux-specific key for cross-OS compatibility
-        LINUX_KEY="Linux-${CACHE_PREFIX}-${NAME}-${RUN_ID}"
+        LINUX_KEY="Linux-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         echo "linux_key=${LINUX_KEY}" >> $GITHUB_OUTPUT
 
         # Generate pattern keys
@@ -80,30 +96,16 @@ runs:
         lookup-only: false
         fail-on-cache-miss: false
 
-    # Restore with standard key (os-specific)
-    - name: 🗄️ Restore with Standard Key
-      id: cache-restore-standard
+    # Restore with platform-specific key
+    - name: 🗄️ Restore with Platform-Specific Key
+      id: cache-restore-platform
       if: steps.cache-restore-exact.outputs.cache-hit != 'true'
       uses: actions/cache/restore@v4
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
         path: ${{ steps.normalize-path.outputs.normalized_path }}
-        key: ${{ steps.generate-keys.outputs.standard_key }}
-        enableCrossOsArchive: true
-        lookup-only: false
-        fail-on-cache-miss: false
-
-    # Restore with OS-agnostic key
-    - name: 🗄️ Restore with OS-Agnostic Key
-      id: cache-restore-agnostic
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-standard.outputs.cache-hit != 'true'
-      uses: actions/cache/restore@v4
-      env:
-        ACTIONS_CACHE_SERVICE_V2: 'true'
-      with:
-        path: ${{ steps.normalize-path.outputs.normalized_path }}
-        key: ${{ steps.generate-keys.outputs.agnostic_key }}
+        key: ${{ steps.generate-keys.outputs.platform_key }}
         enableCrossOsArchive: true
         lookup-only: false
         fail-on-cache-miss: false
@@ -111,7 +113,7 @@ runs:
     # Restore with Linux key for cross-OS compatibility
     - name: 🗄️ Restore with Linux Key
       id: cache-restore-linux
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-standard.outputs.cache-hit != 'true' && steps.cache-restore-agnostic.outputs.cache-hit != 'true' && runner.os != 'Linux'
+      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-platform.outputs.cache-hit != 'true' && runner.os != 'Linux'
       uses: actions/cache/restore@v4
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
@@ -125,7 +127,7 @@ runs:
     # Try OS-specific pattern as fallback (finds latest matching cache)
     - name: 🗄️ Restore with Pattern
       id: cache-restore-pattern
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-standard.outputs.cache-hit != 'true' && steps.cache-restore-agnostic.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true'
+      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-platform.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true'
       uses: actions/cache/restore@v4
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
@@ -140,7 +142,7 @@ runs:
 
     # Handle cache miss
     - name: ⚠️ Handle Cache Miss
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-standard.outputs.cache-hit != 'true' && steps.cache-restore-agnostic.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true' && steps.cache-restore-pattern.outputs.cache-hit != 'true'
+      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-platform.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true' && steps.cache-restore-pattern.outputs.cache-hit != 'true'
       shell: bash
       run: |
         if [ -n "${{ inputs.use_cache }}" ] && [ "${{ inputs.use_cache }}" = "true-only" ]; then
@@ -160,10 +162,8 @@ runs:
         # Summary of what method was used to get the file (for debugging)
         if [ "${{ steps.cache-restore-exact.outputs.cache-hit }}" == "true" ]; then
           SOURCE="exact key cache"
-        elif [ "${{ steps.cache-restore-standard.outputs.cache-hit }}" == "true" ]; then
-          SOURCE="standard key cache"
-        elif [ "${{ steps.cache-restore-agnostic.outputs.cache-hit }}" == "true" ]; then
-          SOURCE="OS-agnostic key cache"
+        elif [ "${{ steps.cache-restore-platform.outputs.cache-hit }}" == "true" ]; then
+          SOURCE="platform-specific key cache"
         elif [ "${{ steps.cache-restore-linux.outputs.cache-hit }}" == "true" ]; then
           SOURCE="Linux key cache"
         elif [ "${{ steps.cache-restore-pattern.outputs.cache-hit }}" == "true" ]; then

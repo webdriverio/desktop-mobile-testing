@@ -130,6 +130,13 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
     const version = config.version || config.package?.version || '1.0.0';
     const targetDir = join(appPath, 'src-tauri', 'target', 'release');
 
+    // Debug logging to help diagnose the issue
+    log.debug(`Tauri config debug - appPath: ${appPath}`);
+    log.debug(`Tauri config debug - configPath: ${tauriConfigPath}`);
+    log.debug(`Tauri config debug - config.productName: ${config.productName}`);
+    log.debug(`Tauri config debug - config.package?.productName: ${config.package?.productName}`);
+    log.debug(`Tauri config debug - resolved productName: ${productName}`);
+
     return {
       name: productName,
       version,

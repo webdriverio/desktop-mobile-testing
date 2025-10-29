@@ -120,11 +120,24 @@ runs:
           }
         }
 
-        # Compress directories preserving structure
-        # Use paths directly instead of individual files to maintain directory hierarchy
+        # Compress directories preserving structure using 7zip for cross-platform compatibility
+        # 7zip creates ZIP files with forward slashes, avoiding Windows path separator issues
         try {
           if ($paths.Count -gt 0) {
-            Compress-Archive -Path $paths -DestinationPath "${{ inputs.output }}" -Force -ErrorAction Stop
+            # Install 7zip if not available
+            if (!(Get-Command "7z" -ErrorAction SilentlyContinue)) {
+              Write-Host "Installing 7zip for cross-platform ZIP creation..."
+              choco install 7zip -y --no-progress
+            }
+
+            # Use 7zip for cross-platform compatible ZIP creation
+            $7zArgs = @("a", "-tzip", "${{ inputs.output }}")
+            $7zArgs += $paths
+
+            & 7z @7zArgs
+            if ($LASTEXITCODE -ne 0) {
+              throw "7zip failed with exit code $LASTEXITCODE"
+            }
           } else {
             # Create empty archive if no paths found
             Compress-Archive -Path @() -DestinationPath "${{ inputs.output }}" -Force -ErrorAction Stop
@@ -155,7 +168,7 @@ runs:
 
         # Get archive size for reporting
         $fileSize = (Get-Item "${{ inputs.output }}").Length
-        $humanSize = if ($fileSize -lt 1KB) { "$fileSize B" } 
+        $humanSize = if ($fileSize -lt 1KB) { "$fileSize B" }
                     elseif ($fileSize -lt 1MB) { "{0:N1} KB" -f ($fileSize / 1KB) }
                     elseif ($fileSize -lt 1GB) { "{0:N1} MB" -f ($fileSize / 1MB) }
                     else { "{0:N1} GB" -f ($fileSize / 1GB) }
@@ -189,7 +202,11 @@ runs:
         RUN_ID="${{ github.run_id }}"
         RERUN_SUFFIX="${{ steps.check-rerun.outputs.rerun_suffix }}"
 
-        # Generate standard key (OS specific)
+        # Generate platform-specific key (no cross-platform sharing to avoid path issues)
+        PLATFORM_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
+        echo "platform_key=${PLATFORM_KEY}" >> $GITHUB_OUTPUT
+
+        # Keep standard key for backward compatibility
         STANDARD_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         echo "standard_key=${STANDARD_KEY}" >> $GITHUB_OUTPUT
 
@@ -206,22 +223,14 @@ runs:
         retention-days: ${{ inputs.retention_days }}
         if-no-files-found: error
 
-    # Cache with OS-specific key
-    - name: 🗄️ Cache Artifact (OS-specific)
+    # Cache with platform-specific key
+    # Cross-platform archive enabled - works for TypeScript packages (wdio-electron-build)
+    # Tauri apps use 7zip for cross-platform compatible ZIPs
+    - name: 🗄️ Cache Artifact (Platform-specific)
       uses: actions/cache/save@v4
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
         path: ${{ inputs.output }}
-        key: ${{ steps.generate-keys.outputs.standard_key }}
-        enableCrossOsArchive: true
-
-    # Cache with OS-agnostic key
-    - name: 🗄️ Cache Artifact (OS-agnostic)
-      uses: actions/cache/save@v4
-      env:
-        ACTIONS_CACHE_SERVICE_V2: 'true'
-      with:
-        path: ${{ inputs.output }}
-        key: ${{ steps.generate-keys.outputs.agnostic_key }}
+        key: ${{ steps.generate-keys.outputs.platform_key }}
         enableCrossOsArchive: true
