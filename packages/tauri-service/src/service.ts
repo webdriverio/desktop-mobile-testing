@@ -22,6 +22,7 @@ const log = createLogger('tauri-service', 'service');
  */
 export default class TauriWorkerService {
   constructor(options: TauriServiceOptions, capabilities: TauriCapabilities) {
+    log.info('🚀 TauriWorkerService constructor called');
     log.debug('TauriWorkerService initialized');
     log.debug('Options:', JSON.stringify(options, null, 2));
     log.debug('Capabilities:', JSON.stringify(capabilities, null, 2));
@@ -35,6 +36,7 @@ export default class TauriWorkerService {
     specs: string[],
     browser: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser,
   ): Promise<void> {
+    log.info('🚀 TauriWorkerService before() method called');
     log.debug('Initializing Tauri worker service...');
     log.debug('Specs:', specs);
 
