@@ -214,7 +214,7 @@ export const config = {
   // Connect to tauri-driver instead of spawning a browser driver
   hostname: '127.0.0.1',
   port: 4444,
-  logLevel: envContext.env.WDIO_VERBOSE === 'true' ? 'debug' : 'info',
+  logLevel: 'debug',
   bail: 0,
   baseUrl: '',
   waitforTimeout: 10000,
