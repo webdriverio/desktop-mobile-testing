@@ -29,7 +29,7 @@ wdio-desktop-mobile-testing/
 │   └── electron-utils/       # @wdio/electron-utils
 ├── e2e/                   # E2E test suite
 ├── fixtures/              # Test fixtures and apps
-│   ├── e2e-apps/         # 6 test apps (builder/forge/no-binary × cjs/esm)
+│   ├── electron-apps/    # 6 test apps (builder/forge/no-binary × cjs/esm)
 │   ├── package-tests/    # 3 integration test apps
 │   ├── build-cjs/        # CJS build scenarios
 │   ├── build-esm/        # ESM build scenarios
@@ -114,7 +114,7 @@ All packages successfully migrated with:
 
 **Test Fixtures:**
 - ✅ **6 E2E Apps:** builder-cjs, builder-esm, forge-cjs, forge-esm, no-binary-cjs, no-binary-esm
-- ✅ **3 Package Test Apps:** builder-app, forge-app, script-app  
+- ✅ **3 Package Test Apps:** builder-app, forge-app, script-app
 - ✅ **Build Test Fixtures:** CJS/ESM scenarios, config format tests
 - ✅ **Package Scenarios:** Dependency edge cases
 - ✅ All fixtures updated to use `@wdio/electron-service`
@@ -191,7 +191,7 @@ pnpm turbo build --filter='./packages/*'
 
 # Test fixture apps
 cd fixtures/package-tests/script-app && pnpm build
-cd fixtures/e2e-apps/forge-esm && pnpm build:bundle
+cd fixtures/electron-apps/forge-esm && pnpm build:bundle
 
 # Run E2E tests (when ready)
 cd e2e && pnpm test

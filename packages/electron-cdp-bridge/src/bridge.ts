@@ -1,7 +1,7 @@
 import EventEmitter from 'node:events';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('bridge');
+const log = createLogger('electron-service', 'bridge');
 
 import type { ProtocolMapping } from 'devtools-protocol/types/protocol-mapping.js';
 import WebSocket from 'ws';

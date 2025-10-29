@@ -257,7 +257,9 @@ export class StatusBar {
       results
         .filter((r) => !r.success && !r.skipped)
         .forEach((result) => {
-          console.log(`  • ${result.name}: ${result.error || 'Unknown error'}`);
+          // Truncate error to just the first meaningful line to avoid printing entire WDIO output
+          const errorFirstLine = result.error?.split('\n')[0] || 'Unknown error';
+          console.log(`  • ${result.name}: ${errorFirstLine}`);
         });
     }
 

@@ -1,8 +1,8 @@
 import * as babelParser from '@babel/parser';
 import type { ExecuteOpts } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('service');
+const log = createLogger('electron-service', 'service');
 
 import { parse, print } from 'recast';
 import type { ElectronCdpBridge } from '../bridge';

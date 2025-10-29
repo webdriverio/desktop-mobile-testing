@@ -96,7 +96,7 @@ jobs:
             const generateBuildFilter = (scenario, type) => {
               return scenario
                 .split(',')
-                .map((s) => `--filter=example-${s.trim()}-${type}`)
+                .map((s) => `--filter=electron-${s.trim()}-${type}`)
                 .join(' ');
             };
             return generateBuildFilter('${{ inputs.scenario }}', '${{ inputs.type }}');
@@ -105,7 +105,7 @@ jobs:
       # This builds only the necessary test apps for the current test configuration
       - name: 🏗️ Build Test Applications
         shell: bash
-        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel --verbosity=2
+        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
 
       # Dynamically generate the test commands to run
       # This handles both single and multiple scenarios, and ESM/CJS/both
@@ -129,10 +129,10 @@ jobs:
             return generateTestCommand('${{ inputs.scenario }}', '${{ inputs.type }}');
 
       # Run the E2E tests using Turbo with the generated test commands
-      # First initializes the E2E environment, then runs the specific tests
+      # Each test builds its own apps with correct environment context
       - name: 🧪 Execute E2E Tests
         shell: bash
-        run: pnpm exec turbo run init-e2es ${{ steps.gen-test.outputs.result }} --only --verbosity=2 --log-order=stream
+        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information on Failure

@@ -33,7 +33,7 @@ Each package contains:
 - `src/index.ts` - Source code to be bundled
 - `wdio-bundler.config.ts` - Bundler configuration (if applicable)
 
-### `e2e-apps/`
+### `electron-apps/`
 
 Complete Electron applications for end-to-end testing:
 
@@ -54,7 +54,7 @@ const configPath = path.join('fixtures', 'config-formats', 'valid-ts-config.ts')
 const buildPath = path.join('fixtures', 'build-cjs', 'simple-ts-config');
 
 // E2E testing
-const appPath = path.join('fixtures', 'e2e-apps', 'forge-esm');
+const appPath = path.join('fixtures', 'electron-apps', 'forge-esm');
 ```
 
 ## Migration Notes

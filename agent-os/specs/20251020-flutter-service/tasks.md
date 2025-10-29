@@ -905,7 +905,7 @@ This tasks breakdown implements `@wdio/flutter-service` as a convenience layer o
 
 ### Task Group 7: Example Applications - All Platforms (2-3 weeks)
 
-**Assigned Implementer:** example-engineer
+**Assigned Implementer:** flutter-engineer
 **Estimated Effort:** 10-15 days
 **Dependencies:** Task Group 6
 **Phase:** Examples and Documentation

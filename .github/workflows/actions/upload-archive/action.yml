@@ -90,23 +90,85 @@ runs:
         # Get file count before compression (for validation)
         $fileCount = (Get-ChildItem -Path "${{ inputs.paths }}" -File -Recurse | Where-Object { $_.FullName -notmatch "node_modules" -and $_.FullName -notmatch "\\\..*\\|/\..*/" }).Count
 
-        # Compress files using PowerShell (excluding node_modules and hidden files)
-        $files = Get-ChildItem -Path "${{ inputs.paths }}" -Recurse | Where-Object { 
-          $_.FullName -notmatch "node_modules" -and 
-          $_.FullName -notmatch "\\\..*\\|/\..*/" -and
-          !$_.PSIsContainer
+        # Normalize file timestamps BEFORE compression (for Rust target directories)
+        # ZIP format only supports dates between 1980-01-01 and 2107-12-31
+        $paths = "${{ inputs.paths }}" -split ' '
+        $validDate = Get-Date "2020-01-01"
+        $minDate = Get-Date "1980-01-01"
+        $maxDate = Get-Date "2107-12-31"
+
+        foreach ($path in $paths) {
+          if (Test-Path $path) {
+            # Normalize timestamps for both files and directories
+            Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+              try {
+                # Normalize all three timestamp properties
+                if ($_.LastWriteTime -lt $minDate -or $_.LastWriteTime -gt $maxDate) {
+                  $_.LastWriteTime = $validDate
+                }
+                if ($_.CreationTime -lt $minDate -or $_.CreationTime -gt $maxDate) {
+                  $_.CreationTime = $validDate
+                }
+                if ($_.LastAccessTime -lt $minDate -or $_.LastAccessTime -gt $maxDate) {
+                  $_.LastAccessTime = $validDate
+                }
+              } catch {
+                # If we can't set timestamps, log and skip
+                Write-Host "::debug::Could not normalize timestamps for: $($_.FullName)"
+              }
+            }
+          }
         }
-        
-        if ($files.Count -gt 0) {
-          Compress-Archive -Path $files.FullName -DestinationPath "${{ inputs.output }}" -Force
-        } else {
-          # Create empty archive if no files found
-          Compress-Archive -Path @() -DestinationPath "${{ inputs.output }}" -Force
+
+        # Compress directories preserving structure using 7zip for cross-platform compatibility
+        # 7zip creates ZIP files with forward slashes, avoiding Windows path separator issues
+        try {
+          if ($paths.Count -gt 0) {
+            # Install 7zip if not available
+            if (!(Get-Command "7z" -ErrorAction SilentlyContinue)) {
+              Write-Host "Installing 7zip for cross-platform ZIP creation..."
+              choco install 7zip -y --no-progress
+            }
+
+            # Use 7zip for cross-platform compatible ZIP creation
+            $7zArgs = @("a", "-tzip", "${{ inputs.output }}")
+            $7zArgs += $paths
+
+            & 7z @7zArgs
+            if ($LASTEXITCODE -ne 0) {
+              throw "7zip failed with exit code $LASTEXITCODE"
+            }
+          } else {
+            # Create empty archive if no paths found
+            Compress-Archive -Path @() -DestinationPath "${{ inputs.output }}" -Force -ErrorAction Stop
+          }
+        } catch {
+          Write-Host "::error::Failed to create archive: $_"
+          Write-Host "::error::This may be due to file timestamps outside the ZIP format range (1980-2107)"
+
+          # Try to find files with problematic timestamps
+          Write-Host "Checking for files with invalid timestamps..."
+          foreach ($path in $paths) {
+            if (Test-Path $path) {
+              Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | Where-Object {
+                $_.LastWriteTime -lt $minDate -or $_.LastWriteTime -gt $maxDate -or
+                $_.CreationTime -lt $minDate -or $_.CreationTime -gt $maxDate -or
+                $_.LastAccessTime -lt $minDate -or $_.LastAccessTime -gt $maxDate
+              } | ForEach-Object {
+                Write-Host "::warning::Invalid timestamp on: $($_.FullName)"
+                Write-Host "  LastWriteTime: $($_.LastWriteTime)"
+                Write-Host "  CreationTime: $($_.CreationTime)"
+                Write-Host "  LastAccessTime: $($_.LastAccessTime)"
+              }
+            }
+          }
+
+          throw
         }
 
         # Get archive size for reporting
         $fileSize = (Get-Item "${{ inputs.output }}").Length
-        $humanSize = if ($fileSize -lt 1KB) { "$fileSize B" } 
+        $humanSize = if ($fileSize -lt 1KB) { "$fileSize B" }
                     elseif ($fileSize -lt 1MB) { "{0:N1} KB" -f ($fileSize / 1KB) }
                     elseif ($fileSize -lt 1GB) { "{0:N1} MB" -f ($fileSize / 1MB) }
                     else { "{0:N1} GB" -f ($fileSize / 1GB) }
@@ -140,7 +202,11 @@ runs:
         RUN_ID="${{ github.run_id }}"
         RERUN_SUFFIX="${{ steps.check-rerun.outputs.rerun_suffix }}"
 
-        # Generate standard key (OS specific)
+        # Generate platform-specific key (no cross-platform sharing to avoid path issues)
+        PLATFORM_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
+        echo "platform_key=${PLATFORM_KEY}" >> $GITHUB_OUTPUT
+
+        # Keep standard key for backward compatibility
         STANDARD_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         echo "standard_key=${STANDARD_KEY}" >> $GITHUB_OUTPUT
 
@@ -157,22 +223,14 @@ runs:
         retention-days: ${{ inputs.retention_days }}
         if-no-files-found: error
 
-    # Cache with OS-specific key
-    - name: 🗄️ Cache Artifact (OS-specific)
+    # Cache with platform-specific key
+    # Cross-platform archive enabled - works for TypeScript packages (wdio-electron-build)
+    # Tauri apps use 7zip for cross-platform compatible ZIPs
+    - name: 🗄️ Cache Artifact (Platform-specific)
       uses: actions/cache/save@v4
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
         path: ${{ inputs.output }}
-        key: ${{ steps.generate-keys.outputs.standard_key }}
-        enableCrossOsArchive: true
-
-    # Cache with OS-agnostic key
-    - name: 🗄️ Cache Artifact (OS-agnostic)
-      uses: actions/cache/save@v4
-      env:
-        ACTIONS_CACHE_SERVICE_V2: 'true'
-      with:
-        path: ${{ inputs.output }}
-        key: ${{ steps.generate-keys.outputs.agnostic_key }}
+        key: ${{ steps.generate-keys.outputs.platform_key }}
         enableCrossOsArchive: true

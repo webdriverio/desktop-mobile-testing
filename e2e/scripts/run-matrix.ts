@@ -12,7 +12,8 @@ import BuildManager from './build-apps.js';
  * Test variant definition
  */
 interface TestVariant {
-  platform: 'builder' | 'forge' | 'no-binary';
+  framework: 'electron' | 'tauri';
+  app: 'builder' | 'forge' | 'no-binary' | 'basic';
   moduleType: 'cjs' | 'esm';
   testType: 'standard' | 'window' | 'multiremote' | 'standalone';
   binary: boolean;
@@ -22,7 +23,13 @@ interface TestVariant {
  * Get human-readable test name
  */
 function getTestName(variant: TestVariant): string {
-  const parts = [variant.platform, variant.moduleType, variant.testType, variant.binary ? 'binary' : 'no-binary'];
+  const parts = [
+    variant.framework,
+    variant.app,
+    variant.moduleType,
+    variant.testType,
+    variant.binary ? 'binary' : 'no-binary',
+  ];
   return parts.join('-');
 }
 
@@ -30,7 +37,16 @@ function getTestName(variant: TestVariant): string {
  * Generate all possible test variants
  */
 function generateTestVariants(): TestVariant[] {
-  const platforms: Array<'builder' | 'forge' | 'no-binary'> = ['builder', 'forge', 'no-binary'];
+  // If FRAMEWORK is set, only generate variants for that framework
+  const frameworks: Array<'electron' | 'tauri'> = process.env.FRAMEWORK
+    ? [process.env.FRAMEWORK as 'electron' | 'tauri']
+    : ['electron', 'tauri'];
+
+  console.log(`🔍 Debug: FRAMEWORK env var: ${process.env.FRAMEWORK}`);
+  console.log(`🔍 Debug: Generated frameworks: ${frameworks.join(', ')}`);
+
+  const electronApps: Array<'builder' | 'forge' | 'no-binary'> = ['builder', 'forge', 'no-binary'];
+  const tauriApps: Array<'basic'> = ['basic'];
   const moduleTypes: Array<'cjs' | 'esm'> = ['cjs', 'esm'];
   const testTypes: Array<'standard' | 'window' | 'multiremote' | 'standalone'> = [
     'standard',
@@ -41,21 +57,37 @@ function generateTestVariants(): TestVariant[] {
 
   const variants: TestVariant[] = [];
 
-  for (const platform of platforms) {
-    for (const moduleType of moduleTypes) {
-      for (const testType of testTypes) {
-        // no-binary platform is always non-binary
-        const binary = platform !== 'no-binary';
+  for (const framework of frameworks) {
+    const apps = framework === 'electron' ? electronApps : tauriApps;
 
-        variants.push({
-          platform,
-          moduleType,
-          testType,
-          binary,
-        });
+    for (const app of apps) {
+      // Tauri apps are always ESM, Electron apps support both CJS and ESM
+      const frameworkModuleTypes: Array<'cjs' | 'esm'> = framework === 'tauri' ? ['esm'] : moduleTypes;
+
+      for (const moduleType of frameworkModuleTypes) {
+        for (const testType of testTypes) {
+          // no-binary app is always non-binary for Electron
+          // Tauri apps are always binary
+          const binary = framework === 'tauri' || app !== 'no-binary';
+
+          variants.push({
+            framework,
+            app,
+            moduleType,
+            testType,
+            binary,
+          });
+        }
       }
     }
   }
+
+  console.log(`🔍 Debug: Generated ${variants.length} variants:`);
+  variants.forEach((variant, index) => {
+    console.log(
+      `  ${index + 1}. ${variant.framework}-${variant.app}-${variant.moduleType}-${variant.testType}-${variant.binary ? 'binary' : 'no-binary'}`,
+    );
+  });
 
   return variants;
 }
@@ -65,7 +97,8 @@ function generateTestVariants(): TestVariant[] {
  */
 function hasEnvironmentFilters(): boolean {
   return !!(
-    process.env.PLATFORM ||
+    process.env.FRAMEWORK ||
+    process.env.APP ||
     process.env.MODULE_TYPE ||
     process.env.TEST_TYPE ||
     process.env.BINARY ||
@@ -87,19 +120,26 @@ function filterVariants(variants: TestVariant[], envContext: EnvironmentContext)
 
   console.log('🎯 Environment filters detected - filtering test variants');
   console.log('🔍 Debug: Environment filter values:');
-  console.log(`  process.env.PLATFORM: "${process.env.PLATFORM}"`);
+  console.log(`  process.env.FRAMEWORK: "${process.env.FRAMEWORK}"`);
+  console.log(`  process.env.APP: "${process.env.APP}"`);
   console.log(`  process.env.MODULE_TYPE: "${process.env.MODULE_TYPE}"`);
   console.log(`  process.env.TEST_TYPE: "${process.env.TEST_TYPE}"`);
   console.log(`  process.env.BINARY: "${process.env.BINARY}"`);
-  console.log(`  envContext.platform: "${envContext.platform}"`);
+  console.log(`  envContext.framework: "${envContext.framework}"`);
+  console.log(`  envContext.app: "${envContext.app}"`);
   console.log(`  envContext.moduleType: "${envContext.moduleType}"`);
   console.log(`  envContext.testType: "${envContext.testType}"`);
   console.log(`  envContext.isBinary: ${envContext.isBinary}`);
   console.log(`  envContext.isMacUniversal: ${envContext.isMacUniversal}`);
 
   const filtered = variants.filter((variant) => {
-    // Platform filter - only apply if explicitly set
-    if (process.env.PLATFORM && variant.platform !== envContext.platform) {
+    // Framework filter - only apply if explicitly set
+    if (process.env.FRAMEWORK && variant.framework !== envContext.framework) {
+      return false;
+    }
+
+    // App filter - only apply if explicitly set
+    if (process.env.APP && variant.app !== envContext.app) {
       return false;
     }
 
@@ -118,9 +158,9 @@ function filterVariants(variants: TestVariant[], envContext: EnvironmentContext)
       return false;
     }
 
-    // Mac Universal mode - include both CJS and ESM for builder/forge binary tests
+    // Mac Universal mode - include both CJS and ESM for builder/forge binary tests (Electron only)
     if (envContext.isMacUniversal) {
-      return ['builder', 'forge'].includes(variant.platform) && variant.binary;
+      return variant.framework === 'electron' && ['builder', 'forge'].includes(variant.app) && variant.binary;
     }
 
     return true;
@@ -144,10 +184,19 @@ async function runTest(
   console.log(`\n🚀 Starting test: ${testName}`);
 
   try {
-    // Determine app directory
-    const appDirName = variant.binary ? `${variant.platform}-${variant.moduleType}` : `no-binary-${variant.moduleType}`;
+    // Determine app directory based on framework
+    let appDirName: string;
+    let fixturesDir: string;
 
-    const appPath = join(process.cwd(), '..', 'fixtures', 'e2e-apps', appDirName);
+    if (variant.framework === 'tauri') {
+      appDirName = variant.app;
+      fixturesDir = 'tauri-apps';
+    } else {
+      appDirName = variant.binary ? `${variant.app}-${variant.moduleType}` : `no-binary-${variant.moduleType}`;
+      fixturesDir = 'electron-apps';
+    }
+
+    const appPath = join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
 
     console.log(`🔍 Debug: Test paths for ${testName}`);
     console.log(`  Current working directory: ${process.cwd()}`);
@@ -164,7 +213,8 @@ async function runTest(
 
     // Create environment for test execution
     const testEnv = envContext.createChildEnvironment({
-      PLATFORM: variant.platform,
+      FRAMEWORK: variant.framework,
+      APP: variant.app,
       MODULE_TYPE: variant.moduleType,
       TEST_TYPE: variant.testType,
       BINARY: variant.binary ? 'true' : 'false',
@@ -259,7 +309,8 @@ async function runTests(): Promise<void> {
     if (filteredVariants.length === 0) {
       console.log('\n⚠️ WARNING: No test variants match the current environment!');
       console.log('Environment configuration:');
-      console.log(`  PLATFORM: ${envContext.platform}`);
+      console.log(`  FRAMEWORK: ${envContext.framework}`);
+      console.log(`  APP: ${envContext.app}`);
       console.log(`  MODULE_TYPE: ${envContext.moduleType}`);
       console.log(`  TEST_TYPE: ${envContext.testType}`);
       console.log(`  BINARY: ${envContext.isBinary}`);
@@ -383,10 +434,13 @@ function parseCommandLineArgs(): void {
     if (match) {
       const [, key, value] = match;
       switch (key) {
-        case 'platform':
-        case 'platforms':
-          process.env.PLATFORM = value;
-          console.log(`Set PLATFORM=${value} from command line`);
+        case 'framework':
+          process.env.FRAMEWORK = value;
+          console.log(`Set FRAMEWORK=${value} from command line`);
+          break;
+        case 'app':
+          process.env.APP = value;
+          console.log(`Set APP=${value} from command line`);
           break;
         case 'module-type':
         case 'modules':
@@ -422,17 +476,18 @@ function parseCommandLineArgs(): void {
  */
 function printUsage(): void {
   console.log(`
-🚀 WebdriverIO Electron Service E2E Test Matrix
+🚀 WebdriverIO Desktop Service E2E Test Matrix
 
 USAGE:
   tsx scripts/run-matrix.ts [options]
 
 FILTERING OPTIONS:
-  --platform=<platform>     Run tests for specific platform(s): builder, forge, no-binary
+  --framework=<framework>   Run tests for specific framework(s): electron, tauri
+  --app=<app>              Run tests for specific app(s): builder, forge, no-binary, basic, advanced
   --module-type=<type>      Run tests for specific module type(s): cjs, esm
-  --test-type=<type>        Run tests for specific test type(s): standard, window, multiremote, standalone
+  --test-type=<type>       Run tests for specific test type(s): standard, window, multiremote, standalone
   --binary=<true|false>     Run binary or no-binary tests
-  --mac-universal=<true>    Run Mac Universal build tests (builder/forge only)
+  --mac-universal=<true>    Run Mac Universal build tests (Electron builder/forge only)
 
 EXECUTION OPTIONS:
   --concurrency=<n>         Number of tests to run concurrently (default: 1)
@@ -444,30 +499,46 @@ EXAMPLES:
   # Run full test matrix (all combinations)
   tsx scripts/run-matrix.ts
 
+  # Run only Electron tests
+  tsx scripts/run-matrix.ts --framework=electron
+
+  # Run only Tauri tests
+  tsx scripts/run-matrix.ts --framework=tauri
+
   # Run only builder tests
-  tsx scripts/run-matrix.ts --platform=builder
+  tsx scripts/run-matrix.ts --app=builder
+
+  # Run only basic Tauri tests
+  tsx scripts/run-matrix.ts --framework=tauri --app=basic
 
   # Run only ESM tests
   tsx scripts/run-matrix.ts --module-type=esm
 
   # Run only window tests for forge platform
-  tsx scripts/run-matrix.ts --platform=forge --test-type=window
+  tsx scripts/run-matrix.ts --framework=electron --app=forge --test-type=window
 
   # Run tests with higher concurrency
   tsx scripts/run-matrix.ts --concurrency=3
 
   # CI mode - run specific combination (set via environment)
-  PLATFORM=builder MODULE_TYPE=cjs tsx scripts/run-matrix.ts
+  FRAMEWORK=electron APP=builder MODULE_TYPE=cjs tsx scripts/run-matrix.ts
 
 ENVIRONMENT VARIABLES:
   All command-line options can also be set via environment variables:
-  PLATFORM, MODULE_TYPE, TEST_TYPE, BINARY, MAC_UNIVERSAL, CONCURRENCY
+  FRAMEWORK, APP, MODULE_TYPE, TEST_TYPE, BINARY, MAC_UNIVERSAL, CONCURRENCY
 `);
 }
 
 // Main execution
 async function main(): Promise<void> {
-  console.log('🚀 WebdriverIO Electron Service E2E Test Matrix');
+  // Prevent duplicate execution
+  if (process.env.WDIO_MATRIX_EXECUTING) {
+    console.log('⚠️ Script already executing, skipping duplicate run');
+    return;
+  }
+  process.env.WDIO_MATRIX_EXECUTING = 'true';
+
+  console.log('🚀 WebdriverIO Desktop Service E2E Test Matrix');
   console.log('Arguments:', process.argv.slice(2));
 
   // Parse command line arguments
@@ -476,11 +547,6 @@ async function main(): Promise<void> {
   // Run tests
   await runTests();
 }
-
-console.log('🔍 Debug: Starting test execution at', new Date().toISOString());
-console.log('🔍 Debug: Node.js version:', process.version);
-console.log('🔍 Debug: Platform:', process.platform, process.arch);
-console.log('🔍 Debug: Process arguments:', process.argv.join(' '));
 
 // Run the tests
 main().catch((error) => {

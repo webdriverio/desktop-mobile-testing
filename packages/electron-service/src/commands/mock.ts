@@ -1,9 +1,9 @@
 import type { ElectronMock } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 import { createMock } from '../mock.js';
 import mockStore from '../mockStore.js';
 
-const log = createLogger('mock');
+const log = createLogger('electron-service', 'mock');
 
 interface ElectronServiceContext {
   browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;

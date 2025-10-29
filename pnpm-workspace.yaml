@@ -2,12 +2,13 @@ packages:
   - packages/*
   - examples/*
   - e2e
-  - fixtures/e2e-apps/builder-cjs
-  - fixtures/e2e-apps/builder-esm
-  - fixtures/e2e-apps/forge-cjs
-  - fixtures/e2e-apps/forge-esm
-  - fixtures/e2e-apps/no-binary-cjs
-  - fixtures/e2e-apps/no-binary-esm
+  - fixtures/electron-apps/builder-cjs
+  - fixtures/electron-apps/builder-esm
+  - fixtures/electron-apps/forge-cjs
+  - fixtures/electron-apps/forge-esm
+  - fixtures/electron-apps/no-binary-cjs
+  - fixtures/electron-apps/no-binary-esm
+  - fixtures/tauri-apps/basic
   - fixtures/package-tests/builder-app
   - fixtures/package-tests/forge-app
   - fixtures/package-tests/script-app

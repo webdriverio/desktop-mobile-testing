@@ -7,9 +7,9 @@ import type {
   ElectronType,
   ExecuteOpts,
 } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('mock');
+const log = createLogger('electron-service', 'mock');
 
 async function restoreElectronFunctionality(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   const browserToUse = browserContext || browser;

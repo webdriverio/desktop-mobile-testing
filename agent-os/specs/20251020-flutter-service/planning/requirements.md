@@ -374,9 +374,9 @@ Implement comprehensive testing matching Electron service coverage:
   - Platform-specific scenarios (mobile gestures, desktop interactions)
 
 - [ ] **Test Fixtures** (matching `fixtures/` structure):
-  - E2E test apps for all 5 platforms (`examples/flutter/e2e-apps/`)
-  - Package test scenarios (`examples/flutter/package-tests/`)
-  - Configuration variations (`examples/flutter/config-scenarios/`)
+  - E2E test apps for all 5 platforms (`fixtures/flutter-apps/`)
+  - Package test scenarios (`fixtures/flutter-package-tests/`)
+  - Configuration variations (`fixtures/flutter-config-scenarios/`)
 
 - [ ] **Test Coverage Targets:**
   - 80%+ package test coverage (matching Electron)
@@ -441,7 +441,7 @@ Provide example Flutter applications for all platforms:
 
 **Example Location:**
 ```
-examples/flutter/
+fixtures/flutter-apps/
 ├── mobile/
 │   ├── android/
 │   └── ios/
@@ -771,9 +771,9 @@ Analyze Electron service tests to establish reusable patterns and identify Flutt
   - Create test reuse matrix (copy/adapt/create new)
   - Plan shared test utilities location (@wdio/native-utils or new package)
   - Design Flutter fixture structure:
-    - `examples/flutter/e2e-apps/` - Android, iOS, Windows, macOS, Linux apps
-    - `examples/flutter/package-tests/` - Flutter app scenarios
-    - `examples/flutter/config-scenarios/` - pubspec.yaml variations
+    - `fixtures/flutter-apps/` - Android, iOS, Windows, macOS, Linux apps
+    - `fixtures/flutter-package-tests/` - Flutter app scenarios
+    - `fixtures/flutter-config-scenarios/` - pubspec.yaml variations
   - Define test coverage targets matching Electron (80%+ package, comprehensive E2E)
 
 - [ ] **Document Findings:**
@@ -862,13 +862,13 @@ Analyze Electron service tests to establish reusable patterns and identify Flutt
 - [ ] Configure multi-platform CI for E2E tests
 
 **Deliverables:**
-- 5 E2E test apps in `examples/flutter/e2e-apps/`:
+- 5 E2E test apps in `fixtures/flutter-apps/`:
   - `android-app/` - Android test app
   - `ios-app/` - iOS test app
   - `windows-app/` - Windows test app
   - `macos-app/` - macOS test app
   - `linux-app/` - Linux test app
-- Package test fixtures in `examples/flutter/package-tests/`
+- Package test fixtures in `fixtures/flutter-package-tests/`
 - Test infrastructure ready
 
 ### Phase 6: E2E and Package Testing (2-3 weeks)

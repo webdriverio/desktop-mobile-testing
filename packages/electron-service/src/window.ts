@@ -1,7 +1,7 @@
 import type { BrowserExtension } from '@wdio/electron-types';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('service');
+const log = createLogger('electron-service', 'service');
 
 import type { Browser as PuppeteerBrowser } from 'puppeteer-core';
 

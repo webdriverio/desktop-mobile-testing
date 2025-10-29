@@ -1,4 +1,4 @@
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CdpBridge } from '../src/bridge.js';
 import { ERROR_MESSAGE } from '../src/constants.js';
@@ -6,7 +6,7 @@ import { DevTool } from '../src/devTool.js';
 
 import type { DebuggerList } from '../src/types.js';
 
-vi.mock('@wdio/electron-utils', () => {
+vi.mock('@wdio/native-utils', () => {
   const mockLogger = {
     info: vi.fn(),
     warn: vi.fn(),

@@ -1,12 +1,26 @@
 import type { BrowserExtension } from '@wdio/electron-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { clearAllMocks } from '../src/commands/clearAllMocks.js';
 import { execute } from '../src/commands/executeCdp.js';
-import * as commands from '../src/commands/index.js';
+import { isMockFunction } from '../src/commands/isMockFunction.js';
+import { mock } from '../src/commands/mock.js';
+import { mockAll } from '../src/commands/mockAll.js';
+import { resetAllMocks } from '../src/commands/resetAllMocks.js';
+import { restoreAllMocks } from '../src/commands/restoreAllMocks.js';
 import ElectronWorkerService, { waitUntilWindowAvailable } from '../src/service.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus } from '../src/window.js';
 import { mockProcessProperty } from './helpers.js';
 
-vi.mock('@wdio/electron-utils', () => import('./mocks/electron-utils.js'));
+const commands = {
+  clearAllMocks,
+  isMockFunction,
+  mock,
+  mockAll,
+  resetAllMocks,
+  restoreAllMocks,
+};
+
+vi.mock('@wdio/native-utils', () => import('./mocks/electron-utils.js'));
 
 vi.mock('../src/window.js', () => {
   return {
@@ -17,16 +31,12 @@ vi.mock('../src/window.js', () => {
   };
 });
 
-vi.mock('../src/commands/index', () => {
-  return {
-    isMockFunction: vi.fn(),
-    mock: vi.fn(),
-    mockAll: vi.fn(),
-    clearAllMocks: vi.fn(),
-    resetAllMocks: vi.fn(),
-    restoreAllMocks: vi.fn(),
-  };
-});
+vi.mock('../src/commands/isMockFunction.js', () => ({ isMockFunction: vi.fn() }));
+vi.mock('../src/commands/mock.js', () => ({ mock: vi.fn() }));
+vi.mock('../src/commands/mockAll.js', () => ({ mockAll: vi.fn() }));
+vi.mock('../src/commands/clearAllMocks.js', () => ({ clearAllMocks: vi.fn() }));
+vi.mock('../src/commands/resetAllMocks.js', () => ({ resetAllMocks: vi.fn() }));
+vi.mock('../src/commands/restoreAllMocks.js', () => ({ restoreAllMocks: vi.fn() }));
 
 vi.mock('../src/commands/execute', () => {
   return {

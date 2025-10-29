@@ -1,7 +1,7 @@
 import http, { type ClientRequest, type RequestOptions } from 'node:http';
-import { createLogger } from '@wdio/electron-utils';
+import { createLogger } from '@wdio/native-utils';
 
-const log = createLogger('bridge');
+const log = createLogger('electron-service', 'bridge');
 
 import waitPort from 'wait-port';
 import { DEFAULT_HOSTNAME, DEFAULT_PORT, ERROR_MESSAGE, REQUEST_TIMEOUT } from './constants.js';

@@ -1,4 +1,4 @@
-// Comprehensive mock for @wdio/electron-utils
+// Comprehensive mock for @wdio/native-utils
 import { vi } from 'vitest';
 
 type LogArea = 'service' | 'launcher' | 'bridge' | 'mock' | 'bundler' | 'config' | 'utils' | 'e2e';
