@@ -1,11 +1,43 @@
 import { execSync, spawn } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
+
+/**
+ * Extract instance ID from capabilities args (e.g., '--browser=A' -> 'A')
+ */
+function extractInstanceId(caps: TauriCapabilities): string | undefined {
+  const args = caps['tauri:options']?.args || [];
+  const browserArg = args.find((arg) => arg.startsWith('--browser='));
+  return browserArg?.split('=')[1];
+}
+
+/**
+ * Generate unique data directory for multiremote instance
+ */
+function generateDataDirectory(instanceId: string): string {
+  const baseTempDir = tmpdir();
+  const dataDir = join(baseTempDir, `tauri-multiremote-${instanceId}`);
+
+  log.debug(`Generated data directory for instance ${instanceId}: ${dataDir}`);
+  return dataDir;
+}
+
+/**
+ * Set environment variable for data directory isolation
+ */
+function setDataDirectoryEnv(instanceId: string, dataDir: string): void {
+  const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+  process.env[envVarName] = dataDir;
+
+  log.info(`Set ${envVarName}=${dataDir} for instance ${instanceId}`);
+}
 
 /**
  * Tauri launcher service
@@ -119,6 +151,16 @@ export default class TauriLaunchService {
     if (!existsSync(this.appBinaryPath)) {
       log.error(`Tauri binary not found: ${this.appBinaryPath}`);
       return;
+    }
+
+    // Implement automatic data directory isolation for multiremote instances
+    const instanceId = extractInstanceId(firstCap);
+    if (instanceId) {
+      log.info(`Detected multiremote instance: ${instanceId}`);
+      const dataDir = generateDataDirectory(instanceId);
+      setDataDirectoryEnv(instanceId, dataDir);
+    } else {
+      log.debug('Standard Tauri session (not multiremote)');
     }
 
     // Run environment diagnostics

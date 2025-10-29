@@ -155,17 +155,18 @@ let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
 if (envContext.isMultiremote) {
   // Tauri multiremote configuration
+  // The service automatically handles data directory isolation for multiremote instances
   capabilities = {
     browserA: {
       capabilities: {
         browserName: 'tauri',
         'tauri:options': {
           application: appBinaryPath,
-          args: ['--foo', '--bar=baz', '--browser=A'],
+          args: ['--browser=A'],
         },
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
-          appArgs: ['--foo', '--bar=baz', '--browser=A'],
+          appArgs: ['--browser=A'],
         },
       },
     },
@@ -174,11 +175,11 @@ if (envContext.isMultiremote) {
         browserName: 'tauri',
         'tauri:options': {
           application: appBinaryPath,
-          args: ['--foo', '--bar=baz', '--browser=B'],
+          args: ['--browser=B'],
         },
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
-          appArgs: ['--foo', '--bar=baz', '--browser=B'],
+          appArgs: ['--browser=B'],
         },
       },
     },
