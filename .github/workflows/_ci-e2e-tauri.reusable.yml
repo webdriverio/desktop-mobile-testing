@@ -284,8 +284,8 @@ jobs:
           journalctl --no-pager -n 50 || echo "No system logs available"
 
       # Show comprehensive debug information on failure
-      - name: 🐛 Debug Information on Failure
-        if: failure()
+      - name: 🐛 Debug Information
+        if: always()
         shell: bash
         run: pnpm run ci:e2e:logs
 
