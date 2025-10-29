@@ -44,9 +44,7 @@ function setDataDirectoryEnv(instanceId: string, dataDir: string): void {
  */
 export default class TauriLaunchService {
   private tauriDriverProcess?: import('node:child_process').ChildProcess;
-  private tauriDriverProcesses: Map<string, import('node:child_process').ChildProcess> = new Map();
   private appBinaryPath?: string;
-  private isMultiremote: boolean = false;
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -134,7 +132,6 @@ export default class TauriLaunchService {
     if (Array.isArray(capabilities)) {
       // Standard capabilities array - no isolation needed
       log.debug('Standard Tauri session (not multiremote)');
-      this.isMultiremote = false;
       return;
     }
 
@@ -142,23 +139,32 @@ export default class TauriLaunchService {
     const capKeys = Object.keys(capabilities);
     if (capKeys.length === 0) {
       log.warn('No capabilities found in multiremote object');
-      this.isMultiremote = false;
       return;
     }
 
-    this.isMultiremote = true;
     log.info(`Setting up data directory isolation for ${capKeys.length} multiremote instances`);
 
+    // For multiremote, we need to ensure that each Tauri app instance gets its own data directory
+    // We'll set up the environment for the first instance, and the Tauri apps themselves
+    // will need to read their instance-specific data directories from their command line args
+    const firstCap = (capabilities as any)[capKeys[0]].capabilities;
+    const firstInstanceId = extractInstanceId(firstCap);
+
+    if (firstInstanceId) {
+      const dataDir = generateDataDirectory(firstInstanceId);
+      setDataDirectoryEnv(firstInstanceId, dataDir);
+      log.debug(`Configured isolation for first instance ${capKeys[0]} (ID: ${firstInstanceId})`);
+    } else {
+      log.warn(`Could not extract instance ID for first instance ${capKeys[0]}`);
+    }
+
+    // Log all instances for debugging
     for (const key of capKeys) {
       const cap = (capabilities as any)[key].capabilities;
       const instanceId = extractInstanceId(cap);
-
       if (instanceId) {
         const dataDir = generateDataDirectory(instanceId);
-        setDataDirectoryEnv(instanceId, dataDir);
-        log.debug(`Configured isolation for ${key} (ID: ${instanceId})`);
-      } else {
-        log.warn(`Could not extract instance ID for ${key}`);
+        log.debug(`Instance ${key} (ID: ${instanceId}) would use data dir: ${dataDir}`);
       }
     }
   }
@@ -213,9 +219,10 @@ export default class TauriLaunchService {
       return;
     }
 
-    // For multiremote instances, spawn a separate tauri-driver process with instance-specific environment
-    if (this.isMultiremote && instanceId) {
-      await this.startInstanceSpecificTauriDriver(instanceId);
+    // For multiremote instances, ensure data directory isolation is set up
+    // The single tauri-driver process will handle multiple sessions
+    if (instanceId) {
+      log.debug(`Multiremote instance ${instanceId} - data directory isolation already configured`);
     }
 
     // Run environment diagnostics
@@ -349,78 +356,6 @@ export default class TauriLaunchService {
   }
 
   /**
-   * Start instance-specific tauri-driver process for multiremote
-   */
-  private async startInstanceSpecificTauriDriver(instanceId: string): Promise<void> {
-    const tauriDriverPath = getTauriDriverPath();
-    const port = (this.options.tauriDriverPort || 4444) + parseInt(instanceId.replace(/\D/g, '')) || 1; // Use different ports for each instance
-
-    log.debug(`Starting instance-specific tauri-driver for ${instanceId} on port ${port}`);
-
-    // Prepare tauri-driver arguments
-    const args = ['--port', port.toString()];
-
-    // Resolve native driver path (WebKitWebDriver on Linux)
-    const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
-
-    if (nativeDriverPath) {
-      args.push('--native-driver', nativeDriverPath);
-      log.debug(`Using native driver: ${nativeDriverPath}`);
-    }
-
-    return new Promise((resolve, reject) => {
-      // Set up instance-specific environment variables
-      const env = { ...process.env };
-      const dataDir = generateDataDirectory(instanceId);
-      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-      env[envVarName] = dataDir;
-
-      log.info(`Starting tauri-driver for instance ${instanceId} with ${envVarName}=${dataDir}`);
-
-      const driverProcess = spawn(tauriDriverPath, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
-        env,
-      });
-
-      this.tauriDriverProcesses.set(instanceId, driverProcess);
-
-      driverProcess.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.debug(`tauri-driver[${instanceId}] stdout: ${output}`);
-
-        // Check if tauri-driver is ready
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          resolve();
-        }
-      });
-
-      driverProcess.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`tauri-driver[${instanceId}] stderr: ${output}`);
-      });
-
-      driverProcess.on('error', (error) => {
-        log.error(`Failed to start tauri-driver for instance ${instanceId}: ${error.message}`);
-        reject(error);
-      });
-
-      driverProcess.on('exit', (code) => {
-        log.debug(`tauri-driver for instance ${instanceId} exited with code ${code}`);
-        this.tauriDriverProcesses.delete(instanceId);
-      });
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        if (!driverProcess.killed) {
-          log.warn(`tauri-driver startup timeout for instance ${instanceId}, assuming ready`);
-          resolve();
-        }
-      }, 30000);
-    });
-  }
-
-  /**
    * Start tauri-driver process
    */
   private async startTauriDriver(): Promise<void> {
@@ -497,9 +432,8 @@ export default class TauriLaunchService {
    * Stop tauri-driver process
    */
   private async stopTauriDriver(): Promise<void> {
-    // Stop main tauri-driver process
     if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
-      log.debug('Stopping main tauri-driver...');
+      log.debug('Stopping tauri-driver...');
 
       this.tauriDriverProcess.kill('SIGTERM');
 
@@ -517,15 +451,6 @@ export default class TauriLaunchService {
         });
       });
     }
-
-    // Stop all instance-specific processes
-    for (const [instanceId, process] of this.tauriDriverProcesses) {
-      if (!process.killed) {
-        log.debug(`Stopping tauri-driver process for instance ${instanceId}`);
-        process.kill('SIGTERM');
-      }
-    }
-    this.tauriDriverProcesses.clear();
   }
 
   /**

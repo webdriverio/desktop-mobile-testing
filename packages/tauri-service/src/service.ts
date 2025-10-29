@@ -1,5 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
-import { executeTauriCommand, isTauriApiAvailable } from './commands/execute.js';
+import { executeTauriCommand } from './commands/execute.js';
 import type { TauriCapabilities, TauriResult, TauriServiceOptions } from './types.js';
 
 /**
@@ -41,54 +41,26 @@ export default class TauriWorkerService {
     // Handle multiremote vs standard browser
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
-
-      // For multiremote, add a small delay to ensure all instances are ready
       log.debug(`Initializing ${mrBrowser.instances.length} multiremote instances`);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Add Tauri API to the root multiremote object first (for browserA.tauri, browserB.tauri access)
       this.addTauriApi(browser as unknown as WebdriverIO.Browser);
       log.debug('Tauri API added to root multiremote object');
 
-      // Check Tauri API availability and add API to each individual multiremote instance
+      // Add Tauri API to each individual multiremote instance
       for (const instanceName of mrBrowser.instances) {
-        try {
-          const mrInstance = mrBrowser.getInstance(instanceName);
-          log.debug(`Checking Tauri API availability for instance: ${instanceName}`);
+        const mrInstance = mrBrowser.getInstance(instanceName);
+        log.debug(`Adding Tauri API to instance: ${instanceName}`);
 
-          const isAvailable = await isTauriApiAvailable(mrInstance);
-          if (!isAvailable) {
-            throw new Error(
-              `Tauri API is not available for instance ${instanceName}. Make sure the Tauri app is running and tauri-driver is connected.`,
-            );
-          }
-
-          // Add Tauri API to each individual multiremote instance
-          this.addTauriApi(mrInstance);
-          log.debug(`Tauri API added to instance: ${instanceName}`);
-        } catch (error) {
-          log.error(`Failed to initialize Tauri API for instance ${instanceName}: ${error}`);
-          throw error;
-        }
+        // Add Tauri API to each individual multiremote instance
+        this.addTauriApi(mrInstance);
+        log.debug(`Tauri API added to instance: ${instanceName}`);
       }
     } else {
       // Standard browser
-      try {
-        log.debug('Checking Tauri API availability for standard browser');
-        const isAvailable = await isTauriApiAvailable(browser as WebdriverIO.Browser);
-        if (!isAvailable) {
-          throw new Error(
-            'Tauri API is not available. Make sure the Tauri app is running and tauri-driver is connected.',
-          );
-        }
-
-        // Add Tauri API to browser object
-        this.addTauriApi(browser as WebdriverIO.Browser);
-        log.debug('Tauri API added to standard browser');
-      } catch (error) {
-        log.error(`Failed to initialize Tauri API for standard browser: ${error}`);
-        throw error;
-      }
+      log.debug('Adding Tauri API to standard browser');
+      this.addTauriApi(browser as WebdriverIO.Browser);
+      log.debug('Tauri API added to standard browser');
     }
 
     log.debug('Tauri worker service initialized');
