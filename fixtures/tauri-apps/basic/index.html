@@ -98,6 +98,29 @@
     </div>
 
     <script type="module">
+      // Import Tauri API using npm module approach (recommended for v2)
+      // This is the preferred way in Tauri v2
+      (async () => {
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+
+          // Ensure window.__TAURI__ exists and expose invoke for WebDriver tests
+          if (!window.__TAURI__) {
+            window.__TAURI__ = {};
+          }
+          if (!window.__TAURI__.core) {
+            window.__TAURI__.core = {};
+          }
+          window.__TAURI__.core.invoke = invoke;
+        } catch (error) {
+          console.warn('Failed to import @tauri-apps/api/core, using global API:', error);
+          // Fallback: ensure window.__TAURI__.core.invoke exists (should be available with withGlobalTauri: true)
+          if (!window.__TAURI__?.core?.invoke) {
+            console.error('Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
+          }
+        }
+      })();
+
       let count = 0;
       const counterElement = document.getElementById('counter');
       const incrementButton = document.getElementById('increment-button');
