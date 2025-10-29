@@ -16,7 +16,7 @@ export async function executeTauriCommand<T = unknown>(
   try {
     // Execute Tauri command via WebDriver
     const result = await browser.execute(
-      (cmd: string, cmdArgs: unknown[]) => {
+      (cmd: string, ...cmdArgs: unknown[]) => {
         console.log('🔍 Executing Tauri command:', cmd, 'with args:', cmdArgs);
 
         // Tauri v2 uses window.__TAURI__.core.invoke
@@ -26,7 +26,7 @@ export async function executeTauriCommand<T = unknown>(
         return invokeResult;
       },
       command,
-      args,
+      ...args,
     );
 
     log.debug(`Tauri command result:`, result);
