@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'node:child_process';
+import { type ChildProcess, execSync, spawn } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -35,16 +35,16 @@ function generateDataDirectory(instanceId: string): string {
  * Tauri launcher service
  */
 export default class TauriLaunchService {
-  private tauriDriverProcess?: import('node:child_process').ChildProcess;
+  private tauriDriverProcess?: ChildProcess;
   private appBinaryPath?: string;
-  private tauriDriverProcesses: Map<string, { proc: import('node:child_process').ChildProcess; port: number }> =
-    new Map();
+  private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number }> = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
     capabilities: TauriCapabilities,
     config: Options.Testrunner,
   ) {
+    console.log('🚀 TauriLaunchService constructor called');
     log.debug('TauriLaunchService initialized');
     log.debug('Capabilities:', JSON.stringify(capabilities, null, 2));
     log.debug('Config:', JSON.stringify(config, null, 2));
@@ -57,6 +57,7 @@ export default class TauriLaunchService {
     _config: Options.Testrunner,
     capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
+    console.log('🚀 TauriLaunchService onPrepare called');
     log.debug('Preparing Tauri service...');
 
     // Check for unsupported platforms
@@ -121,11 +122,15 @@ export default class TauriLaunchService {
         const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
         const env = { ...process.env, [envVarName]: dataDir };
 
-        const basePort = this.options.tauriDriverPort || 4444;
-        const port = basePort + i; // ensure unique port per instance
+        // Prefer per-instance port/hostname from WDIO multiremote capabilities if provided
+        const instancePort = (value as any).port ?? (this.options.tauriDriverPort || 4444) + i;
+        const instanceHost = (value as any).hostname ?? '127.0.0.1';
 
-        log.info(`➡️  Starting tauri-driver for ${key} (ID: ${instanceId}) on port ${port}`);
-        await this.startTauriDriverForInstance(instanceId, port, env);
+        log.info(
+          `➡️  Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
+            `(data dir: ${dataDir})`,
+        );
+        await this.startTauriDriverForInstance(instanceId, instancePort, env);
       }
     } else {
       // Standard session: single shared tauri-driver as before
@@ -425,6 +430,7 @@ export default class TauriLaunchService {
         const output = data.toString();
         log.debug(`tauri-driver [${instanceId}] stdout: ${output}`);
         if (output.includes('tauri-driver started') || output.includes('listening on')) {
+          log.info(`✅ tauri-driver [${instanceId}] started on port ${port} (pid: ${proc.pid ?? 'unknown'})`);
           resolve();
         }
       });
