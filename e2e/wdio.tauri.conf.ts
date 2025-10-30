@@ -172,7 +172,7 @@ if (envContext.isMultiremote) {
         },
       },
       hostname: '127.0.0.1',
-      port: 4444,
+      port: 5555,
     },
     browserB: {
       capabilities: {
@@ -187,7 +187,7 @@ if (envContext.isMultiremote) {
         },
       },
       hostname: '127.0.0.1',
-      port: 4445,
+      port: 5556,
     },
   };
 } else {
