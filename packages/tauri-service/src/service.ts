@@ -1,4 +1,4 @@
-import { createLogger } from '@wdio/native-utils';
+import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { executeTauriCommand } from './commands/execute.js';
 import type { TauriCapabilities, TauriResult, TauriServiceOptions } from './types.js';
 
@@ -58,8 +58,8 @@ export default class TauriWorkerService {
         this.addTauriApi(mrInstance);
         log.debug(`Tauri API added to instance: ${instanceName}`);
 
-        // Wait for the Tauri app to be ready (similar to Electron's waitUntilWindowAvailable)
-        await this.waitUntilTauriAppReady(mrInstance);
+        // Wait until a window is available (shared util in native-utils)
+        await waitUntilWindowAvailable(mrInstance);
         log.debug(`Tauri app ready for instance: ${instanceName}`);
       }
     } else {
@@ -68,8 +68,8 @@ export default class TauriWorkerService {
       this.addTauriApi(browser as WebdriverIO.Browser);
       log.debug('Tauri API added to standard browser');
 
-      // Wait for the Tauri app to be ready
-      await this.waitUntilTauriAppReady(browser as WebdriverIO.Browser);
+      // Wait until a window is available (shared util in native-utils)
+      await waitUntilWindowAvailable(browser as WebdriverIO.Browser);
       log.debug('Tauri app ready for standard browser');
     }
 
@@ -108,33 +108,7 @@ export default class TauriWorkerService {
     // Add cleanup logic here
   }
 
-  /**
-   * Wait until Tauri app is ready (similar to Electron's waitUntilWindowAvailable)
-   */
-  private async waitUntilTauriAppReady(browser: WebdriverIO.Browser): Promise<void> {
-    try {
-      // Wait for the Tauri app to be ready by checking if we can get window handles
-      await browser.waitUntil(
-        async () => {
-          try {
-            const handles = await browser.getWindowHandles();
-            return handles.length > 0;
-          } catch (error) {
-            log.debug(`Waiting for Tauri app readiness, error: ${error instanceof Error ? error.message : error}`);
-            return false;
-          }
-        },
-        {
-          timeout: 30000, // 30 seconds timeout
-          timeoutMsg: 'Tauri app did not become ready within 30 seconds',
-        },
-      );
-      log.debug('Tauri app is ready');
-    } catch (error) {
-      log.warn(`Failed to wait for Tauri app readiness: ${error instanceof Error ? error.message : error}`);
-      // Don't throw - let the test continue and fail naturally if needed
-    }
-  }
+  // readiness handled via shared waitUntilWindowAvailable
 
   /**
    * Add Tauri API to browser object

@@ -6,3 +6,4 @@ export { generateBinaryPaths, getBinaryPath } from './binaryPath.js';
 export { getElectronVersion } from './electronVersion.js';
 export type { LogArea } from './log.js';
 export { selectExecutable, validateBinaryPaths } from './selectExecutable.js';
+export { waitUntilWindowAvailable } from './window.js';

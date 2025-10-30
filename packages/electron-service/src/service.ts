@@ -7,7 +7,7 @@ import type {
   ElectronType,
   ExecuteOpts,
 } from '@wdio/electron-types';
-import { createLogger } from '@wdio/native-utils';
+import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import type { Capabilities, Services } from '@wdio/types';
 import { ElectronCdpBridge, getDebuggerEndpoint } from './bridge.js';
 import { clearAllMocks } from './commands/clearAllMocks.js';
@@ -215,13 +215,6 @@ async function initCdpBridge(
   await cdpBridge.connect();
   return cdpBridge;
 }
-
-export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser) => {
-  await browser.waitUntil(async () => {
-    const numWindows = (await browser.getWindowHandles()).length;
-    return numWindows > 0;
-  });
-};
 
 const copyOriginalApi = async (browser: WebdriverIO.Browser) => {
   await browser.electron.execute<void, [ExecuteOpts]>(
