@@ -20,7 +20,7 @@ const commands = {
   restoreAllMocks,
 };
 
-vi.mock('@wdio/native-utils', () => import('./mocks/electron-utils.js'));
+vi.mock('@wdio/native-utils', () => import('./mocks/native-utils.js'));
 
 vi.mock('../src/window.js', () => {
   return {

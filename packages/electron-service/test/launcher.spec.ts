@@ -7,7 +7,7 @@ import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import ElectronLaunchService from '../src/launcher.js';
 import { mockProcessProperty, revertProcessProperty } from './helpers.js';
-import { getAppBuildInfo, getBinaryPath, getElectronVersion, getMockLogger } from './mocks/electron-utils.js';
+import { getAppBuildInfo, getBinaryPath, getElectronVersion, getMockLogger } from './mocks/native-utils.js';
 
 let LaunchService: typeof ElectronLaunchService;
 let instance: ElectronLaunchService | undefined;
@@ -27,7 +27,7 @@ vi.mock('node:fs/promises', () => {
   };
 });
 vi.mock('@wdio/native-utils', async () => {
-  const mockUtilsModule = await import('./mocks/electron-utils.js');
+  const mockUtilsModule = await import('./mocks/native-utils.js');
 
   // Configure the specific mocks needed for launcher tests
   mockUtilsModule.getBinaryPath.mockResolvedValue({
@@ -73,7 +73,7 @@ vi.mock('get-port', async () => {
 beforeEach(async () => {
   mockProcessProperty('platform', 'darwin');
   // Ensure the launcher logger is created before importing the service
-  const { createLogger } = await import('./mocks/electron-utils.js');
+  const { createLogger } = await import('./mocks/native-utils.js');
   createLogger('electron-service');
   LaunchService = (await import('../src/launcher.js')).default;
   options = {

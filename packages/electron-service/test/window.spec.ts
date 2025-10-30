@@ -2,7 +2,7 @@ import type { Browser as PuppeteerBrowser } from 'puppeteer-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from '../src/window.js';
 
-vi.mock('@wdio/native-utils', () => import('./mocks/electron-utils.js'));
+vi.mock('@wdio/native-utils', () => import('./mocks/native-utils.js'));
 
 describe('Window Management', () => {
   beforeEach(() => {

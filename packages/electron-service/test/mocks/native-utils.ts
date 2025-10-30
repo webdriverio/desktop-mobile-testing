@@ -46,3 +46,4 @@ export const clearAllMockLoggers = () => {
 export const getBinaryPath = vi.fn();
 export const getAppBuildInfo = vi.fn();
 export const getElectronVersion = vi.fn();
+export const waitUntilWindowAvailable = vi.fn();
