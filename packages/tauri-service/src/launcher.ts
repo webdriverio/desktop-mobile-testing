@@ -452,6 +452,40 @@ export default class TauriLaunchService {
         }
       }, 30000);
     });
+
+    // Additional readiness: wait until the driver port accepts connections
+    await this.waitForPortOpen('127.0.0.1', port, 30000);
+  }
+
+  /**
+   * Wait until a TCP port is accepting connections
+   */
+  private async waitForPortOpen(host: string, port: number, timeoutMs: number): Promise<void> {
+    const started = Date.now();
+    const net = await import('node:net');
+    while (Date.now() - started < timeoutMs) {
+      const isOpen = await new Promise<boolean>((resolve) => {
+        const socket = new net.Socket();
+        const onError = () => {
+          try {
+            socket.destroy();
+          } catch {}
+          resolve(false);
+        };
+        socket.setTimeout(750);
+        socket.once('error', onError);
+        socket.once('timeout', onError);
+        socket.connect(port, host, () => {
+          try {
+            socket.end();
+          } catch {}
+          resolve(true);
+        });
+      });
+      if (isOpen) return;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    log.warn(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
   }
 
   /**
