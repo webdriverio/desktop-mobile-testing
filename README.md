@@ -1,15 +1,15 @@
 # WebdriverIO Cross-Platform Testing Services
 
-> Integration services for cross-platform testing on Electron, Flutter, Neutralino, and Tauri with WebdriverIO
+> Integration services for cross-platform testing on Electron, Tauri, Flutter, and Neutralino with WebdriverIO
 
 ## Overview
 
 This monorepo contains WebdriverIO service packages for testing desktop and mobile applications across multiple frameworks:
 
 - **Electron Service** - Test Electron applications with automatic binary detection, CDP bridge for main process access, and comprehensive API mocking
+- **Tauri Service** - Test Tauri applications with official tauri-driver integration and multiremote support
 - **Flutter Service** - Test Flutter apps on iOS, Android, Windows, macOS, and Linux with Appium integration (coming soon)
 - **Neutralino Service** - Test Neutralino.js applications with WebSocket API bridge (coming soon)
-- **Tauri Service** - Test Tauri applications with official tauri-driver integration (coming soon)
 
 ## Quick Start
 
@@ -32,12 +32,15 @@ pnpm turbo lint
 ```
 wdio-desktop-mobile-testing/
 ├── packages/               # Service packages
-│   ├── @wdio/
-│   │   ├── electron-utils/
-│   │   ├── electron-cdp-bridge/
-│   │   └── native-utils/
-│   └── wdio-electron-service/
-├── examples/              # Example applications
+│   ├── electron-service/   # @wdio/electron-service
+│   ├── tauri-service/      # @wdio/tauri-service
+│   ├── electron-cdp-bridge/ # @wdio/electron-cdp-bridge
+│   ├── electron-types/     # @wdio/electron-types
+│   ├── native-utils/       # @wdio/native-utils
+│   └── bundler/            # @wdio/bundler
+├── fixtures/              # Test fixtures and example apps
+│   ├── e2e-apps/         # E2E test applications
+│   └── package-tests/    # Package test applications
 ├── e2e/                  # E2E test scenarios
 ├── docs/                 # Documentation
 └── scripts/              # Build and utility scripts
@@ -49,16 +52,24 @@ wdio-desktop-mobile-testing/
 
 Test Electron applications with WebdriverIO.
 
-- 📦 **Package**: `wdio-electron-service`
-- 📖 **Docs**: [packages/wdio-electron-service/README.md](packages/wdio-electron-service/README.md)
+- 📦 **Package**: `@wdio/electron-service`
+- 📖 **Docs**: [packages/electron-service/README.md](packages/electron-service/README.md)
 - ✨ **Features**: Binary detection, CDP bridge, API mocking, window management
+
+### Tauri Service
+
+Test Tauri applications with WebdriverIO.
+
+- 📦 **Package**: `@wdio/tauri-service`
+- 📖 **Docs**: [packages/tauri-service/README.md](packages/tauri-service/README.md)
+- ✨ **Features**: tauri-driver integration, multiremote support, binary detection
 
 ### Shared Utilities
 
 Common utilities shared across all framework services.
 
 - 📦 **Package**: `@wdio/native-utils`
-- 📖 **Docs**: [packages/@wdio/native-utils/README.md](packages/@wdio/native-utils/README.md) (coming soon)
+- 📖 **Docs**: [packages/@wdio/native-utils/README.md](packages/@wdio/native-utils/README.md)
 
 ## Development
 
@@ -96,8 +107,16 @@ pnpm format                # Format code with Biome
 pnpm typecheck             # Type check all packages
 
 # Package-specific commands
-pnpm --filter @wdio/electron-utils build
-pnpm --filter wdio-electron-service test
+pnpm --filter @wdio/native-utils build
+pnpm --filter @wdio/electron-service test
+pnpm --filter @wdio/tauri-service test
+
+# E2E Testing
+pnpm e2e                          # Run all E2E tests
+pnpm e2e:electron-builder          # Run Electron builder tests
+pnpm e2e:electron-forge            # Run Electron forge tests
+pnpm e2e:electron-no-binary        # Run Electron no-binary tests
+pnpm e2e:tauri                     # Run Tauri tests
 ```
 
 ### Adding a New Package
@@ -117,10 +136,22 @@ This project maintains 80%+ test coverage across all packages. Tests are organiz
 pnpm test
 
 # Run tests for specific package
-pnpm --filter wdio-electron-service test
+pnpm --filter @wdio/electron-service test
+pnpm --filter @wdio/tauri-service test
 
 # Run with coverage
 pnpm test:coverage
+
+# Run E2E tests
+pnpm e2e                          # All E2E tests
+pnpm e2e:electron-builder          # Electron builder E2E
+pnpm e2e:electron-forge            # Electron forge E2E
+pnpm e2e:tauri                     # Tauri E2E
+
+# Run package tests (isolated test apps)
+pnpm test:package                 # Both Electron and Tauri
+pnpm test:package:electron        # Electron only
+pnpm test:package:tauri           # Tauri only
 ```
 
 ## Contributing
