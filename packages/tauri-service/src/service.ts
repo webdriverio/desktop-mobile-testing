@@ -45,96 +45,10 @@ export default class TauriWorkerService {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
       log.debug(`Initializing ${mrBrowser.instances.length} multiremote instances`);
 
-      // DEBUG: Log driver process status (if accessible)
-      log.debug('Checking sessions immediately after before() call');
-      log.debug(`Number of instances: ${mrBrowser.instances.length}`);
-
-      // DEBUG: Try to verify driver processes are running (via launcher if accessible)
-      // Note: In worker process, we don't have direct access to launcher processes,
-      // but we can log the expected ports from capabilities
-      for (const instanceName of mrBrowser.instances) {
-        const mrInstance = mrBrowser.getInstance(instanceName);
-        const options = (mrInstance as any).options || {};
-        const sessionId = (mrInstance as any).sessionId || 'unknown';
-        log.debug(
-          `Expected connection for ${instanceName} - ${options.hostname || 'unknown'}:${options.port || 'unknown'} (session: ${sessionId.substring(0, 8)}...)`,
-        );
-      }
-
-      // DEBUG: Try to check if driver processes are accessible via HTTP
-      for (const instanceName of mrBrowser.instances) {
-        const mrInstance = mrBrowser.getInstance(instanceName);
-        const options = (mrInstance as any).options || {};
-        const hostname = options.hostname || '127.0.0.1';
-        const port = options.port;
-        if (port) {
-          try {
-            const http = await import('node:http');
-            const isReachable = await new Promise<boolean>((resolve) => {
-              const req = http.get(`http://${hostname}:${port}/status`, { timeout: 1000 }, (res) => {
-                res.once('data', () => {});
-                res.once('end', () => resolve(true));
-              });
-              req.once('error', () => resolve(false));
-              req.once('timeout', () => {
-                req.destroy();
-                resolve(false);
-              });
-            });
-            log.debug(`Driver for ${instanceName} HTTP reachable: ${isReachable}`);
-          } catch (error) {
-            log.debug(
-              `Could not check HTTP reachability for ${instanceName}: ${error instanceof Error ? error.message : String(error)}`,
-            );
-          }
-        }
-      }
-      for (const instanceName of mrBrowser.instances) {
-        const mrInstance = mrBrowser.getInstance(instanceName);
-        const sessionId = (mrInstance as any).sessionId || 'unknown';
-        const capabilities = (mrInstance as any).capabilities || {};
-        const options = (mrInstance as any).options || {};
-        const hostname = options.hostname || 'unknown';
-        const port = options.port || 'unknown';
-        const requestedCaps = (mrInstance as any).requestedCapabilities || {};
-
-        log.debug(
-          `Instance ${instanceName} - sessionId: ${sessionId.substring(0, 8)}..., ` +
-            `hostname: ${hostname}, port: ${port}, ` +
-            `capabilities keys: ${Object.keys(capabilities).join(', ')}`,
-        );
-        log.debug(`Instance ${instanceName} requestedCaps: ${JSON.stringify(requestedCaps).substring(0, 200)}...`);
-        try {
-          const handle = await mrInstance.getWindowHandle();
-          log.debug(`✅ Instance ${instanceName} session VALID - handle: ${handle.substring(0, 8)}...`);
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          const errorStack = error instanceof Error ? error.stack : '';
-          log.error(`❌ Instance ${instanceName} session INVALID: ${errorMessage}`);
-          if (errorStack) {
-            log.debug(`Error stack: ${errorStack.substring(0, 500)}`);
-          }
-        }
-      }
-
       // Add Tauri API to the root multiremote object first (for browserA.tauri, browserB.tauri access)
+      // Mirror Electron service approach: add API immediately without session validation
       this.addTauriApi(browser as unknown as WebdriverIO.Browser);
       log.debug('Tauri API added to root multiremote object');
-
-      // DEBUG: Check again after adding API to root
-      log.debug('Checking sessions after adding API to root');
-      for (const instanceName of mrBrowser.instances) {
-        const mrInstance = mrBrowser.getInstance(instanceName);
-        try {
-          const handle = await mrInstance.getWindowHandle();
-          log.debug(
-            `✅ Instance ${instanceName} still VALID after root API add (handle: ${handle.substring(0, 8)}...)`,
-          );
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          log.error(`❌ Instance ${instanceName} became INVALID after root API add: ${errorMessage}`);
-        }
-      }
 
       // Add Tauri API to each individual multiremote instance and wait for readiness
       // Process sequentially with delays to avoid session conflicts
@@ -144,42 +58,16 @@ export default class TauriWorkerService {
         const sessionId = (mrInstance as any).sessionId || 'unknown';
 
         log.debug(`Processing instance ${instanceName} (session: ${sessionId.substring(0, 8)}...)`);
-        log.debug(`Adding Tauri API to instance: ${instanceName}`);
 
         // Add Tauri API to each individual multiremote instance
         this.addTauriApi(mrInstance);
         log.debug(`Tauri API added to instance: ${instanceName}`);
 
-        // Verify session is still valid before waiting
-        try {
-          const testHandle = await mrInstance.getWindowHandle();
-          log.debug(
-            `✅ Instance ${instanceName} session valid before waitUntilWindowAvailable (handle: ${testHandle.substring(0, 8)}...)`,
-          );
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          log.error(`❌ Instance ${instanceName} session INVALID before waitUntilWindowAvailable: ${errorMessage}`);
-        }
-
         // Wait until a window is available (shared util in native-utils)
         // This includes retry logic for transient "invalid session id" errors
-        log.debug(`Starting waitUntilWindowAvailable for ${instanceName}...`);
-        const waitStart = Date.now();
+        // Mirror Electron service: just wait, don't validate sessions before/after
         await waitUntilWindowAvailable(mrInstance);
-        const waitElapsed = Date.now() - waitStart;
-        log.debug(`✅ Instance ${instanceName} completed waitUntilWindowAvailable in ${waitElapsed}ms`);
         log.debug(`Tauri app ready for instance: ${instanceName}`);
-
-        // Verify session is still valid after waiting
-        try {
-          const testHandle = await mrInstance.getWindowHandle();
-          log.debug(
-            `✅ Instance ${instanceName} session valid after waitUntilWindowAvailable (handle: ${testHandle.substring(0, 8)}...)`,
-          );
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          log.error(`❌ Instance ${instanceName} session INVALID after waitUntilWindowAvailable: ${errorMessage}`);
-        }
 
         // Small delay between instances to prevent race conditions
         // where checking one instance might affect another
