@@ -50,7 +50,9 @@ export default class TauriWorkerService {
       log.debug('Tauri API added to root multiremote object');
 
       // Add Tauri API to each individual multiremote instance and wait for readiness
-      for (const instanceName of mrBrowser.instances) {
+      // Process sequentially with delays to avoid session conflicts
+      for (let i = 0; i < mrBrowser.instances.length; i++) {
+        const instanceName = mrBrowser.instances[i];
         const mrInstance = mrBrowser.getInstance(instanceName);
         log.debug(`Adding Tauri API to instance: ${instanceName}`);
 
@@ -59,8 +61,15 @@ export default class TauriWorkerService {
         log.debug(`Tauri API added to instance: ${instanceName}`);
 
         // Wait until a window is available (shared util in native-utils)
+        // This includes retry logic for transient "invalid session id" errors
         await waitUntilWindowAvailable(mrInstance);
         log.debug(`Tauri app ready for instance: ${instanceName}`);
+
+        // Small delay between instances to prevent race conditions
+        // where checking one instance might affect another
+        if (i < mrBrowser.instances.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
       }
     } else {
       // Standard browser
