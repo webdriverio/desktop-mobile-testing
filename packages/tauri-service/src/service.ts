@@ -45,29 +45,129 @@ export default class TauriWorkerService {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
       log.debug(`Initializing ${mrBrowser.instances.length} multiremote instances`);
 
+      // DEBUG: Log driver process status (if accessible)
+      console.log(`[TauriWorkerService] DEBUG: Checking sessions immediately after before() call`);
+
+      // DEBUG: Try to verify driver processes are running (via launcher if accessible)
+      // Note: In worker process, we don't have direct access to launcher processes,
+      // but we can log the expected ports from capabilities
+      for (const instanceName of mrBrowser.instances) {
+        const mrInstance = mrBrowser.getInstance(instanceName);
+        const options = (mrInstance as any).options || {};
+        console.log(
+          `[TauriWorkerService] DEBUG: Expected connection for ${instanceName} - ${options.hostname || 'unknown'}:${options.port || 'unknown'}`,
+        );
+      }
+      for (const instanceName of mrBrowser.instances) {
+        const mrInstance = mrBrowser.getInstance(instanceName);
+        const sessionId = (mrInstance as any).sessionId || 'unknown';
+        const capabilities = (mrInstance as any).capabilities || {};
+        const options = (mrInstance as any).options || {};
+        const hostname = options.hostname || 'unknown';
+        const port = options.port || 'unknown';
+        const requestedCaps = (mrInstance as any).requestedCapabilities || {};
+
+        console.log(
+          `[TauriWorkerService] DEBUG: Instance ${instanceName} - sessionId: ${sessionId.substring(0, 8)}..., ` +
+            `hostname: ${hostname}, port: ${port}, ` +
+            `capabilities keys: ${Object.keys(capabilities).join(', ')}`,
+        );
+        console.log(
+          `[TauriWorkerService] DEBUG: Instance ${instanceName} requestedCaps: ${JSON.stringify(requestedCaps).substring(0, 200)}...`,
+        );
+        try {
+          const handle = await mrInstance.getWindowHandle();
+          console.log(
+            `[TauriWorkerService] DEBUG: ✅ Instance ${instanceName} session VALID - handle: ${handle.substring(0, 8)}...`,
+          );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorStack = error instanceof Error ? error.stack : '';
+          console.log(`[TauriWorkerService] DEBUG: ❌ Instance ${instanceName} session INVALID: ${errorMessage}`);
+          if (errorStack) {
+            console.log(`[TauriWorkerService] DEBUG: Error stack: ${errorStack.substring(0, 500)}`);
+          }
+        }
+      }
+
       // Add Tauri API to the root multiremote object first (for browserA.tauri, browserB.tauri access)
       this.addTauriApi(browser as unknown as WebdriverIO.Browser);
       log.debug('Tauri API added to root multiremote object');
+
+      // DEBUG: Check again after adding API to root
+      console.log(`[TauriWorkerService] DEBUG: Checking sessions after adding API to root`);
+      for (const instanceName of mrBrowser.instances) {
+        const mrInstance = mrBrowser.getInstance(instanceName);
+        try {
+          const handle = await mrInstance.getWindowHandle();
+          console.log(
+            `[TauriWorkerService] DEBUG: ✅ Instance ${instanceName} still VALID after root API add (handle: ${handle.substring(0, 8)}...)`,
+          );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(
+            `[TauriWorkerService] DEBUG: ❌ Instance ${instanceName} became INVALID after root API add: ${errorMessage}`,
+          );
+        }
+      }
 
       // Add Tauri API to each individual multiremote instance and wait for readiness
       // Process sequentially with delays to avoid session conflicts
       for (let i = 0; i < mrBrowser.instances.length; i++) {
         const instanceName = mrBrowser.instances[i];
         const mrInstance = mrBrowser.getInstance(instanceName);
+        const sessionId = (mrInstance as any).sessionId || 'unknown';
+
+        console.log(
+          `[TauriWorkerService] Processing instance ${instanceName} (session: ${sessionId.substring(0, 8)}...)`,
+        );
         log.debug(`Adding Tauri API to instance: ${instanceName}`);
 
         // Add Tauri API to each individual multiremote instance
         this.addTauriApi(mrInstance);
         log.debug(`Tauri API added to instance: ${instanceName}`);
 
+        // Verify session is still valid before waiting
+        try {
+          const testHandle = await mrInstance.getWindowHandle();
+          console.log(
+            `[TauriWorkerService] ✅ Instance ${instanceName} session valid before waitUntilWindowAvailable (handle: ${testHandle.substring(0, 8)}...)`,
+          );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(
+            `[TauriWorkerService] ❌ Instance ${instanceName} session INVALID before waitUntilWindowAvailable: ${errorMessage}`,
+          );
+        }
+
         // Wait until a window is available (shared util in native-utils)
         // This includes retry logic for transient "invalid session id" errors
+        console.log(`[TauriWorkerService] Starting waitUntilWindowAvailable for ${instanceName}...`);
+        const waitStart = Date.now();
         await waitUntilWindowAvailable(mrInstance);
+        const waitElapsed = Date.now() - waitStart;
+        console.log(
+          `[TauriWorkerService] ✅ Instance ${instanceName} completed waitUntilWindowAvailable in ${waitElapsed}ms`,
+        );
         log.debug(`Tauri app ready for instance: ${instanceName}`);
+
+        // Verify session is still valid after waiting
+        try {
+          const testHandle = await mrInstance.getWindowHandle();
+          console.log(
+            `[TauriWorkerService] ✅ Instance ${instanceName} session valid after waitUntilWindowAvailable (handle: ${testHandle.substring(0, 8)}...)`,
+          );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log(
+            `[TauriWorkerService] ❌ Instance ${instanceName} session INVALID after waitUntilWindowAvailable: ${errorMessage}`,
+          );
+        }
 
         // Small delay between instances to prevent race conditions
         // where checking one instance might affect another
         if (i < mrBrowser.instances.length - 1) {
+          console.log(`[TauriWorkerService] Waiting 200ms before processing next instance...`);
           await new Promise((resolve) => setTimeout(resolve, 200));
         }
       }

@@ -6,29 +6,54 @@
  * drivers that may have issues with getWindowHandles() in multiremote scenarios.
  */
 export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser): Promise<void> => {
+  // Extract instance identifier for debugging
+  const instanceId =
+    (browser as any).capabilities?.['tauri:options']?.args
+      ?.find((arg: string) => arg.startsWith('--browser='))
+      ?.split('=')[1] || 'unknown';
+  const sessionId = (browser as any).sessionId || 'unknown';
+  const startTime = Date.now();
+
+  console.log(
+    `[waitUntilWindowAvailable] Starting readiness check for instance ${instanceId} (session: ${sessionId.substring(0, 8)}...)`,
+  );
+
+  let attemptCount = 0;
   await browser.waitUntil(
     async () => {
+      attemptCount++;
       try {
-        // Use getWindowHandle() instead of getWindowHandles() for better compatibility
-        // Some drivers (like tauri-driver) may have issues with getWindowHandles()
-        // in multiremote scenarios where sessions can become temporarily invalid
-        await browser.getWindowHandle();
+        const handle = await browser.getWindowHandle();
+        const elapsed = Date.now() - startTime;
+        console.log(
+          `[waitUntilWindowAvailable] ✅ Instance ${instanceId} ready after ${elapsed}ms (${attemptCount} attempts) - handle: ${handle.substring(0, 8)}...`,
+        );
         return true;
       } catch (error) {
-        // Retry on "invalid session id" errors - these can be transient in multiremote
         const errorMessage = error instanceof Error ? error.message : String(error);
+        const elapsed = Date.now() - startTime;
         if (errorMessage.includes('invalid session id')) {
-          // Return false to retry, but this is expected and will be retried by waitUntil
+          if (attemptCount % 10 === 0 || attemptCount <= 5) {
+            // Log every 10th attempt or first 5 attempts
+            console.log(
+              `[waitUntilWindowAvailable] ⚠️  Instance ${instanceId} - invalid session id (attempt ${attemptCount}, ${elapsed}ms elapsed)`,
+            );
+          }
           return false;
         }
-        // For other errors, also retry (but log if needed)
+        // For other errors, log and retry
+        if (attemptCount <= 3) {
+          console.log(
+            `[waitUntilWindowAvailable] ⚠️  Instance ${instanceId} - error (attempt ${attemptCount}): ${errorMessage}`,
+          );
+        }
         return false;
       }
     },
     {
       timeout: 30000,
       interval: 250,
-      timeoutMsg: 'Window handle not available after timeout',
+      timeoutMsg: `Window handle not available after timeout for instance ${instanceId}`,
     },
   );
 };
