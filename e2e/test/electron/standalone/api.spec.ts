@@ -26,7 +26,7 @@ const packageJsonPath = path.join(
   '..',
   '..',
   'fixtures',
-  'electron-apps',
+  'e2e-apps',
   exampleDir,
   'package.json',
 );
@@ -60,7 +60,7 @@ if (isBinary) {
     '..',
     '..',
     'fixtures',
-    'electron-apps',
+    'e2e-apps',
     exampleDir,
     'dist',
     'main.js',

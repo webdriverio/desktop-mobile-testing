@@ -1,5 +1,5 @@
 {
-  "name": "script-app-example",
+  "name": "electron-script-app-example",
   "version": "0.0.0",
   "description": "Simple Electron app example using wdio-electron-service",
   "main": "out/main/index.js",

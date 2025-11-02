@@ -69,7 +69,7 @@ describe('Forge App Example', () => {
 
     const html = await infoDisplay.getHTML();
     expect(html).toContain('🏷️ App Name:');
-    expect(html).toContain('forge-app-example');
+    expect(html).toContain('electron-forge-app-example');
   });
 
   it('should have correct window configuration', async () => {

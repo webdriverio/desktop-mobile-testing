@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createEnvironmentContext } from '../config/envSchema.js';
-import { dirExists, execWithEnv, fileExists, formatDuration } from '../lib/utils.js';
+import { dirExists, execWithEnv, fileExists, formatDuration, getE2EAppDirName } from '../lib/utils.js';
 
 /**
  * Manager for E2E app building
@@ -112,23 +112,25 @@ export class BuildManager {
     // Determine which apps to build based on framework
     const appsToBuild: string[] = [];
 
-    if (envContext.framework === 'tauri') {
-      const tauriAppsDir = join(process.cwd(), '..', 'fixtures', 'tauri-apps');
-      appsToBuild.push(join(tauriAppsDir, envContext.app));
-    } else {
-      const electronAppsDir = join(process.cwd(), '..', 'fixtures', 'electron-apps');
+    const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
+    const appDirName = getE2EAppDirName(
+      envContext.framework,
+      envContext.app,
+      envContext.moduleType,
+      envContext.isNoBinary,
+    );
+    appsToBuild.push(join(e2eAppsDir, appDirName));
 
-      if (envContext.app === 'no-binary') {
-        appsToBuild.push(join(electronAppsDir, `no-binary-${envContext.moduleType}`));
-      } else {
-        appsToBuild.push(join(electronAppsDir, `${envContext.app}-${envContext.moduleType}`));
-      }
-
-      // If Mac Universal, also build the other module type
-      if (envContext.isMacUniversal) {
-        const otherModuleType = envContext.moduleType === 'cjs' ? 'esm' : 'cjs';
-        appsToBuild.push(join(electronAppsDir, `${envContext.app}-${otherModuleType}`));
-      }
+    // If Mac Universal, also build the other module type
+    if (envContext.isMacUniversal) {
+      const otherModuleType = envContext.moduleType === 'cjs' ? 'esm' : 'cjs';
+      const otherAppDirName = getE2EAppDirName(
+        envContext.framework,
+        envContext.app,
+        otherModuleType,
+        false, // Mac Universal always uses binary mode
+      );
+      appsToBuild.push(join(e2eAppsDir, otherAppDirName));
     }
 
     console.log(`📦 Apps to build: ${appsToBuild.map((p) => p.split('/').pop()).join(', ')}`);
@@ -146,12 +148,19 @@ export class BuildManager {
     console.log('🏗️ Building all apps...');
 
     // Build Electron apps
-    const electronAppsDir = join(process.cwd(), '..', 'fixtures', 'electron-apps');
-    const electronAppDirs = ['builder-cjs', 'builder-esm', 'forge-cjs', 'forge-esm', 'no-binary-cjs', 'no-binary-esm'];
+    const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
+    const electronAppDirs = [
+      'electron-builder-cjs',
+      'electron-builder-esm',
+      'electron-forge-cjs',
+      'electron-forge-esm',
+      'electron-no-binary-cjs',
+      'electron-no-binary-esm',
+    ];
 
     console.log('📦 Building Electron apps...');
     for (const appDir of electronAppDirs) {
-      const appPath = join(electronAppsDir, appDir);
+      const appPath = join(e2eAppsDir, appDir);
       if (dirExists(appPath)) {
         await this.ensureAppBuilt(appPath);
       } else {
@@ -160,12 +169,11 @@ export class BuildManager {
     }
 
     // Build Tauri apps
-    const tauriAppsDir = join(process.cwd(), '..', 'fixtures', 'tauri-apps');
-    const tauriAppDirs = ['basic'];
+    const tauriAppDirs = ['tauri'];
 
     console.log('📦 Building Tauri apps...');
     for (const appDir of tauriAppDirs) {
-      const appPath = join(tauriAppsDir, appDir);
+      const appPath = join(e2eAppsDir, appDir);
       if (dirExists(appPath)) {
         await this.ensureAppBuilt(appPath);
       } else {
@@ -370,12 +378,19 @@ export class BuildManager {
     console.log('🧹 Cleaning app build artifacts...');
 
     // Clean Electron apps
-    const electronAppsDir = join(process.cwd(), '..', 'fixtures', 'electron-apps');
-    const electronAppDirs = ['builder-cjs', 'builder-esm', 'forge-cjs', 'forge-esm', 'no-binary-cjs', 'no-binary-esm'];
+    const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
+    const electronAppDirs = [
+      'electron-builder-cjs',
+      'electron-builder-esm',
+      'electron-forge-cjs',
+      'electron-forge-esm',
+      'electron-no-binary-cjs',
+      'electron-no-binary-esm',
+    ];
 
     console.log('🧹 Cleaning Electron apps...');
     for (const appDir of electronAppDirs) {
-      const appPath = join(electronAppsDir, appDir);
+      const appPath = join(e2eAppsDir, appDir);
       const distPath = join(appPath, 'dist');
       const outPath = join(appPath, 'out');
 
@@ -394,12 +409,11 @@ export class BuildManager {
     }
 
     // Clean Tauri apps
-    const tauriAppsDir = join(process.cwd(), '..', 'fixtures', 'tauri-apps');
-    const tauriAppDirs = ['basic'];
+    const tauriAppDirs = ['tauri'];
 
     console.log('🧹 Cleaning Tauri apps...');
     for (const appDir of tauriAppDirs) {
-      const appPath = join(tauriAppsDir, appDir);
+      const appPath = join(e2eAppsDir, appDir);
       const targetPath = join(appPath, 'src-tauri', 'target');
 
       try {

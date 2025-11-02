@@ -1,5 +1,5 @@
 {
-  "name": "forge-app-example",
+  "name": "electron-forge-app-example",
   "version": "0.0.0",
   "description": "Electron Forge app example using wdio-electron-service",
   "main": "dist/main/index.js",

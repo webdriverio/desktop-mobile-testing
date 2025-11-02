@@ -1,5 +1,5 @@
 {
-  "name": "builder-app-example",
+  "name": "electron-builder-app-example",
   "version": "0.0.0",
   "description": "Electron Builder app example using wdio-electron-service",
   "main": "dist/main/index.js",

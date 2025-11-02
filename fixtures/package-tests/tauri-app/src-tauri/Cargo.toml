@@ -1,0 +1,27 @@
+[package]
+name = "tauri-app-example"
+version = "0.1.0"
+description = "A basic Tauri app for testing"
+authors = ["WebDriverIO Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = ["tray-icon"] }
+tauri-plugin-fs = "2.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# For platform info
+sysinfo = "0.30.5"
+# For clipboard
+clipboard = "0.5.0"
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

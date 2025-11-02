@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noCommonJs: This is a CJS file for CommonJS testing
 const { contextBridge, ipcRenderer } = require('electron');
 
 const validChannels = ['increase-window-size', 'decrease-window-size', 'show-open-dialog', 'switch-main-window'];

@@ -202,7 +202,12 @@ export default class TauriLaunchService {
       const capKeys = Object.keys(caps);
       if (capKeys.length > 0) {
         const firstKey = capKeys[0];
-        firstCap = (caps as any)[firstKey].capabilities;
+        const multiremoteCaps = caps as Record<string, { capabilities: TauriCapabilities }>;
+        firstCap = multiremoteCaps[firstKey]?.capabilities;
+        if (!firstCap) {
+          log.warn(`No capabilities found for instance: ${firstKey}`);
+          return;
+        }
         instanceId = extractInstanceId(firstCap);
         log.debug(`Multiremote instance detected: ${firstKey} (ID: ${instanceId})`);
       } else {

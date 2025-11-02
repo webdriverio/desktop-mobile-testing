@@ -69,7 +69,7 @@ describe('Builder App Example', () => {
 
     const html = await infoDisplay.getHTML();
     expect(html).toContain('🏷️ App Name:');
-    expect(html).toContain('builder-app-example');
+    expect(html).toContain('electron-builder-app-example');
   });
 
   it('should have correct window configuration', async () => {

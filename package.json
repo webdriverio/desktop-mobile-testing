@@ -56,7 +56,9 @@
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "test:integration": "turbo run test:integration",
-    "test:package": "pnpx cross-env DEBUG=@wdio/electron-service tsx ./scripts/test-package.ts",
+    "test:package": "pnpx tsx ./scripts/test-package.ts",
+    "test:package:electron": "pnpx cross-env DEBUG=@wdio/electron-service tsx ./scripts/test-package.ts --service=electron",
+    "test:package:tauri": "pnpx tsx ./scripts/test-package.ts --service=tauri",
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
     "update:all": "pnpm catalog:update --default && pnpm catalog:update --next && pnpm up -iLr"
