@@ -867,6 +867,9 @@ importers:
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       webdriverio:
         specifier: catalog:default
         version: 9.20.0(puppeteer-core@22.15.0)

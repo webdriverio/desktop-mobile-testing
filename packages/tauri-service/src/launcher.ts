@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
+import getPort from 'get-port';
 import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
@@ -113,6 +114,24 @@ export default class TauriLaunchService {
       const capEntries = Object.entries(capabilities);
       log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);
 
+      // Dynamically allocate free ports for each instance sequentially to avoid conflicts
+      const allocatedPorts: number[] = [];
+      const basePort = this.options.tauriDriverPort || 4444;
+      const usedPorts = new Set<number>();
+
+      for (let i = 0; i < capEntries.length; i++) {
+        // Try starting from basePort + i, but get-port will find a free one if that's taken
+        const preferredPort = basePort + i;
+        const port = await getPort({
+          port: preferredPort,
+          host: '127.0.0.1',
+          exclude: Array.from(usedPorts),
+        });
+        usedPorts.add(port);
+        allocatedPorts.push(port);
+        log.debug(`Allocated port ${port} for instance ${i} (preferred: ${preferredPort})`);
+      }
+
       for (let i = 0; i < capEntries.length; i++) {
         const [key, value] = capEntries[i];
         const cap = value.capabilities;
@@ -122,13 +141,17 @@ export default class TauriLaunchService {
         const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
         const env = { ...process.env, [envVarName]: dataDir };
 
-        // Prefer per-instance port/hostname from WDIO multiremote capabilities if provided
-        const instancePort = (value as any).port ?? (this.options.tauriDriverPort || 4444) + i;
-        const instanceHost = (value as any).hostname ?? '127.0.0.1';
+        // Use dynamically allocated port
+        const instancePort = allocatedPorts[i];
+        const instanceHost = '127.0.0.1';
+
+        // Update capabilities with the allocated port so WDIO connects to the correct port
+        (value as { port?: number; hostname?: string }).port = instancePort;
+        (value as { port?: number; hostname?: string }).hostname = instanceHost;
 
         log.info(
           `➡️  Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
-            `(data dir: ${dataDir})`,
+            `(data dir: ${dataDir}, dynamically allocated)`,
         );
         await this.startTauriDriverForInstance(instanceId, instancePort, env);
       }

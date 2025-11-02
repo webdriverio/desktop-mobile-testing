@@ -172,7 +172,7 @@ if (envContext.isMultiremote) {
         },
       },
       hostname: '127.0.0.1',
-      port: 5555,
+      port: 0, // Will be set dynamically by launcher
     },
     browserB: {
       capabilities: {
@@ -187,7 +187,7 @@ if (envContext.isMultiremote) {
         },
       },
       hostname: '127.0.0.1',
-      port: 5556,
+      port: 0, // Will be set dynamically by launcher
     },
   };
 } else {
