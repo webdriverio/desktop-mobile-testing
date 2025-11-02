@@ -154,6 +154,13 @@ export default class TauriLaunchService {
             `(data dir: ${dataDir}, dynamically allocated)`,
         );
         await this.startTauriDriverForInstance(instanceId, instancePort, env);
+
+        // Wait for driver to fully stabilize before starting the next one
+        // This prevents race conditions when multiple drivers start simultaneously
+        if (i < capEntries.length - 1) {
+          log.debug(`Waiting for ${instanceId} to stabilize before starting next driver...`);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
       }
     } else {
       // Standard session: single shared tauri-driver as before
@@ -478,6 +485,9 @@ export default class TauriLaunchService {
 
     // Additional readiness: wait until the driver port accepts connections
     await this.waitForPortOpen('127.0.0.1', port, 30000);
+
+    // Verify the driver is responding to HTTP requests (not just TCP)
+    await this.waitForHttpReady('127.0.0.1', port, 10000);
   }
 
   /**
@@ -509,6 +519,50 @@ export default class TauriLaunchService {
       await new Promise((r) => setTimeout(r, 250));
     }
     log.warn(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
+  }
+
+  /**
+   * Wait until the WebDriver HTTP endpoint is responding
+   * Verifies the driver is ready to handle HTTP requests, not just TCP connections
+   */
+  private async waitForHttpReady(host: string, port: number, timeoutMs: number): Promise<void> {
+    const started = Date.now();
+    const http = await import('node:http');
+    while (Date.now() - started < timeoutMs) {
+      const isReady = await new Promise<boolean>((resolve) => {
+        // Try /status first (standard WebDriver endpoint), fallback to / if not available
+        const tryEndpoint = (path: string) => {
+          const req = http.get(`http://${host}:${port}${path}`, { timeout: 1000 }, (res) => {
+            // Any HTTP response (even 404/500) means the server is up and responding
+            res.once('data', () => {});
+            res.once('end', () => resolve(true));
+          });
+          req.once('error', () => {
+            // If /status fails, try root endpoint
+            if (path === '/status') {
+              tryEndpoint('/');
+            } else {
+              resolve(false);
+            }
+          });
+          req.once('timeout', () => {
+            req.destroy();
+            if (path === '/status') {
+              tryEndpoint('/');
+            } else {
+              resolve(false);
+            }
+          });
+        };
+        tryEndpoint('/status');
+      });
+      if (isReady) {
+        log.debug(`HTTP endpoint ready at http://${host}:${port}`);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    log.warn(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
   }
 
   /**
