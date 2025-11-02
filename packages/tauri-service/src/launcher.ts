@@ -38,7 +38,7 @@ function generateDataDirectory(instanceId: string): string {
 export default class TauriLaunchService {
   private tauriDriverProcess?: ChildProcess;
   private appBinaryPath?: string;
-  private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number }> = new Map();
+  private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -115,12 +115,15 @@ export default class TauriLaunchService {
       log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);
 
       // Dynamically allocate free ports for each instance sequentially to avoid conflicts
+      // Each tauri-driver instance needs two ports: main port and native port
       const allocatedPorts: number[] = [];
+      const allocatedNativePorts: number[] = [];
       const basePort = this.options.tauriDriverPort || 4444;
+      const baseNativePort = 4445; // Default native port
       const usedPorts = new Set<number>();
 
       for (let i = 0; i < capEntries.length; i++) {
-        // Try starting from basePort + i, but get-port will find a free one if that's taken
+        // Allocate main port
         const preferredPort = basePort + i;
         const port = await getPort({
           port: preferredPort,
@@ -129,7 +132,18 @@ export default class TauriLaunchService {
         });
         usedPorts.add(port);
         allocatedPorts.push(port);
-        log.debug(`Allocated port ${port} for instance ${i} (preferred: ${preferredPort})`);
+
+        // Allocate native port (each instance needs its own)
+        const preferredNativePort = baseNativePort + i;
+        const nativePort = await getPort({
+          port: preferredNativePort,
+          host: '127.0.0.1',
+          exclude: Array.from(usedPorts),
+        });
+        usedPorts.add(nativePort);
+        allocatedNativePorts.push(nativePort);
+
+        log.debug(`Allocated ports for instance ${i}: main=${port}, native=${nativePort}`);
       }
 
       for (let i = 0; i < capEntries.length; i++) {
@@ -141,8 +155,9 @@ export default class TauriLaunchService {
         const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
         const env = { ...process.env, [envVarName]: dataDir };
 
-        // Use dynamically allocated port
+        // Use dynamically allocated ports
         const instancePort = allocatedPorts[i];
+        const instanceNativePort = allocatedNativePorts[i];
         const instanceHost = '127.0.0.1';
 
         // Update capabilities with the allocated port so WDIO connects to the correct port
@@ -151,10 +166,10 @@ export default class TauriLaunchService {
 
         log.info(
           `➡️  Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
-            `(data dir: ${dataDir}, dynamically allocated)`,
+            `(native port: ${instanceNativePort}, data dir: ${dataDir})`,
         );
         try {
-          await this.startTauriDriverForInstance(instanceId, instancePort, env);
+          await this.startTauriDriverForInstance(instanceId, instancePort, instanceNativePort, env);
           log.info(`✅ Successfully started tauri-driver for ${key} on port ${instancePort}`);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
@@ -372,11 +387,12 @@ export default class TauriLaunchService {
   private async startTauriDriver(): Promise<void> {
     const tauriDriverPath = getTauriDriverPath();
     const port = this.options.tauriDriverPort || 4444;
+    const nativePort = 4445; // Default native port for single instance
 
-    log.debug(`Starting tauri-driver on port ${port}`);
+    log.debug(`Starting tauri-driver on port ${port} (native port: ${nativePort})`);
 
     // Prepare tauri-driver arguments
-    const args = ['--port', port.toString()];
+    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
 
     // Resolve native driver path (WebKitWebDriver on Linux)
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
@@ -442,11 +458,18 @@ export default class TauriLaunchService {
   /**
    * Start tauri-driver process for a specific multiremote instance
    */
-  private async startTauriDriverForInstance(instanceId: string, port: number, env: NodeJS.ProcessEnv): Promise<void> {
+  private async startTauriDriverForInstance(
+    instanceId: string,
+    port: number,
+    nativePort: number,
+    env: NodeJS.ProcessEnv,
+  ): Promise<void> {
     const tauriDriverPath = getTauriDriverPath();
 
-    log.info(`Starting tauri-driver [${instanceId}] on port ${port} (path: ${tauriDriverPath})`);
-    const args = ['--port', port.toString()];
+    log.info(
+      `Starting tauri-driver [${instanceId}] on port ${port} (native port: ${nativePort}, path: ${tauriDriverPath})`,
+    );
+    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
 
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
     if (nativeDriverPath) {
@@ -464,7 +487,7 @@ export default class TauriLaunchService {
       });
 
       log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
-      this.tauriDriverProcesses.set(instanceId, { proc, port });
+      this.tauriDriverProcesses.set(instanceId, { proc, port, nativePort });
 
       proc.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
