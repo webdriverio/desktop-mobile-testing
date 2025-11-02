@@ -1,9 +1,10 @@
-import { execSync, spawn } from 'node:child_process';
+import { type ChildProcess, execSync, spawn } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
+import getPort from 'get-port';
 import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
@@ -29,24 +30,15 @@ function generateDataDirectory(instanceId: string): string {
   return dataDir;
 }
 
-/**
- * Set environment variable for data directory isolation
- */
-function setDataDirectoryEnv(instanceId: string, dataDir: string): void {
-  const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-  process.env[envVarName] = dataDir;
-
-  log.info(`Set ${envVarName}=${dataDir} for instance ${instanceId}`);
-}
+// (per-instance env is set when spawning the tauri-driver process)
 
 /**
  * Tauri launcher service
  */
 export default class TauriLaunchService {
-  private tauriDriverProcess?: import('node:child_process').ChildProcess;
-  private tauriDriverProcesses: Map<string, import('node:child_process').ChildProcess> = new Map();
+  private tauriDriverProcess?: ChildProcess;
   private appBinaryPath?: string;
-  private isMultiremote: boolean = false;
+  private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -115,53 +107,77 @@ export default class TauriLaunchService {
       }
     }
 
-    // Set up data directory isolation for multiremote instances before starting tauri-driver
-    // This ensures tauri-driver inherits the correct environment variables
-    this.setupDataDirectoryIsolation(capabilities);
+    // Multiremote: spawn a dedicated tauri-driver per instance on unique ports
+    if (!Array.isArray(capabilities)) {
+      const capEntries = Object.entries(capabilities);
+      log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);
 
-    // Start tauri-driver in onPrepare (centralized mode)
-    // Note: On Linux CI, the entire test command should be wrapped with xvfb-run
-    // so that this process has display access
-    await this.startTauriDriver();
+      // Dynamically allocate free ports for each instance sequentially to avoid conflicts
+      // Each tauri-driver instance needs two ports: main port and native port
+      const allocatedPorts: number[] = [];
+      const allocatedNativePorts: number[] = [];
+      const basePort = this.options.tauriDriverPort || 4444;
+      const baseNativePort = 4445; // Default native port
+      const usedPorts = new Set<number>();
+
+      for (let i = 0; i < capEntries.length; i++) {
+        // Allocate main port
+        const preferredPort = basePort + i;
+        const port = await getPort({
+          port: preferredPort,
+          host: '127.0.0.1',
+          exclude: Array.from(usedPorts),
+        });
+        usedPorts.add(port);
+        allocatedPorts.push(port);
+
+        // Allocate native port (each instance needs its own)
+        const preferredNativePort = baseNativePort + i;
+        const nativePort = await getPort({
+          port: preferredNativePort,
+          host: '127.0.0.1',
+          exclude: Array.from(usedPorts),
+        });
+        usedPorts.add(nativePort);
+        allocatedNativePorts.push(nativePort);
+
+        log.info(`Allocated ports for instance ${i}: main=${port}, native=${nativePort}`);
+      }
+
+      for (let i = 0; i < capEntries.length; i++) {
+        const [key, value] = capEntries[i];
+        const cap = value.capabilities;
+        const instanceId = extractInstanceId(cap) || String(i);
+
+        const dataDir = generateDataDirectory(instanceId);
+        const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+        const env = { ...process.env, [envVarName]: dataDir };
+
+        // Use dynamically allocated ports
+        const instancePort = allocatedPorts[i];
+        const instanceNativePort = allocatedNativePorts[i];
+        const instanceHost = '127.0.0.1';
+
+        // Update capabilities with the allocated port so WDIO connects to the correct port
+        (value as { port?: number; hostname?: string }).port = instancePort;
+        (value as { port?: number; hostname?: string }).hostname = instanceHost;
+
+        log.info(
+          `Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
+            `(native port: ${instanceNativePort})`,
+        );
+        await this.startTauriDriverForInstance(instanceId, instancePort, instanceNativePort, env);
+      }
+    } else {
+      // Standard session: single shared tauri-driver as before
+      // Set up isolation is not necessary; app may use default data dir
+      await this.startTauriDriver();
+    }
 
     log.debug('Tauri service prepared successfully');
   }
 
-  /**
-   * Set up data directory isolation for multiremote instances
-   */
-  private setupDataDirectoryIsolation(capabilities: TauriCapabilities | TauriCapabilities[]): void {
-    if (Array.isArray(capabilities)) {
-      // Standard capabilities array - no isolation needed
-      log.debug('Standard Tauri session (not multiremote)');
-      this.isMultiremote = false;
-      return;
-    }
-
-    // Multiremote capabilities object - set up isolation for each instance
-    const capKeys = Object.keys(capabilities);
-    if (capKeys.length === 0) {
-      log.warn('No capabilities found in multiremote object');
-      this.isMultiremote = false;
-      return;
-    }
-
-    this.isMultiremote = true;
-    log.info(`Setting up data directory isolation for ${capKeys.length} multiremote instances`);
-
-    for (const key of capKeys) {
-      const cap = (capabilities as any)[key].capabilities;
-      const instanceId = extractInstanceId(cap);
-
-      if (instanceId) {
-        const dataDir = generateDataDirectory(instanceId);
-        setDataDirectoryEnv(instanceId, dataDir);
-        log.debug(`Configured isolation for ${key} (ID: ${instanceId})`);
-      } else {
-        log.warn(`Could not extract instance ID for ${key}`);
-      }
-    }
-  }
+  // (data directory isolation is handled per spawned driver; no pre-setup needed)
 
   /**
    * Start worker session
@@ -213,9 +229,10 @@ export default class TauriLaunchService {
       return;
     }
 
-    // For multiremote instances, spawn a separate tauri-driver process with instance-specific environment
-    if (this.isMultiremote && instanceId) {
-      await this.startInstanceSpecificTauriDriver(instanceId);
+    // For multiremote instances, ensure data directory isolation is set up
+    // The single tauri-driver process will handle multiple sessions
+    if (instanceId) {
+      log.debug(`Multiremote instance ${instanceId} - data directory isolation already configured`);
     }
 
     // Run environment diagnostics
@@ -349,88 +366,17 @@ export default class TauriLaunchService {
   }
 
   /**
-   * Start instance-specific tauri-driver process for multiremote
-   */
-  private async startInstanceSpecificTauriDriver(instanceId: string): Promise<void> {
-    const tauriDriverPath = getTauriDriverPath();
-    const port = (this.options.tauriDriverPort || 4444) + parseInt(instanceId.replace(/\D/g, '')) || 1; // Use different ports for each instance
-
-    log.debug(`Starting instance-specific tauri-driver for ${instanceId} on port ${port}`);
-
-    // Prepare tauri-driver arguments
-    const args = ['--port', port.toString()];
-
-    // Resolve native driver path (WebKitWebDriver on Linux)
-    const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
-
-    if (nativeDriverPath) {
-      args.push('--native-driver', nativeDriverPath);
-      log.debug(`Using native driver: ${nativeDriverPath}`);
-    }
-
-    return new Promise((resolve, reject) => {
-      // Set up instance-specific environment variables
-      const env = { ...process.env };
-      const dataDir = generateDataDirectory(instanceId);
-      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-      env[envVarName] = dataDir;
-
-      log.info(`Starting tauri-driver for instance ${instanceId} with ${envVarName}=${dataDir}`);
-
-      const driverProcess = spawn(tauriDriverPath, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
-        env,
-      });
-
-      this.tauriDriverProcesses.set(instanceId, driverProcess);
-
-      driverProcess.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.debug(`tauri-driver[${instanceId}] stdout: ${output}`);
-
-        // Check if tauri-driver is ready
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          resolve();
-        }
-      });
-
-      driverProcess.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`tauri-driver[${instanceId}] stderr: ${output}`);
-      });
-
-      driverProcess.on('error', (error) => {
-        log.error(`Failed to start tauri-driver for instance ${instanceId}: ${error.message}`);
-        reject(error);
-      });
-
-      driverProcess.on('exit', (code) => {
-        log.debug(`tauri-driver for instance ${instanceId} exited with code ${code}`);
-        this.tauriDriverProcesses.delete(instanceId);
-      });
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        if (!driverProcess.killed) {
-          log.warn(`tauri-driver startup timeout for instance ${instanceId}, assuming ready`);
-          resolve();
-        }
-      }, 30000);
-    });
-  }
-
-  /**
    * Start tauri-driver process
    */
   private async startTauriDriver(): Promise<void> {
     const tauriDriverPath = getTauriDriverPath();
     const port = this.options.tauriDriverPort || 4444;
+    const nativePort = 4445; // Default native port for single instance
 
-    log.debug(`Starting tauri-driver on port ${port}`);
+    log.debug(`Starting tauri-driver on port ${port} (native port: ${nativePort})`);
 
     // Prepare tauri-driver arguments
-    const args = ['--port', port.toString()];
+    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
 
     // Resolve native driver path (WebKitWebDriver on Linux)
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
@@ -494,38 +440,193 @@ export default class TauriLaunchService {
   }
 
   /**
+   * Start tauri-driver process for a specific multiremote instance
+   */
+  private async startTauriDriverForInstance(
+    instanceId: string,
+    port: number,
+    nativePort: number,
+    env: NodeJS.ProcessEnv,
+  ): Promise<void> {
+    const tauriDriverPath = getTauriDriverPath();
+
+    log.info(`Starting tauri-driver [${instanceId}] on port ${port} (native port: ${nativePort})`);
+    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
+
+    const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
+    if (nativeDriverPath) {
+      args.push('--native-driver', nativeDriverPath);
+      log.debug(`[${instanceId}] Using native driver: ${nativeDriverPath}`);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(tauriDriverPath, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false,
+        env,
+      });
+
+      log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
+      this.tauriDriverProcesses.set(instanceId, { proc, port, nativePort });
+
+      proc.stdout?.on('data', (data: Buffer) => {
+        const output = data.toString();
+        log.debug(`[${instanceId}] stdout: ${output.trim()}`);
+        if (output.includes('tauri-driver started') || output.includes('listening on')) {
+          log.info(`✅ tauri-driver [${instanceId}] started successfully on port ${port}`);
+          resolve();
+        }
+      });
+
+      proc.stderr?.on('data', (data: Buffer) => {
+        const output = data.toString();
+        log.error(`[${instanceId}] stderr: ${output.trim()}`);
+      });
+
+      proc.on('error', (error: Error) => {
+        log.error(`❌ Failed to start tauri-driver [${instanceId}]: ${error.message}`);
+        reject(error);
+      });
+
+      proc.on('exit', (code: number | null, signal: string | null) => {
+        if (code !== null && code !== 0) {
+          log.error(`❌ tauri-driver [${instanceId}] exited with code ${code}, signal: ${signal}`);
+        } else {
+          log.debug(`[${instanceId}] Process exited (code: ${code}, signal: ${signal})`);
+        }
+      });
+
+      setTimeout(() => {
+        if (!proc.killed) {
+          log.warn(`⚠️  tauri-driver [${instanceId}] startup timeout, assuming ready`);
+          resolve();
+        }
+      }, 30000);
+    });
+
+    // Wait for driver to be ready
+    log.debug(`[${instanceId}] Waiting for TCP port ${port} to open...`);
+    await this.waitForPortOpen('127.0.0.1', port, 30000);
+    log.debug(`[${instanceId}] Waiting for HTTP endpoint to be ready...`);
+    await this.waitForHttpReady('127.0.0.1', port, 10000);
+
+    // Verify process is still alive
+    const procInfo = this.tauriDriverProcesses.get(instanceId);
+    if (procInfo?.proc.killed) {
+      throw new Error(`tauri-driver [${instanceId}] process died during startup`);
+    }
+    log.info(`[${instanceId}] Driver ready on port ${port} (native port: ${nativePort})`);
+  }
+
+  /**
+   * Wait until a TCP port is accepting connections
+   */
+  private async waitForPortOpen(host: string, port: number, timeoutMs: number): Promise<void> {
+    const started = Date.now();
+    const net = await import('node:net');
+    while (Date.now() - started < timeoutMs) {
+      const isOpen = await new Promise<boolean>((resolve) => {
+        const socket = new net.Socket();
+        const onError = () => {
+          try {
+            socket.destroy();
+          } catch {}
+          resolve(false);
+        };
+        socket.setTimeout(750);
+        socket.once('error', onError);
+        socket.once('timeout', onError);
+        socket.connect(port, host, () => {
+          try {
+            socket.end();
+          } catch {}
+          resolve(true);
+        });
+      });
+      if (isOpen) return;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    log.warn(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
+  }
+
+  /**
+   * Wait until the WebDriver HTTP endpoint is responding
+   * Verifies the driver is ready to handle HTTP requests, not just TCP connections
+   */
+  private async waitForHttpReady(host: string, port: number, timeoutMs: number): Promise<void> {
+    const started = Date.now();
+    const http = await import('node:http');
+    while (Date.now() - started < timeoutMs) {
+      const isReady = await new Promise<boolean>((resolve) => {
+        // Try /status first (standard WebDriver endpoint), fallback to / if not available
+        const tryEndpoint = (path: string) => {
+          const req = http.get(`http://${host}:${port}${path}`, { timeout: 1000 }, (res) => {
+            // Any HTTP response (even 404/500) means the server is up and responding
+            res.once('data', () => {});
+            res.once('end', () => resolve(true));
+          });
+          req.once('error', () => {
+            // If /status fails, try root endpoint
+            if (path === '/status') {
+              tryEndpoint('/');
+            } else {
+              resolve(false);
+            }
+          });
+          req.once('timeout', () => {
+            req.destroy();
+            if (path === '/status') {
+              tryEndpoint('/');
+            } else {
+              resolve(false);
+            }
+          });
+        };
+        tryEndpoint('/status');
+      });
+      if (isReady) {
+        log.debug(`HTTP endpoint ready at http://${host}:${port}`);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    log.warn(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
+  }
+
+  /**
    * Stop tauri-driver process
    */
   private async stopTauriDriver(): Promise<void> {
-    // Stop main tauri-driver process
+    // Stop per-instance drivers if present
+    if (this.tauriDriverProcesses.size > 0) {
+      for (const [instanceId, { proc }] of this.tauriDriverProcesses.entries()) {
+        if (!proc.killed) {
+          log.debug(`Stopping tauri-driver [${instanceId}]...`);
+          proc.kill('SIGTERM');
+        }
+      }
+
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+      this.tauriDriverProcesses.clear();
+      return;
+    }
+
+    // Fallback to single driver mode
     if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
-      log.debug('Stopping main tauri-driver...');
-
+      log.debug('Stopping tauri-driver...');
       this.tauriDriverProcess.kill('SIGTERM');
-
-      // Wait for graceful shutdown
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => {
           log.warn('tauri-driver did not stop gracefully, forcing kill');
           this.tauriDriverProcess?.kill('SIGKILL');
           resolve();
         }, 5000);
-
         this.tauriDriverProcess?.on('exit', () => {
           clearTimeout(timeout);
           resolve();
         });
       });
     }
-
-    // Stop all instance-specific processes
-    for (const [instanceId, process] of this.tauriDriverProcesses) {
-      if (!process.killed) {
-        log.debug(`Stopping tauri-driver process for instance ${instanceId}`);
-        process.kill('SIGTERM');
-      }
-    }
-    this.tauriDriverProcesses.clear();
   }
 
   /**

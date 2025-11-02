@@ -74,55 +74,33 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
 
-      # Install Tauri dependencies on Linux
-      - name: 🦀 Install Tauri Dependencies (Linux)
+      # Install Tauri runtime dependencies on Linux (apps are pre-built, only need runtime libs)
+      # Minimum requirements per Tauri docs: libwebkit2gtk-4.1-0, libgtk-3-0, libappindicator3-1
+      # Additional libraries may be pulled in as transitive dependencies
+      - name: 🦀 Install Tauri Runtime Dependencies (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          echo "Installing Tauri dependencies for Linux..."
+          echo "Installing Tauri runtime dependencies for Linux..."
           sudo tee -a /etc/apt/sources.list > /dev/null <<EOT
           deb http://archive.ubuntu.com/ubuntu jammy main universe
           EOT
           sudo apt-get update
+          sudo apt-get --fix-broken install -y || true
+
+          # Install required packages - use t64 variant to avoid migration conflicts
+          # Remove conflicting libgtk-3-0 if present
+          # sudo apt-get remove -y libgtk-3-0 2>/dev/null || true
           sudo apt-get install -y \
-            build-essential \
-            pkg-config \
-            libgtk-3-dev \
-            libwebkit2gtk-4.0-dev \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libglib2.0-dev \
-            libsoup-2.4-1 \
-            libsoup2.4-dev \
-            libjavascriptcoregtk-4.0-dev \
-            libjavascriptcoregtk-4.1-dev \
-            libssl-dev \
-            libasound2-dev \
-            libx11-dev \
-            libxext-dev \
-            libxfixes-dev \
-            libxrender-dev \
-            libxrandr-dev \
-            libxss-dev \
-            libxtst-dev \
-            libxcomposite-dev \
-            libxcursor-dev \
-            libxdamage-dev \
-            libxinerama-dev \
-            libxcb1-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            libxcb-render0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinerama0-dev \
-            libxcb-xkb-dev \
-            libxcb-image0-dev \
-            libxcb-util0-dev \
-            libxcb-icccm4-dev \
-            libxcb-ewmh-dev \
-            libxcb-dri2-0-dev
+            libwebkit2gtk-4.1-0 \
+            libgtk-3-0t64 \
+            libayatana-appindicator3-1
+
+      # Install Rust toolchain only for tauri-driver (minimal install)
+      - name: 🦀 Setup Rust (for tauri-driver)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
 
       - name: 🚗 Install tauri-driver
         shell: bash

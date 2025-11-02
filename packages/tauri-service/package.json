@@ -42,6 +42,7 @@
     "@wdio/native-utils": "workspace:*",
     "@wdio/types": "catalog:default",
     "debug": "^4.4.3",
+    "get-port": "^7.1.0",
     "webdriverio": "catalog:default"
   },
   "devDependencies": {
