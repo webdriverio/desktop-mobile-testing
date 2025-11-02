@@ -1,5 +1,5 @@
 [package]
-name = "tauri-basic-app"
+name = "tauri-e2e-app"
 version = "0.1.0"
 description = "A basic Tauri app for testing"
 authors = ["WebDriverIO Team"]

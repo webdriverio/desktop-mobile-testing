@@ -63,50 +63,53 @@
     "@repo/e2e#build": {
       "dependsOn": ["@wdio/electron-service#build", "@wdio/tauri-service#build"]
     },
-    "@repo/e2e#test:e2e:builder-cjs": {
-      "dependsOn": ["electron-builder-cjs#build", "@repo/e2e#test:e2e:builder-esm"]
+    "@repo/e2e#test:e2e:electron-builder-cjs": {
+      "dependsOn": ["electron-builder-cjs-e2e-app#build", "@repo/e2e#test:e2e:electron-builder-esm"]
     },
-    "@repo/e2e#test:e2e:builder-esm": {
-      "dependsOn": ["electron-builder-esm#build"]
+    "@repo/e2e#test:e2e:electron-builder-esm": {
+      "dependsOn": ["electron-builder-esm-e2e-app#build"]
     },
-    "@repo/e2e#test:e2e:forge-cjs": {
-      "dependsOn": ["electron-forge-cjs#build", "@repo/e2e#test:e2e:forge-esm"]
+    "@repo/e2e#test:e2e:electron-forge-cjs": {
+      "dependsOn": ["electron-forge-cjs-e2e-app#build", "@repo/e2e#test:e2e:electron-forge-esm"]
     },
-    "@repo/e2e#test:e2e:forge-esm": {
-      "dependsOn": ["electron-forge-esm#build"]
+    "@repo/e2e#test:e2e:electron-forge-esm": {
+      "dependsOn": ["electron-forge-esm-e2e-app#build"]
     },
-    "@repo/e2e#test:e2e:no-binary-cjs": {
-      "dependsOn": ["electron-no-binary-cjs#build", "@repo/e2e#test:e2e:no-binary-esm"]
+    "@repo/e2e#test:e2e:electron-no-binary-cjs": {
+      "dependsOn": ["electron-no-binary-cjs-e2e-app#build", "@repo/e2e#test:e2e:electron-no-binary-esm"]
     },
-    "@repo/e2e#test:e2e:no-binary-esm": {
-      "dependsOn": ["electron-no-binary-esm#build", "electron-no-binary-cjs#build"]
+    "@repo/e2e#test:e2e:electron-no-binary-esm": {
+      "dependsOn": ["electron-no-binary-esm-e2e-app#build", "electron-no-binary-cjs-e2e-app#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic:window": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic:multiremote": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:tauri:basic:standalone": {
-      "dependsOn": ["tauri-basic#build", "@wdio/tauri-service#build"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
     },
-    "@repo/e2e#test:e2e:tauri-advanced": {
-      "dependsOn": ["tauri-advanced-app#build", "@wdio/tauri-service#build"]
+    "@repo/e2e#test:e2e-mac-universal:electron-forge-cjs": {
+      "dependsOn": [
+        "electron-forge-cjs-e2e-app#build:mac-universal",
+        "@repo/e2e#test:e2e-mac-universal:electron-forge-esm"
+      ]
     },
-    "@repo/e2e#test:e2e-mac-universal:forge-cjs": {
-      "dependsOn": ["electron-forge-cjs#build:mac-universal", "@repo/e2e#test:e2e-mac-universal:forge-esm"]
+    "@repo/e2e#test:e2e-mac-universal:electron-forge-esm": {
+      "dependsOn": ["electron-forge-esm-e2e-app#build:mac-universal"]
     },
-    "@repo/e2e#test:e2e-mac-universal:forge-esm": {
-      "dependsOn": ["electron-forge-esm#build:mac-universal"]
+    "@repo/e2e#test:e2e-mac-universal:electron-builder-cjs": {
+      "dependsOn": [
+        "electron-builder-cjs-e2e-app#build:mac-universal",
+        "@repo/e2e#test:e2e-mac-universal:electron-builder-esm"
+      ]
     },
-    "@repo/e2e#test:e2e-mac-universal:builder-cjs": {
-      "dependsOn": ["electron-builder-cjs#build:mac-universal", "@repo/e2e#test:e2e-mac-universal:builder-esm"]
-    },
-    "@repo/e2e#test:e2e-mac-universal:builder-esm": {
-      "dependsOn": ["electron-builder-esm#build:mac-universal"]
+    "@repo/e2e#test:e2e-mac-universal:electron-builder-esm": {
+      "dependsOn": ["electron-builder-esm-e2e-app#build:mac-universal"]
     },
     "@wdio/bundler#build": {
       "dependsOn": ["typecheck"],
@@ -132,51 +135,47 @@
       "dependsOn": ["typecheck"],
       "outputs": ["dist/**"]
     },
-    "electron-builder-cjs#build": {
-      "dependsOn": ["^build", "electron-builder-esm#build"],
+    "electron-builder-cjs-e2e-app#build": {
+      "dependsOn": ["^build", "electron-builder-esm-e2e-app#build"],
       "outputs": ["dist/**"]
     },
-    "electron-builder-esm#build": {
-      "dependsOn": ["^build", "@repo/e2e#test:e2e:no-binary-cjs"],
+    "electron-builder-esm-e2e-app#build": {
+      "dependsOn": ["^build", "@repo/e2e#test:e2e:electron-no-binary-cjs"],
       "outputs": ["dist/**"]
     },
-    "electron-forge-cjs#build": {
-      "dependsOn": ["^build", "electron-forge-esm#build"],
+    "electron-forge-cjs-e2e-app#build": {
+      "dependsOn": ["^build", "electron-forge-esm-e2e-app#build"],
       "outputs": ["out/**"]
     },
-    "electron-forge-esm#build": {
+    "electron-forge-esm-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["out/**"]
     },
-    "electron-no-binary-cjs#build": {
+    "electron-no-binary-cjs-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "electron-no-binary-esm#build": {
-      "dependsOn": ["^build", "electron-no-binary-cjs#build"],
+    "electron-no-binary-esm-e2e-app#build": {
+      "dependsOn": ["^build", "electron-no-binary-cjs-e2e-app#build"],
       "outputs": ["dist/**"]
     },
-    "electron-builder-cjs#build:mac-universal": {
-      "dependsOn": ["^build", "electron-builder-esm#build:mac-universal"],
+    "electron-builder-cjs-e2e-app#build:mac-universal": {
+      "dependsOn": ["^build", "electron-builder-esm-e2e-app#build:mac-universal"],
       "outputs": ["dist/**"]
     },
-    "electron-builder-esm#build:mac-universal": {
+    "electron-builder-esm-e2e-app#build:mac-universal": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "electron-forge-cjs#build:mac-universal": {
-      "dependsOn": ["^build", "electron-forge-esm#build:mac-universal"],
+    "electron-forge-cjs-e2e-app#build:mac-universal": {
+      "dependsOn": ["^build", "electron-forge-esm-e2e-app#build:mac-universal"],
       "outputs": ["out/**"]
     },
-    "electron-forge-esm#build:mac-universal": {
-      "dependsOn": ["^build", "electron-builder-cjs#build:mac-universal"],
+    "electron-forge-esm-e2e-app#build:mac-universal": {
+      "dependsOn": ["^build", "electron-builder-cjs-e2e-app#build:mac-universal"],
       "outputs": ["out/**"]
     },
-    "tauri-basic#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["src-tauri/target/**"]
-    },
-    "tauri-advanced-app#build": {
+    "tauri-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["src-tauri/target/**"]
     }

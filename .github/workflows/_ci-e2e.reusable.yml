@@ -96,7 +96,7 @@ jobs:
             const generateBuildFilter = (scenario, type) => {
               return scenario
                 .split(',')
-                .map((s) => `--filter=electron-${s.trim()}-${type}`)
+                .map((s) => `--filter=electron-${s.trim()}-${type}-e2e-app`)
                 .join(' ');
             };
             return generateBuildFilter('${{ inputs.scenario }}', '${{ inputs.type }}');
@@ -119,10 +119,10 @@ jobs:
               return scenario
                 .split(',')
                 .flatMap((s) => {
-                  const scenario = s.trim();
+                  const scenarioTrimmed = s.trim();
                   return type === '*'
-                    ? [`test:e2e:${scenario}-esm`, `test:e2e:${scenario}-cjs`]
-                    : [`test:e2e:${scenario}-${type}`];
+                    ? [`test:e2e:electron-${scenarioTrimmed}-esm`, `test:e2e:electron-${scenarioTrimmed}-cjs`]
+                    : [`test:e2e:electron-${scenarioTrimmed}-${type}`];
                 })
                 .join(' ');
             };

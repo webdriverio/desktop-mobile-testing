@@ -1,5 +1,5 @@
 {
-  "name": "electron-forge-cjs",
+  "name": "electron-forge-cjs-e2e-app",
   "version": "0.0.0",
   "main": "dist/main.js",
   "private": true,

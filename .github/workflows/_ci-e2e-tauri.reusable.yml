@@ -131,7 +131,7 @@ jobs:
 
       # Download the pre-built Tauri app binaries from the OS-specific build job
       # This is much faster than rebuilding Tauri apps for each test type
-      # Extract to repository root so files end up in fixtures/tauri-apps/*/src-tauri/target/
+      # Extract to repository root so files end up in fixtures/e2e-apps/tauri/src-tauri/target/
       - name: 📦 Download Tauri App Binaries
         uses: ./.github/workflows/actions/download-archive
         with:
@@ -145,21 +145,21 @@ jobs:
       - name: ✅ Verify Tauri Binaries
         shell: bash
         run: |
-          echo "Checking for Tauri binaries in fixtures/tauri-apps/*/src-tauri/target/"
+          echo "Checking for Tauri binaries in fixtures/e2e-apps/tauri/src-tauri/target/"
 
-          if [ ! -d "fixtures/tauri-apps" ]; then
-            echo "::error::fixtures/tauri-apps directory not found!"
+          if [ ! -d "fixtures/e2e-apps/tauri" ]; then
+            echo "::error::fixtures/e2e-apps/tauri directory not found!"
             exit 1
           fi
 
           # Find all target directories
-          TARGET_DIRS=$(find fixtures/tauri-apps -name "target" -type d 2>/dev/null || true)
+          TARGET_DIRS=$(find fixtures/e2e-apps/tauri -name "target" -type d 2>/dev/null || true)
 
           if [ -z "$TARGET_DIRS" ]; then
             echo "::error::No target directories found! Binaries were not extracted correctly."
             echo "Directory contents:"
-            ls -la fixtures/tauri-apps/ || true
-            ls -la fixtures/tauri-apps/*/src-tauri/ || true
+            ls -la fixtures/e2e-apps/tauri/ || true
+            ls -la fixtures/e2e-apps/tauri/src-tauri/ || true
             exit 1
           fi
 

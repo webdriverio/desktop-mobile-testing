@@ -223,13 +223,13 @@ export class BuildManager {
       // Check for Tauri binary based on platform
       let binaryPath: string;
       if (process.platform === 'win32') {
-        binaryPath = join(tauriTargetDir, 'tauri-basic-app.exe');
+        binaryPath = join(tauriTargetDir, 'tauri-e2e-app.exe');
       } else if (process.platform === 'darwin') {
         // Skip macOS Tauri tests due to WKWebView limitations
         console.log(`🔍 Debug: Skipping macOS Tauri binary check due to WKWebView limitations`);
         return false;
       } else if (process.platform === 'linux') {
-        binaryPath = join(tauriTargetDir, 'tauri-basic-app');
+        binaryPath = join(tauriTargetDir, 'tauri-e2e-app');
       } else {
         console.log(`🔍 Debug: Unsupported platform for Tauri: ${process.platform}`);
         return false;

@@ -1,5 +1,5 @@
 {
-  "name": "electron-builder-cjs",
+  "name": "electron-builder-cjs-e2e-app",
   "version": "0.0.0",
   "main": "dist/main.js",
   "private": true,

@@ -29,7 +29,7 @@ env:
 jobs:
   # This job runs package tests on multiple Node.js versions and operating systems
   package:
-    name: Package Tests
+    name: Package Tests - ${{ inputs.os == 'macos-latest' && 'Electron only' || 'Electron + Tauri' }}
     runs-on: ${{ inputs.os }}
     steps:
       # Standard checkout with SSH key for private repositories
@@ -72,9 +72,17 @@ jobs:
           fi
 
       # Run package tests using Turbo
+      # Skip Tauri tests on macOS (not supported due to WKWebView limitations)
       - name: 🧪 Execute Package Tests
-        run: pnpm run test:package
         shell: bash
+        run: |
+          if [ "${{ inputs.os }}" == "macos-latest" ]; then
+            echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
+            pnpm run test:package:electron
+          else
+            echo "Running all package tests (Electron and Tauri)"
+            pnpm run test:package
+          fi
 
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment

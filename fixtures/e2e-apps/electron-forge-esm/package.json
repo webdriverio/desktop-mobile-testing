@@ -1,5 +1,5 @@
 {
-  "name": "electron-forge-esm",
+  "name": "electron-forge-esm-e2e-app",
   "version": "0.0.0",
   "main": "dist/main.js",
   "module": "dist/main.bundle.js",

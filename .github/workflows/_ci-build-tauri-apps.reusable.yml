@@ -121,7 +121,7 @@ jobs:
       # Build all Tauri test applications using Turbo
       # This creates the binaries in src-tauri/target/release (or debug)
       - name: 🏗️ Build All Tauri Apps
-        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-*-app --only --parallel
+        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app --only --parallel
         shell: bash
 
       # Upload Tauri app binaries as artifacts
@@ -133,6 +133,6 @@ jobs:
         with:
           name: tauri-apps-${{ runner.os }}
           output: tauri-apps-${{ runner.os }}/artifact.zip
-          paths: fixtures/tauri-apps/*/src-tauri/target
+          paths: fixtures/e2e-apps/tauri/src-tauri/target
           cache_key_prefix: tauri-apps
           retention_days: '90'
