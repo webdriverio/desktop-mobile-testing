@@ -86,13 +86,13 @@ jobs:
           deb http://archive.ubuntu.com/ubuntu jammy main universe
           EOT
           sudo apt-get update
-          # Install minimum required runtime libraries per Tauri documentation
-          # https://v2.tauri.app/start/prerequisites/ and https://tauri.app/distribute/debian/
+          sudo apt-get --fix-broken install -y || true
+
+          # Install required packages - apt resolves dependencies and handles t64 migration automatically
           sudo apt-get install -y \
             libwebkit2gtk-4.1-0 \
-            libgtk-3-0
-          # Try libayatana-appindicator3-1 first, fallback to libappindicator3-1 if not available
-          sudo apt-get install -y libayatana-appindicator3-1 || sudo apt-get install -y libappindicator3-1
+            libgtk-3-0 \
+            libayatana-appindicator3-1
 
       # Install Rust toolchain only for tauri-driver (minimal install)
       - name: 🦀 Setup Rust (for tauri-driver)
