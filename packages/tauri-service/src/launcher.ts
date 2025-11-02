@@ -45,7 +45,7 @@ export default class TauriLaunchService {
     capabilities: TauriCapabilities,
     config: Options.Testrunner,
   ) {
-    console.log('🚀 TauriLaunchService constructor called');
+    log.info('🚀 TauriLaunchService constructor called');
     log.debug('TauriLaunchService initialized');
     log.debug('Capabilities:', JSON.stringify(capabilities, null, 2));
     log.debug('Config:', JSON.stringify(config, null, 2));
@@ -58,7 +58,7 @@ export default class TauriLaunchService {
     _config: Options.Testrunner,
     capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
-    console.log('🚀 TauriLaunchService onPrepare called');
+    log.info('🚀 TauriLaunchService onPrepare called');
     log.debug('Preparing Tauri service...');
 
     // Check for unsupported platforms
@@ -153,12 +153,19 @@ export default class TauriLaunchService {
           `➡️  Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
             `(data dir: ${dataDir}, dynamically allocated)`,
         );
-        await this.startTauriDriverForInstance(instanceId, instancePort, env);
+        try {
+          await this.startTauriDriverForInstance(instanceId, instancePort, env);
+          log.info(`✅ Successfully started tauri-driver for ${key} on port ${instancePort}`);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          log.error(`❌ Failed to start tauri-driver for ${key}: ${errorMsg}`);
+          throw error;
+        }
 
         // Wait for driver to fully stabilize before starting the next one
         // This prevents race conditions when multiple drivers start simultaneously
         if (i < capEntries.length - 1) {
-          log.debug(`Waiting for ${instanceId} to stabilize before starting next driver...`);
+          log.debug(`⏳ Waiting 1s for ${instanceId} to stabilize before starting next driver...`);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
@@ -438,13 +445,15 @@ export default class TauriLaunchService {
   private async startTauriDriverForInstance(instanceId: string, port: number, env: NodeJS.ProcessEnv): Promise<void> {
     const tauriDriverPath = getTauriDriverPath();
 
-    log.debug(`Starting tauri-driver [${instanceId}] on port ${port}`);
+    log.info(`Starting tauri-driver [${instanceId}] on port ${port} (path: ${tauriDriverPath})`);
     const args = ['--port', port.toString()];
 
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
     if (nativeDriverPath) {
       args.push('--native-driver', nativeDriverPath);
-      log.debug(`[${instanceId}] Using native driver: ${nativeDriverPath}`);
+      log.info(`[${instanceId}] Using native driver: ${nativeDriverPath}`);
+    } else {
+      log.warn(`[${instanceId}] WARNING: No native driver found`);
     }
 
     await new Promise<void>((resolve, reject) => {
@@ -454,11 +463,12 @@ export default class TauriLaunchService {
         env,
       });
 
+      log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
       this.tauriDriverProcesses.set(instanceId, { proc, port });
 
       proc.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
-        log.debug(`tauri-driver [${instanceId}] stdout: ${output}`);
+        log.info(`[${instanceId}] stdout: ${output.trim()}`);
         if (output.includes('tauri-driver started') || output.includes('listening on')) {
           log.info(`✅ tauri-driver [${instanceId}] started on port ${port} (pid: ${proc.pid ?? 'unknown'})`);
           resolve();
@@ -467,27 +477,46 @@ export default class TauriLaunchService {
 
       proc.stderr?.on('data', (data: Buffer) => {
         const output = data.toString();
-        log.error(`tauri-driver [${instanceId}] stderr: ${output}`);
+        log.error(`[${instanceId}] stderr: ${output.trim()}`);
       });
 
       proc.on('error', (error: Error) => {
-        log.error(`Failed to start tauri-driver [${instanceId}]: ${error.message}`);
+        log.error(`❌ Failed to start tauri-driver [${instanceId}]: ${error.message}`);
         reject(error);
+      });
+
+      proc.on('exit', (code: number | null, signal: string | null) => {
+        if (code !== null && code !== 0) {
+          log.error(`❌ tauri-driver [${instanceId}] exited with code ${code}, signal: ${signal}`);
+        } else {
+          log.debug(`[${instanceId}] Process exited (code: ${code}, signal: ${signal})`);
+        }
       });
 
       setTimeout(() => {
         if (!proc.killed) {
-          log.warn(`tauri-driver [${instanceId}] startup timeout, assuming ready`);
+          log.warn(`⚠️  tauri-driver [${instanceId}] startup timeout, assuming ready`);
           resolve();
         }
       }, 30000);
     });
 
     // Additional readiness: wait until the driver port accepts connections
+    log.info(`[${instanceId}] Waiting for TCP port ${port} to open...`);
     await this.waitForPortOpen('127.0.0.1', port, 30000);
+    log.info(`[${instanceId}] ✅ TCP port ${port} is open`);
 
     // Verify the driver is responding to HTTP requests (not just TCP)
+    log.info(`[${instanceId}] Waiting for HTTP endpoint to be ready...`);
     await this.waitForHttpReady('127.0.0.1', port, 10000);
+    log.info(`[${instanceId}] ✅ HTTP endpoint ready on port ${port}`);
+
+    // Final verification: check process is still alive
+    const procInfo = this.tauriDriverProcesses.get(instanceId);
+    if (procInfo?.proc.killed) {
+      throw new Error(`tauri-driver [${instanceId}] process died during startup`);
+    }
+    log.info(`[${instanceId}] ✅ Driver fully ready and process alive (PID: ${procInfo?.proc.pid ?? 'unknown'})`);
   }
 
   /**

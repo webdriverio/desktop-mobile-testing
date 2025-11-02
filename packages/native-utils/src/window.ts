@@ -1,3 +1,7 @@
+import { createLogger } from './log.js';
+
+const log = createLogger('native-utils', 'window');
+
 /**
  * Wait until at least one window handle is available for the given browser instance.
  * This is framework-agnostic and mirrors the readiness check pattern used in Electron.
@@ -14,9 +18,7 @@ export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser): Pr
   const sessionId = (browser as any).sessionId || 'unknown';
   const startTime = Date.now();
 
-  console.log(
-    `[waitUntilWindowAvailable] Starting readiness check for instance ${instanceId} (session: ${sessionId.substring(0, 8)}...)`,
-  );
+  log.debug(`Starting readiness check for instance ${instanceId} (session: ${sessionId.substring(0, 8)}...)`);
 
   let attemptCount = 0;
   await browser.waitUntil(
@@ -25,8 +27,8 @@ export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser): Pr
       try {
         const handle = await browser.getWindowHandle();
         const elapsed = Date.now() - startTime;
-        console.log(
-          `[waitUntilWindowAvailable] ✅ Instance ${instanceId} ready after ${elapsed}ms (${attemptCount} attempts) - handle: ${handle.substring(0, 8)}...`,
+        log.debug(
+          `✅ Instance ${instanceId} ready after ${elapsed}ms (${attemptCount} attempts) - handle: ${handle.substring(0, 8)}...`,
         );
         return true;
       } catch (error) {
@@ -35,17 +37,13 @@ export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser): Pr
         if (errorMessage.includes('invalid session id')) {
           if (attemptCount % 10 === 0 || attemptCount <= 5) {
             // Log every 10th attempt or first 5 attempts
-            console.log(
-              `[waitUntilWindowAvailable] ⚠️  Instance ${instanceId} - invalid session id (attempt ${attemptCount}, ${elapsed}ms elapsed)`,
-            );
+            log.debug(`⚠️  Instance ${instanceId} - invalid session id (attempt ${attemptCount}, ${elapsed}ms elapsed)`);
           }
           return false;
         }
         // For other errors, log and retry
         if (attemptCount <= 3) {
-          console.log(
-            `[waitUntilWindowAvailable] ⚠️  Instance ${instanceId} - error (attempt ${attemptCount}): ${errorMessage}`,
-          );
+          log.debug(`⚠️  Instance ${instanceId} - error (attempt ${attemptCount}): ${errorMessage}`);
         }
         return false;
       }
