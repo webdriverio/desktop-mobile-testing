@@ -77,32 +77,13 @@ jobs:
     with:
       os: 'windows-latest'
 
-  build-electron-package-apps-linux:
-    name: Build Electron Package Test Apps [Linux]
-    needs: [build]
-    uses: ./.github/workflows/_ci-build-electron-package-apps.reusable.yml
-    with:
-      os: 'ubuntu-latest'
-
-  build-electron-package-apps-windows:
-    name: Build Electron Package Test Apps [Windows]
-    needs: [build]
-    uses: ./.github/workflows/_ci-build-electron-package-apps.reusable.yml
-    with:
-      os: 'windows-latest'
-
-  build-electron-package-apps-macos:
-    name: Build Electron Package Test Apps [macOS]
-    needs: [build]
-    uses: ./.github/workflows/_ci-build-electron-package-apps.reusable.yml
-    with:
-      os: 'macos-latest'
-
   # Run package tests after unit tests to ensure the package is built correctly
   # Split Electron and Tauri tests across separate jobs for better parallelization and clarity
+  # Electron apps are built inline on the test runner (faster builds, Turbo caching handles it)
+  # Tauri apps are built separately due to longer build times and system dependencies
   package-electron-linux:
     name: Package - Electron [Linux]
-    needs: [build, lint, build-electron-package-apps-linux]
+    needs: [build, lint]
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -110,11 +91,10 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
-      electron_cache_key: ${{ needs.build-electron-package-apps-linux.outputs.cache_key }}
 
   package-electron-windows:
     name: Package - Electron [Windows]
-    needs: [build, lint, build-electron-package-apps-windows]
+    needs: [build, lint]
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: 'windows-latest'
@@ -122,11 +102,10 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
-      electron_cache_key: ${{ needs.build-electron-package-apps-windows.outputs.cache_key }}
 
   package-electron-macos:
     name: Package - Electron [macOS]
-    needs: [build, lint, build-electron-package-apps-macos]
+    needs: [build, lint]
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: 'macos-latest'
@@ -134,7 +113,6 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
-      electron_cache_key: ${{ needs.build-electron-package-apps-macos.outputs.cache_key }}
 
   package-tauri-linux:
     name: Package - Tauri [Linux]
