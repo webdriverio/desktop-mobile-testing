@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { z } from 'zod';
+import { getE2EAppDirName } from '../lib/utils.js';
 
 /**
  * Environment variable schema for E2E tests
@@ -61,7 +62,9 @@ export class EnvironmentContext {
   }
 
   get platform(): 'builder' | 'forge' | 'no-binary' {
-    return this.env.APP;
+    // Platform is Electron-specific; for Tauri, 'basic' maps to 'builder' conceptually
+    // but this getter is only used for Electron apps in isNoBinary check
+    return this.env.APP as 'builder' | 'forge' | 'no-binary';
   }
 
   get moduleType(): 'cjs' | 'esm' {
@@ -104,19 +107,16 @@ export class EnvironmentContext {
       return this.env.EXAMPLE_DIR;
     }
 
-    if (this.framework === 'tauri') {
-      return `${this.app}-app`;
-    }
-
-    return this.isNoBinary ? `no-binary-${this.moduleType}` : `${this.platform}-${this.moduleType}`;
+    return getE2EAppDirName(this.framework, this.app, this.moduleType, this.isNoBinary);
   }
 
   /**
    * Get the full app directory path
    */
   get appDirPath(): string {
-    const fixturesDir = this.framework === 'tauri' ? 'tauri-apps' : 'electron-apps';
-    return path.join(process.cwd(), '..', 'fixtures', fixturesDir, this.appDirName);
+    const fixturesDir = 'e2e-apps';
+    const appDirName = getE2EAppDirName(this.framework, this.app, this.moduleType, this.isNoBinary);
+    return path.join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
   }
 
   /**

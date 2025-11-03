@@ -1,0 +1,80 @@
+name: Build Electron Package Test Apps
+description: 'Builds Electron package test applications and creates shareable artifacts'
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: 'OS of runner'
+        required: true
+        type: string
+    outputs:
+      build_id:
+        description: 'Unique identifier for this build'
+        value: ${{ jobs.build-electron-package-apps.outputs.build_id }}
+      build_date:
+        description: 'Timestamp when the build completed'
+        value: ${{ jobs.build-electron-package-apps.outputs.build_date }}
+      artifact_size:
+        description: 'Size of the build artifact in bytes'
+        value: ${{ jobs.build-electron-package-apps.outputs.artifact_size }}
+      cache_key:
+        description: 'Cache key used for artifact uploads, can be passed to download actions'
+        value: ${{ jobs.build-electron-package-apps.outputs.cache_key }}
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  TURBO_DAEMON: false
+
+jobs:
+  build-electron-package-apps:
+    name: Build Electron Package Test Apps
+    runs-on: ${{ inputs.os }}
+    outputs:
+      build_id: ${{ steps.build-info.outputs.build_id }}
+      build_date: ${{ steps.build-info.outputs.build_date }}
+      artifact_size: ${{ steps.upload-archive.outputs.size || '0' }}
+      cache_key: ${{ steps.upload-archive.outputs.cache_key }}
+    steps:
+      - name: 👷 Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: 🛠️ Setup Development Environment
+        uses: ./.github/workflows/actions/setup-workspace
+        with:
+          node-version: '20'
+
+      - name: 📊 Generate Build Information
+        id: build-info
+        shell: bash
+        run: |
+          echo "build_id=$(date +%s)-${{ github.run_id }}-${{ runner.os }}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      # Install dependencies for all Electron package test apps
+      # This ensures all required packages (like @electron-forge/core) are available before building
+      - name: 📦 Install Dependencies
+        run: pnpm install
+        shell: bash
+
+      # Build all Electron package test apps using Turbo
+      # This creates dist/ and dist-electron/ or out/ directories
+      - name: 🏗️ Build Electron Package Test Apps
+        run: pnpm exec turbo run build --filter=electron-builder-app-example --filter=electron-forge-app-example --filter=electron-script-app-example --only --parallel
+        shell: bash
+
+      # Upload Electron package test app artifacts
+      # Each OS uploads its own artifacts since apps are platform-specific
+      # Using GitHub Actions cache with ~90 day retention (vs. 1 day for regular artifacts)
+      - name: 📦 Upload Electron Package Test App Binaries
+        id: upload-archive
+        uses: ./.github/workflows/actions/upload-archive
+        with:
+          name: electron-package-apps-${{ runner.os }}
+          output: electron-package-apps-${{ runner.os }}/artifact.zip
+          paths: fixtures/package-tests/electron-builder-app/dist fixtures/package-tests/electron-builder-app/dist-electron fixtures/package-tests/electron-forge-app/dist fixtures/package-tests/electron-forge-app/out fixtures/package-tests/electron-script-app/dist fixtures/package-tests/electron-script-app/out
+          cache_key_prefix: electron-package-apps
+          retention_days: '90'
+

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import pLimit from 'p-limit';
 import { createEnvironmentContext, type EnvironmentContext } from '../config/envSchema.js';
 import { StatusBar, type TestResult, TestStatusTracker } from '../lib/statusBar.js';
-import { execWdio, formatDuration } from '../lib/utils.js';
+import { execWdio, formatDuration, getE2EAppDirName } from '../lib/utils.js';
 import BuildManager from './build-apps.js';
 
 /**
@@ -185,16 +185,9 @@ async function runTest(
 
   try {
     // Determine app directory based on framework
-    let appDirName: string;
-    let fixturesDir: string;
-
-    if (variant.framework === 'tauri') {
-      appDirName = variant.app;
-      fixturesDir = 'tauri-apps';
-    } else {
-      appDirName = variant.binary ? `${variant.app}-${variant.moduleType}` : `no-binary-${variant.moduleType}`;
-      fixturesDir = 'electron-apps';
-    }
+    const fixturesDir = 'e2e-apps';
+    const isNoBinary = !variant.binary;
+    const appDirName = getE2EAppDirName(variant.framework, variant.app, variant.moduleType, isNoBinary);
 
     const appPath = join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
 

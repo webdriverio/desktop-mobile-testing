@@ -120,19 +120,21 @@ jobs:
 
       # Build all Tauri test applications using Turbo
       # This creates the binaries in src-tauri/target/release (or debug)
+      # Build both E2E app and package test app
       - name: 🏗️ Build All Tauri Apps
-        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-*-app --only --parallel
+        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app --filter=tauri-app-example --only --parallel
         shell: bash
 
       # Upload Tauri app binaries as artifacts
       # Each OS uploads its own artifacts since binaries are platform-specific
       # Using GitHub Actions cache with ~90 day retention (vs. 1 day for regular artifacts)
+      # Include both E2E app and package test app binaries
       - name: 📦 Upload Tauri App Binaries
         id: upload-archive
         uses: ./.github/workflows/actions/upload-archive
         with:
           name: tauri-apps-${{ runner.os }}
           output: tauri-apps-${{ runner.os }}/artifact.zip
-          paths: fixtures/tauri-apps/*/src-tauri/target
+          paths: fixtures/e2e-apps/tauri/src-tauri/target fixtures/package-tests/tauri-app/src-tauri/target
           cache_key_prefix: tauri-apps
           retention_days: '90'

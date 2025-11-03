@@ -1,0 +1,124 @@
+name: Build Tauri Package Test App
+description: 'Builds Tauri package test application and creates shareable artifacts'
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        description: 'OS of runner'
+        required: true
+        type: string
+      build-command:
+        description: 'Build command for Tauri app (build or build:debug)'
+        type: string
+        default: 'build'
+    outputs:
+      build_id:
+        description: 'Unique identifier for this build'
+        value: ${{ jobs.build-tauri-package-app.outputs.build_id }}
+      build_date:
+        description: 'Timestamp when the build completed'
+        value: ${{ jobs.build-tauri-package-app.outputs.build_date }}
+      artifact_size:
+        description: 'Size of the build artifact in bytes'
+        value: ${{ jobs.build-tauri-package-app.outputs.artifact_size }}
+      cache_key:
+        description: 'Cache key used for artifact uploads, can be passed to download actions'
+        value: ${{ jobs.build-tauri-package-app.outputs.cache_key }}
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  TURBO_DAEMON: false
+
+jobs:
+  build-tauri-package-app:
+    name: Build Tauri Package Test App
+    runs-on: ${{ inputs.os }}
+    outputs:
+      build_id: ${{ steps.build-info.outputs.build_id }}
+      build_date: ${{ steps.build-info.outputs.build_date }}
+      artifact_size: ${{ steps.upload-archive.outputs.size || '0' }}
+      cache_key: ${{ steps.upload-archive.outputs.cache_key }}
+    steps:
+      - name: 👷 Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: 🛠️ Setup Development Environment
+        uses: ./.github/workflows/actions/setup-workspace
+        with:
+          node-version: '20'
+
+      - name: 🦀 Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 🦀 Install Tauri Dependencies (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Installing Tauri dependencies for Linux..."
+          sudo tee -a /etc/apt/sources.list > /dev/null <<EOT
+          deb http://archive.ubuntu.com/ubuntu jammy main universe
+          EOT
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev \
+            libsoup2.4-dev \
+            libjavascriptcoregtk-4.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libssl-dev \
+            libasound2-dev \
+            libx11-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxrender-dev \
+            libxrandr-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxcomposite-dev \
+            libxcursor-dev \
+            libxdamage-dev \
+            libxinerama-dev \
+            libxcb1-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxcb-render0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinerama0-dev \
+            libxcb-xkb-dev \
+            libxcb-image0-dev \
+            libxcb-util0-dev \
+            libxcb-icccm4-dev \
+            libxcb-ewmh-dev \
+            libxcb-dri2-0-dev
+
+      - name: 📊 Generate Build Information
+        id: build-info
+        shell: bash
+        run: |
+          echo "build_id=$(date +%s)-${{ github.run_id }}-${{ runner.os }}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: 🏗️ Build Tauri Package Test App
+        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-app-example --only
+        shell: bash
+
+      - name: 📦 Upload Tauri Package Test App Binary
+        id: upload-archive
+        uses: ./.github/workflows/actions/upload-archive
+        with:
+          name: tauri-package-app-${{ runner.os }}
+          output: tauri-package-app-${{ runner.os }}/artifact.zip
+          paths: fixtures/package-tests/tauri-app/src-tauri/target
+          cache_key_prefix: tauri-package-app
+          retention_days: '90'
+

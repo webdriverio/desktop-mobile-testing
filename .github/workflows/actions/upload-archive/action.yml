@@ -88,17 +88,25 @@ runs:
         }
 
         # Get file count before compression (for validation)
-        $fileCount = (Get-ChildItem -Path "${{ inputs.paths }}" -File -Recurse | Where-Object { $_.FullName -notmatch "node_modules" -and $_.FullName -notmatch "\\\..*\\|/\..*/" }).Count
+        # Check if path exists first to avoid PowerShell errors with non-existent paths
+        $paths = "${{ inputs.paths }}" -split ' '
+        $fileCount = 0
+        foreach ($path in $paths) {
+          if (Test-Path $path) {
+            $fileCount += (Get-ChildItem -Path $path -File -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch "node_modules" -and $_.FullName -notmatch "\\\..*\\|/\..*/" }).Count
+          } else {
+            Write-Host "::warning::Path does not exist (may be expected): $path"
+          }
+        }
 
         # Normalize file timestamps BEFORE compression (for Rust target directories)
         # ZIP format only supports dates between 1980-01-01 and 2107-12-31
-        $paths = "${{ inputs.paths }}" -split ' '
         $validDate = Get-Date "2020-01-01"
         $minDate = Get-Date "1980-01-01"
         $maxDate = Get-Date "2107-12-31"
 
         foreach ($path in $paths) {
-          if (Test-Path $path) {
+          if (Test-Path $path -ErrorAction SilentlyContinue) {
             # Normalize timestamps for both files and directories
             Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
               try {
@@ -149,7 +157,7 @@ runs:
           # Try to find files with problematic timestamps
           Write-Host "Checking for files with invalid timestamps..."
           foreach ($path in $paths) {
-            if (Test-Path $path) {
+            if (Test-Path $path -ErrorAction SilentlyContinue) {
               Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | Where-Object {
                 $_.LastWriteTime -lt $minDate -or $_.LastWriteTime -gt $maxDate -or
                 $_.CreationTime -lt $minDate -or $_.CreationTime -gt $maxDate -or

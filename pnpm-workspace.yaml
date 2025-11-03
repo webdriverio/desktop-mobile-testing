@@ -2,16 +2,17 @@ packages:
   - packages/*
   - examples/*
   - e2e
-  - fixtures/electron-apps/builder-cjs
-  - fixtures/electron-apps/builder-esm
-  - fixtures/electron-apps/forge-cjs
-  - fixtures/electron-apps/forge-esm
-  - fixtures/electron-apps/no-binary-cjs
-  - fixtures/electron-apps/no-binary-esm
-  - fixtures/tauri-apps/basic
-  - fixtures/package-tests/builder-app
-  - fixtures/package-tests/forge-app
-  - fixtures/package-tests/script-app
+  - fixtures/e2e-apps/electron-builder-cjs
+  - fixtures/e2e-apps/electron-builder-esm
+  - fixtures/e2e-apps/electron-forge-cjs
+  - fixtures/e2e-apps/electron-forge-esm
+  - fixtures/e2e-apps/electron-no-binary-cjs
+  - fixtures/e2e-apps/electron-no-binary-esm
+  - fixtures/e2e-apps/tauri
+  - fixtures/package-tests/electron-builder-app
+  - fixtures/package-tests/electron-forge-app
+  - fixtures/package-tests/electron-script-app
+  - fixtures/package-tests/tauri-app
 
 catalogs:
   default:

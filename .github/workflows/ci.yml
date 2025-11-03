@@ -47,21 +47,96 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
+  # Build app binaries in parallel for better CI efficiency
+  # Package test apps and E2E apps are built separately so tests don't wait for each other
+  build-tauri-e2e-app-linux:
+    name: Build Tauri E2E App [Linux]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
+    with:
+      os: 'ubuntu-latest'
+
+  build-tauri-e2e-app-windows:
+    name: Build Tauri E2E App [Windows]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
+    with:
+      os: 'windows-latest'
+
+  build-tauri-package-app-linux:
+    name: Build Tauri Package Test App [Linux]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
+    with:
+      os: 'ubuntu-latest'
+
+  build-tauri-package-app-windows:
+    name: Build Tauri Package Test App [Windows]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
+    with:
+      os: 'windows-latest'
+
   # Run package tests after unit tests to ensure the package is built correctly
-  package-matrix:
-    name: Package [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}]
+  # Split Electron and Tauri tests across separate jobs for better parallelization and clarity
+  # Electron apps are built inline on the test runner (faster builds, Turbo caching handles it)
+  # Tauri apps are built separately due to longer build times and system dependencies
+  package-electron-linux:
+    name: Package - Electron [Linux]
     needs: [build, lint]
-    strategy:
-      fail-fast: false
-      matrix:
-        # Test on all major operating systems to ensure cross-platform compatibility
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
-      os: ${{ matrix.os }}
+      os: 'ubuntu-latest'
+      service: 'electron'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
+
+  package-electron-windows:
+    name: Package - Electron [Windows]
+    needs: [build, lint]
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: 'windows-latest'
+      service: 'electron'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+
+  package-electron-macos:
+    name: Package - Electron [macOS]
+    needs: [build, lint]
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: 'macos-latest'
+      service: 'electron'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+
+  package-tauri-linux:
+    name: Package - Tauri [Linux]
+    needs: [build, lint, build-tauri-package-app-linux]
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: 'ubuntu-latest'
+      service: 'tauri'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-package-app-linux.outputs.cache_key }}
+
+  package-tauri-windows:
+    name: Package - Tauri [Windows]
+    needs: [build, lint, build-tauri-package-app-windows]
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: 'windows-latest'
+      service: 'tauri'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-package-app-windows.outputs.cache_key }}
 
   # Run build tests outside of the main Linux build job.
   build-matrix:
@@ -111,27 +186,11 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # Build Tauri apps once per OS (parallel with other jobs)
-  # These binaries are reused by all test types on that OS
-  build-tauri-apps-linux:
-    name: Build Tauri Apps [Linux]
-    needs: [build]
-    uses: ./.github/workflows/_ci-build-tauri-apps.reusable.yml
-    with:
-      os: 'ubuntu-latest'
-
-  build-tauri-apps-windows:
-    name: Build Tauri Apps [Windows]
-    needs: [build]
-    uses: ./.github/workflows/_ci-build-tauri-apps.reusable.yml
-    with:
-      os: 'windows-latest'
-
-  # Tauri E2E tests for Linux - only waits for Linux build
-  # This allows Linux tests to start immediately after Linux build completes
+  # Tauri E2E tests for Linux - only waits for E2E app build
+  # This allows Linux tests to start immediately after E2E app build completes
   e2e-tauri-linux-matrix:
     name: E2E - Tauri [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build, build-tauri-apps-linux]
+    needs: [build, build-tauri-e2e-app-linux]
     strategy:
       fail-fast: false
       matrix:
@@ -146,13 +205,13 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-apps-linux.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-e2e-app-linux.outputs.cache_key }}
 
-  # Tauri E2E tests for Windows - only waits for Windows build
-  # This allows Windows tests to start immediately after Windows build completes
+  # Tauri E2E tests for Windows - only waits for E2E app build
+  # This allows Windows tests to start immediately after E2E app build completes
   e2e-tauri-windows-matrix:
     name: E2E - Tauri [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build, build-tauri-apps-windows]
+    needs: [build, build-tauri-e2e-app-windows]
     strategy:
       fail-fast: false
       matrix:
@@ -167,7 +226,7 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-apps-windows.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-e2e-app-windows.outputs.cache_key }}
 
   # Tauri E2E tests for macOS - skipped with clear messaging
   # macOS is not supported due to WKWebView WebDriver limitations

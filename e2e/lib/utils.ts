@@ -231,3 +231,31 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
     return fallback;
   }
 }
+
+/**
+ * Compute the E2E app directory name based on framework, app type, module type, and binary mode.
+ * This is used consistently across envSchema, build scripts, and test runners.
+ *
+ * @param framework - 'electron' or 'tauri'
+ * @param app - App type: 'builder', 'forge', 'no-binary', or 'basic' (for Tauri)
+ * @param moduleType - 'cjs' or 'esm' (only used for Electron)
+ * @param isNoBinary - Whether this is a no-binary mode (only used for Electron)
+ * @returns The computed directory name
+ */
+export function getE2EAppDirName(
+  framework: 'electron' | 'tauri',
+  app: 'builder' | 'forge' | 'no-binary' | 'basic',
+  moduleType: 'cjs' | 'esm',
+  isNoBinary: boolean,
+): string {
+  if (framework === 'tauri') {
+    // Tauri app directory is always 'tauri' regardless of app type
+    return 'tauri';
+  }
+
+  if (isNoBinary) {
+    return `electron-no-binary-${moduleType}`;
+  }
+
+  return `electron-${app}-${moduleType}`;
+}

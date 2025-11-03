@@ -281,8 +281,8 @@ Tests are integrated with Turborepo for efficient execution:
 
 ```bash
 # Run specific test combinations
-turbo run test:e2e:builder-cjs
-turbo run test:e2e:tauri-basic
+turbo run test:e2e:electron-builder-cjs
+turbo run test:e2e:tauri
 ```
 
 ## Debugging
