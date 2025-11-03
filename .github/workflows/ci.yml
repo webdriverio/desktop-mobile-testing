@@ -48,8 +48,9 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
 
   # Run package tests after unit tests to ensure the package is built correctly
-  package-matrix:
-    name: Package [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}] - ${{ matrix.os == 'macos-latest' && 'Electron' || 'Electron + Tauri' }}
+  # Split Electron and Tauri tests across separate jobs for better parallelization and clarity
+  package-electron-matrix:
+    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}]
     needs: [build, lint]
     strategy:
       fail-fast: false
@@ -59,6 +60,23 @@ jobs:
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: ${{ matrix.os }}
+      service: 'electron'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+
+  package-tauri-matrix:
+    name: Package - Tauri [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' }}]
+    needs: [build, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        # Tauri not supported on macOS due to WKWebView limitations
+        os: ['ubuntu-latest', 'windows-latest']
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: ${{ matrix.os }}
+      service: 'tauri'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}

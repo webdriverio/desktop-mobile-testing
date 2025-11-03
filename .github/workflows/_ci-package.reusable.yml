@@ -10,6 +10,11 @@ on:
         description: 'Operating system to run tests on'
         type: string
         required: true
+      service:
+        description: 'Service to test (electron, tauri, or both)'
+        type: string
+        required: false
+        default: 'both'
       build_id:
         description: 'Build ID from the build job'
         type: string
@@ -29,7 +34,7 @@ env:
 jobs:
   # This job runs package tests on multiple Node.js versions and operating systems
   package:
-    name: Package Tests - ${{ inputs.os == 'macos-latest' && 'Electron only' || 'Electron + Tauri' }}
+    name: Package Tests - ${{ inputs.service == 'electron' && 'Electron' || inputs.service == 'tauri' && 'Tauri' || 'Both' }}
     runs-on: ${{ inputs.os }}
     steps:
       # Standard checkout with SSH key for private repositories
@@ -72,17 +77,36 @@ jobs:
           fi
 
       # Run package tests using Turbo
-      # Skip Tauri tests on macOS (not supported due to WKWebView limitations)
       - name: 🧪 Execute Package Tests
         shell: bash
         run: |
-          if [ "${{ inputs.os }}" == "macos-latest" ]; then
-            echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
-            pnpm run test:package:electron
-          else
-            echo "Running all package tests (Electron and Tauri)"
-            pnpm run test:package
-          fi
+          case "${{ inputs.service }}" in
+            electron)
+              echo "Running Electron package tests"
+              pnpm run test:package:electron
+              ;;
+            tauri)
+              if [ "${{ inputs.os }}" == "macos-latest" ]; then
+                echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
+                exit 0
+              fi
+              echo "Running Tauri package tests"
+              pnpm run test:package:tauri
+              ;;
+            both)
+              if [ "${{ inputs.os }}" == "macos-latest" ]; then
+                echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
+                pnpm run test:package:electron
+              else
+                echo "Running all package tests (Electron and Tauri)"
+                pnpm run test:package
+              fi
+              ;;
+            *)
+              echo "Invalid service: ${{ inputs.service }}"
+              exit 1
+              ;;
+          esac
 
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment
