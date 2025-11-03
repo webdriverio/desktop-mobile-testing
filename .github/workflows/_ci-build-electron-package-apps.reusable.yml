@@ -53,6 +53,12 @@ jobs:
           echo "build_id=$(date +%s)-${{ github.run_id }}-${{ runner.os }}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
+      # Install dependencies for all Electron package test apps
+      # This ensures all required packages (like @electron-forge/core) are available before building
+      - name: 📦 Install Dependencies
+        run: pnpm install
+        shell: bash
+
       # Build all Electron package test apps using Turbo
       # This creates dist/ and dist-electron/ or out/ directories
       - name: 🏗️ Build Electron Package Test Apps
