@@ -246,10 +246,7 @@ async function testExample(
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
 
     // Build the app if needed
-    if (
-      packageJson.scripts?.build &&
-      (packageName.includes('builder') || packageName.includes('forge') || packageName.includes('script'))
-    ) {
+    if (packageJson.scripts?.build) {
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
     }
 
@@ -392,14 +389,8 @@ async function main() {
         continue;
       }
 
-      // Detect service type from package name
+      // Detect service type from package name (already filtered by prefix, but needed for testExample)
       const detectedService: 'electron' | 'tauri' = packageName.startsWith('tauri-') ? 'tauri' : 'electron';
-
-      // Skip if service type doesn't match
-      if (options.service !== 'both' && detectedService !== options.service) {
-        log(`⏭️  Skipping ${packageName} (service type ${detectedService} doesn't match filter ${options.service})`);
-        continue;
-      }
 
       await testExample(packagePath, packages, detectedService);
     }
