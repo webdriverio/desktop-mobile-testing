@@ -27,6 +27,10 @@ on:
         description: 'Cache key to use for downloading artifacts'
         type: string
         required: false
+      tauri_cache_key:
+        description: 'Cache key for Tauri app binaries'
+        type: string
+        required: false
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
@@ -60,6 +64,19 @@ jobs:
           cache_key_prefix: wdio-electron-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
+      # Download Tauri app binaries if testing Tauri service
+      # The download-archive action extracts to workspace root, preserving directory structure
+      # Archive contains: fixtures/e2e-apps/tauri/src-tauri/target and fixtures/package-tests/tauri-app/src-tauri/target
+      - name: 📦 Download Tauri App Binaries
+        if: inputs.service == 'tauri' || inputs.service == 'both'
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: tauri-apps-${{ runner.os }}
+          path: tauri-apps-${{ runner.os }}
+          filename: artifact.zip
+          cache_key_prefix: tauri-apps
+          exact_cache_key: ${{ inputs.tauri_cache_key || '' }}
+
       # Verify the extracted dist directories exist
       - name: 🔍 Verify Extracted Files
         id: verify-build
@@ -76,30 +93,62 @@ jobs:
             echo "::warning::No dist directories found, build extraction may have failed"
           fi
 
+      # Pack services from downloaded artifacts so --skip-build can use them
+      # This creates the .tgz files that the test script expects when --skip-build is used
+      - name: 📦 Pack Services from Artifacts
+        shell: bash
+        run: |
+          echo "Packing services from downloaded artifacts..."
+          # Pack native-utils (required for both services)
+          if [ -d "packages/native-utils/dist" ]; then
+            (cd packages/native-utils && pnpm pack)
+          fi
+
+          # Pack Electron service and dependencies if needed
+          if [ "${{ inputs.service }}" == "electron" ] || [ "${{ inputs.service }}" == "both" ]; then
+            if [ -d "packages/electron-types/dist" ]; then
+              (cd packages/electron-types && pnpm pack)
+            fi
+            if [ -d "packages/electron-cdp-bridge/dist" ]; then
+              (cd packages/electron-cdp-bridge && pnpm pack)
+            fi
+            if [ -d "packages/electron-service/dist" ]; then
+              (cd packages/electron-service && pnpm pack)
+            fi
+          fi
+
+          # Pack Tauri service if needed
+          if [ "${{ inputs.service }}" == "tauri" ] || [ "${{ inputs.service }}" == "both" ]; then
+            if [ -d "packages/tauri-service/dist" ]; then
+              (cd packages/tauri-service && pnpm pack)
+            fi
+          fi
+
       # Run package tests using Turbo
+      # Use --skip-build since artifacts are downloaded from build job
       - name: 🧪 Execute Package Tests
         shell: bash
         run: |
           case "${{ inputs.service }}" in
             electron)
-              echo "Running Electron package tests"
-              pnpm run test:package:electron
+              echo "Running Electron package tests (using downloaded artifacts)"
+              pnpm run test:package:electron -- --skip-build
               ;;
             tauri)
               if [ "${{ inputs.os }}" == "macos-latest" ]; then
                 echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
                 exit 0
               fi
-              echo "Running Tauri package tests"
-              pnpm run test:package:tauri
+              echo "Running Tauri package tests (using downloaded artifacts)"
+              pnpm run test:package:tauri -- --skip-build
               ;;
             both)
               if [ "${{ inputs.os }}" == "macos-latest" ]; then
                 echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
-                pnpm run test:package:electron
+                pnpm run test:package:electron -- --skip-build
               else
-                echo "Running all package tests (Electron and Tauri)"
-                pnpm run test:package
+                echo "Running all package tests (Electron and Tauri, using downloaded artifacts)"
+                pnpm run test:package -- --skip-build
               fi
               ;;
             *)

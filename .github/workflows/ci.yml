@@ -65,21 +65,29 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  package-tauri-matrix:
-    name: Package - Tauri [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' }}]
-    needs: [build, lint]
-    strategy:
-      fail-fast: false
-      matrix:
-        # Tauri not supported on macOS due to WKWebView limitations
-        os: ['ubuntu-latest', 'windows-latest']
+  package-tauri-linux:
+    name: Package - Tauri [Linux]
+    needs: [build, lint, build-tauri-apps-linux]
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
-      os: ${{ matrix.os }}
+      os: 'ubuntu-latest'
       service: 'tauri'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-apps-linux.outputs.cache_key }}
+
+  package-tauri-windows:
+    name: Package - Tauri [Windows]
+    needs: [build, lint, build-tauri-apps-windows]
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: 'windows-latest'
+      service: 'tauri'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-apps-windows.outputs.cache_key }}
 
   # Run build tests outside of the main Linux build job.
   build-matrix:
