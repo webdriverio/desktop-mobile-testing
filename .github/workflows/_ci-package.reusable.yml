@@ -53,6 +53,32 @@ jobs:
         with:
           node-version: '20'
 
+      # Install Rust toolchain and tauri-driver if testing Tauri service
+      - name: 🦀 Setup Rust (for tauri-driver)
+        if: inputs.service == 'tauri' || inputs.service == 'both'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: 🚗 Install tauri-driver
+        if: inputs.service == 'tauri' || inputs.service == 'both'
+        shell: bash
+        run: |
+          echo "Installing tauri-driver..."
+          cargo install tauri-driver
+
+      # Install WebKit WebDriver for Linux (required by tauri-driver)
+      - name: 🌐 Install WebKit WebDriver (Linux)
+        if: (inputs.service == 'tauri' || inputs.service == 'both') && runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Installing WebKit WebDriver for Linux..."
+          sudo apt-get update
+          sudo apt-get install -y webkit2gtk-driver
+          # Verify installation
+          which WebKitWebDriver || echo "WebKitWebDriver not found in PATH"
+          WebKitWebDriver --version || echo "WebKitWebDriver version check failed"
+
       # Download the pre-built packages from the build job
       # This ensures all tests use the same build artifacts
       - name: 📦 Download Build Artifacts
