@@ -249,7 +249,8 @@ export function getE2EAppDirName(
   isNoBinary: boolean,
 ): string {
   if (framework === 'tauri') {
-    return app;
+    // Tauri app directory is always 'tauri' regardless of app type
+    return 'tauri';
   }
 
   if (isNoBinary) {
