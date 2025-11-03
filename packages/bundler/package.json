@@ -35,8 +35,8 @@
   },
   "dependencies": {
     "@rollup/plugin-node-resolve": "^16.0.2",
-    "@rollup/plugin-typescript": "^12.1.4",
-    "commander": "^14.0.1",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "commander": "^14.0.2",
     "debug": "^4.4.3",
     "read-package-up": "^11.0.0",
     "rollup": "^4.52.4",
