@@ -176,6 +176,7 @@ async function testExample(
     cdpBridgePath?: string;
   },
   service: 'electron' | 'tauri',
+  skipBuild: boolean,
 ) {
   const packageName = packagePath.split(/[/\\]/).pop();
   if (!packageName) {
@@ -245,8 +246,24 @@ async function testExample(
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
 
-    // Build the app if needed
-    if (packageJson.scripts?.build) {
+    // Copy pre-built binary if skipBuild is true and it's a Tauri app
+    if (skipBuild && service === 'tauri') {
+      const sourceTargetDir = join(rootDir, 'fixtures', 'package-tests', 'tauri-app', 'src-tauri', 'target');
+      const destTargetDir = join(packageDir, 'src-tauri', 'target');
+
+      if (existsSync(sourceTargetDir)) {
+        log(`Copying pre-built Tauri binary from ${sourceTargetDir}...`);
+        mkdirSync(destTargetDir, { recursive: true });
+        cpSync(sourceTargetDir, destTargetDir, { recursive: true });
+        log(`✅ Pre-built binary copied successfully`);
+      } else {
+        log(`⚠️  Pre-built binary not found at ${sourceTargetDir}, will build instead`);
+        if (packageJson.scripts?.build) {
+          execCommand('pnpm build', packageDir, `Building ${packageName} app`);
+        }
+      }
+    } else if (!skipBuild && packageJson.scripts?.build) {
+      // Build the app if needed (only when not skipping build)
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
     }
 
@@ -392,7 +409,7 @@ async function main() {
       // Detect service type from package name (already filtered by prefix, but needed for testExample)
       const detectedService: 'electron' | 'tauri' = packageName.startsWith('tauri-') ? 'tauri' : 'electron';
 
-      await testExample(packagePath, packages, detectedService);
+      await testExample(packagePath, packages, detectedService, options.skipBuild ?? false);
     }
 
     log(`🎉 All package tests completed successfully!`);
