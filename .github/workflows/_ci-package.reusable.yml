@@ -93,7 +93,7 @@ jobs:
       # Download app binaries if testing services that require pre-built apps
       # The download-archive action extracts to workspace root, preserving directory structure
       # Tauri: Archive contains fixtures/package-tests/tauri-app/src-tauri/target
-      # Electron: Built inline on the test runner (fast builds, Turbo caching handles it)
+      # Electron: Apps are built in isolated environments by test-package.ts script
       - name: 📦 Download Tauri Package Test App Binary
         if: inputs.service == 'tauri' || inputs.service == 'both'
         uses: ./.github/workflows/actions/download-archive
@@ -103,16 +103,6 @@ jobs:
           filename: artifact.zip
           cache_key_prefix: tauri-package-app
           exact_cache_key: ${{ inputs.tauri_cache_key || '' }}
-
-      # Build Electron package test apps inline on the test runner
-      # Turbo caching will handle build output caching automatically
-      # This is simpler than separate build jobs since Electron builds are fast (~1-2 min)
-      - name: 🏗️ Build Electron Package Test Apps
-        if: inputs.service == 'electron' || inputs.service == 'both'
-        shell: bash
-        run: |
-          echo "Building Electron package test apps (Turbo will cache outputs)..."
-          pnpm exec turbo run build --filter=electron-builder-app-example --filter=electron-forge-app-example --filter=electron-script-app-example --only --parallel
 
       # Verify the extracted dist directories exist
       - name: 🔍 Verify Extracted Files
@@ -161,14 +151,15 @@ jobs:
             fi
           fi
 
-      # Run package tests using Turbo
-      # Electron apps are built inline above, Tauri apps are pre-built and downloaded
+      # Run package tests using test-package.ts script
+      # All apps are built in isolated environments (Electron always, Tauri if not skipBuild)
+      # Tauri uses skipBuild to copy pre-built binaries from separate build jobs
       - name: 🧪 Execute Package Tests
         shell: bash
         run: |
           case "${{ inputs.service }}" in
             electron)
-              echo "Running Electron package tests (apps built inline, using Turbo cache)"
+              echo "Running Electron package tests (apps built in isolated environments)"
               pnpm run test:package:electron
               ;;
             tauri)
@@ -176,7 +167,7 @@ jobs:
                 echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
                 exit 0
               fi
-              echo "Running Tauri package tests (using pre-built binaries)"
+              echo "Running Tauri package tests (using pre-built binaries from separate build job)"
               if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
                 echo "Using xvfb-run to provide a DISPLAY on Linux"
                 xvfb-run -a pnpm run test:package:tauri -- --skip-build
@@ -189,10 +180,10 @@ jobs:
                 echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
                 pnpm run test:package:electron
               else
-                echo "Running all package tests (Electron built inline, Tauri using pre-built binaries)"
-                # Electron: build inline (no --skip-build needed)
+                echo "Running all package tests (Electron built in isolated environments, Tauri using pre-built binaries)"
+                # Electron: build in isolated environments (no --skip-build)
                 pnpm run test:package:electron
-                # Tauri: use --skip-build for pre-built binaries
+                # Tauri: use --skip-build for pre-built binaries from separate build job
                 if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
                   xvfb-run -a pnpm run test:package:tauri -- --skip-build
                 else

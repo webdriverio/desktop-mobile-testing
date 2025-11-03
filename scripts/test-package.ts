@@ -246,72 +246,26 @@ async function testExample(
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
 
-    // Copy pre-built app if skipBuild is true
-    if (skipBuild) {
-      if (service === 'tauri') {
-        // Tauri apps: copy src-tauri/target directory
-        const sourceTargetDir = join(rootDir, 'fixtures', 'package-tests', 'tauri-app', 'src-tauri', 'target');
-        const destTargetDir = join(packageDir, 'src-tauri', 'target');
+    // Handle pre-built binaries for Tauri (skipBuild only applies to Tauri)
+    // Electron apps are always built in isolated environments (like electron-service repo)
+    if (skipBuild && service === 'tauri') {
+      // Tauri apps: copy src-tauri/target directory from pre-built artifacts
+      const sourceTargetDir = join(rootDir, 'fixtures', 'package-tests', 'tauri-app', 'src-tauri', 'target');
+      const destTargetDir = join(packageDir, 'src-tauri', 'target');
 
-        if (existsSync(sourceTargetDir)) {
-          log(`Copying pre-built Tauri binary from ${sourceTargetDir}...`);
-          mkdirSync(destTargetDir, { recursive: true });
-          cpSync(sourceTargetDir, destTargetDir, { recursive: true });
-          log(`✅ Pre-built Tauri binary copied successfully`);
-        } else {
-          log(`⚠️  Pre-built Tauri binary not found at ${sourceTargetDir}, will build instead`);
-          if (packageJson.scripts?.build) {
-            execCommand('pnpm build', packageDir, `Building ${packageName} app`);
-          }
-        }
-      } else if (service === 'electron') {
-        // Electron apps: copy dist/ and dist-electron/ or out/ directories
-        const sourceAppDir = join(rootDir, 'fixtures', 'package-tests', packageName);
-        const distDir = join(sourceAppDir, 'dist');
-        const distElectronDir = join(sourceAppDir, 'dist-electron');
-        const outDir = join(sourceAppDir, 'out');
-
-        let copied = false;
-
-        // Copy dist/ directory (bundled source files) if it exists
-        if (existsSync(distDir)) {
-          const destDistDir = join(packageDir, 'dist');
-          log(`Copying pre-built Electron dist from ${distDir}...`);
-          mkdirSync(destDistDir, { recursive: true });
-          cpSync(distDir, destDistDir, { recursive: true });
-          log(`✅ Pre-built Electron dist copied successfully`);
-          copied = true;
-        }
-
-        // Copy dist-electron/ directory (packaged app - electron-builder) if it exists
-        if (existsSync(distElectronDir)) {
-          const destDistElectronDir = join(packageDir, 'dist-electron');
-          log(`Copying pre-built Electron app from ${distElectronDir}...`);
-          mkdirSync(destDistElectronDir, { recursive: true });
-          cpSync(distElectronDir, destDistElectronDir, { recursive: true });
-          log(`✅ Pre-built Electron app (dist-electron) copied successfully`);
-          copied = true;
-        }
-
-        // Copy out/ directory (packaged app - electron-forge) if it exists
-        if (existsSync(outDir)) {
-          const destOutDir = join(packageDir, 'out');
-          log(`Copying pre-built Electron app from ${outDir}...`);
-          mkdirSync(destOutDir, { recursive: true });
-          cpSync(outDir, destOutDir, { recursive: true });
-          log(`✅ Pre-built Electron app (out) copied successfully`);
-          copied = true;
-        }
-
-        if (!copied) {
-          log(`⚠️  Pre-built Electron app not found (checked dist/, dist-electron/, out/), will build instead`);
-          if (packageJson.scripts?.build) {
-            execCommand('pnpm build', packageDir, `Building ${packageName} app`);
-          }
+      if (existsSync(sourceTargetDir)) {
+        log(`Copying pre-built Tauri binary from ${sourceTargetDir}...`);
+        mkdirSync(destTargetDir, { recursive: true });
+        cpSync(sourceTargetDir, destTargetDir, { recursive: true });
+        log(`✅ Pre-built Tauri binary copied successfully`);
+      } else {
+        log(`⚠️  Pre-built Tauri binary not found at ${sourceTargetDir}, will build instead`);
+        if (packageJson.scripts?.build) {
+          execCommand('pnpm build', packageDir, `Building ${packageName} app`);
         }
       }
-    } else if (!skipBuild && packageJson.scripts?.build) {
-      // Build the app if needed (only when not skipping build)
+    } else if (packageJson.scripts?.build) {
+      // Build the app in isolated environment (Electron always, Tauri if not skipBuild)
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
     }
 
