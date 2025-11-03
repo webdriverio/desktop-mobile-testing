@@ -28,7 +28,11 @@ on:
         type: string
         required: false
       tauri_cache_key:
-        description: 'Cache key for Tauri app binaries'
+        description: 'Cache key for Tauri package test app binaries'
+        type: string
+        required: false
+      electron_cache_key:
+        description: 'Cache key for Electron package test app binaries'
         type: string
         required: false
 
@@ -90,18 +94,29 @@ jobs:
           cache_key_prefix: wdio-electron-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
-      # Download Tauri app binaries if testing Tauri service
+      # Download app binaries if testing services that require pre-built apps
       # The download-archive action extracts to workspace root, preserving directory structure
-      # Archive contains: fixtures/e2e-apps/tauri/src-tauri/target and fixtures/package-tests/tauri-app/src-tauri/target
-      - name: 📦 Download Tauri App Binaries
+      # Tauri: Archive contains fixtures/package-tests/tauri-app/src-tauri/target
+      # Electron: Archive contains fixtures/package-tests/electron-*/dist and dist-electron/ or out/
+      - name: 📦 Download Tauri Package Test App Binary
         if: inputs.service == 'tauri' || inputs.service == 'both'
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-apps-${{ runner.os }}
-          path: tauri-apps-${{ runner.os }}
+          name: tauri-package-app-${{ runner.os }}
+          path: tauri-package-app-${{ runner.os }}
           filename: artifact.zip
-          cache_key_prefix: tauri-apps
+          cache_key_prefix: tauri-package-app
           exact_cache_key: ${{ inputs.tauri_cache_key || '' }}
+
+      - name: 📦 Download Electron Package Test App Binaries
+        if: inputs.service == 'electron' || inputs.service == 'both'
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: electron-package-apps-${{ runner.os }}
+          path: electron-package-apps-${{ runner.os }}
+          filename: artifact.zip
+          cache_key_prefix: electron-package-apps
+          exact_cache_key: ${{ inputs.electron_cache_key || '' }}
 
       # Verify the extracted dist directories exist
       - name: 🔍 Verify Extracted Files
@@ -166,7 +181,12 @@ jobs:
                 exit 0
               fi
               echo "Running Tauri package tests (using downloaded artifacts)"
-              pnpm run test:package:tauri -- --skip-build
+              if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
+                echo "Using xvfb-run to provide a DISPLAY on Linux"
+                xvfb-run -a pnpm run test:package:tauri -- --skip-build
+              else
+                pnpm run test:package:tauri -- --skip-build
+              fi
               ;;
             both)
               if [ "${{ inputs.os }}" == "macos-latest" ]; then

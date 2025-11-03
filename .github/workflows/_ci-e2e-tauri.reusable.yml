@@ -129,16 +129,16 @@ jobs:
           cache_key_prefix: wdio-electron-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
-      # Download the pre-built Tauri app binaries from the OS-specific build job
+      # Download the pre-built Tauri E2E app binary from the OS-specific build job
       # This is much faster than rebuilding Tauri apps for each test type
       # Extract to repository root so files end up in fixtures/e2e-apps/tauri/src-tauri/target/
-      - name: 📦 Download Tauri App Binaries
+      - name: 📦 Download Tauri E2E App Binary
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-apps-${{ runner.os }}
-          path: tauri-apps-${{ runner.os }}
+          name: tauri-e2e-app-${{ runner.os }}
+          path: tauri-e2e-app-${{ runner.os }}
           filename: artifact.zip
-          cache_key_prefix: tauri-apps
+          cache_key_prefix: tauri-e2e-app
           exact_cache_key: ${{ inputs.tauri_cache_key }}
 
       # Verify Tauri binaries were extracted correctly
