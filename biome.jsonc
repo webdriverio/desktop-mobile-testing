@@ -3,7 +3,19 @@
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!fixtures/config-formats/invalid-syntax.ts", "!**/coverage", "!**/dist", "!**/out", "!.turbo"]
+    "includes": [
+      "**",
+      "!fixtures/config-formats/invalid-syntax.ts",
+      // ignore coverage files
+      "!**/coverage",
+      // ignore electron build files
+      "!**/dist",
+      "!**/out",
+      // ignore turbo files
+      "!.turbo",
+      // ignore tauri plugin build files
+      "!**/tauri-plugin/target"
+    ]
   },
   "formatter": {
     "enabled": true,
