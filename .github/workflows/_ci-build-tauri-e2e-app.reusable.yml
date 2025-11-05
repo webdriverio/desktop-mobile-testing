@@ -12,6 +12,18 @@ on:
         description: 'Build command for Tauri app (build or build:debug)'
         type: string
         default: 'build'
+      build_id:
+        description: 'Build ID from the main build job'
+        type: string
+        required: false
+      artifact_size:
+        description: 'Size of the build artifact in bytes'
+        type: string
+        required: false
+      cache_key:
+        description: 'Cache key to use for downloading artifacts'
+        type: string
+        required: false
     outputs:
       build_id:
         description: 'Unique identifier for this build'
@@ -108,6 +120,27 @@ jobs:
           echo "build_id=$(date +%s)-${{ github.run_id }}-${{ runner.os }}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
+      # Download the pre-built packages from the main build job
+      # This ensures we use the same build artifacts and avoid rebuilding Node.js packages
+      - name: 📦 Download Package Build Artifacts
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: wdio-electron-service
+          path: wdio-electron-service-build
+          filename: artifact.zip
+          cache_key_prefix: wdio-electron-build
+          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+
+      # Display build information if available
+      - name: 📊 Show Build Information
+        if: inputs.build_id != '' && inputs.artifact_size != ''
+        shell: bash
+        run: |
+          echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
+
+      # Build Tauri E2E App
+      # This will only build the Tauri app and its Rust dependencies
+      # Node.js packages are already built from the downloaded artifacts
       - name: 🏗️ Build Tauri E2E App
         run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app
         shell: bash

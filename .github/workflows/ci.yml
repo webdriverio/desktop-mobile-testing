@@ -55,6 +55,9 @@ jobs:
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     with:
       os: 'ubuntu-latest'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
 
   build-tauri-e2e-app-windows:
     name: Build Tauri E2E App [Windows]
@@ -62,6 +65,9 @@ jobs:
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     with:
       os: 'windows-latest'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
 
   build-tauri-package-app-linux:
     name: Build Tauri Package Test App [Linux]
