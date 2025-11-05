@@ -7,11 +7,17 @@
     "permissions": [
       "core:default",
       "core:window:default",
+      "core:event:default",
+      "core:path:default",
       "fs:allow-read",
       "fs:allow-write",
       "fs:allow-remove",
       "fs:allow-exists",
       "fs:allow-stat",
+      "fs:read-files",
+      "fs:write-files",
+      "fs:read-dirs",
+      "fs:read-meta",
       { "identifier": "fs:scope", "allow": [{ "path": "$TEMP/**" }, { "path": "/tmp/**" }, { "path": "$HOME/**" }] }
     ]
   }
