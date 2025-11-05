@@ -126,16 +126,16 @@ jobs:
         shell: bash
         run: |
           echo "Packing services from downloaded artifacts..."
-          # Pack native-utils (required for both services)
+          # Pack shared dependencies
           if [ -d "packages/native-utils/dist" ]; then
             (cd packages/native-utils && pnpm pack)
+          fi
+          if [ -d "packages/native-types/dist" ]; then
+            (cd packages/native-types && pnpm pack && mv wdio-native-types-*.tgz ../)
           fi
 
           # Pack Electron service and dependencies if needed
           if [ "${{ inputs.service }}" == "electron" ] || [ "${{ inputs.service }}" == "both" ]; then
-            if [ -d "packages/native-types/dist" ]; then
-              (cd packages/native-types && pnpm pack)
-            fi
             if [ -d "packages/electron-cdp-bridge/dist" ]; then
               (cd packages/electron-cdp-bridge && pnpm pack)
             fi
