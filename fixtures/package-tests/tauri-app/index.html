@@ -98,6 +98,11 @@
     </div>
 
     <script type="module">
+      // Import WebDriverIO Tauri plugin frontend API
+      // This provides window.wdioTauri for testing
+      // For package tests, we load the plugin from a bundled file since Vite isn't used
+      import './plugins/wdio-plugin.js';
+
       // Import Tauri API using npm module approach (recommended for v2)
       // This is the preferred way in Tauri v2
       (async () => {
