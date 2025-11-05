@@ -114,7 +114,7 @@ jobs:
         run: |
           echo "🔍 Debugging Tauri package test app build environment..."
           APP_DIR="fixtures/package-tests/tauri-app/src-tauri"
-          
+
           echo ""
           echo "=== Checking app directory structure ==="
           if [ -d "$APP_DIR" ]; then
@@ -123,14 +123,14 @@ jobs:
           else
             echo "❌ App directory NOT found: $APP_DIR"
           fi
-          
+
           echo ""
           echo "=== Checking capabilities file ==="
           if [ -f "$APP_DIR/capabilities/default.json" ]; then
             echo "✅ Capabilities file exists"
             echo "Capabilities file contents:"
             cat "$APP_DIR/capabilities/default.json" || echo "Failed to read capabilities file"
-            
+
             # Check if identifier is "default"
             if grep -q '"identifier": "default"' "$APP_DIR/capabilities/default.json"; then
               echo "✅ Capability identifier is 'default'"
@@ -139,7 +139,7 @@ jobs:
               echo "Actual identifier:"
               grep '"identifier"' "$APP_DIR/capabilities/default.json" || echo "No identifier found"
             fi
-            
+
             # Check for plugin permissions
             if grep -q "wdio:" "$APP_DIR/capabilities/default.json"; then
               echo "✅ Plugin permissions found in capabilities file"
@@ -153,7 +153,7 @@ jobs:
             echo "Checking if capabilities directory exists:"
             ls -la "$APP_DIR/capabilities/" 2>/dev/null || echo "Capabilities directory does not exist"
           fi
-          
+
           echo ""
           echo "=== Checking build.rs ==="
           if [ -f "$APP_DIR/build.rs" ]; then
@@ -163,17 +163,17 @@ jobs:
           else
             echo "❌ build.rs NOT found"
           fi
-          
+
           echo ""
           echo "=== Checking plugin availability ==="
           if [ -d "packages/tauri-plugin" ]; then
             echo "✅ Plugin directory exists"
-            
+
             if [ -d "packages/tauri-plugin/permissions" ]; then
               echo "✅ Plugin permissions directory exists"
               echo "Plugin permissions files:"
               ls -la "packages/tauri-plugin/permissions/" || echo "Failed to list permissions"
-              
+
               if [ -f "packages/tauri-plugin/permissions/default.toml" ]; then
                 echo "✅ Plugin default.toml exists"
                 echo "Plugin permissions file contents:"
@@ -184,7 +184,7 @@ jobs:
             else
               echo "❌ Plugin permissions directory NOT found"
             fi
-            
+
             if [ -f "packages/tauri-plugin/build.rs" ]; then
               echo "✅ Plugin build.rs exists"
             else
@@ -193,7 +193,7 @@ jobs:
           else
             echo "❌ Plugin directory NOT found"
           fi
-          
+
           echo ""
           echo "=== Checking Cargo.toml ==="
           if [ -f "$APP_DIR/Cargo.toml" ]; then
@@ -208,26 +208,26 @@ jobs:
           else
             echo "❌ Cargo.toml NOT found"
           fi
-          
+
           echo ""
           echo "=== Checking for existing gen directory ==="
           if [ -d "$APP_DIR/gen" ]; then
             echo "⚠️  gen directory already exists (should be cleaned before build)"
             echo "Contents:"
             find "$APP_DIR/gen" -type f | head -10 || echo "gen directory is empty"
-            
+
             echo ""
             echo "Checking existing ACL manifest (if present):"
             if [ -f "$APP_DIR/gen/schemas/acl-manifests.json" ]; then
               echo "Existing ACL manifest found:"
               cat "$APP_DIR/gen/schemas/acl-manifests.json" | jq 'keys' 2>/dev/null || cat "$APP_DIR/gen/schemas/acl-manifests.json" | head -20
-              
+
               if grep -q '"default"' "$APP_DIR/gen/schemas/acl-manifests.json" 2>/dev/null; then
                 echo "✅ Existing manifest has 'default' capability"
               else
                 echo "❌ Existing manifest does NOT have 'default' capability"
               fi
-              
+
               if grep -q '"wdio"' "$APP_DIR/gen/schemas/acl-manifests.json" 2>/dev/null; then
                 echo "✅ Existing manifest has 'wdio' plugin"
               else
@@ -265,25 +265,25 @@ jobs:
           APP_DIR="fixtures/package-tests/tauri-app/src-tauri"
           GEN_DIR="$APP_DIR/gen"
           ACL_MANIFEST="$GEN_DIR/schemas/acl-manifests.json"
-          
+
           echo ""
           echo "=== Checking if gen directory was created ==="
           if [ -d "$GEN_DIR" ]; then
             echo "✅ gen directory exists"
             echo "Contents:"
             find "$GEN_DIR" -type f | head -20 || echo "gen directory is empty"
-            
+
             if [ -f "$ACL_MANIFEST" ]; then
               echo "✅ ACL manifest exists"
               echo "ACL manifest keys:"
               cat "$ACL_MANIFEST" | jq 'keys' 2>/dev/null || cat "$ACL_MANIFEST" | head -50
-              
+
               if grep -q '"default"' "$ACL_MANIFEST" 2>/dev/null; then
                 echo "✅ 'default' capability found in ACL manifest"
               else
                 echo "❌ 'default' capability NOT found in ACL manifest"
               fi
-              
+
               if grep -q '"wdio"' "$ACL_MANIFEST" 2>/dev/null; then
                 echo "✅ 'wdio' plugin found in ACL manifest"
               else
@@ -295,26 +295,26 @@ jobs:
           else
             echo "❌ gen directory NOT created - ACL manifest generation failed"
           fi
-          
+
           echo ""
           echo "=== Checking plugin build output ==="
           if [ -d "packages/tauri-plugin/target" ]; then
             echo "Plugin target directory exists"
             echo "Looking for permissions in plugin target:"
             find "packages/tauri-plugin/target" -type d -name "permissions" | head -5 || echo "No permissions directories found"
-            
+
             echo ""
             echo "Looking for OUT_DIR permissions:"
             find "packages/tauri-plugin/target" -path "*/permissions/wdio/*" -type f | head -5 || echo "No plugin permissions files found in OUT_DIR"
           fi
-          
+
           echo ""
           echo "=== Checking app build output for plugin permissions ==="
           if [ -d "$APP_DIR/target" ]; then
             echo "App target directory exists"
             echo "Looking for plugin permissions in app target:"
             find "$APP_DIR/target" -type d -name "permissions" | head -5 || echo "No permissions directories found"
-            
+
             echo ""
             echo "Looking for plugin OUT_DIR in app target:"
             find "$APP_DIR/target" -path "*/build/tauri-plugin-*/out/permissions/wdio/*" -type f | head -5 || echo "No plugin permissions found in app target"

@@ -3440,67 +3440,78 @@
     }
   },
   "wdio": {
-    "default_permission": null,
+    "default_permission": {
+      "identifier": "default",
+      "description": "Allows all WebDriverIO plugin commands for testing",
+      "permissions": [
+        "allow-execute",
+        "allow-set-mock",
+        "allow-get-mock",
+        "allow-clear-mocks",
+        "allow-reset-mocks",
+        "allow-restore-mocks"
+      ]
+    },
     "permissions": {
-      "allow-wdio.clear-mocks": {
-        "identifier": "allow-wdio.clear-mocks",
-        "description": "Enables the wdio.clear-mocks command without any pre-configured scope.",
-        "commands": { "allow": ["wdio.clear-mocks"], "deny": [] }
+      "allow-clear-mocks": {
+        "identifier": "allow-clear-mocks",
+        "description": "Enables the clear_mocks command without any pre-configured scope.",
+        "commands": { "allow": ["clear_mocks"], "deny": [] }
       },
-      "allow-wdio.execute": {
-        "identifier": "allow-wdio.execute",
-        "description": "Enables the wdio.execute command without any pre-configured scope.",
-        "commands": { "allow": ["wdio.execute"], "deny": [] }
+      "allow-execute": {
+        "identifier": "allow-execute",
+        "description": "Enables the execute command without any pre-configured scope.",
+        "commands": { "allow": ["execute"], "deny": [] }
       },
-      "allow-wdio.get-mock": {
-        "identifier": "allow-wdio.get-mock",
-        "description": "Enables the wdio.get-mock command without any pre-configured scope.",
-        "commands": { "allow": ["wdio.get-mock"], "deny": [] }
+      "allow-get-mock": {
+        "identifier": "allow-get-mock",
+        "description": "Enables the get_mock command without any pre-configured scope.",
+        "commands": { "allow": ["get_mock"], "deny": [] }
       },
-      "allow-wdio.reset-mocks": {
-        "identifier": "allow-wdio.reset-mocks",
-        "description": "Enables the wdio.reset-mocks command without any pre-configured scope.",
-        "commands": { "allow": ["wdio.reset-mocks"], "deny": [] }
+      "allow-reset-mocks": {
+        "identifier": "allow-reset-mocks",
+        "description": "Enables the reset_mocks command without any pre-configured scope.",
+        "commands": { "allow": ["reset_mocks"], "deny": [] }
       },
-      "allow-wdio.restore-mocks": {
-        "identifier": "allow-wdio.restore-mocks",
-        "description": "Enables the wdio.restore-mocks command without any pre-configured scope.",
-        "commands": { "allow": ["wdio.restore-mocks"], "deny": [] }
+      "allow-restore-mocks": {
+        "identifier": "allow-restore-mocks",
+        "description": "Enables the restore_mocks command without any pre-configured scope.",
+        "commands": { "allow": ["restore_mocks"], "deny": [] }
       },
-      "allow-wdio.set-mock": {
-        "identifier": "allow-wdio.set-mock",
-        "description": "Enables the wdio.set-mock command without any pre-configured scope.",
-        "commands": { "allow": ["wdio.set-mock"], "deny": [] }
+      "allow-set-mock": {
+        "identifier": "allow-set-mock",
+        "description": "Enables the set_mock command without any pre-configured scope.",
+        "commands": { "allow": ["set_mock"], "deny": [] }
       },
-      "deny-wdio.clear-mocks": {
-        "identifier": "deny-wdio.clear-mocks",
-        "description": "Denies the wdio.clear-mocks command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": ["wdio.clear-mocks"] }
+      "deny-clear-mocks": {
+        "identifier": "deny-clear-mocks",
+        "description": "Denies the clear_mocks command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["clear_mocks"] }
       },
-      "deny-wdio.execute": {
-        "identifier": "deny-wdio.execute",
-        "description": "Denies the wdio.execute command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": ["wdio.execute"] }
+      "deny-execute": {
+        "identifier": "deny-execute",
+        "description": "Denies the execute command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["execute"] }
       },
-      "deny-wdio.get-mock": {
-        "identifier": "deny-wdio.get-mock",
-        "description": "Denies the wdio.get-mock command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": ["wdio.get-mock"] }
+      "deny-get-mock": {
+        "identifier": "deny-get-mock",
+        "description": "Denies the get_mock command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["get_mock"] }
       },
-      "deny-wdio.reset-mocks": {
-        "identifier": "deny-wdio.reset-mocks",
-        "description": "Denies the wdio.reset-mocks command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": ["wdio.reset-mocks"] }
+      "deny-reset-mocks": {
+        "identifier": "deny-reset-mocks",
+        "description": "Denies the reset_mocks command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["reset_mocks"] }
       },
-      "deny-wdio.restore-mocks": {
-        "identifier": "deny-wdio.restore-mocks",
-        "description": "Denies the wdio.restore-mocks command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": ["wdio.restore-mocks"] }
+      "deny-restore-mocks": {
+        "identifier": "deny-restore-mocks",
+        "description": "Denies the restore_mocks command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["restore_mocks"] }
       },
-      "deny-wdio.set-mock": {
-        "identifier": "deny-wdio.set-mock",
-        "description": "Denies the wdio.set-mock command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": ["wdio.set-mock"] }
+      "deny-set-mock": {
+        "identifier": "deny-set-mock",
+        "description": "Denies the set_mock command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["set_mock"] }
       }
     },
     "permission_sets": {},
