@@ -24,18 +24,18 @@ use desktop::Wdio;
 use mobile::Wdio;
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the wdio APIs.
-pub trait WdioExt<R: Runtime + Send + Sync> {
+pub trait WdioExt<R: Runtime> {
     fn wdio(&self) -> &Wdio<R>;
 }
 
-impl<R: Runtime + Send + Sync, T: Manager<R>> crate::WdioExt<R> for T {
+impl<R: Runtime, T: Manager<R>> crate::WdioExt<R> for T {
     fn wdio(&self) -> &Wdio<R> {
         self.state::<Wdio<R>>().inner()
     }
 }
 
 /// Creates the Wdio plugin with default options.
-pub fn init<R: Runtime + Send + Sync>() -> TauriPlugin<R> {
+pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wdio")
         .invoke_handler(tauri::generate_handler![
             commands::wdio_execute,
