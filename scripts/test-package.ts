@@ -116,7 +116,7 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     // Pack Electron service and dependencies if needed
     if (service === 'electron' || service === 'both') {
       const electronServiceDir = normalize(join(rootDir, 'packages', 'electron-service'));
-      const typesDir = normalize(join(rootDir, 'packages', 'electron-types'));
+      const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
       const cdpBridgeDir = normalize(join(rootDir, 'packages', 'electron-cdp-bridge'));
 
       if (!existsSync(typesDir)) {
@@ -338,10 +338,10 @@ async function main() {
 
       if (options.service === 'electron' || options.service === 'both') {
         const electronServiceDir = normalize(join(rootDir, 'packages', 'electron-service'));
-        const typesDir = normalize(join(rootDir, 'packages', 'electron-types'));
+        const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
         const cdpBridgeDir = normalize(join(rootDir, 'packages', 'electron-cdp-bridge'));
         packages.electronServicePath = findTgzFile(electronServiceDir, 'wdio-electron-service-');
-        packages.typesPath = findTgzFile(typesDir, 'wdio-electron-types-');
+        packages.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
         packages.cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-');
       }
 

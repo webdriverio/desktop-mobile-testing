@@ -133,8 +133,8 @@ jobs:
 
           # Pack Electron service and dependencies if needed
           if [ "${{ inputs.service }}" == "electron" ] || [ "${{ inputs.service }}" == "both" ]; then
-            if [ -d "packages/electron-types/dist" ]; then
-              (cd packages/electron-types && pnpm pack)
+            if [ -d "packages/native-types/dist" ]; then
+              (cd packages/native-types && pnpm pack)
             fi
             if [ -d "packages/electron-cdp-bridge/dist" ]; then
               (cd packages/electron-cdp-bridge && pnpm pack)
