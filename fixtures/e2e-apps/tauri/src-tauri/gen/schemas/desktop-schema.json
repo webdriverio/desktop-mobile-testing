@@ -5649,6 +5649,78 @@
           "type": "string",
           "const": "fs:write-files",
           "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
+        },
+        {
+          "description": "Enables the wdio.clear-mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-wdio.clear-mocks",
+          "markdownDescription": "Enables the wdio.clear-mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the wdio.execute command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-wdio.execute",
+          "markdownDescription": "Enables the wdio.execute command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the wdio.get-mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-wdio.get-mock",
+          "markdownDescription": "Enables the wdio.get-mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the wdio.reset-mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-wdio.reset-mocks",
+          "markdownDescription": "Enables the wdio.reset-mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the wdio.restore-mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-wdio.restore-mocks",
+          "markdownDescription": "Enables the wdio.restore-mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the wdio.set-mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-wdio.set-mock",
+          "markdownDescription": "Enables the wdio.set-mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the wdio.clear-mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-wdio.clear-mocks",
+          "markdownDescription": "Denies the wdio.clear-mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the wdio.execute command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-wdio.execute",
+          "markdownDescription": "Denies the wdio.execute command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the wdio.get-mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-wdio.get-mock",
+          "markdownDescription": "Denies the wdio.get-mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the wdio.reset-mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-wdio.reset-mocks",
+          "markdownDescription": "Denies the wdio.reset-mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the wdio.restore-mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-wdio.restore-mocks",
+          "markdownDescription": "Denies the wdio.restore-mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the wdio.set-mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-wdio.set-mock",
+          "markdownDescription": "Denies the wdio.set-mock command without any pre-configured scope."
         }
       ]
     },

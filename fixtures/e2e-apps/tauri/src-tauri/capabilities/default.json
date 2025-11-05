@@ -20,6 +20,12 @@
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$TEMP/**" }, { "path": "/tmp/**" }, { "path": "$HOME/**" }]
-    }
+    },
+    "wdio:allow-wdio.execute",
+    "wdio:allow-wdio.set-mock",
+    "wdio:allow-wdio.get-mock",
+    "wdio:allow-wdio.clear-mocks",
+    "wdio:allow-wdio.reset-mocks",
+    "wdio:allow-wdio.restore-mocks"
   ]
 }
