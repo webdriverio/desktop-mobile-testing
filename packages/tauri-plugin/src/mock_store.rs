@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
 use serde_json::Value as JsonValue;
 use crate::models::MockConfig;
 
@@ -34,10 +33,12 @@ impl MockStore {
         self.original_handlers.clear();
     }
 
+    #[allow(dead_code)]
     pub fn remove_mock(&mut self, command: &str) -> Option<MockConfig> {
         self.mocks.remove(command)
     }
 
+    #[allow(dead_code)]
     pub fn get_all_mocks(&self) -> &HashMap<String, MockConfig> {
         &self.mocks
     }

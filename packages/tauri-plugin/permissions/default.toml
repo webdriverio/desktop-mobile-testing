@@ -1,0 +1,13 @@
+"$schema" = "https://schema.tauri.app/permissions/2"
+
+[default]
+description = "Allows all WebDriverIO plugin commands for testing"
+permissions = [
+  "allow-execute",
+  "allow-set-mock",
+  "allow-get-mock",
+  "allow-clear-mocks",
+  "allow-reset-mocks",
+  "allow-restore-mocks"
+]
+

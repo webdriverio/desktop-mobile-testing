@@ -20,7 +20,8 @@ fn main() {
         tauri_build::Attributes::new()
             .plugin(
                 "wdio",
-                tauri_build::InlinedPlugin::new().commands(&COMMANDS),
+                tauri_build::InlinedPlugin::new()
+                    .commands(&COMMANDS)
             )
     )
     .unwrap_or_else(|_| {
