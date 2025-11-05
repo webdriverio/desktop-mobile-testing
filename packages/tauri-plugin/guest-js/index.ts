@@ -34,6 +34,11 @@ declare global {
  */
 export async function execute(script: string, args: unknown[] = []): Promise<unknown> {
   try {
+    // Ensure window.__TAURI__ is available
+    if (!window.__TAURI__) {
+      throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
+    }
+
     // Serialize args to pass them to the plugin
     const argsJson = JSON.stringify(args);
 
@@ -134,13 +139,9 @@ export function init(): void {
     return;
   }
 
-  // Ensure window.__TAURI__ exists
-  if (!window.__TAURI__) {
-    console.error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
-    return;
-  }
-
   // Expose wdioTauri on window object for backward compatibility
+  // Note: window.__TAURI__ might not be available immediately, but we can set up the API
+  // The API functions will check for __TAURI__ when they're called
   window.wdioTauri = {
     execute,
     setMock,
