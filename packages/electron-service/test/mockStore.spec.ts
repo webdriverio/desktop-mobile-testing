@@ -1,4 +1,4 @@
-import type { ElectronMock } from '@wdio/electron-types';
+import type { ElectronMock } from '@wdio/native-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ElectronServiceMockStore } from '../src/mockStore.js';
 

@@ -126,12 +126,12 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
         throw new Error(`CDP Bridge directory does not exist: ${cdpBridgeDir}`);
       }
 
-      execCommand('pnpm pack', typesDir, 'Packing @wdio/electron-types');
+      execCommand('pnpm pack', typesDir, 'Packing @wdio/native-types');
       execCommand('pnpm pack', cdpBridgeDir, 'Packing @wdio/electron-cdp-bridge');
       execCommand('pnpm pack', electronServiceDir, 'Packing @wdio/electron-service');
 
       result.electronServicePath = findTgzFile(electronServiceDir, 'wdio-electron-service-');
-      result.typesPath = findTgzFile(typesDir, 'wdio-electron-types-');
+      result.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
       result.cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-');
     }
 
@@ -221,7 +221,7 @@ async function testExample(
         throw new Error('Electron service packages not available');
       }
       overrides['@wdio/electron-service'] = `file:${packages.electronServicePath}`;
-      overrides['@wdio/electron-types'] = `file:${packages.typesPath}`;
+      overrides['@wdio/native-types'] = `file:${packages.typesPath}`;
       overrides['@wdio/electron-cdp-bridge'] = `file:${packages.cdpBridgePath}`;
       packagesToInstall.push(packages.typesPath, packages.cdpBridgePath, packages.electronServicePath);
     } else if (service === 'tauri') {

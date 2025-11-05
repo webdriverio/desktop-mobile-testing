@@ -1,4 +1,4 @@
-import type { BrowserExtension } from '@wdio/electron-types';
+import type { BrowserExtension } from '@wdio/native-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearAllMocks } from '../src/commands/clearAllMocks.js';
 import { execute } from '../src/commands/executeCdp.js';

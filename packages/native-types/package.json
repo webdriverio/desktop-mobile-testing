@@ -1,7 +1,7 @@
 {
-  "name": "@wdio/electron-types",
+  "name": "@wdio/native-types",
   "version": "9.2.0",
-  "description": "Type definitions for WebdriverIO Electron Service",
+  "description": "Type definitions for WebdriverIO Native Desktop Services (Electron and Tauri)",
   "homepage": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing",
   "license": "MIT",
   "type": "module",
@@ -52,6 +52,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
-    "directory": "packages/electron-types"
+    "directory": "packages/native-types"
   }
 }

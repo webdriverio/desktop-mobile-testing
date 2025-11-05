@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
-import type { BinaryPathResult, ElectronServiceOptions } from '@wdio/electron-types';
+import type { BinaryPathResult, ElectronServiceOptions } from '@wdio/native-types';
 import type { Capabilities, Options } from '@wdio/types';
 import getPort from 'get-port';
 import nock from 'nock';

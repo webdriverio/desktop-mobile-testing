@@ -1,6 +1,6 @@
 import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
-import type { PathValidationAttempt, PathValidationError, PathValidationResult } from '@wdio/electron-types';
+import type { PathValidationAttempt, PathValidationError, PathValidationResult } from '@wdio/native-types';
 import { createLogger } from './log.js';
 
 const log = createLogger('electron-service', 'utils');

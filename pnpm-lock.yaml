@@ -129,9 +129,9 @@ importers:
       '@vitest/spy':
         specifier: ^3.2.4
         version: 3.2.4
-      '@wdio/electron-types':
+      '@wdio/native-types':
         specifier: workspace:*
-        version: link:../packages/electron-types
+        version: link:../packages/native-types
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -496,9 +496,6 @@ importers:
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
-      '@wdio/electron-types':
-        specifier: workspace:*
-        version: link:../../../packages/electron-types
       '@wdio/globals':
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
@@ -508,6 +505,9 @@ importers:
       '@wdio/mocha-framework':
         specifier: ^9.20.0
         version: 9.20.0
+      '@wdio/native-types':
+        specifier: workspace:*
+        version: link:../../../packages/native-types
       '@wdio/native-utils':
         specifier: workspace:*
         version: link:../../../packages/native-utils
@@ -706,15 +706,15 @@ importers:
       '@wdio/electron-cdp-bridge':
         specifier: workspace:*
         version: link:../electron-cdp-bridge
-      '@wdio/electron-types':
-        specifier: workspace:*
-        version: link:../electron-types
       '@wdio/globals':
         specifier: catalog:default
         version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0
+      '@wdio/native-types':
+        specifier: workspace:*
+        version: link:../native-types
       '@wdio/native-utils':
         specifier: workspace:*
         version: link:../native-utils
@@ -789,7 +789,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.9.1)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)
 
-  packages/electron-types:
+  packages/native-types:
     dependencies:
       '@vitest/spy':
         specifier: ^3.2.4
@@ -871,9 +871,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.9.1)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0))
-      '@wdio/electron-types':
+      '@wdio/native-types':
         specifier: workspace:*
-        version: link:../electron-types
+        version: link:../native-types
       shx:
         specifier: ^0.4.0
         version: 0.4.0
@@ -884,11 +884,22 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.9.1)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)
 
+  packages/tauri-plugin: {}
+
   packages/tauri-service:
     dependencies:
+      '@babel/parser':
+        specifier: ^7.26.0
+        version: 7.28.4
+      '@wdio/globals':
+        specifier: catalog:default
+        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0
+      '@wdio/native-types':
+        specifier: workspace:*
+        version: link:../native-types
       '@wdio/native-utils':
         specifier: workspace:*
         version: link:../native-utils
@@ -901,6 +912,9 @@ importers:
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
+      recast:
+        specifier: ^0.23.11
+        version: 0.23.11
       webdriverio:
         specifier: catalog:default
         version: 9.20.0(puppeteer-core@22.15.0)

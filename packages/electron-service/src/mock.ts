@@ -6,7 +6,7 @@ import type {
   ElectronMock,
   ElectronType,
   ExecuteOpts,
-} from '@wdio/electron-types';
+} from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'mock');

@@ -1,5 +1,5 @@
 import * as babelParser from '@babel/parser';
-import type { ExecuteOpts } from '@wdio/electron-types';
+import type { ExecuteOpts } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'service');

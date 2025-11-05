@@ -1,4 +1,4 @@
-import type { ElectronMock } from '@wdio/electron-types';
+import type { ElectronMock } from '@wdio/native-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ElectronCdpBridge } from '../../src/bridge.js';
 import { execute } from '../../src/commands/executeCdp.js';

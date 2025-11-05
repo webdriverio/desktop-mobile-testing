@@ -9,7 +9,7 @@ import type {
   PathGenerationError,
   PathGenerationResult,
   PathValidationResult,
-} from '@wdio/electron-types';
+} from '@wdio/native-types';
 import { SUPPORTED_BUILD_TOOL, SUPPORTED_PLATFORM } from './constants.js';
 import { validateBinaryPaths } from './selectExecutable.js';
 

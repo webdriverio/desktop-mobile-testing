@@ -1,4 +1,4 @@
-import type { BrowserExtension } from '@wdio/electron-types';
+import type { BrowserExtension } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'service');

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { WdioElectronConfig } from '@wdio/electron-types';
+import type { WdioElectronConfig } from '@wdio/native-types';
 import type { NormalizedPackageJson } from 'read-package-up';
 
 import { createEnvironmentContext } from './config/envSchema.js';

@@ -1,4 +1,4 @@
-import type { ElectronMock, ExecuteOpts } from '@wdio/electron-types';
+import type { ElectronMock, ExecuteOpts } from '@wdio/native-types';
 import { mock } from './mock.js';
 
 interface ElectronServiceContext {
