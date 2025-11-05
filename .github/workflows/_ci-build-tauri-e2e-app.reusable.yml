@@ -138,8 +138,20 @@ jobs:
         run: |
           echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
 
+      # Install dependencies to ensure workspace is properly set up
+      # This is needed after downloading artifacts to ensure all workspace links are correct
+      - name: 📦 Install Dependencies
+        run: pnpm install
+        shell: bash
+
+      # Build the Tauri plugin's JavaScript first
+      # This is needed by the E2E app's build process
+      - name: 🏗️ Build Tauri Plugin JavaScript
+        run: pnpm exec turbo run build:js --filter=@wdio/tauri-plugin
+        shell: bash
+
       # Build Tauri E2E App
-      # This will only build the Tauri app and its Rust dependencies
+      # This will build the plugin's Rust code (for permissions) and the Tauri app
       # Node.js packages are already built from the downloaded artifacts
       - name: 🏗️ Build Tauri E2E App
         run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app
