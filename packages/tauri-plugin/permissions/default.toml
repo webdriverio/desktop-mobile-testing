@@ -11,3 +11,32 @@ permissions = [
   "allow-restore-mocks"
 ]
 
+[allow-execute]
+identifier = "allow-execute"
+description = "Allow executing scripts via the wdio plugin"
+commands = { allow = ["wdio.execute"], deny = [] }
+
+[allow-set-mock]
+identifier = "allow-set-mock"
+description = "Allow setting mocks via the wdio plugin"
+commands = { allow = ["wdio.set-mock"], deny = [] }
+
+[allow-get-mock]
+identifier = "allow-get-mock"
+description = "Allow getting mocks via the wdio plugin"
+commands = { allow = ["wdio.get-mock"], deny = [] }
+
+[allow-clear-mocks]
+identifier = "allow-clear-mocks"
+description = "Allow clearing mocks via the wdio plugin"
+commands = { allow = ["wdio.clear-mocks"], deny = [] }
+
+[allow-reset-mocks]
+identifier = "allow-reset-mocks"
+description = "Allow resetting mocks via the wdio plugin"
+commands = { allow = ["wdio.reset-mocks"], deny = [] }
+
+[allow-restore-mocks]
+identifier = "allow-restore-mocks"
+description = "Allow restoring mocks via the wdio plugin"
+commands = { allow = ["wdio.restore-mocks"], deny = [] }
