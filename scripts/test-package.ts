@@ -316,7 +316,101 @@ async function testExample(
       if (service === 'tauri' && packageJson.scripts?.['build:js']) {
         execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
       }
+
+      // For Tauri apps, add debugging before build to diagnose ACL manifest issues
+      if (service === 'tauri') {
+        const srcTauriDir = join(packageDir, 'src-tauri');
+        const capabilitiesDir = join(srcTauriDir, 'capabilities');
+        const capabilitiesFile = join(capabilitiesDir, 'default.json');
+        const genDir = join(srcTauriDir, 'gen');
+        const buildRs = join(srcTauriDir, 'build.rs');
+        const cargoToml = join(srcTauriDir, 'Cargo.toml');
+
+        log(`🔍 Debugging Tauri app build environment before build...`);
+        log(`   src-tauri directory: ${srcTauriDir} (exists: ${existsSync(srcTauriDir)})`);
+        log(`   capabilities directory: ${capabilitiesDir} (exists: ${existsSync(capabilitiesDir)})`);
+        log(`   capabilities/default.json: ${capabilitiesFile} (exists: ${existsSync(capabilitiesFile)})`);
+        log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
+        log(`   build.rs: ${buildRs} (exists: ${existsSync(buildRs)})`);
+        log(`   Cargo.toml: ${cargoToml} (exists: ${existsSync(cargoToml)})`);
+
+        if (existsSync(capabilitiesFile)) {
+          try {
+            const capabilitiesContent = readFileSync(capabilitiesFile, 'utf-8');
+            const capabilitiesJson = JSON.parse(capabilitiesContent);
+            log(`   ✅ Capabilities file is valid JSON`);
+            log(`   ✅ Capability identifier: ${capabilitiesJson.identifier}`);
+            log(`   ✅ Capability has ${capabilitiesJson.permissions?.length || 0} permissions`);
+
+            // Check if plugin permissions are referenced
+            const pluginPerms = capabilitiesJson.permissions?.filter((p: string) => p.startsWith('wdio:'));
+            if (pluginPerms && pluginPerms.length > 0) {
+              log(`   ✅ References ${pluginPerms.length} plugin permissions: ${pluginPerms.join(', ')}`);
+            } else {
+              log(`   ⚠️  No plugin permissions referenced in capabilities file`);
+            }
+          } catch (error) {
+            log(`   ❌ Capabilities file is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+
+        // Check if plugin is accessible
+        const pluginPath = join(tempDir, 'packages', 'tauri-plugin');
+        log(`   Plugin path: ${pluginPath} (exists: ${existsSync(pluginPath)})`);
+        if (existsSync(pluginPath)) {
+          const pluginPermissions = join(pluginPath, 'permissions');
+          log(`   Plugin permissions: ${pluginPermissions} (exists: ${existsSync(pluginPermissions)})`);
+        }
+
+        // Check Cargo.toml for plugin dependency
+        if (existsSync(cargoToml)) {
+          const cargoTomlContent = readFileSync(cargoToml, 'utf-8');
+          if (cargoTomlContent.includes('tauri-plugin-wdio')) {
+            log(`   ✅ Plugin dependency found in Cargo.toml`);
+          } else {
+            log(`   ❌ Plugin dependency NOT found in Cargo.toml`);
+          }
+        }
+      }
+
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
+
+      // After build, check if gen directory was created
+      if (service === 'tauri') {
+        const srcTauriDir = join(packageDir, 'src-tauri');
+        const genDir = join(srcTauriDir, 'gen');
+        const aclManifest = join(genDir, 'schemas', 'acl-manifests.json');
+
+        log(`🔍 Debugging Tauri app build results...`);
+        log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
+        if (existsSync(genDir)) {
+          log(`   ✅ gen directory created`);
+          if (existsSync(aclManifest)) {
+            log(`   ✅ ACL manifest created: ${aclManifest}`);
+            try {
+              const manifestContent = readFileSync(aclManifest, 'utf-8');
+              const manifestJson = JSON.parse(manifestContent);
+              log(`   ✅ ACL manifest is valid JSON`);
+              if (manifestJson.wdio) {
+                log(`   ✅ Plugin (wdio) found in ACL manifest`);
+              } else {
+                log(`   ⚠️  Plugin (wdio) NOT found in ACL manifest`);
+              }
+              if (manifestJson.default) {
+                log(`   ✅ Default capability found in ACL manifest`);
+              } else {
+                log(`   ❌ Default capability NOT found in ACL manifest`);
+              }
+            } catch (error) {
+              log(`   ❌ ACL manifest is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          } else {
+            log(`   ❌ ACL manifest NOT created: ${aclManifest}`);
+          }
+        } else {
+          log(`   ❌ gen directory NOT created - this indicates ACL manifest generation failed`);
+        }
+      }
     }
 
     execCommand('pnpm test', packageDir, `Running tests for ${packageName}`);
