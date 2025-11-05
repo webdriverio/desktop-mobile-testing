@@ -6,6 +6,14 @@
   "type": "module",
   "main": "./dist-js/index.js",
   "types": "./dist-js/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist-js/index.d.ts",
+        "default": "./dist-js/index.js"
+      }
+    }
+  },
   "files": ["README.md", "dist-js"],
   "scripts": {
     "build:js": "tsc guest-js/index.ts --outDir dist-js --module ESNext --moduleResolution bundler --target ESNext --declaration --esModuleInterop --skipLibCheck"
