@@ -131,7 +131,7 @@ jobs:
             (cd packages/native-utils && pnpm pack)
           fi
           if [ -d "packages/native-types/dist" ]; then
-            (cd packages/native-types && pnpm pack && mv wdio-native-types-*.tgz ../)
+            (cd packages/native-types && pnpm pack)
           fi
 
           # Pack Electron service and dependencies if needed
