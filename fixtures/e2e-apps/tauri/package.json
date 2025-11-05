@@ -6,9 +6,10 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "vite",
+    "build:js": "pnpm --filter @wdio/tauri-plugin build:js",
     "build:web": "vite build",
-    "build": "npm run build:web && tauri build",
-    "build:debug": "npm run build:web && tauri build --debug",
+    "build": "pnpm build:js && pnpm build:web && tauri build",
+    "build:debug": "pnpm build:js && pnpm build:web && tauri build --debug",
     "test": "wdio run ./wdio.conf.ts"
   },
   "dependencies": {
