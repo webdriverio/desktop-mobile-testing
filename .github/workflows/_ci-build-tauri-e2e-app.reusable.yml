@@ -150,9 +150,76 @@ jobs:
         run: pnpm exec turbo run build:js --filter=@wdio/tauri-plugin
         shell: bash
 
+      # Build the plugin's Rust code first to ensure permissions are available
+      # This is critical: the plugin's build.rs copies permissions to OUT_DIR,
+      # which the app's build.rs needs to discover and merge into the ACL manifest
+      - name: 🦀 Build Tauri Plugin Rust Code
+        shell: bash
+        run: |
+          cd packages/tauri-plugin
+          
+          # Debug: Check if tauri.conf.json exists and why build.rs might be failing
+          echo "🔍 Debugging plugin build environment..."
+          echo "Current directory: $(pwd)"
+          echo "Files in plugin directory:"
+          ls -la || echo "Failed to list files"
+          
+          if [ -f "tauri.conf.json" ]; then
+            echo "✅ tauri.conf.json exists"
+            echo "Contents:"
+            cat tauri.conf.json || echo "Failed to read tauri.conf.json"
+          else
+            echo "⚠️  tauri.conf.json does NOT exist"
+            echo "This is expected for plugins - plugins don't need tauri.conf.json"
+            echo "The 'Failed to build with tauri.conf.json' warning is normal and can be ignored"
+          fi
+          
+          # Check if permissions directory exists
+          if [ -d "permissions" ]; then
+            echo "✅ permissions directory exists"
+            echo "Permissions files:"
+            ls -la permissions/ || echo "Failed to list permissions"
+          else
+            echo "❌ permissions directory does NOT exist"
+          fi
+          
+          # Check if build.rs exists
+          if [ -f "build.rs" ]; then
+            echo "✅ build.rs exists"
+          else
+            echo "❌ build.rs does NOT exist"
+          fi
+          
+          # Build the plugin - this runs build.rs which copies permissions to OUT_DIR
+          echo "🏗️  Building plugin (this will run build.rs)..."
+          cargo build --package tauri-plugin-wdio 2>&1 | head -50 || echo "⚠️  Build failed (expected if dependencies missing, but build.rs should have run)"
+          
+          # Debug: Check if permissions were copied to OUT_DIR
+          echo "🔍 Checking if permissions were copied to OUT_DIR..."
+          if [ -d "target/debug/build" ] || [ -d "target/release/build" ]; then
+            echo "Build output directories found:"
+            find target -type d -name "permissions" 2>/dev/null | head -5 || echo "No permissions directories found in target/"
+          else
+            echo "⚠️  No build output directories found yet"
+          fi
+
+      # Clean the E2E app's existing build artifacts to ensure a fresh build
+      # This ensures the plugin's permissions are properly discovered and merged
+      - name: 🧹 Clean E2E App Build Artifacts
+        shell: bash
+        run: |
+          # Clean the E2E app's build artifacts (including gen directory)
+          if [ -d "fixtures/e2e-apps/tauri/src-tauri/gen" ]; then
+            rm -rf fixtures/e2e-apps/tauri/src-tauri/gen
+          fi
+          if [ -d "fixtures/e2e-apps/tauri/src-tauri/target" ]; then
+            rm -rf fixtures/e2e-apps/tauri/src-tauri/target
+          fi
+
       # Build Tauri E2E App
       # This will build the plugin's Rust code (for permissions) and the Tauri app
       # Node.js packages are already built from the downloaded artifacts
+      # The plugin will be built as a dependency, and its permissions will be merged into the ACL manifest
       - name: 🏗️ Build Tauri E2E App
         run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app
         shell: bash
