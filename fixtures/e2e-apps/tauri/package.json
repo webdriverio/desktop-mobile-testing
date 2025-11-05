@@ -5,9 +5,8 @@
   "type": "module",
   "scripts": {
     "tauri": "tauri",
-    "dev": "tauri dev",
-    "clean:dist": "rm -rf dist",
-    "build:web": "node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('index.html','dist/index.html');\"",
+    "dev": "vite",
+    "build:web": "vite build",
     "build": "npm run build:web && tauri build",
     "build:debug": "npm run build:web && tauri build --debug",
     "test": "wdio run ./wdio.conf.ts"
@@ -24,6 +23,7 @@
     "@wdio/mocha-framework": "^9.0.0",
     "@wdio/spec-reporter": "^9.0.0",
     "@wdio/tauri-service": "workspace:*",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vite": "^7.2.0"
   }
 }
