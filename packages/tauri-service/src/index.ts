@@ -1,4 +1,9 @@
+// Import types package to ensure module augmentation is loaded
+import { browser as wdioBrowser } from '@wdio/globals';
+import '@wdio/native-types';
+
 export {
+  execute,
   executeTauriCommand,
   executeTauriCommands,
   executeTauriCommandsParallel,
@@ -16,21 +21,29 @@ export {
   isTauriAppBuilt,
 } from './pathResolver.js';
 // Export the worker service as default
+export { default } from './service.js';
 // Export the browser extension
-export { default, default as browser } from './service.js';
+export const browser: WebdriverIO.Browser = wdioBrowser;
+// Re-export types from @wdio/native-types
+export type {
+  TauriAPIs,
+  TauriResult,
+  TauriServiceAPI,
+  TauriServiceCapabilities,
+  TauriServiceGlobalOptions,
+  TauriServiceOptions,
+} from '@wdio/native-types';
 // Export session management
 export {
   createTauriCapabilities,
   getTauriServiceStatus,
-  init as session,
+  init as startWdioSession,
 } from './session.js';
-// Export types
+
+// Export types from local types file
 export type {
   TauriAppInfo,
   TauriCapabilities,
   TauriCommandContext,
   TauriDriverProcess,
-  TauriResult,
-  TauriServiceGlobalOptions,
-  TauriServiceOptions,
 } from './types.js';

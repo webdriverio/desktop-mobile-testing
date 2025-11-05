@@ -1,19 +1,7 @@
+import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
-import { executeTauriCommand } from './commands/execute.js';
-import type { TauriCapabilities, TauriResult, TauriServiceOptions } from './types.js';
-
-/**
- * Tauri API interface for browser object
- */
-interface TauriAPI {
-  execute: <T = unknown>(command: string, ...args: unknown[]) => Promise<TauriResult<T>>;
-  isMockFunction: (fn: unknown) => boolean;
-  mock: (apiName: string, funcName: string) => Promise<unknown>;
-  mockAll: (apiName: string) => Promise<unknown>;
-  clearAllMocks: () => Promise<void>;
-  resetAllMocks: () => Promise<void>;
-  restoreAllMocks: () => Promise<void>;
-}
+import { execute } from './commands/execute.js';
+import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -78,17 +66,20 @@ export default class TauriWorkerService {
    * Matches the Electron service API surface exactly
    */
   private addTauriApi(browser: WebdriverIO.Browser): void {
-    (browser as WebdriverIO.Browser & { tauri: TauriAPI }).tauri = this.getTauriAPI(browser);
+    browser.tauri = this.getTauriAPI(browser);
   }
 
   /**
    * Get Tauri API object for a browser instance
    * Handles both standard and multiremote browsers
    */
-  private getTauriAPI(browser: WebdriverIO.Browser): TauriAPI {
+  private getTauriAPI(browser: WebdriverIO.Browser): TauriServiceAPI {
     return {
-      execute: <T = unknown>(command: string, ...args: unknown[]): Promise<TauriResult<T>> => {
-        return executeTauriCommand<T>(browser, command, ...args);
+      execute: <ReturnValue, InnerArguments extends unknown[]>(
+        script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
+        ...args: InnerArguments
+      ): Promise<ReturnValue | undefined> => {
+        return execute<ReturnValue, InnerArguments>(browser, script, ...args);
       },
 
       clearAllMocks: async (): Promise<void> => {

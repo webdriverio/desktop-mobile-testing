@@ -1,10 +1,103 @@
+import * as babelParser from '@babel/parser';
+import type { TauriAPIs } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
+import { parse, print } from 'recast';
 import type { TauriCommandContext, TauriResult } from '../types.js';
 
 const log = createLogger('tauri-service', 'service');
 
 /**
- * Execute a Tauri command
+ * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs
+ * Matches Electron's execute pattern: accepts functions or strings, passes Tauri APIs as first parameter
+ */
+export async function execute<ReturnValue, InnerArguments extends unknown[]>(
+  browser: WebdriverIO.Browser,
+  script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
+  ...args: InnerArguments
+): Promise<ReturnValue | undefined> {
+  /**
+   * parameter check
+   */
+  if (typeof script !== 'string' && typeof script !== 'function') {
+    throw new Error('Expecting script to be type of "string" or "function"');
+  }
+
+  if (!browser) {
+    throw new Error('WDIO browser is not yet initialised');
+  }
+
+  // Check if plugin is available
+  const pluginAvailable = await browser.execute(() => {
+    // @ts-expect-error - Plugin API injected at runtime
+    return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
+  });
+
+  if (!pluginAvailable) {
+    throw new Error(
+      'Tauri plugin not available. Make sure @wdio/tauri-plugin is installed and registered in your Tauri app.',
+    );
+  }
+
+  // Convert function to string and remove first parameter (tauri)
+  const scriptString = typeof script === 'function' ? removeFirstArg(script.toString()) : script;
+
+  // Execute via plugin's execute command
+  // The plugin will inject the Tauri APIs object as the first argument
+  const result = await browser.execute(
+    function executeWithinTauri(script: string, ...args) {
+      // @ts-expect-error - Plugin API injected at runtime
+      return window.wdioTauri.execute(script, args);
+    },
+    scriptString,
+    ...args,
+  );
+
+  log.debug(`Execute result:`, result);
+
+  return (result as ReturnValue) ?? undefined;
+}
+
+/**
+ * Remove first arg `tauri` - Tauri APIs will be injected by the plugin
+ */
+function removeFirstArg(funcStr: string): string {
+  // generate AST
+  const ast = parse(funcStr, {
+    parser: {
+      parse: (source: string) =>
+        babelParser.parse(source, {
+          sourceType: 'module',
+          plugins: ['typescript'],
+        }),
+    },
+  });
+
+  let funcNode = null;
+  const topLevelNode = ast.program.body[0];
+
+  if (topLevelNode.type === 'ExpressionStatement') {
+    // Arrow function
+    funcNode = topLevelNode.expression;
+  } else if (topLevelNode.type === 'FunctionDeclaration') {
+    // Function declaration
+    funcNode = topLevelNode;
+  }
+
+  if (!funcNode) {
+    throw new Error('Unsupported function type');
+  }
+
+  // Remove first args `tauri` if exists
+  if ('params' in funcNode && Array.isArray(funcNode.params)) {
+    funcNode.params.shift();
+  }
+
+  return print(ast).code;
+}
+
+/**
+ * Execute a Tauri command (legacy method - kept for backward compatibility)
+ * @deprecated Use execute() instead
  */
 export async function executeTauriCommand<T = unknown>(
   browser: WebdriverIO.Browser,
@@ -14,30 +107,7 @@ export async function executeTauriCommand<T = unknown>(
   log.debug(`Executing Tauri command: ${command} with args:`, args);
 
   try {
-    // Execute Tauri command via WebDriver
-    const result = await browser.execute(
-      (cmd: string, ...cmdArgs: unknown[]) => {
-        console.log('🔍 Executing Tauri command:', cmd, 'with args:', cmdArgs);
-        console.log(
-          '🔍 Args types:',
-          cmdArgs.map((arg) => typeof arg),
-        );
-        console.log(
-          '🔍 Args JSON:',
-          cmdArgs.map((arg) => JSON.stringify(arg)),
-        );
-
-        // Tauri v2 uses window.__TAURI__.core.invoke
-        // @ts-expect-error - Tauri command API injected at runtime
-        const invokeResult = window.__TAURI__.core.invoke(cmd, ...cmdArgs);
-        console.log('🔍 Tauri invoke result:', invokeResult);
-        return invokeResult;
-      },
-      command,
-      ...args,
-    );
-
-    log.debug(`Tauri command result:`, result);
+    const result = await execute(browser, ({ core }) => core.invoke(command, ...args));
 
     return {
       success: true,
