@@ -131,8 +131,11 @@
       "dependsOn": ["@wdio/electron-cdp-bridge#build"],
       "outputs": ["dist/**"]
     },
+    "@wdio/tauri-plugin#build:js": {
+      "outputs": ["dist-js/**"]
+    },
     "@wdio/tauri-service#build": {
-      "dependsOn": ["typecheck"],
+      "dependsOn": ["@wdio/tauri-plugin#build:js", "typecheck"],
       "outputs": ["dist/**"]
     },
     "electron-builder-cjs-e2e-app#build": {
@@ -176,7 +179,7 @@
       "outputs": ["out/**"]
     },
     "tauri-e2e-app#build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
       "outputs": ["src-tauri/target/**"]
     }
   }

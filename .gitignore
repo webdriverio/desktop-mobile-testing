@@ -38,6 +38,7 @@ jspm_packages/
 
 # Build outputs
 dist
+dist-js
 out
 build
 

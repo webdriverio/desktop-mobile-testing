@@ -3,8 +3,20 @@
   "version": "0.1.0",
   "description": "Tauri plugin providing execute and mocking capabilities for WebDriverIO testing",
   "private": true,
-  "files": ["README.md", "gen"],
+  "type": "module",
+  "main": "./dist-js/index.js",
+  "types": "./dist-js/index.d.ts",
+  "files": ["README.md", "dist-js"],
+  "scripts": {
+    "build:js": "tsc guest-js/index.ts --outDir dist-js --module ESNext --moduleResolution bundler --target ESNext --declaration --esModuleInterop --skipLibCheck"
+  },
   "keywords": ["tauri", "webdriverio", "testing", "automation"],
   "author": "WebDriverIO Community",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
 }
