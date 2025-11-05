@@ -215,8 +215,41 @@ jobs:
             echo "⚠️  gen directory already exists (should be cleaned before build)"
             echo "Contents:"
             find "$APP_DIR/gen" -type f | head -10 || echo "gen directory is empty"
+            
+            echo ""
+            echo "Checking existing ACL manifest (if present):"
+            if [ -f "$APP_DIR/gen/schemas/acl-manifests.json" ]; then
+              echo "Existing ACL manifest found:"
+              cat "$APP_DIR/gen/schemas/acl-manifests.json" | jq 'keys' 2>/dev/null || cat "$APP_DIR/gen/schemas/acl-manifests.json" | head -20
+              
+              if grep -q '"default"' "$APP_DIR/gen/schemas/acl-manifests.json" 2>/dev/null; then
+                echo "✅ Existing manifest has 'default' capability"
+              else
+                echo "❌ Existing manifest does NOT have 'default' capability"
+              fi
+              
+              if grep -q '"wdio"' "$APP_DIR/gen/schemas/acl-manifests.json" 2>/dev/null; then
+                echo "✅ Existing manifest has 'wdio' plugin"
+              else
+                echo "⚠️  Existing manifest does NOT have 'wdio' plugin"
+              fi
+            fi
           else
             echo "✅ gen directory does not exist (will be created during build)"
+          fi
+
+      # CRITICAL: Clean gen directory before build to ensure fresh ACL manifest generation
+      # The gen directory contains generated ACL manifests that must be regenerated with current plugin permissions
+      - name: 🧹 Clean Gen Directory
+        shell: bash
+        run: |
+          APP_DIR="fixtures/package-tests/tauri-app/src-tauri"
+          if [ -d "$APP_DIR/gen" ]; then
+            echo "Cleaning gen directory to ensure fresh ACL manifest generation..."
+            rm -rf "$APP_DIR/gen"
+            echo "✅ gen directory cleaned"
+          else
+            echo "gen directory does not exist, nothing to clean"
           fi
 
       - name: 🏗️ Build Tauri Package Test App
