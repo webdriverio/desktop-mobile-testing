@@ -181,6 +181,7 @@ async fn write_clipboard(content: String) -> Result<(), String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_wdio::init())
         .invoke_handler(tauri::generate_handler![
             get_window_bounds,
             set_window_bounds,

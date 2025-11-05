@@ -3371,19 +3371,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-basic-app"
-version = "0.1.0"
-dependencies = [
- "clipboard",
- "serde",
- "serde_json",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-fs",
-]
-
-[[package]]
 name = "tauri-build"
 version = "2.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3430,6 +3417,20 @@ dependencies = [
  "url",
  "uuid",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-e2e-app"
+version = "0.1.0"
+dependencies = [
+ "clipboard",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-fs",
+ "tauri-plugin-wdio",
 ]
 
 [[package]]
@@ -3483,6 +3484,18 @@ dependencies = [
  "thiserror 2.0.17",
  "toml 0.9.8",
  "url",
+]
+
+[[package]]
+name = "tauri-plugin-wdio"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
