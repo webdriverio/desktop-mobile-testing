@@ -138,10 +138,16 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     // Pack Tauri service if needed
     if (service === 'tauri' || service === 'both') {
       const tauriServiceDir = normalize(join(rootDir, 'packages', 'tauri-service'));
+      const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
       if (!existsSync(tauriServiceDir)) {
         throw new Error(`Tauri service directory does not exist: ${tauriServiceDir}`);
       }
+      if (!existsSync(typesDir)) {
+        throw new Error(`Types directory does not exist: ${typesDir}`);
+      }
+      execCommand('pnpm pack', typesDir, 'Packing @wdio/native-types');
       execCommand('pnpm pack', tauriServiceDir, 'Packing @wdio/tauri-service');
+      result.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
       result.tauriServicePath = findTgzFile(tauriServiceDir, 'wdio-tauri-service-');
     }
 
@@ -154,6 +160,9 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     }
     if (result.tauriServicePath) {
       log(`   Tauri Service: ${result.tauriServicePath}`);
+      if (result.typesPath) {
+        log(`   Types: ${result.typesPath}`);
+      }
     }
 
     return result;
@@ -225,11 +234,12 @@ async function testExample(
       overrides['@wdio/electron-cdp-bridge'] = `file:${packages.cdpBridgePath}`;
       packagesToInstall.push(packages.typesPath, packages.cdpBridgePath, packages.electronServicePath);
     } else if (service === 'tauri') {
-      if (!packages.tauriServicePath) {
-        throw new Error('Tauri service package not available');
+      if (!packages.tauriServicePath || !packages.typesPath) {
+        throw new Error('Tauri service packages not available');
       }
       overrides['@wdio/tauri-service'] = `file:${packages.tauriServicePath}`;
-      packagesToInstall.push(packages.tauriServicePath);
+      overrides['@wdio/native-types'] = `file:${packages.typesPath}`;
+      packagesToInstall.push(packages.typesPath, packages.tauriServicePath);
     }
 
     packageJson.pnpm = {
@@ -347,7 +357,9 @@ async function main() {
 
       if (options.service === 'tauri' || options.service === 'both') {
         const tauriServiceDir = normalize(join(rootDir, 'packages', 'tauri-service'));
+        const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
         packages.tauriServicePath = findTgzFile(tauriServiceDir, 'wdio-tauri-service-');
+        packages.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
       }
 
       log(`📦 Using existing packages:`);
