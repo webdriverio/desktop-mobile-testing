@@ -256,6 +256,42 @@ async function testExample(
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
 
+    // For Tauri apps, ensure the plugin is available as a Rust dependency
+    // The plugin is a path dependency (../../../../packages/tauri-plugin from src-tauri/Cargo.toml)
+    // We need to copy it to the correct relative location in the isolated environment
+    if (service === 'tauri') {
+      const pluginSourceDir = join(rootDir, 'packages', 'tauri-plugin');
+      // From tempDir/tauri-app/src-tauri/Cargo.toml, ../../../../packages/tauri-plugin
+      // means: tempDir/packages/tauri-plugin
+      const pluginDestDir = join(tempDir, 'packages', 'tauri-plugin');
+      const cargoTomlPath = join(packageDir, 'src-tauri', 'Cargo.toml');
+
+      if (existsSync(cargoTomlPath)) {
+        const cargoToml = readFileSync(cargoTomlPath, 'utf-8');
+        // Check if plugin is referenced as a path dependency
+        if (cargoToml.includes('tauri-plugin-wdio') && cargoToml.includes('path =')) {
+          // Copy plugin source to make it accessible from isolated environment
+          // This includes the permissions directory which is needed for ACL manifest generation
+          if (existsSync(pluginSourceDir)) {
+            log(`Copying plugin source for Rust dependency resolution...`);
+            mkdirSync(dirname(pluginDestDir), { recursive: true });
+            cpSync(pluginSourceDir, pluginDestDir, { recursive: true });
+            log(`✅ Plugin source copied to ${pluginDestDir}`);
+
+            // Verify permissions directory was copied
+            const permissionsDir = join(pluginDestDir, 'permissions');
+            if (existsSync(permissionsDir)) {
+              log(`✅ Plugin permissions directory found at ${permissionsDir}`);
+            } else {
+              log(`⚠️  Plugin permissions directory not found at ${permissionsDir}`);
+            }
+          } else {
+            log(`⚠️  Plugin source not found at ${pluginSourceDir}`);
+          }
+        }
+      }
+    }
+
     // Handle pre-built binaries for Tauri (skipBuild only applies to Tauri)
     // Electron apps are always built in isolated environments (like electron-service repo)
     if (skipBuild && service === 'tauri') {
@@ -276,6 +312,10 @@ async function testExample(
       }
     } else if (packageJson.scripts?.build) {
       // Build the app in isolated environment (Electron always, Tauri if not skipBuild)
+      // For Tauri apps, ensure the plugin's JavaScript is built first
+      if (service === 'tauri' && packageJson.scripts?.['build:js']) {
+        execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+      }
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
     }
 
