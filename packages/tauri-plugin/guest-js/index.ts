@@ -75,16 +75,16 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
     const argsJson = JSON.stringify(args);
 
     // Wrap the script to inject the Tauri APIs object as the first argument
-    // The script is already a function string without the first parameter (removed by service)
+    // The script is a function string that expects tauri APIs as first parameter
     // We need to wrap it to call it with window.__TAURI__ as the first argument
     // Note: We can't JSON.stringify window.__TAURI__ because it contains functions
     // Instead, we reference it directly in the wrapped script
     const wrappedScript = `
       (async () => {
-        const tauri = window.__TAURI__;
+        const __wdio_tauri = window.__TAURI__;
         const __wdio_args = ${argsJson};
-        // Execute the script as a function with tauri as first arg, then spread args
-        return (${script})(tauri, ...__wdio_args);
+        // Execute the script as a function with tauri as first arg, then spread additional args
+        return (${script})(__wdio_tauri, ...__wdio_args);
       })()
     `.trim();
 

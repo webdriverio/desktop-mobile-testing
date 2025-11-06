@@ -1,7 +1,5 @@
-import * as babelParser from '@babel/parser';
 import type { TauriAPIs } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
-import { parse, print } from 'recast';
 import type { TauriCommandContext, TauriResult } from '../types.js';
 
 const log = createLogger('tauri-service', 'service');
@@ -63,8 +61,8 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     );
   }
 
-  // Convert function to string and remove first parameter (tauri)
-  const scriptString = typeof script === 'function' ? removeFirstArg(script.toString()) : script;
+  // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
+  const scriptString = typeof script === 'function' ? script.toString() : script;
 
   // Execute via plugin's execute command
   // The plugin will inject the Tauri APIs object as the first argument
@@ -80,44 +78,6 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   log.debug(`Execute result:`, result);
 
   return (result as ReturnValue) ?? undefined;
-}
-
-/**
- * Remove first arg `tauri` - Tauri APIs will be injected by the plugin
- */
-function removeFirstArg(funcStr: string): string {
-  // generate AST
-  const ast = parse(funcStr, {
-    parser: {
-      parse: (source: string) =>
-        babelParser.parse(source, {
-          sourceType: 'module',
-          plugins: ['typescript'],
-        }),
-    },
-  });
-
-  let funcNode = null;
-  const topLevelNode = ast.program.body[0];
-
-  if (topLevelNode.type === 'ExpressionStatement') {
-    // Arrow function
-    funcNode = topLevelNode.expression;
-  } else if (topLevelNode.type === 'FunctionDeclaration') {
-    // Function declaration
-    funcNode = topLevelNode;
-  }
-
-  if (!funcNode) {
-    throw new Error('Unsupported function type');
-  }
-
-  // Remove first args `tauri` if exists
-  if ('params' in funcNode && Array.isArray(funcNode.params)) {
-    funcNode.params.shift();
-  }
-
-  return print(ast).code;
 }
 
 /**
