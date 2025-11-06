@@ -26,10 +26,35 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  // Check if plugin is available
-  const pluginAvailable = await browser.execute(() => {
-    // @ts-expect-error - Plugin API injected at runtime
-    return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
+  // Check if plugin is available with retry logic (handles async module loading)
+  const pluginAvailable = await browser.executeAsync((done) => {
+    const checkPlugin = () => {
+      // @ts-expect-error - Plugin API injected at runtime
+      return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
+    };
+
+    // If already available, return immediately
+    if (checkPlugin()) {
+      done(true);
+      return;
+    }
+
+    // Otherwise, poll for up to 5 seconds
+    const startTime = Date.now();
+    const timeout = 5000;
+    const interval = 50;
+
+    const poll = () => {
+      if (checkPlugin()) {
+        done(true);
+      } else if (Date.now() - startTime > timeout) {
+        done(false);
+      } else {
+        setTimeout(poll, interval);
+      }
+    };
+
+    poll();
   });
 
   if (!pluginAvailable) {
