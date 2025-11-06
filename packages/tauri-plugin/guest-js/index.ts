@@ -39,6 +39,12 @@ declare global {
       core?: {
         invoke?: (cmd: string, args?: InvokeArgs) => Promise<unknown>;
       };
+      log?: {
+        info?: (message: string) => Promise<void>;
+        error?: (message: string) => Promise<void>;
+        warn?: (message: string) => Promise<void>;
+        debug?: (message: string) => Promise<void>;
+      };
     };
     wdioTauri?: {
       execute: (script: string, args?: unknown[]) => Promise<unknown>;
@@ -164,24 +170,44 @@ export async function restoreMocks(): Promise<void> {
   }
 }
 
+// Helper to log using Tauri's log plugin (will output to stdout in tests)
+async function tauriLog(message: string): Promise<void> {
+  try {
+    // Try to use Tauri's log plugin if available
+    if (typeof window !== 'undefined' && window.__TAURI__?.log?.info) {
+      await window.__TAURI__.log.info(message);
+    } else {
+      // Fallback to console.log
+      console.log(message);
+    }
+  } catch {
+    // Silently fail if logging doesn't work
+    console.log(message);
+  }
+}
+
 /**
  * Initialize the plugin frontend API
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
 export function init(): void {
-  console.log('[WDIO Tauri Plugin] Initializing...');
-  console.log('[WDIO Tauri Plugin] typeof window:', typeof window);
+  const messages: string[] = [];
+  messages.push('[WDIO Tauri Plugin] Initializing...');
+  messages.push(`[WDIO Tauri Plugin] typeof window: ${typeof window}`);
 
   if (typeof window === 'undefined') {
-    console.log('[WDIO Tauri Plugin] Window is undefined, skipping initialization');
+    messages.push('[WDIO Tauri Plugin] Window is undefined, skipping initialization');
+    for (const msg of messages) {
+      console.log(msg);
+    }
     return;
   }
 
-  console.log('[WDIO Tauri Plugin] window.__TAURI__ available:', typeof window.__TAURI__ !== 'undefined');
-  console.log(
-    '[WDIO Tauri Plugin] window.__TAURI__?.core?.invoke available:',
-    typeof window.__TAURI__?.core?.invoke !== 'undefined',
+  messages.push(`[WDIO Tauri Plugin] window.__TAURI__ available: ${typeof window.__TAURI__ !== 'undefined'}`);
+  messages.push(
+    `[WDIO Tauri Plugin] window.__TAURI__?.core?.invoke available: ${typeof window.__TAURI__?.core?.invoke !== 'undefined'}`,
   );
+  messages.push(`[WDIO Tauri Plugin] window.__TAURI__?.log available: ${typeof window.__TAURI__?.log !== 'undefined'}`);
 
   // Expose wdioTauri on window object for backward compatibility
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
@@ -195,16 +221,34 @@ export function init(): void {
     restoreMocks,
   };
 
-  console.log('[WDIO Tauri Plugin] window.wdioTauri set successfully');
-  console.log('[WDIO Tauri Plugin] window.wdioTauri.execute:', typeof window.wdioTauri.execute);
+  messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
+  messages.push(`[WDIO Tauri Plugin] window.wdioTauri.execute: ${typeof window.wdioTauri.execute}`);
+
+  // Log all messages (console.log is synchronous, will work immediately)
+  for (const msg of messages) {
+    console.log(msg);
+  }
+
+  // Also try to log via Tauri (async, will work after Tauri initializes)
+  Promise.all(messages.map((msg) => tauriLog(msg))).catch(() => {
+    // Ignore errors
+  });
 }
 
 // Auto-initialize when imported
-console.log('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
-console.log('[WDIO Tauri Plugin] typeof window at module level:', typeof window);
+const initMessages: string[] = [];
+initMessages.push('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
+initMessages.push(`[WDIO Tauri Plugin] typeof window at module level: ${typeof window}`);
+
 if (typeof window !== 'undefined') {
-  console.log('[WDIO Tauri Plugin] Auto-initializing...');
+  initMessages.push('[WDIO Tauri Plugin] Auto-initializing...');
+  for (const msg of initMessages) {
+    console.log(msg);
+  }
   init();
 } else {
-  console.log('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
+  initMessages.push('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
+  for (const msg of initMessages) {
+    console.log(msg);
+  }
 }
