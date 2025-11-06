@@ -3439,6 +3439,27 @@
       "title": "FsScopeEntry"
     }
   },
+  "log": {
+    "default_permission": {
+      "identifier": "default",
+      "description": "Allows the log command",
+      "permissions": ["allow-log"]
+    },
+    "permissions": {
+      "allow-log": {
+        "identifier": "allow-log",
+        "description": "Enables the log command without any pre-configured scope.",
+        "commands": { "allow": ["log"], "deny": [] }
+      },
+      "deny-log": {
+        "identifier": "deny-log",
+        "description": "Denies the log command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["log"] }
+      }
+    },
+    "permission_sets": {},
+    "global_scope_schema": null
+  },
   "wdio": {
     "default_permission": {
       "identifier": "default",

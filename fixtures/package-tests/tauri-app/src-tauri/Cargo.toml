@@ -21,6 +21,7 @@ serde_json = "1.0"
 sysinfo = "0.30.5"
 # For clipboard
 clipboard = "0.5.0"
+tauri-plugin-log = "2.0.0-rc.2"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

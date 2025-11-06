@@ -98,6 +98,17 @@
     </div>
 
     <script type="module">
+      // Attach console to Tauri logger first so all logs are captured
+      (async () => {
+        try {
+          const { attachConsole } = await import('@tauri-apps/plugin-log');
+          await attachConsole();
+          console.log('[App] Console attached to Tauri logger');
+        } catch (error) {
+          console.error('[App] Failed to attach console to Tauri logger:', error);
+        }
+      })();
+
       console.log('[App] Script loading started');
       console.log('[App] typeof window:', typeof window);
       console.log('[App] window.__TAURI__ available before plugin import:', typeof window.__TAURI__ !== 'undefined');
