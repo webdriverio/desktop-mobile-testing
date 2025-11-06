@@ -583,9 +583,6 @@ importers:
       '@tauri-apps/plugin-fs':
         specifier: ^2.0.0
         version: 2.4.4
-      '@wdio/tauri-plugin':
-        specifier: workspace:*
-        version: link:../../../packages/tauri-plugin
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.0.0
