@@ -27,18 +27,28 @@ export async function init(
   await launcher.onWorkerStart('standalone', capabilities);
 
   log.debug('Tauri service capabilities after onPrepare:', JSON.stringify(capabilities, null, 2));
+
+  // Extract connection info from capabilities (set by launcher.onPrepare)
+  const hostname = (capabilities as { hostname?: string }).hostname || 'localhost';
+  const port = (capabilities as { port?: number }).port || 4444;
+
+  // Remove hostname and port from capabilities - they are not valid W3C WebDriver capabilities
+  // They should only be at the top level of remote() options
+  delete (capabilities as { hostname?: string }).hostname;
+  delete (capabilities as { port?: number }).port;
+
   log.debug(
-    `Capabilities check before remote(): ` +
-      `browserName=${(capabilities as { browserName?: string }).browserName}, ` +
-      `hostname=${(capabilities as { hostname?: string }).hostname}, ` +
-      `port=${(capabilities as { port?: number }).port}`,
+    `Connection info for remote(): hostname=${hostname}, port=${port}, ` +
+      `browserName=${(capabilities as { browserName?: string }).browserName}`,
   );
 
   // Create worker service
   const service = new TauriWorkerService(capabilities['wdio:tauriServiceOptions'] || {}, capabilities);
 
-  // Initialize session
+  // Initialize session - connection info must be at top level, not in capabilities
   const browser = await remote({
+    hostname,
+    port,
     capabilities,
   });
 
