@@ -84,7 +84,8 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
         const __wdio_tauri = window.__TAURI__;
         const __wdio_args = ${argsJson};
         // Execute the script as a function with tauri as first arg, then spread additional args
-        return (${script})(__wdio_tauri, ...__wdio_args);
+        // Await the result in case it's a Promise (most Tauri commands return Promises)
+        return await (${script})(__wdio_tauri, ...__wdio_args);
       })()
     `.trim();
 
