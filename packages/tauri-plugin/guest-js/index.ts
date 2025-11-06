@@ -169,9 +169,19 @@ export async function restoreMocks(): Promise<void> {
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
 export function init(): void {
+  console.log('[WDIO Tauri Plugin] Initializing...');
+  console.log('[WDIO Tauri Plugin] typeof window:', typeof window);
+
   if (typeof window === 'undefined') {
+    console.log('[WDIO Tauri Plugin] Window is undefined, skipping initialization');
     return;
   }
+
+  console.log('[WDIO Tauri Plugin] window.__TAURI__ available:', typeof window.__TAURI__ !== 'undefined');
+  console.log(
+    '[WDIO Tauri Plugin] window.__TAURI__?.core?.invoke available:',
+    typeof window.__TAURI__?.core?.invoke !== 'undefined',
+  );
 
   // Expose wdioTauri on window object for backward compatibility
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
@@ -184,9 +194,17 @@ export function init(): void {
     resetMocks,
     restoreMocks,
   };
+
+  console.log('[WDIO Tauri Plugin] window.wdioTauri set successfully');
+  console.log('[WDIO Tauri Plugin] window.wdioTauri.execute:', typeof window.wdioTauri.execute);
 }
 
 // Auto-initialize when imported
+console.log('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
+console.log('[WDIO Tauri Plugin] typeof window at module level:', typeof window);
 if (typeof window !== 'undefined') {
+  console.log('[WDIO Tauri Plugin] Auto-initializing...');
   init();
+} else {
+  console.log('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
 }
