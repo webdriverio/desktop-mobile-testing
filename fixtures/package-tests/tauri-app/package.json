@@ -15,8 +15,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0",
-    "@wdio/tauri-plugin": "workspace:*"
+    "@tauri-apps/plugin-fs": "^2.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
