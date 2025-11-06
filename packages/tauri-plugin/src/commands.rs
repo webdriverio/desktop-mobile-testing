@@ -12,6 +12,9 @@ pub(crate) async fn execute<R: Runtime>(
     window: WebviewWindow<R>,
     request: ExecuteRequest,
 ) -> Result<JsonValue> {
+    log::info!("[WDIO Plugin] Execute request - script: {}", request.script);
+    log::info!("[WDIO Plugin] Execute request - args: {:?}", request.args);
+
     // Build the script with args injected
     // The script should be a function that receives args, or a standalone script
     // We'll wrap it to pass args if args are provided
@@ -19,12 +22,14 @@ pub(crate) async fn execute<R: Runtime>(
         // Serialize args to JSON and inject them into the script
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
-        
+
         // Wrap the script to inject args as a variable
         format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, request.script)
     } else {
         request.script
     };
+
+    log::info!("[WDIO Plugin] Prepared script: {}", script);
 
     // Use WebviewWindow::eval() to execute JavaScript in the frontend context
     // This gives the code access to window.__TAURI__ APIs
@@ -48,29 +53,41 @@ pub(crate) async fn execute<R: Runtime>(
     let error_tx = tx;
     
     let listener_id = app_handle.listen(&event_id, move |event| {
+        log::info!("[WDIO Plugin] Received event payload: {}", event.payload());
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
+            log::info!("[WDIO Plugin] Parsed payload: {:?}", payload);
             if let Some(result) = payload.get("result") {
+                log::info!("[WDIO Plugin] Got result field: {:?}", result);
                 // Result is a JSON string that needs to be parsed back to a value
                 if let Some(json_str) = result.as_str() {
+                    log::info!("[WDIO Plugin] Result is string: {}", json_str);
                     match serde_json::from_str::<serde_json::Value>(json_str) {
                         Ok(parsed) => {
+                            log::info!("[WDIO Plugin] Successfully parsed result: {:?}", parsed);
                             let _ = result_tx.send(Ok(parsed));
                         }
                         Err(e) => {
+                            log::error!("[WDIO Plugin] Failed to parse result JSON: {}", e);
                             let _ = error_tx.send(Err(crate::Error::ExecuteError(
                                 format!("Failed to parse result JSON: {}", e)
                             )));
                         }
                     }
                 } else {
+                    log::info!("[WDIO Plugin] Result is not a string, using as-is");
                     // If it's not a string, just use it as-is
                     let _ = result_tx.send(Ok(result.clone()));
                 }
             } else if let Some(error) = payload.get("error") {
+                log::error!("[WDIO Plugin] Got error field: {:?}", error);
                 let _ = error_tx.send(Err(crate::Error::ExecuteError(
                     error.as_str().unwrap_or("Unknown error").to_string()
                 )));
+            } else {
+                log::warn!("[WDIO Plugin] Payload has neither result nor error field!");
             }
+        } else {
+            log::error!("[WDIO Plugin] Failed to parse event payload as JSON");
         }
     });
     
