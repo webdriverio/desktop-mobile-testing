@@ -39,12 +39,12 @@ impl<R: Runtime, T: Manager<R>> crate::WdioExt<R> for T {
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wdio")
         .invoke_handler(tauri::generate_handler![
-            commands::wdio_execute,
-            commands::wdio_set_mock,
-            commands::wdio_get_mock,
-            commands::wdio_clear_mocks,
-            commands::wdio_reset_mocks,
-            commands::wdio_restore_mocks,
+            commands::execute,
+            commands::set_mock,
+            commands::get_mock,
+            commands::clear_mocks,
+            commands::reset_mocks,
+            commands::restore_mocks,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

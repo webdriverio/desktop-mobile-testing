@@ -7,8 +7,8 @@ use crate::Result;
 use crate::mock_store::MockStore;
 
 /// Execute JavaScript code in the frontend context
-#[command(rename = "wdio.execute")]
-pub(crate) async fn wdio_execute<R: Runtime>(
+#[command]
+pub(crate) async fn execute<R: Runtime>(
     window: WebviewWindow<R>,
     request: ExecuteRequest,
 ) -> Result<JsonValue> {
@@ -113,8 +113,8 @@ pub(crate) async fn wdio_execute<R: Runtime>(
 }
 
 /// Set a mock for a Tauri command
-#[command(rename = "wdio.set-mock")]
-pub(crate) async fn wdio_set_mock<R: Runtime>(
+#[command]
+pub(crate) async fn set_mock<R: Runtime>(
     app: AppHandle<R>,
     command: String,
     config: MockConfig,
@@ -132,8 +132,8 @@ pub(crate) async fn wdio_set_mock<R: Runtime>(
 }
 
 /// Get a mock configuration for a command
-#[command(rename = "wdio.get-mock")]
-pub(crate) async fn wdio_get_mock<R: Runtime>(
+#[command]
+pub(crate) async fn get_mock<R: Runtime>(
     app: AppHandle<R>,
     command: String,
 ) -> Result<Option<MockConfig>> {
@@ -149,8 +149,8 @@ pub(crate) async fn wdio_get_mock<R: Runtime>(
 }
 
 /// Clear all mocks
-#[command(rename = "wdio.clear-mocks")]
-pub(crate) async fn wdio_clear_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+#[command]
+pub(crate) async fn clear_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
     let mock_store = app
         .try_state::<Arc<Mutex<MockStore>>>()
         .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
@@ -164,8 +164,8 @@ pub(crate) async fn wdio_clear_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()
 }
 
 /// Reset all mocks (clear and remove original handlers)
-#[command(rename = "wdio.reset-mocks")]
-pub(crate) async fn wdio_reset_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+#[command]
+pub(crate) async fn reset_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
     let mock_store = app
         .try_state::<Arc<Mutex<MockStore>>>()
         .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
@@ -179,8 +179,8 @@ pub(crate) async fn wdio_reset_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()
 }
 
 /// Restore all mocks (remove mocks and restore original handlers)
-#[command(rename = "wdio.restore-mocks")]
-pub(crate) async fn wdio_restore_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
+#[command]
+pub(crate) async fn restore_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
     let mock_store = app
         .try_state::<Arc<Mutex<MockStore>>>()
         .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
