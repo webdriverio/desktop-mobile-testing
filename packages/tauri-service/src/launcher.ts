@@ -181,9 +181,13 @@ export default class TauriLaunchService {
       for (const cap of capsList) {
         (cap as { port?: number; hostname?: string }).port = port;
         (cap as { port?: number; hostname?: string }).hostname = hostname;
+        log.debug(
+          `Set tauri-driver connection on capabilities: ${hostname}:${port}, ` +
+            `browserName=${(cap as { browserName?: string }).browserName}, ` +
+            `port=${(cap as { port?: number }).port}, ` +
+            `hostname=${(cap as { hostname?: string }).hostname}`,
+        );
       }
-
-      log.debug(`Set tauri-driver connection info: ${hostname}:${port}`);
     }
 
     log.debug('Tauri service prepared successfully');

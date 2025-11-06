@@ -26,7 +26,13 @@ export async function init(
   // Start worker session
   await launcher.onWorkerStart('standalone', capabilities);
 
-  log.debug('Tauri service capabilities:', JSON.stringify(capabilities, null, 2));
+  log.debug('Tauri service capabilities after onPrepare:', JSON.stringify(capabilities, null, 2));
+  log.debug(
+    `Capabilities check before remote(): ` +
+      `browserName=${(capabilities as { browserName?: string }).browserName}, ` +
+      `hostname=${(capabilities as { hostname?: string }).hostname}, ` +
+      `port=${(capabilities as { port?: number }).port}`,
+  );
 
   // Create worker service
   const service = new TauriWorkerService(capabilities['wdio:tauriServiceOptions'] || {}, capabilities);
