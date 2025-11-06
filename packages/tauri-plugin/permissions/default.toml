@@ -1,3 +1,23 @@
+# WebDriverIO Tauri Plugin Permissions
+#
+# This file defines the ACL (Access Control List) permissions for the wdio plugin.
+# These permissions control which commands apps can invoke from the frontend.
+#
+# Permission Structure:
+# - [default]: The default permission set that includes all plugin commands
+# - [allow-*]: Individual permissions for each command
+#
+# Usage in Apps:
+# Add to your app's capabilities file (e.g., capabilities/default.json):
+#   "wdio:allow-execute",
+#   "wdio:allow-set-mock",
+#   etc.
+#
+# Or use the default set:
+#   "wdio:default"
+#
+# For more on Tauri v2 permissions: https://v2.tauri.app/security/capabilities/
+
 "$schema" = "https://schema.tauri.app/permissions/2"
 
 [default]
