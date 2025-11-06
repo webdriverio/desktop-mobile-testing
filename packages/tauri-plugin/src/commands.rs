@@ -50,7 +50,22 @@ pub(crate) async fn execute<R: Runtime>(
     let listener_id = app_handle.listen(&event_id, move |event| {
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
             if let Some(result) = payload.get("result") {
-                let _ = result_tx.send(Ok(result.clone()));
+                // Result is a JSON string that needs to be parsed back to a value
+                if let Some(json_str) = result.as_str() {
+                    match serde_json::from_str::<serde_json::Value>(json_str) {
+                        Ok(parsed) => {
+                            let _ = result_tx.send(Ok(parsed));
+                        }
+                        Err(e) => {
+                            let _ = error_tx.send(Err(crate::Error::ExecuteError(
+                                format!("Failed to parse result JSON: {}", e)
+                            )));
+                        }
+                    }
+                } else {
+                    // If it's not a string, just use it as-is
+                    let _ = result_tx.send(Ok(result.clone()));
+                }
             } else if let Some(error) = payload.get("error") {
                 let _ = error_tx.send(Err(crate::Error::ExecuteError(
                     error.as_str().unwrap_or("Unknown error").to_string()
