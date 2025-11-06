@@ -295,7 +295,15 @@ async function testExample(
     // Handle pre-built binaries for Tauri (skipBuild only applies to Tauri)
     // Electron apps are always built in isolated environments (like electron-service repo)
     if (skipBuild && service === 'tauri') {
-      // Tauri apps: copy src-tauri/target directory from pre-built artifacts
+      // Tauri apps: need to build plugin JS and web frontend even with pre-built binary
+      if (packageJson.scripts?.['build:js']) {
+        execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+      }
+      if (packageJson.scripts?.['build:web']) {
+        execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
+      }
+
+      // Copy src-tauri/target directory from pre-built artifacts
       const sourceTargetDir = join(rootDir, 'fixtures', 'package-tests', 'tauri-app', 'src-tauri', 'target');
       const destTargetDir = join(packageDir, 'src-tauri', 'target');
 
@@ -312,9 +320,14 @@ async function testExample(
       }
     } else if (packageJson.scripts?.build) {
       // Build the app in isolated environment (Electron always, Tauri if not skipBuild)
-      // For Tauri apps, ensure the plugin's JavaScript is built first
-      if (service === 'tauri' && packageJson.scripts?.['build:js']) {
-        execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+      // For Tauri apps, ensure the plugin's JavaScript is built and bundled
+      if (service === 'tauri') {
+        if (packageJson.scripts?.['build:js']) {
+          execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+        }
+        if (packageJson.scripts?.['build:web']) {
+          execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
+        }
       }
 
       // For Tauri apps, add debugging before build to diagnose ACL manifest issues
