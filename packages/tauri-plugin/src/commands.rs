@@ -98,7 +98,7 @@ pub(crate) async fn execute<R: Runtime>(
         r#"
         (async () => {{
             try {{
-                const result = {};
+                const result = await ({});
                 const jsonResult = JSON.stringify(result);
                 // Use Tauri event API to send result back to Rust
                 if (window.__TAURI__?.event?.emit) {{
