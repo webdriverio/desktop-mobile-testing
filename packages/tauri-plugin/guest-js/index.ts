@@ -59,8 +59,10 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
     // Call the plugin command to execute the wrapped script
     // Tauri v2 plugin commands use format: plugin:plugin-name|command-name
     const result = await invoke('plugin:wdio|execute', {
-      script: wrappedScript,
-      args: [],
+      request: {
+        script: wrappedScript,
+        args: [],
+      },
     } as InvokeArgs);
     return result;
   } catch (error) {
