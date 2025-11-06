@@ -4,7 +4,33 @@
  */
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
-import { invoke } from '@tauri-apps/api/core';
+
+// Lazy-load invoke function to support both global Tauri API and dynamic imports
+// This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
+let _invokeCache: ((cmd: string, args?: InvokeArgs) => Promise<unknown>) | null = null;
+
+async function getInvoke(): Promise<(cmd: string, args?: InvokeArgs) => Promise<unknown>> {
+  if (_invokeCache) {
+    return _invokeCache;
+  }
+
+  // Check if window.__TAURI__ is available globally (withGlobalTauri: true)
+  if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
+    _invokeCache = window.__TAURI__.core.invoke;
+    return _invokeCache;
+  }
+
+  // Fallback to dynamic import for bundler environments
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    _invokeCache = invoke;
+    return _invokeCache;
+  } catch (_error) {
+    throw new Error(
+      'Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json or @tauri-apps/api is installed.',
+    );
+  }
+}
 
 // Type declarations for window extensions
 declare global {
@@ -58,6 +84,7 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
 
     // Call the plugin command to execute the wrapped script
     // Tauri v2 plugin commands use format: plugin:plugin-name|command-name
+    const invoke = await getInvoke();
     const result = await invoke('plugin:wdio|execute', {
       request: {
         script: wrappedScript,
@@ -77,6 +104,7 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
  */
 export async function setMock(command: string, config: unknown): Promise<void> {
   try {
+    const invoke = await getInvoke();
     await invoke('plugin:wdio|set-mock', {
       command,
       config,
@@ -93,6 +121,7 @@ export async function setMock(command: string, config: unknown): Promise<void> {
  */
 export async function getMock(command: string): Promise<unknown | null> {
   try {
+    const invoke = await getInvoke();
     return await invoke('plugin:wdio|get-mock', { command } as InvokeArgs);
   } catch (error) {
     throw new Error(`Failed to get mock for ${command}: ${error instanceof Error ? error.message : String(error)}`);
@@ -104,6 +133,7 @@ export async function getMock(command: string): Promise<unknown | null> {
  */
 export async function clearMocks(): Promise<void> {
   try {
+    const invoke = await getInvoke();
     await invoke('plugin:wdio|clear-mocks');
   } catch (error) {
     throw new Error(`Failed to clear mocks: ${error instanceof Error ? error.message : String(error)}`);
@@ -115,6 +145,7 @@ export async function clearMocks(): Promise<void> {
  */
 export async function resetMocks(): Promise<void> {
   try {
+    const invoke = await getInvoke();
     await invoke('plugin:wdio|reset-mocks');
   } catch (error) {
     throw new Error(`Failed to reset mocks: ${error instanceof Error ? error.message : String(error)}`);
@@ -126,6 +157,7 @@ export async function resetMocks(): Promise<void> {
  */
 export async function restoreMocks(): Promise<void> {
   try {
+    const invoke = await getInvoke();
     await invoke('plugin:wdio|restore-mocks');
   } catch (error) {
     throw new Error(`Failed to restore mocks: ${error instanceof Error ? error.message : String(error)}`);
