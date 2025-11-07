@@ -1,6 +1,15 @@
 import { expect, multiremotebrowser } from '@wdio/globals';
 import '@wdio/native-types';
 
+function assertHasOwnProperty<Property extends PropertyKey>(
+  value: unknown,
+  property: Property,
+): asserts value is Record<Property, unknown> {
+  if (typeof value !== 'object' || value === null || !Object.hasOwn(value, property)) {
+    throw new Error(`Expected property ${String(property)} to exist on value`);
+  }
+}
+
 describe('Tauri APIs using Multiremote', () => {
   it('should retrieve platform info through the Tauri API on multiple instances', async () => {
     const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
@@ -14,11 +23,10 @@ describe('Tauri APIs using Multiremote', () => {
       browserA.tauri.execute(({ core }) => core.invoke('get_platform_info')),
       browserB.tauri.execute(({ core }) => core.invoke('get_platform_info')),
     ]);
-
-    expect(Object.hasOwn(resultA, 'os')).toBe(true);
-    expect(Object.hasOwn(resultB, 'os')).toBe(true);
-    expect(Object.hasOwn(resultA, 'arch')).toBe(true);
-    expect(Object.hasOwn(resultB, 'arch')).toBe(true);
+    assertHasOwnProperty(resultA, 'os');
+    assertHasOwnProperty(resultB, 'os');
+    assertHasOwnProperty(resultA, 'arch');
+    assertHasOwnProperty(resultB, 'arch');
     expect(resultA.os).toBe(resultB.os); // Same OS for both instances
   });
 
@@ -33,10 +41,10 @@ describe('Tauri APIs using Multiremote', () => {
       browserB.tauri.execute(({ core }) => core.invoke('get_platform_info')),
     ]);
 
-    expect(Object.hasOwn(resultA, 'hostname')).toBe(true);
-    expect(Object.hasOwn(resultB, 'hostname')).toBe(true);
-    expect(Object.hasOwn(resultA, 'memory')).toBe(true);
-    expect(Object.hasOwn(resultB, 'memory')).toBe(true);
+    assertHasOwnProperty(resultA, 'hostname');
+    assertHasOwnProperty(resultB, 'hostname');
+    assertHasOwnProperty(resultA, 'memory');
+    assertHasOwnProperty(resultB, 'memory');
 
     // Verify instances can operate independently by checking they have unique hostnames
     // (or at least that both queries succeeded independently)
@@ -56,12 +64,12 @@ describe('Tauri APIs using Multiremote', () => {
     ]);
 
     // Verify both instances return valid platform information
-    expect(Object.hasOwn(resultA, 'os')).toBe(true);
-    expect(Object.hasOwn(resultB, 'os')).toBe(true);
+    assertHasOwnProperty(resultA, 'os');
+    assertHasOwnProperty(resultB, 'os');
     expect(resultA.os).toBe(resultB.os); // Same OS for both instances
 
     // Verify both instances have independent data structures
-    expect(Object.hasOwn(resultA, 'cpu')).toBe(true);
-    expect(Object.hasOwn(resultB, 'cpu')).toBe(true);
+    assertHasOwnProperty(resultA, 'cpu');
+    assertHasOwnProperty(resultB, 'cpu');
   });
 });
