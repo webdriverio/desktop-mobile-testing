@@ -123,7 +123,11 @@ switch (envContext.testType) {
     break;
   default:
     // Standard tests - core functionality without specialized test modes
-    specs = ['./test/tauri/api.spec.ts'];
+    specs = [
+      './test/tauri/api.spec.ts',
+      './test/tauri/execute-advanced.spec.ts',
+      './test/tauri/execute-data-types.spec.ts',
+    ];
     break;
 }
 
