@@ -3438,5 +3438,104 @@
       "description": "FS scope entry.",
       "title": "FsScopeEntry"
     }
+  },
+  "log": {
+    "default_permission": {
+      "identifier": "default",
+      "description": "Allows the log command",
+      "permissions": ["allow-log"]
+    },
+    "permissions": {
+      "allow-log": {
+        "identifier": "allow-log",
+        "description": "Enables the log command without any pre-configured scope.",
+        "commands": { "allow": ["log"], "deny": [] }
+      },
+      "deny-log": {
+        "identifier": "deny-log",
+        "description": "Denies the log command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["log"] }
+      }
+    },
+    "permission_sets": {},
+    "global_scope_schema": null
+  },
+  "wdio": {
+    "default_permission": {
+      "identifier": "default",
+      "description": "Allows all WebDriverIO plugin commands for testing",
+      "permissions": [
+        "allow-execute",
+        "allow-set-mock",
+        "allow-get-mock",
+        "allow-clear-mocks",
+        "allow-reset-mocks",
+        "allow-restore-mocks"
+      ]
+    },
+    "permissions": {
+      "allow-clear-mocks": {
+        "identifier": "allow-clear-mocks",
+        "description": "Enables the clear_mocks command without any pre-configured scope.",
+        "commands": { "allow": ["clear_mocks"], "deny": [] }
+      },
+      "allow-execute": {
+        "identifier": "allow-execute",
+        "description": "Enables the execute command without any pre-configured scope.",
+        "commands": { "allow": ["execute"], "deny": [] }
+      },
+      "allow-get-mock": {
+        "identifier": "allow-get-mock",
+        "description": "Enables the get_mock command without any pre-configured scope.",
+        "commands": { "allow": ["get_mock"], "deny": [] }
+      },
+      "allow-reset-mocks": {
+        "identifier": "allow-reset-mocks",
+        "description": "Enables the reset_mocks command without any pre-configured scope.",
+        "commands": { "allow": ["reset_mocks"], "deny": [] }
+      },
+      "allow-restore-mocks": {
+        "identifier": "allow-restore-mocks",
+        "description": "Enables the restore_mocks command without any pre-configured scope.",
+        "commands": { "allow": ["restore_mocks"], "deny": [] }
+      },
+      "allow-set-mock": {
+        "identifier": "allow-set-mock",
+        "description": "Enables the set_mock command without any pre-configured scope.",
+        "commands": { "allow": ["set_mock"], "deny": [] }
+      },
+      "deny-clear-mocks": {
+        "identifier": "deny-clear-mocks",
+        "description": "Denies the clear_mocks command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["clear_mocks"] }
+      },
+      "deny-execute": {
+        "identifier": "deny-execute",
+        "description": "Denies the execute command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["execute"] }
+      },
+      "deny-get-mock": {
+        "identifier": "deny-get-mock",
+        "description": "Denies the get_mock command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["get_mock"] }
+      },
+      "deny-reset-mocks": {
+        "identifier": "deny-reset-mocks",
+        "description": "Denies the reset_mocks command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["reset_mocks"] }
+      },
+      "deny-restore-mocks": {
+        "identifier": "deny-restore-mocks",
+        "description": "Denies the restore_mocks command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["restore_mocks"] }
+      },
+      "deny-set-mock": {
+        "identifier": "deny-set-mock",
+        "description": "Denies the set_mock command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["set_mock"] }
+      }
+    },
+    "permission_sets": {},
+    "global_scope_schema": null
   }
 }

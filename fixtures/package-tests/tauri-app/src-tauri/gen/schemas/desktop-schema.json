@@ -5649,6 +5649,102 @@
           "type": "string",
           "const": "fs:write-files",
           "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
+        },
+        {
+          "description": "Allows the log command\n#### This default permission set includes:\n\n- `allow-log`",
+          "type": "string",
+          "const": "log:default",
+          "markdownDescription": "Allows the log command\n#### This default permission set includes:\n\n- `allow-log`"
+        },
+        {
+          "description": "Enables the log command without any pre-configured scope.",
+          "type": "string",
+          "const": "log:allow-log",
+          "markdownDescription": "Enables the log command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the log command without any pre-configured scope.",
+          "type": "string",
+          "const": "log:deny-log",
+          "markdownDescription": "Denies the log command without any pre-configured scope."
+        },
+        {
+          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`",
+          "type": "string",
+          "const": "wdio:default",
+          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`"
+        },
+        {
+          "description": "Enables the clear_mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-clear-mocks",
+          "markdownDescription": "Enables the clear_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the execute command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-execute",
+          "markdownDescription": "Enables the execute command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-get-mock",
+          "markdownDescription": "Enables the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the reset_mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-reset-mocks",
+          "markdownDescription": "Enables the reset_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the restore_mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-restore-mocks",
+          "markdownDescription": "Enables the restore_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-set-mock",
+          "markdownDescription": "Enables the set_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the clear_mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-clear-mocks",
+          "markdownDescription": "Denies the clear_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the execute command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-execute",
+          "markdownDescription": "Denies the execute command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-get-mock",
+          "markdownDescription": "Denies the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reset_mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-reset-mocks",
+          "markdownDescription": "Denies the reset_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the restore_mocks command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-restore-mocks",
+          "markdownDescription": "Denies the restore_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_mock command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-set-mock",
+          "markdownDescription": "Denies the set_mock command without any pre-configured scope."
         }
       ]
     },

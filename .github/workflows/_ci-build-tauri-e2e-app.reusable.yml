@@ -12,6 +12,18 @@ on:
         description: 'Build command for Tauri app (build or build:debug)'
         type: string
         default: 'build'
+      build_id:
+        description: 'Build ID from the main build job'
+        type: string
+        required: false
+      artifact_size:
+        description: 'Size of the build artifact in bytes'
+        type: string
+        required: false
+      cache_key:
+        description: 'Cache key to use for downloading artifacts'
+        type: string
+        required: false
     outputs:
       build_id:
         description: 'Unique identifier for this build'
@@ -108,9 +120,207 @@ jobs:
           echo "build_id=$(date +%s)-${{ github.run_id }}-${{ runner.os }}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
-      - name: 🏗️ Build Tauri E2E App
-        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app --only
+      # Download the pre-built packages from the main build job
+      # This ensures we use the same build artifacts and avoid rebuilding Node.js packages
+      - name: 📦 Download Package Build Artifacts
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: wdio-electron-service
+          path: wdio-electron-service-build
+          filename: artifact.zip
+          cache_key_prefix: wdio-electron-build
+          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+
+      # Display build information if available
+      - name: 📊 Show Build Information
+        if: inputs.build_id != '' && inputs.artifact_size != ''
         shell: bash
+        run: |
+          echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
+
+      # Install dependencies to ensure workspace is properly set up
+      # This is needed after downloading artifacts to ensure all workspace links are correct
+      - name: 📦 Install Dependencies
+        run: pnpm install
+        shell: bash
+
+      # Build the Tauri plugin's JavaScript first
+      # This is needed by the E2E app's build process (for bundling)
+      - name: 🏗️ Build Tauri Plugin JavaScript
+        run: pnpm exec turbo run build:js --filter=@wdio/tauri-plugin
+        shell: bash
+
+      # Clean the E2E app's existing build artifacts to ensure a fresh build
+      # This ensures the plugin's permissions are properly discovered and merged
+      # Note: We don't need to explicitly build the plugin's Rust code here because
+      # Cargo will automatically build it as a dependency when building the app
+      # (the plugin is a path dependency in Cargo.toml)
+      - name: 🧹 Clean E2E App Build Artifacts
+        shell: bash
+        run: |
+          # Clean the E2E app's build artifacts (including gen directory)
+          if [ -d "fixtures/e2e-apps/tauri/src-tauri/gen" ]; then
+            rm -rf fixtures/e2e-apps/tauri/src-tauri/gen
+          fi
+          if [ -d "fixtures/e2e-apps/tauri/src-tauri/target" ]; then
+            rm -rf fixtures/e2e-apps/tauri/src-tauri/target
+          fi
+
+      # Debug: Check environment before build
+      - name: 🔍 Debug Tauri App Build Environment
+        shell: bash
+        run: |
+          echo "🔍 Debugging Tauri E2E app build environment..."
+          APP_DIR="fixtures/e2e-apps/tauri/src-tauri"
+
+          echo "Checking app directory structure..."
+          ls -la "$APP_DIR" || echo "Failed to list app directory"
+
+          echo ""
+          echo "Checking capabilities file..."
+          if [ -f "$APP_DIR/capabilities/default.json" ]; then
+            echo "✅ Capabilities file exists"
+            cat "$APP_DIR/capabilities/default.json" | head -20 || echo "Failed to read capabilities file"
+
+            # Check if identifier is "default"
+            if grep -q '"identifier": "default"' "$APP_DIR/capabilities/default.json"; then
+              echo "✅ Capability identifier is 'default'"
+            else
+              echo "❌ Capability identifier is NOT 'default'"
+            fi
+          else
+            echo "❌ Capabilities file NOT found at $APP_DIR/capabilities/default.json"
+          fi
+
+          echo ""
+          echo "Checking build.rs..."
+          if [ -f "$APP_DIR/build.rs" ]; then
+            echo "✅ build.rs exists"
+            cat "$APP_DIR/build.rs" || echo "Failed to read build.rs"
+          else
+            echo "❌ build.rs NOT found"
+          fi
+
+          echo ""
+          echo "Checking plugin availability..."
+          if [ -d "packages/tauri-plugin" ]; then
+            echo "✅ Plugin directory exists"
+            if [ -d "packages/tauri-plugin/permissions" ]; then
+              echo "✅ Plugin permissions directory exists"
+              ls -la "packages/tauri-plugin/permissions/" || echo "Failed to list permissions"
+            else
+              echo "❌ Plugin permissions directory NOT found"
+            fi
+          else
+            echo "❌ Plugin directory NOT found"
+          fi
+
+          echo ""
+          echo "Checking Cargo.toml for plugin dependency..."
+          if [ -f "$APP_DIR/Cargo.toml" ]; then
+            if grep -q "tauri-plugin-wdio" "$APP_DIR/Cargo.toml"; then
+              echo "✅ Plugin dependency found in Cargo.toml"
+              grep -A2 "tauri-plugin-wdio" "$APP_DIR/Cargo.toml" || echo "Failed to grep Cargo.toml"
+            else
+              echo "❌ Plugin dependency NOT found in Cargo.toml"
+            fi
+          fi
+
+      # Build Tauri E2E App
+      # Cargo will automatically build the plugin (as a path dependency) before building the app
+      # The plugin's build.rs will copy permissions to OUT_DIR, which the app's build.rs
+      # will discover and merge into the ACL manifest
+      # Node.js packages are already built from the downloaded artifacts
+      - name: 🏗️ Build Tauri E2E App
+        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app
+        shell: bash
+
+      # Debug: Check if ACL manifest was generated after build
+      - name: 🔍 Debug ACL Manifest Generation
+        if: failure()
+        shell: bash
+        run: |
+          echo "🔍 Checking ACL manifest generation after build failure..."
+          APP_DIR="fixtures/e2e-apps/tauri/src-tauri"
+          GEN_DIR="$APP_DIR/gen"
+          ACL_MANIFEST="$GEN_DIR/schemas/acl-manifests.json"
+
+          echo ""
+          echo "=== Checking gen directory ==="
+          if [ -d "$GEN_DIR" ]; then
+            echo "✅ gen directory exists"
+            echo "Contents:"
+            find "$GEN_DIR" -type f | head -20 || echo "gen directory is empty"
+
+            if [ -f "$ACL_MANIFEST" ]; then
+              echo "✅ ACL manifest exists"
+              echo "ACL manifest keys:"
+              cat "$ACL_MANIFEST" | jq 'keys' 2>/dev/null || cat "$ACL_MANIFEST" | head -50
+
+              if grep -q '"default"' "$ACL_MANIFEST" 2>/dev/null; then
+                echo "✅ 'default' capability found in ACL manifest"
+              else
+                echo "❌ 'default' capability NOT found in ACL manifest"
+                echo "This is the root cause of the error!"
+                echo "Full manifest contents:"
+                cat "$ACL_MANIFEST" || echo "Failed to read manifest"
+              fi
+
+              if grep -q '"wdio"' "$ACL_MANIFEST" 2>/dev/null; then
+                echo "✅ 'wdio' plugin found in ACL manifest"
+              else
+                echo "⚠️  'wdio' plugin NOT found in ACL manifest"
+              fi
+            else
+              echo "❌ ACL manifest NOT found at $ACL_MANIFEST"
+              echo "This indicates ACL manifest generation failed before creating the manifest"
+            fi
+          else
+            echo "❌ gen directory NOT created - ACL manifest generation failed completely"
+            echo "This means tauri_build::try_build() failed before generating any output"
+          fi
+
+          echo ""
+          echo "=== Checking plugin build output (plugin's OUT_DIR) ==="
+          if [ -d "packages/tauri-plugin/target" ]; then
+            echo "Plugin target directory exists"
+            echo "Looking for permissions in plugin's OUT_DIR..."
+            find "packages/tauri-plugin/target" -path "*/out/permissions/wdio/*" -type f | head -10 || echo "No plugin permissions found in plugin OUT_DIR"
+
+            echo ""
+            echo "All permission directories in plugin target:"
+            find "packages/tauri-plugin/target" -type d -name "permissions" | head -10 || echo "No permissions directories found"
+          else
+            echo "⚠️  Plugin target directory does not exist"
+          fi
+
+          echo ""
+          echo "=== Checking app build output for plugin permissions (app's dependency OUT_DIR) ==="
+          if [ -d "$APP_DIR/target" ]; then
+            echo "App target directory exists"
+            echo "Looking for plugin permissions in app's dependency build output..."
+            echo "These should be at: target/release/build/tauri-plugin-wdio-*/out/permissions/wdio/"
+            find "$APP_DIR/target" -path "*/build/tauri-plugin-wdio-*/out/permissions/wdio/*" -type f | head -10 || echo "❌ No plugin permissions found in app's dependency OUT_DIR"
+
+            echo ""
+            echo "All permission directories in app target:"
+            find "$APP_DIR/target" -type d -name "permissions" | head -10 || echo "No permissions directories found"
+
+            echo ""
+            echo "Checking for plugin build output directories:"
+            find "$APP_DIR/target" -type d -name "tauri-plugin-wdio-*" | head -5 || echo "No plugin build directories found"
+          else
+            echo "❌ App target directory does not exist (build failed very early)"
+          fi
+
+          echo ""
+          echo "=== Checking if plugin's build.rs ran ==="
+          echo "Looking for plugin build script output..."
+          if [ -d "$APP_DIR/target" ]; then
+            echo "Checking for cargo:rerun-if-changed messages in build output..."
+            # The build output would show if build.rs ran
+            echo "Note: Build script execution is logged in Cargo's build output"
+          fi
 
       - name: 📦 Upload Tauri E2E App Binary
         id: upload-archive

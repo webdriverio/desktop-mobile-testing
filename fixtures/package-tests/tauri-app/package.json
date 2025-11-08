@@ -7,14 +7,16 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "clean:dist": "rm -rf dist",
-    "build:web": "node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('index.html','dist/index.html');\"",
-    "build": "npm run build:web && tauri build",
-    "build:debug": "npm run build:web && tauri build --debug",
+    "build:js": "pnpm --filter @wdio/tauri-plugin build:js",
+    "build:web": "node -e \"const fs=require('fs');const path=require('path');const { execSync } = require('child_process');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('index.html','dist/index.html');try{const pluginJs=path.join(process.cwd(),'../../../packages/tauri-plugin/dist-js/index.js');if(fs.existsSync(pluginJs)){fs.mkdirSync('dist/plugins',{recursive:true});fs.copyFileSync(pluginJs,'dist/plugins/wdio-plugin.js');}}catch(e){console.warn('Failed to copy plugin JS:',e);}\"",
+    "build": "pnpm build:js && pnpm build:web && tauri build",
+    "build:debug": "pnpm build:js && pnpm build:web && tauri build --debug",
     "test": "cross-env DEBUG=@wdio/tauri-service wdio run wdio.conf.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0"
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-log": "^2.7.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

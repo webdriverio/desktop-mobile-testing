@@ -4,7 +4,7 @@ import type {
   ElectronServiceCapabilities,
   ElectronServiceGlobalOptions,
   PathGenerationError,
-} from '@wdio/electron-types';
+} from '@wdio/native-types';
 import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'launcher');

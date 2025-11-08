@@ -38,11 +38,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@babel/parser": "^7.26.0",
+    "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
     "@wdio/native-utils": "workspace:*",
+    "@wdio/native-types": "workspace:*",
     "@wdio/types": "catalog:default",
     "debug": "^4.4.3",
     "get-port": "^7.1.0",
+    "recast": "^0.23.11",
     "webdriverio": "catalog:default"
   },
   "devDependencies": {

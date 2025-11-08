@@ -116,7 +116,7 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     // Pack Electron service and dependencies if needed
     if (service === 'electron' || service === 'both') {
       const electronServiceDir = normalize(join(rootDir, 'packages', 'electron-service'));
-      const typesDir = normalize(join(rootDir, 'packages', 'electron-types'));
+      const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
       const cdpBridgeDir = normalize(join(rootDir, 'packages', 'electron-cdp-bridge'));
 
       if (!existsSync(typesDir)) {
@@ -126,22 +126,28 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
         throw new Error(`CDP Bridge directory does not exist: ${cdpBridgeDir}`);
       }
 
-      execCommand('pnpm pack', typesDir, 'Packing @wdio/electron-types');
+      execCommand('pnpm pack', typesDir, 'Packing @wdio/native-types');
       execCommand('pnpm pack', cdpBridgeDir, 'Packing @wdio/electron-cdp-bridge');
       execCommand('pnpm pack', electronServiceDir, 'Packing @wdio/electron-service');
 
       result.electronServicePath = findTgzFile(electronServiceDir, 'wdio-electron-service-');
-      result.typesPath = findTgzFile(typesDir, 'wdio-electron-types-');
+      result.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
       result.cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-');
     }
 
     // Pack Tauri service if needed
     if (service === 'tauri' || service === 'both') {
       const tauriServiceDir = normalize(join(rootDir, 'packages', 'tauri-service'));
+      const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
       if (!existsSync(tauriServiceDir)) {
         throw new Error(`Tauri service directory does not exist: ${tauriServiceDir}`);
       }
+      if (!existsSync(typesDir)) {
+        throw new Error(`Types directory does not exist: ${typesDir}`);
+      }
+      execCommand('pnpm pack', typesDir, 'Packing @wdio/native-types');
       execCommand('pnpm pack', tauriServiceDir, 'Packing @wdio/tauri-service');
+      result.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
       result.tauriServicePath = findTgzFile(tauriServiceDir, 'wdio-tauri-service-');
     }
 
@@ -154,6 +160,9 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     }
     if (result.tauriServicePath) {
       log(`   Tauri Service: ${result.tauriServicePath}`);
+      if (result.typesPath) {
+        log(`   Types: ${result.typesPath}`);
+      }
     }
 
     return result;
@@ -221,15 +230,16 @@ async function testExample(
         throw new Error('Electron service packages not available');
       }
       overrides['@wdio/electron-service'] = `file:${packages.electronServicePath}`;
-      overrides['@wdio/electron-types'] = `file:${packages.typesPath}`;
+      overrides['@wdio/native-types'] = `file:${packages.typesPath}`;
       overrides['@wdio/electron-cdp-bridge'] = `file:${packages.cdpBridgePath}`;
       packagesToInstall.push(packages.typesPath, packages.cdpBridgePath, packages.electronServicePath);
     } else if (service === 'tauri') {
-      if (!packages.tauriServicePath) {
-        throw new Error('Tauri service package not available');
+      if (!packages.tauriServicePath || !packages.typesPath) {
+        throw new Error('Tauri service packages not available');
       }
       overrides['@wdio/tauri-service'] = `file:${packages.tauriServicePath}`;
-      packagesToInstall.push(packages.tauriServicePath);
+      overrides['@wdio/native-types'] = `file:${packages.typesPath}`;
+      packagesToInstall.push(packages.typesPath, packages.tauriServicePath);
     }
 
     packageJson.pnpm = {
@@ -246,10 +256,54 @@ async function testExample(
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
 
+    // For Tauri apps, ensure the plugin is available as a Rust dependency
+    // The plugin is a path dependency (../../../../packages/tauri-plugin from src-tauri/Cargo.toml)
+    // We need to copy it to the correct relative location in the isolated environment
+    if (service === 'tauri') {
+      const pluginSourceDir = join(rootDir, 'packages', 'tauri-plugin');
+      // From tempDir/tauri-app/src-tauri/Cargo.toml, ../../../../packages/tauri-plugin
+      // means: tempDir/packages/tauri-plugin
+      const pluginDestDir = join(tempDir, 'packages', 'tauri-plugin');
+      const cargoTomlPath = join(packageDir, 'src-tauri', 'Cargo.toml');
+
+      if (existsSync(cargoTomlPath)) {
+        const cargoToml = readFileSync(cargoTomlPath, 'utf-8');
+        // Check if plugin is referenced as a path dependency
+        if (cargoToml.includes('tauri-plugin-wdio') && cargoToml.includes('path =')) {
+          // Copy plugin source to make it accessible from isolated environment
+          // This includes the permissions directory which is needed for ACL manifest generation
+          if (existsSync(pluginSourceDir)) {
+            log(`Copying plugin source for Rust dependency resolution...`);
+            mkdirSync(dirname(pluginDestDir), { recursive: true });
+            cpSync(pluginSourceDir, pluginDestDir, { recursive: true });
+            log(`✅ Plugin source copied to ${pluginDestDir}`);
+
+            // Verify permissions directory was copied
+            const permissionsDir = join(pluginDestDir, 'permissions');
+            if (existsSync(permissionsDir)) {
+              log(`✅ Plugin permissions directory found at ${permissionsDir}`);
+            } else {
+              log(`⚠️  Plugin permissions directory not found at ${permissionsDir}`);
+            }
+          } else {
+            log(`⚠️  Plugin source not found at ${pluginSourceDir}`);
+          }
+        }
+      }
+    }
+
     // Handle pre-built binaries for Tauri (skipBuild only applies to Tauri)
     // Electron apps are always built in isolated environments (like electron-service repo)
     if (skipBuild && service === 'tauri') {
-      // Tauri apps: copy src-tauri/target directory from pre-built artifacts
+      // Tauri apps: need to build plugin JS and web frontend even with pre-built binary
+      if (packageJson.scripts?.['build:js']) {
+        execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+      }
+      if (packageJson.scripts?.['build:web']) {
+        execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
+      }
+
+      // Copy src-tauri/target directory from pre-built artifacts
       const sourceTargetDir = join(rootDir, 'fixtures', 'package-tests', 'tauri-app', 'src-tauri', 'target');
       const destTargetDir = join(packageDir, 'src-tauri', 'target');
 
@@ -266,7 +320,110 @@ async function testExample(
       }
     } else if (packageJson.scripts?.build) {
       // Build the app in isolated environment (Electron always, Tauri if not skipBuild)
+      // For Tauri apps, ensure the plugin's JavaScript is built and bundled
+      if (service === 'tauri') {
+        if (packageJson.scripts?.['build:js']) {
+          execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+        }
+        if (packageJson.scripts?.['build:web']) {
+          execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
+        }
+      }
+
+      // For Tauri apps, add debugging before build to diagnose ACL manifest issues
+      if (service === 'tauri') {
+        const srcTauriDir = join(packageDir, 'src-tauri');
+        const capabilitiesDir = join(srcTauriDir, 'capabilities');
+        const capabilitiesFile = join(capabilitiesDir, 'default.json');
+        const genDir = join(srcTauriDir, 'gen');
+        const buildRs = join(srcTauriDir, 'build.rs');
+        const cargoToml = join(srcTauriDir, 'Cargo.toml');
+
+        log(`🔍 Debugging Tauri app build environment before build...`);
+        log(`   src-tauri directory: ${srcTauriDir} (exists: ${existsSync(srcTauriDir)})`);
+        log(`   capabilities directory: ${capabilitiesDir} (exists: ${existsSync(capabilitiesDir)})`);
+        log(`   capabilities/default.json: ${capabilitiesFile} (exists: ${existsSync(capabilitiesFile)})`);
+        log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
+        log(`   build.rs: ${buildRs} (exists: ${existsSync(buildRs)})`);
+        log(`   Cargo.toml: ${cargoToml} (exists: ${existsSync(cargoToml)})`);
+
+        if (existsSync(capabilitiesFile)) {
+          try {
+            const capabilitiesContent = readFileSync(capabilitiesFile, 'utf-8');
+            const capabilitiesJson = JSON.parse(capabilitiesContent);
+            log(`   ✅ Capabilities file is valid JSON`);
+            log(`   ✅ Capability identifier: ${capabilitiesJson.identifier}`);
+            log(`   ✅ Capability has ${capabilitiesJson.permissions?.length || 0} permissions`);
+
+            // Check if plugin permissions are referenced
+            const pluginPerms = capabilitiesJson.permissions?.filter((p: string) => p.startsWith('wdio:'));
+            if (pluginPerms && pluginPerms.length > 0) {
+              log(`   ✅ References ${pluginPerms.length} plugin permissions: ${pluginPerms.join(', ')}`);
+            } else {
+              log(`   ⚠️  No plugin permissions referenced in capabilities file`);
+            }
+          } catch (error) {
+            log(`   ❌ Capabilities file is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+
+        // Check if plugin is accessible
+        const pluginPath = join(tempDir, 'packages', 'tauri-plugin');
+        log(`   Plugin path: ${pluginPath} (exists: ${existsSync(pluginPath)})`);
+        if (existsSync(pluginPath)) {
+          const pluginPermissions = join(pluginPath, 'permissions');
+          log(`   Plugin permissions: ${pluginPermissions} (exists: ${existsSync(pluginPermissions)})`);
+        }
+
+        // Check Cargo.toml for plugin dependency
+        if (existsSync(cargoToml)) {
+          const cargoTomlContent = readFileSync(cargoToml, 'utf-8');
+          if (cargoTomlContent.includes('tauri-plugin-wdio')) {
+            log(`   ✅ Plugin dependency found in Cargo.toml`);
+          } else {
+            log(`   ❌ Plugin dependency NOT found in Cargo.toml`);
+          }
+        }
+      }
+
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
+
+      // After build, check if gen directory was created
+      if (service === 'tauri') {
+        const srcTauriDir = join(packageDir, 'src-tauri');
+        const genDir = join(srcTauriDir, 'gen');
+        const aclManifest = join(genDir, 'schemas', 'acl-manifests.json');
+
+        log(`🔍 Debugging Tauri app build results...`);
+        log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
+        if (existsSync(genDir)) {
+          log(`   ✅ gen directory created`);
+          if (existsSync(aclManifest)) {
+            log(`   ✅ ACL manifest created: ${aclManifest}`);
+            try {
+              const manifestContent = readFileSync(aclManifest, 'utf-8');
+              const manifestJson = JSON.parse(manifestContent);
+              log(`   ✅ ACL manifest is valid JSON`);
+              if (manifestJson.wdio) {
+                log(`   ✅ Plugin (wdio) found in ACL manifest`);
+              } else {
+                log(`   ⚠️  Plugin (wdio) NOT found in ACL manifest`);
+              }
+              if (manifestJson.default) {
+                log(`   ✅ Default capability found in ACL manifest`);
+              } else {
+                log(`   ❌ Default capability NOT found in ACL manifest`);
+              }
+            } catch (error) {
+              log(`   ❌ ACL manifest is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          } else {
+            log(`   ❌ ACL manifest NOT created: ${aclManifest}`);
+          }
+        } else {
+          log(`   ❌ gen directory NOT created - this indicates ACL manifest generation failed`);
+        }
+      }
     }
 
     execCommand('pnpm test', packageDir, `Running tests for ${packageName}`);
@@ -338,16 +495,18 @@ async function main() {
 
       if (options.service === 'electron' || options.service === 'both') {
         const electronServiceDir = normalize(join(rootDir, 'packages', 'electron-service'));
-        const typesDir = normalize(join(rootDir, 'packages', 'electron-types'));
+        const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
         const cdpBridgeDir = normalize(join(rootDir, 'packages', 'electron-cdp-bridge'));
         packages.electronServicePath = findTgzFile(electronServiceDir, 'wdio-electron-service-');
-        packages.typesPath = findTgzFile(typesDir, 'wdio-electron-types-');
+        packages.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
         packages.cdpBridgePath = findTgzFile(cdpBridgeDir, 'wdio-electron-cdp-bridge-');
       }
 
       if (options.service === 'tauri' || options.service === 'both') {
         const tauriServiceDir = normalize(join(rootDir, 'packages', 'tauri-service'));
+        const typesDir = normalize(join(rootDir, 'packages', 'native-types'));
         packages.tauriServicePath = findTgzFile(tauriServiceDir, 'wdio-tauri-service-');
+        packages.typesPath = findTgzFile(typesDir, 'wdio-native-types-');
       }
 
       log(`📦 Using existing packages:`);

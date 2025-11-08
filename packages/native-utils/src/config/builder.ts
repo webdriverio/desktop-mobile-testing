@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { BuilderBuildInfo, BuilderConfig } from '@wdio/electron-types';
+import type { BuilderBuildInfo, BuilderConfig } from '@wdio/native-types';
 import type { NormalizedReadResult } from 'read-package-up';
 import { APP_NAME_DETECTION_ERROR } from '../constants.js';
 import { createLogger } from '../log.js';

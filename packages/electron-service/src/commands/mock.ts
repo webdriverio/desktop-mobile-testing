@@ -1,4 +1,4 @@
-import type { ElectronMock } from '@wdio/electron-types';
+import type { ElectronMock } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { createMock } from '../mock.js';
 import mockStore from '../mockStore.js';

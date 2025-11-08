@@ -6,7 +6,7 @@ import type {
   ElectronServiceGlobalOptions,
   ElectronType,
   ExecuteOpts,
-} from '@wdio/electron-types';
+} from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import type { Capabilities, Services } from '@wdio/types';
 import { ElectronCdpBridge, getDebuggerEndpoint } from './bridge.js';

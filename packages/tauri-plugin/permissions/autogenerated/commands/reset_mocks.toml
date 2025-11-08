@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-reset-mocks"
+description = "Enables the reset_mocks command without any pre-configured scope."
+commands.allow = ["reset_mocks"]
+
+[[permission]]
+identifier = "deny-reset-mocks"
+description = "Denies the reset_mocks command without any pre-configured scope."
+commands.deny = ["reset_mocks"]

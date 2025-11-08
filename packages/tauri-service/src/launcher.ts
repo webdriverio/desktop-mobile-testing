@@ -171,7 +171,23 @@ export default class TauriLaunchService {
     } else {
       // Standard session: single shared tauri-driver as before
       // Set up isolation is not necessary; app may use default data dir
+      const port = this.options.tauriDriverPort || 4444;
+      const hostname = '127.0.0.1';
+
       await this.startTauriDriver();
+
+      // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
+      // This is necessary for standalone mode where capabilities are passed directly to remote()
+      for (const cap of capsList) {
+        (cap as { port?: number; hostname?: string }).port = port;
+        (cap as { port?: number; hostname?: string }).hostname = hostname;
+        log.debug(
+          `Set tauri-driver connection on capabilities: ${hostname}:${port}, ` +
+            `browserName=${(cap as { browserName?: string }).browserName}, ` +
+            `port=${(cap as { port?: number }).port}, ` +
+            `hostname=${(cap as { hostname?: string }).hostname}`,
+        );
+      }
     }
 
     log.debug('Tauri service prepared successfully');

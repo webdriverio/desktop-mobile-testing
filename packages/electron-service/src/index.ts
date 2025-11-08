@@ -1,4 +1,6 @@
 import { browser as wdioBrowser } from '@wdio/globals';
+// Import types package to ensure module augmentation is loaded
+import '@wdio/native-types';
 import ElectronLaunchService from './launcher.js';
 import ElectronWorkerService from './service.js';
 import { init as initSession } from './session.js';

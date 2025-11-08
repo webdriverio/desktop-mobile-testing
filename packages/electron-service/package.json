@@ -55,7 +55,7 @@
     "@electron/fuses": "^2.0.0",
     "@vitest/spy": "^3.2.4",
     "@wdio/electron-cdp-bridge": "workspace:*",
-    "@wdio/electron-types": "workspace:*",
+    "@wdio/native-types": "workspace:*",
     "@wdio/native-utils": "workspace:*",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",

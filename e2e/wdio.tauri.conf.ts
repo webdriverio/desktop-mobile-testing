@@ -119,11 +119,11 @@ switch (envContext.testType) {
     specs = ['./test/tauri/multiremote/*.spec.ts'];
     break;
   case 'standalone':
-    specs = ['./test/tauri/standalone/api.spec.ts'];
+    specs = ['./test/tauri/standalone/*.spec.ts'];
     break;
   default:
     // Standard tests - core functionality without specialized test modes
-    specs = ['./test/tauri/api.spec.ts'];
+    specs = ['./test/tauri/*.spec.ts'];
     break;
 }
 

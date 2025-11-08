@@ -1,4 +1,4 @@
-import type { AppBuildInfo } from '@wdio/electron-types';
+import type { AppBuildInfo } from '@wdio/native-types';
 import type { NormalizedReadResult } from 'read-package-up';
 import { getConfig as getBuilderConfig } from './config/builder.js';
 import { getConfig as getForgeConfig } from './config/forge.js';

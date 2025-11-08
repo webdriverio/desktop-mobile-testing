@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import { normalize } from 'node:path';
-import type { AppBuildInfo } from '@wdio/electron-types';
+import type { AppBuildInfo } from '@wdio/native-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getBinaryPath } from '../src/binaryPath.js';
 

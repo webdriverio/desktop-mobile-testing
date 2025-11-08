@@ -1,10 +1,88 @@
+import type { TauriAPIs } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriCommandContext, TauriResult } from '../types.js';
 
 const log = createLogger('tauri-service', 'service');
 
 /**
- * Execute a Tauri command
+ * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs
+ * Matches Electron's execute pattern: accepts functions or strings, passes Tauri APIs as first parameter
+ */
+export async function execute<ReturnValue, InnerArguments extends unknown[]>(
+  browser: WebdriverIO.Browser,
+  script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
+  ...args: InnerArguments
+): Promise<ReturnValue | undefined> {
+  /**
+   * parameter check
+   */
+  if (typeof script !== 'string' && typeof script !== 'function') {
+    throw new Error('Expecting script to be type of "string" or "function"');
+  }
+
+  if (!browser) {
+    throw new Error('WDIO browser is not yet initialised');
+  }
+
+  // Check if plugin is available with retry logic (handles async module loading)
+  const pluginAvailable = await browser.executeAsync((done) => {
+    const checkPlugin = () => {
+      // @ts-expect-error - Plugin API injected at runtime
+      return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
+    };
+
+    // If already available, return immediately
+    if (checkPlugin()) {
+      done(true);
+      return;
+    }
+
+    // Otherwise, poll for up to 5 seconds
+    const startTime = Date.now();
+    const timeout = 5000;
+    const interval = 50;
+
+    const poll = () => {
+      if (checkPlugin()) {
+        done(true);
+      } else if (Date.now() - startTime > timeout) {
+        done(false);
+      } else {
+        setTimeout(poll, interval);
+      }
+    };
+
+    poll();
+  });
+
+  if (!pluginAvailable) {
+    throw new Error(
+      'Tauri plugin not available. Make sure @wdio/tauri-plugin is installed and registered in your Tauri app.',
+    );
+  }
+
+  // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
+  const scriptString = typeof script === 'function' ? script.toString() : script;
+
+  // Execute via plugin's execute command
+  // The plugin will inject the Tauri APIs object as the first argument
+  const result = await browser.execute(
+    function executeWithinTauri(script: string, ...args) {
+      // @ts-expect-error - Plugin API injected at runtime
+      return window.wdioTauri.execute(script, args);
+    },
+    scriptString,
+    ...args,
+  );
+
+  log.debug(`Execute result:`, result);
+
+  return (result as ReturnValue) ?? undefined;
+}
+
+/**
+ * Execute a Tauri command (legacy method - kept for backward compatibility)
+ * @deprecated Use execute() instead
  */
 export async function executeTauriCommand<T = unknown>(
   browser: WebdriverIO.Browser,
@@ -14,30 +92,7 @@ export async function executeTauriCommand<T = unknown>(
   log.debug(`Executing Tauri command: ${command} with args:`, args);
 
   try {
-    // Execute Tauri command via WebDriver
-    const result = await browser.execute(
-      (cmd: string, ...cmdArgs: unknown[]) => {
-        console.log('🔍 Executing Tauri command:', cmd, 'with args:', cmdArgs);
-        console.log(
-          '🔍 Args types:',
-          cmdArgs.map((arg) => typeof arg),
-        );
-        console.log(
-          '🔍 Args JSON:',
-          cmdArgs.map((arg) => JSON.stringify(arg)),
-        );
-
-        // Tauri v2 uses window.__TAURI__.core.invoke
-        // @ts-expect-error - Tauri command API injected at runtime
-        const invokeResult = window.__TAURI__.core.invoke(cmd, ...cmdArgs);
-        console.log('🔍 Tauri invoke result:', invokeResult);
-        return invokeResult;
-      },
-      command,
-      ...args,
-    );
-
-    log.debug(`Tauri command result:`, result);
+    const result = await execute(browser, ({ core }) => core.invoke(command, ...args));
 
     return {
       success: true,

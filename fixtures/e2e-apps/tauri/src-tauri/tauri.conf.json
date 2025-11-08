@@ -5,8 +5,8 @@
   "identifier": "com.tauri.basic",
   "build": {
     "frontendDist": "../dist",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "beforeDevCommand": "pnpm vite dev",
+    "beforeBuildCommand": "pnpm vite build"
   },
   "app": {
     "security": {

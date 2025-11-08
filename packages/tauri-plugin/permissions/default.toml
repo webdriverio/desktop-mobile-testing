@@ -1,0 +1,62 @@
+# WebDriverIO Tauri Plugin Permissions
+#
+# This file defines the ACL (Access Control List) permissions for the wdio plugin.
+# These permissions control which commands apps can invoke from the frontend.
+#
+# Permission Structure:
+# - [default]: The default permission set that includes all plugin commands
+# - [allow-*]: Individual permissions for each command
+#
+# Usage in Apps:
+# Add to your app's capabilities file (e.g., capabilities/default.json):
+#   "wdio:allow-execute",
+#   "wdio:allow-set-mock",
+#   etc.
+#
+# Or use the default set:
+#   "wdio:default"
+#
+# For more on Tauri v2 permissions: https://v2.tauri.app/security/capabilities/
+
+"$schema" = "https://schema.tauri.app/permissions/2"
+
+[default]
+description = "Allows all WebDriverIO plugin commands for testing"
+permissions = [
+  "allow-execute",
+  "allow-set-mock",
+  "allow-get-mock",
+  "allow-clear-mocks",
+  "allow-reset-mocks",
+  "allow-restore-mocks"
+]
+
+[allow-execute]
+identifier = "allow-execute"
+description = "Allow executing scripts via the wdio plugin"
+commands = { allow = ["wdio.execute"], deny = [] }
+
+[allow-set-mock]
+identifier = "allow-set-mock"
+description = "Allow setting mocks via the wdio plugin"
+commands = { allow = ["wdio.set-mock"], deny = [] }
+
+[allow-get-mock]
+identifier = "allow-get-mock"
+description = "Allow getting mocks via the wdio plugin"
+commands = { allow = ["wdio.get-mock"], deny = [] }
+
+[allow-clear-mocks]
+identifier = "allow-clear-mocks"
+description = "Allow clearing mocks via the wdio plugin"
+commands = { allow = ["wdio.clear-mocks"], deny = [] }
+
+[allow-reset-mocks]
+identifier = "allow-reset-mocks"
+description = "Allow resetting mocks via the wdio plugin"
+commands = { allow = ["wdio.reset-mocks"], deny = [] }
+
+[allow-restore-mocks]
+identifier = "allow-restore-mocks"
+description = "Allow restoring mocks via the wdio plugin"
+commands = { allow = ["wdio.restore-mocks"], deny = [] }
