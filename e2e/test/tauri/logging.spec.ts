@@ -120,6 +120,7 @@ describe('Tauri Log Integration', () => {
   describe('Frontend Log Capture', () => {
     it('should capture frontend console logs when enabled', async () => {
       // Trigger frontend logs by executing a script
+      // Note: attachConsole() forwards console logs to Rust stdout
       await browser.execute(() => {
         console.info('[Test] Frontend INFO log from test');
         console.warn('[Test] Frontend WARN log from test');
@@ -131,15 +132,24 @@ describe('Tauri Log Integration', () => {
 
       const logs = readWdioLogs();
       console.log(`[DEBUG] Total log length: ${logs.length}`);
-      console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
+
+      // Search for frontend logs - they should have [Tauri:Frontend] prefix
+      // and contain the test message
+      const frontendLogs = findLogEntries(logs, /\[Tauri:Frontend\]/);
+      console.log(`[DEBUG] Found ${frontendLogs.length} frontend log entries`);
+      if (frontendLogs.length > 0) {
+        console.log(`[DEBUG] Sample frontend logs: ${frontendLogs.slice(0, 5).join('\n')}`);
+      }
 
       if (!logs) {
         throw new Error('No logs found in output directory');
       }
 
-      assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*INFO log/i);
-      assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*WARN log/i);
-      assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*ERROR log/i);
+      // Check for frontend logs - they should be identified and forwarded
+      // Note: If attachConsole() isn't working, these logs won't appear
+      assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*Frontend.*INFO/i);
+      assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*Frontend.*WARN/i);
+      assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*Frontend.*ERROR/i);
     });
 
     it('should filter frontend logs by level', async () => {

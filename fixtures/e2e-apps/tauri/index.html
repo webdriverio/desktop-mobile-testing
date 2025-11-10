@@ -98,14 +98,30 @@
     </div>
 
     <script type="module">
-      // Attach console to Tauri logger first so all logs are captured
+      // Forward console logs to Tauri logger using direct plugin APIs
+      // This ensures all console logs (including from browser.execute()) are captured
       (async () => {
         try {
-          const { attachConsole } = await import('@tauri-apps/plugin-log');
-          await attachConsole();
-          console.log('[App] Console attached to Tauri logger');
-        } catch (error) {
-          console.error('[App] Failed to attach console to Tauri logger:', error);
+          const { warn, debug, trace, info, error } = await import('@tauri-apps/plugin-log');
+
+          // Forward console methods to Tauri logger
+          function forwardConsole(fnName, logger) {
+            const original = console[fnName];
+            console[fnName] = (message) => {
+              original(message);
+              void logger(message);
+            };
+          }
+
+          forwardConsole('log', trace);
+          forwardConsole('debug', debug);
+          forwardConsole('info', info);
+          forwardConsole('warn', warn);
+          forwardConsole('error', error);
+
+          console.log('[App] Console forwarded to Tauri logger');
+        } catch (err) {
+          console.error('[App] Failed to forward console to Tauri logger:', err);
         }
       })();
 

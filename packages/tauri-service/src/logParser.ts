@@ -31,16 +31,25 @@ const TAURI_DRIVER_PATTERNS = [
 
 /**
  * Patterns that indicate frontend console logs (forwarded via attachConsole)
- * These logs come through stdout but originate from the frontend
+ * These logs come through stdout but originate from the frontend.
+ *
+ * Note: When attachConsole() forwards console logs, they appear in the same format
+ * as Rust logs: [timestamp][time][module][LEVEL] message
+ *
+ * We identify frontend logs by checking if they contain frontend-specific patterns
+ * that wouldn't appear in backend Rust code.
  */
 const FRONTEND_LOG_PATTERNS = [
-  // Console log patterns from our test code
+  // Console log patterns from our test code - must contain "Frontend" keyword
   /\[Test\].*(Frontend|frontend)/i,
+  // Frontend-specific patterns that wouldn't appear in Rust
   /console\.(log|info|warn|error|debug|trace)/i,
-  // Tauri plugin log format might include webview target
-  /webview/i,
-  // Common frontend log patterns
+  // App initialization logs from HTML
   /\[App\]/i,
+  // Window/DOM related logs
+  /window\.|document\.|typeof window/i,
+  // Frontend-specific error patterns
+  /Uncaught|ReferenceError|TypeError.*window/i,
 ];
 
 /**
