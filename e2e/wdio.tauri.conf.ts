@@ -137,6 +137,10 @@ type TauriCapability = {
   'wdio:tauriServiceOptions': {
     appBinaryPath: string;
     appArgs: string[];
+    captureBackendLogs?: boolean;
+    captureFrontendLogs?: boolean;
+    backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+    frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   };
 };
 
@@ -170,8 +174,8 @@ if (envContext.isMultiremote) {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
           // Enable log capture for logging tests
-          captureBackendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
-          captureFrontendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+          captureBackendLogs: specs.some((s) => s.includes('logging.spec.ts')),
+          captureFrontendLogs: specs.some((s) => s.includes('logging.spec.ts')),
           backendLogLevel: 'info',
           frontendLogLevel: 'info',
         },
@@ -190,8 +194,8 @@ if (envContext.isMultiremote) {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
           // Enable log capture for logging tests
-          captureBackendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
-          captureFrontendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+          captureBackendLogs: specs.some((s) => s.includes('logging.spec.ts')),
+          captureFrontendLogs: specs.some((s) => s.includes('logging.spec.ts')),
           backendLogLevel: 'info',
           frontendLogLevel: 'info',
         },
@@ -213,8 +217,8 @@ if (envContext.isMultiremote) {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
         // Enable log capture for logging tests
-        captureBackendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
-        captureFrontendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+        captureBackendLogs: specs.some((s) => s.includes('logging.spec.ts')),
+        captureFrontendLogs: specs.some((s) => s.includes('logging.spec.ts')),
         backendLogLevel: 'info',
         frontendLogLevel: 'info',
       },
