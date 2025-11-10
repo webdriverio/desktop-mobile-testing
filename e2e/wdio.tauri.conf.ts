@@ -174,8 +174,8 @@ if (envContext.isMultiremote) {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
           // Enable log capture for logging tests
-          captureBackendLogs: specs.some((s) => s.includes('logging.spec.ts')),
-          captureFrontendLogs: specs.some((s) => s.includes('logging.spec.ts')),
+          captureBackendLogs: true,
+          captureFrontendLogs: true,
           backendLogLevel: 'info',
           frontendLogLevel: 'info',
         },
@@ -194,8 +194,8 @@ if (envContext.isMultiremote) {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
           // Enable log capture for logging tests
-          captureBackendLogs: specs.some((s) => s.includes('logging.spec.ts')),
-          captureFrontendLogs: specs.some((s) => s.includes('logging.spec.ts')),
+          captureBackendLogs: true,
+          captureFrontendLogs: true,
           backendLogLevel: 'info',
           frontendLogLevel: 'info',
         },
@@ -217,8 +217,8 @@ if (envContext.isMultiremote) {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
         // Enable log capture for logging tests
-        captureBackendLogs: specs.some((s) => s.includes('logging.spec.ts')),
-        captureFrontendLogs: specs.some((s) => s.includes('logging.spec.ts')),
+        captureBackendLogs: true,
+        captureFrontendLogs: true,
         backendLogLevel: 'info',
         frontendLogLevel: 'info',
       },

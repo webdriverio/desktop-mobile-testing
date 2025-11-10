@@ -14,6 +14,7 @@ function readWdioLogs(): string {
   // For tests, logs are in e2e/logs/{testType}-{appDirName}/
   const logBaseDir = path.join(__dirname, '..', '..', 'logs');
   if (!fs.existsSync(logBaseDir)) {
+    console.log(`[DEBUG] Log base directory does not exist: ${logBaseDir}`);
     return '';
   }
 
@@ -26,8 +27,11 @@ function readWdioLogs(): string {
     .reverse();
 
   if (logDirs.length === 0) {
+    console.log(`[DEBUG] No log directories found in: ${logBaseDir}`);
     return '';
   }
+
+  console.log(`[DEBUG] Found log directories: ${logDirs.join(', ')}`);
 
   // Read all log files from the most recent directory
   const logDir = path.join(logBaseDir, logDirs[0]);
@@ -36,14 +40,18 @@ function readWdioLogs(): string {
     .filter((file) => file.endsWith('.log'))
     .sort();
 
+  console.log(`[DEBUG] Reading logs from: ${logDir}`);
+  console.log(`[DEBUG] Found log files: ${logFiles.join(', ')}`);
+
   let allLogs = '';
   for (const logFile of logFiles) {
     const logPath = path.join(logDir, logFile);
     try {
       const content = fs.readFileSync(logPath, 'utf8');
       allLogs += content + '\n';
-    } catch {
-      // Ignore read errors
+      console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
+    } catch (error) {
+      console.log(`[DEBUG] Failed to read ${logFile}: ${error}`);
     }
   }
 
@@ -75,10 +83,17 @@ describe('Tauri Log Integration', () => {
       // Generate logs via test command
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
-      // Wait a bit for logs to be captured
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait longer for logs to be captured and written to disk
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       const logs = readWdioLogs();
+      console.log(`[DEBUG] Total log length: ${logs.length}`);
+      console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
+
+      if (!logs) {
+        throw new Error('No logs found in output directory');
+      }
+
       assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*INFO level log/i);
       assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*WARN level log/i);
       assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*ERROR level log/i);
@@ -111,10 +126,17 @@ describe('Tauri Log Integration', () => {
         console.error('[Test] Frontend ERROR log from test');
       });
 
-      // Wait a bit for logs to be captured
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait longer for logs to be captured and written to disk
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       const logs = readWdioLogs();
+      console.log(`[DEBUG] Total log length: ${logs.length}`);
+      console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
+
+      if (!logs) {
+        throw new Error('No logs found in output directory');
+      }
+
       assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*INFO log/i);
       assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*WARN log/i);
       assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*ERROR log/i);
@@ -145,10 +167,17 @@ describe('Tauri Log Integration', () => {
         console.info('[Test] Combined test - frontend log');
       });
 
-      // Wait a bit for logs to be captured
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait longer for logs to be captured and written to disk
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       const logs = readWdioLogs();
+      console.log(`[DEBUG] Total log length: ${logs.length}`);
+      console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
+
+      if (!logs) {
+        throw new Error('No logs found in output directory');
+      }
+
       assertLogContains(logs, /\[Tauri:Backend\].*\[Test\]/i);
       assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\]/i);
     });
