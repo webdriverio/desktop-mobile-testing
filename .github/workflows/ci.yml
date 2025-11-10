@@ -87,35 +87,20 @@ jobs:
   # Split Electron and Tauri tests across separate jobs for better parallelization and clarity
   # Electron apps are built inline on the test runner (faster builds, Turbo caching handles it)
   # Tauri apps are built separately due to longer build times and system dependencies
-  package-electron-linux:
-    name: Package - Electron [Linux]
+  # Electron package tests are split by module type (CJS/ESM) for better error isolation
+  package-electron-matrix:
+    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}] - ${{ matrix.module-type }}
     needs: [build, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        module-type: ['cjs', 'esm']
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
-      os: 'ubuntu-latest'
+      os: ${{ matrix.os }}
       service: 'electron'
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-
-  package-electron-windows:
-    name: Package - Electron [Windows]
-    needs: [build, lint]
-    uses: ./.github/workflows/_ci-package.reusable.yml
-    with:
-      os: 'windows-latest'
-      service: 'electron'
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-
-  package-electron-macos:
-    name: Package - Electron [macOS]
-    needs: [build, lint]
-    uses: ./.github/workflows/_ci-package.reusable.yml
-    with:
-      os: 'macos-latest'
-      service: 'electron'
+      module-type: ${{ matrix.module-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
