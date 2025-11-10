@@ -128,8 +128,15 @@ wdio-desktop-mobile-testing/
 │   ├── @wdio/             # Scoped utility packages
 │   │   ├── electron-utils/
 │   │   ├── electron-cdp-bridge/
-│   │   └── native-utils/
-│   └── wdio-electron-service/  # Service packages
+│   │   ├── native-utils/
+│   │   └── tauri-plugin/  # Tauri v2 plugin
+│   ├── wdio-electron-service/  # Service packages
+│   └── wdio-tauri-service/     # Tauri service
+├── fixtures/              # Test fixtures and example apps
+│   ├── e2e-apps/         # E2E test applications
+│   │   └── tauri/        # Tauri E2E app
+│   └── package-tests/     # Package test fixtures
+│       └── tauri-app/     # Tauri package test app
 ├── examples/              # Example applications
 ├── e2e/                  # E2E test scenarios
 ├── docs/                 # Documentation
@@ -296,12 +303,45 @@ Workspace settings (`.vscode/settings.json`):
 }
 ```
 
+## Platform-Specific Setup
+
+### Tauri Development
+
+For working with Tauri packages and plugins:
+
+1. **Install Rust** (if not already installed):
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+
+2. **Install Tauri CLI**:
+   ```bash
+   cargo install tauri-cli
+   # or
+   npm install -g @tauri-apps/cli
+   ```
+
+3. **Build Tauri Plugin**:
+   ```bash
+   cd packages/tauri-plugin
+   cargo build
+   ```
+
+4. **Build Tauri Test Apps**:
+   ```bash
+   cd fixtures/e2e-apps/tauri
+   pnpm tauri build
+   ```
+
+See the [Tauri Plugin README](../packages/tauri-plugin/README.md) for detailed setup instructions.
+
 ## Next Steps
 
 - Read [package-structure.md](./package-structure.md) for package conventions
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines
 - Check out example packages in `packages/@wdio/electron-service/`
 - Explore the Electron service implementation in `packages/wdio-electron-service/`
+- See [Tauri Plugin README](../packages/tauri-plugin/README.md) for Tauri plugin setup
 
 ## Getting Help
 
