@@ -5,6 +5,9 @@ export default defineConfig({
     build: {
       rollupOptions: {
         external: ['electron'],
+        output: {
+          format: 'cjs',
+        },
       },
     },
   },
@@ -14,11 +17,19 @@ export default defineConfig({
         external: ['electron'],
         output: {
           format: 'cjs',
+          entryFileNames: '[name].cjs',
         },
       },
     },
   },
   renderer: {
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+        },
+      },
+    },
     resolve: {
       // workaround for windows path issue
       // see https://github.com/alex8088/electron-vite/issues/802

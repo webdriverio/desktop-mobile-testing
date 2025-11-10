@@ -4,6 +4,11 @@ export default defineConfig({
   main: {
     build: {
       outDir: 'dist/main',
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+        },
+      },
     },
   },
   preload: {
@@ -12,6 +17,7 @@ export default defineConfig({
       rollupOptions: {
         output: {
           format: 'cjs',
+          entryFileNames: '[name].cjs',
         },
       },
     },
@@ -20,7 +26,16 @@ export default defineConfig({
     root: 'src/renderer',
     build: {
       outDir: 'dist/renderer',
+      rollupOptions: {
+        output: {
+          format: 'es',
+        },
+      },
     },
-    resolve: { preserveSymlinks: true },
+    // workaround for windows path issue
+    // see https://github.com/alex8088/electron-vite/issues/802
+    resolve: {
+      preserveSymlinks: true,
+    },
   },
 });
