@@ -178,7 +178,21 @@ async fn write_clipboard(content: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Generate test logs at various levels for E2E testing
+#[tauri::command]
+fn generate_test_logs() -> Result<String, String> {
+    log::trace!("[Test] This is a TRACE level log");
+    log::debug!("[Test] This is a DEBUG level log");
+    log::info!("[Test] This is an INFO level log");
+    log::warn!("[Test] This is a WARN level log");
+    log::error!("[Test] This is an ERROR level log");
+    Ok("Logs generated".to_string())
+}
+
 fn main() {
+    // Log application startup at various levels
+    log::info!("[App] Tauri application starting");
+    log::debug!("[App] Debug: Application initialization");
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_wdio::init())
@@ -206,7 +220,8 @@ fn main() {
             get_current_dir,
             get_platform_info,
             read_clipboard,
-            write_clipboard
+            write_clipboard,
+            generate_test_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

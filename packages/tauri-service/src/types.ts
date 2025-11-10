@@ -19,6 +19,26 @@ export interface TauriServiceOptions {
   logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   commandTimeout?: number;
   startTimeout?: number;
+  /**
+   * Enable/disable capturing Rust backend logs from stdout
+   * @default false
+   */
+  captureBackendLogs?: boolean;
+  /**
+   * Enable/disable capturing frontend console logs from webview
+   * @default false
+   */
+  captureFrontendLogs?: boolean;
+  /**
+   * Minimum log level for backend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Minimum log level for frontend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
 }
 
 /**
@@ -47,6 +67,26 @@ export interface TauriServiceGlobalOptions {
   startTimeout?: number;
   tauriDriverPort?: number;
   nativeDriverPath?: string;
+  /**
+   * Enable/disable capturing Rust backend logs from stdout
+   * @default false
+   */
+  captureBackendLogs?: boolean;
+  /**
+   * Enable/disable capturing frontend console logs from webview
+   * @default false
+   */
+  captureFrontendLogs?: boolean;
+  /**
+   * Minimum log level for backend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Minimum log level for frontend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
 }
 
 /**

@@ -5,8 +5,10 @@ import { join } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
+import { forwardLog, type LogLevel } from './logForwarder.js';
+import { parseLogLines } from './logParser.js';
 import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
-import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
+import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
 
@@ -33,12 +35,31 @@ function generateDataDirectory(instanceId: string): string {
 // (per-instance env is set when spawning the tauri-driver process)
 
 /**
+ * Merge global options with capability-specific options
+ */
+function mergeOptions(
+  globalOptions: TauriServiceGlobalOptions,
+  capabilityOptions?: TauriServiceOptions,
+): TauriServiceOptions {
+  return {
+    ...globalOptions,
+    ...capabilityOptions,
+    // Log capture options default to false if not specified
+    captureBackendLogs: capabilityOptions?.captureBackendLogs ?? globalOptions.captureBackendLogs ?? false,
+    captureFrontendLogs: capabilityOptions?.captureFrontendLogs ?? globalOptions.captureFrontendLogs ?? false,
+    backendLogLevel: (capabilityOptions?.backendLogLevel ?? globalOptions.backendLogLevel ?? 'info') as LogLevel,
+    frontendLogLevel: (capabilityOptions?.frontendLogLevel ?? globalOptions.frontendLogLevel ?? 'info') as LogLevel,
+  };
+}
+
+/**
  * Tauri launcher service
  */
 export default class TauriLaunchService {
   private tauriDriverProcess?: ChildProcess;
   private appBinaryPath?: string;
   private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
+  private instanceOptions: Map<string, TauriServiceOptions> = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -149,6 +170,10 @@ export default class TauriLaunchService {
         const cap = value.capabilities;
         const instanceId = extractInstanceId(cap) || String(i);
 
+        // Store options for this instance
+        const instanceOptions = mergeOptions(this.options, cap['wdio:tauriServiceOptions']);
+        this.instanceOptions.set(instanceId, instanceOptions);
+
         const dataDir = generateDataDirectory(instanceId);
         const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
         const env = { ...process.env, [envVarName]: dataDir };
@@ -166,7 +191,7 @@ export default class TauriLaunchService {
           `Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
             `(native port: ${instanceNativePort})`,
         );
-        await this.startTauriDriverForInstance(instanceId, instancePort, instanceNativePort, env);
+        await this.startTauriDriverForInstance(instanceId, instancePort, instanceNativePort, env, instanceOptions);
       }
     } else {
       // Standard session: single shared tauri-driver as before
@@ -174,7 +199,7 @@ export default class TauriLaunchService {
       const port = this.options.tauriDriverPort || 4444;
       const hostname = '127.0.0.1';
 
-      await this.startTauriDriver();
+      await this.startTauriDriver(capsList);
 
       // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
       // This is necessary for standalone mode where capabilities are passed directly to remote()
@@ -389,7 +414,7 @@ export default class TauriLaunchService {
   /**
    * Start tauri-driver process
    */
-  private async startTauriDriver(): Promise<void> {
+  private async startTauriDriver(capabilities?: TauriCapabilities[]): Promise<void> {
     const tauriDriverPath = getTauriDriverPath();
     const port = this.options.tauriDriverPort || 4444;
     const nativePort = 4445; // Default native port for single instance
@@ -423,6 +448,10 @@ export default class TauriLaunchService {
         env,
       });
 
+      // Get options for backend log capture (use first capability's options for single instance)
+      const firstCap = capabilities?.[0];
+      const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
+
       this.tauriDriverProcess.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
         log.debug(`tauri-driver stdout: ${output}`);
@@ -431,11 +460,29 @@ export default class TauriLaunchService {
         if (output.includes('tauri-driver started') || output.includes('listening on')) {
           resolve();
         }
+
+        // Parse and forward backend logs if enabled
+        if (options.captureBackendLogs) {
+          const parsedLogs = parseLogLines(output);
+          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
+          for (const parsedLog of parsedLogs) {
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel);
+          }
+        }
       });
 
       this.tauriDriverProcess.stderr?.on('data', (data: Buffer) => {
         const output = data.toString();
         log.error(`tauri-driver stderr: ${output}`);
+
+        // Parse and forward backend logs from stderr if enabled
+        if (options.captureBackendLogs) {
+          const parsedLogs = parseLogLines(output);
+          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
+          for (const parsedLog of parsedLogs) {
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel);
+          }
+        }
       });
 
       this.tauriDriverProcess.on('error', (error: Error) => {
@@ -468,6 +515,7 @@ export default class TauriLaunchService {
     port: number,
     nativePort: number,
     env: NodeJS.ProcessEnv,
+    options?: TauriServiceOptions,
   ): Promise<void> {
     const tauriDriverPath = getTauriDriverPath();
 
@@ -490,6 +538,8 @@ export default class TauriLaunchService {
       log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
       this.tauriDriverProcesses.set(instanceId, { proc, port, nativePort });
 
+      const instanceOptions = options ?? mergeOptions(this.options, undefined);
+
       proc.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
         log.debug(`[${instanceId}] stdout: ${output.trim()}`);
@@ -497,11 +547,29 @@ export default class TauriLaunchService {
           log.info(`✅ tauri-driver [${instanceId}] started successfully on port ${port}`);
           resolve();
         }
+
+        // Parse and forward backend logs if enabled
+        if (instanceOptions.captureBackendLogs) {
+          const parsedLogs = parseLogLines(output);
+          const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
+          for (const parsedLog of parsedLogs) {
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+          }
+        }
       });
 
       proc.stderr?.on('data', (data: Buffer) => {
         const output = data.toString();
         log.error(`[${instanceId}] stderr: ${output.trim()}`);
+
+        // Parse and forward backend logs from stderr if enabled
+        if (instanceOptions.captureBackendLogs) {
+          const parsedLogs = parseLogLines(output);
+          const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
+          for (const parsedLog of parsedLogs) {
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+          }
+        }
       });
 
       proc.on('error', (error: Error) => {

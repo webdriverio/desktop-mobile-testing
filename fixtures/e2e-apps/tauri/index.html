@@ -120,6 +120,13 @@
       console.log('[App] Plugin imported');
       console.log('[App] window.wdioTauri available after import:', typeof window.wdioTauri !== 'undefined');
 
+      // Generate test logs at various levels
+      console.trace('[Test] This is a TRACE level log');
+      console.debug('[Test] This is a DEBUG level log');
+      console.info('[Test] This is an INFO level log');
+      console.warn('[Test] This is a WARN level log');
+      console.error('[Test] This is an ERROR level log');
+
       // Import Tauri API using npm module approach (recommended for v2)
       // This is the preferred way in Tauri v2
       (async () => {

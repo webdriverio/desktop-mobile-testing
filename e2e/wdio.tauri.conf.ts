@@ -169,6 +169,11 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
+          // Enable log capture for logging tests
+          captureBackendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+          captureFrontendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+          backendLogLevel: 'info',
+          frontendLogLevel: 'info',
         },
       },
       hostname: '127.0.0.1',
@@ -184,6 +189,11 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
+          // Enable log capture for logging tests
+          captureBackendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+          captureFrontendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+          backendLogLevel: 'info',
+          frontendLogLevel: 'info',
         },
       },
       hostname: '127.0.0.1',
@@ -202,6 +212,11 @@ if (envContext.isMultiremote) {
       'wdio:tauriServiceOptions': {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
+        // Enable log capture for logging tests
+        captureBackendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+        captureFrontendLogs: envContext.specs.some((s) => s.includes('logging.spec.ts')),
+        backendLogLevel: 'info',
+        frontendLogLevel: 'info',
       },
     },
   ];
