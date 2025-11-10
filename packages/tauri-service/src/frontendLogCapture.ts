@@ -1,5 +1,8 @@
+import { createLogger } from '@wdio/native-utils';
 import type { LogLevel } from './logForwarder.js';
 import { forwardLog } from './logForwarder.js';
+
+const log = createLogger('tauri-service');
 
 export interface WebDriverLogEntry {
   level: string;
@@ -38,8 +41,28 @@ export async function captureFrontendLogs(
   instanceId?: string,
 ): Promise<void> {
   try {
+    // Check if getLogs is supported
+    if (typeof browser.getLogs !== 'function') {
+      log.debug(`[${instanceId || 'standalone'}] browser.getLogs is not a function, skipping frontend log capture.`);
+      return;
+    }
+
+    // Check available log types
+    const logTypes = await browser.getLogTypes();
+    if (!logTypes.includes('browser')) {
+      log.debug(
+        `[${instanceId || 'standalone'}] 'browser' log type not available, skipping frontend log capture. Available types: ${logTypes.join(', ')}`,
+      );
+      return;
+    }
+
     // Get logs from browser
     const logs = await browser.getLogs('browser');
+
+    if (!Array.isArray(logs) || logs.length === 0) {
+      // No logs available yet, this is normal
+      return;
+    }
 
     for (const logEntry of logs) {
       // Type assertion for WebDriver log entry structure
@@ -52,13 +75,11 @@ export async function captureFrontendLogs(
     }
   } catch (error) {
     // getLogs may not be supported in all WebDriver implementations
-    // Silently fail - this is expected in some scenarios
-    if (error instanceof Error && error.message.includes('getLogs')) {
-      // Expected - getLogs not supported
-      return;
-    }
-    // Re-throw unexpected errors
-    throw error;
+    // Log the error for debugging but don't fail
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log.debug(
+      `[${instanceId || 'standalone'}] Failed to capture frontend logs: ${errorMessage}. This may be expected if getLogs is not supported.`,
+    );
   }
 }
 
