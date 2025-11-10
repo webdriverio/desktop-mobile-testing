@@ -22,6 +22,8 @@ sysinfo = "0.30.5"
 # For clipboard
 clipboard = "0.5.0"
 tauri-plugin-log = "2.0.0-rc.2"
+# For logging macros (log::info!, log::debug!, etc.)
+log = "0.4"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
