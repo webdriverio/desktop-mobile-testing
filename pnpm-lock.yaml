@@ -148,40 +148,7 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12
 
-  fixtures/e2e-apps/electron-builder-cjs:
-    devDependencies:
-      '@types/node':
-        specifier: ^24.7.2
-        version: 24.9.1
-      '@wdio/cli':
-        specifier: catalog:default
-        version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
-      '@wdio/globals':
-        specifier: catalog:default
-        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
-      '@wdio/local-runner':
-        specifier: catalog:default
-        version: 9.20.0(@wdio/globals@9.17.0)(webdriverio@9.20.0(puppeteer-core@22.15.0))
-      '@wdio/mocha-framework':
-        specifier: catalog:default
-        version: 9.20.0
-      electron:
-        specifier: catalog:default
-        version: 38.3.0
-      electron-builder:
-        specifier: ^26.0.12
-        version: 26.0.12(electron-builder-squirrel-windows@26.0.12)
-      tsx:
-        specifier: ^4.20.6
-        version: 4.20.6
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      webdriverio:
-        specifier: catalog:default
-        version: 9.20.0(puppeteer-core@22.15.0)
-
-  fixtures/e2e-apps/electron-builder-esm:
+  fixtures/e2e-apps/electron-builder:
     devDependencies:
       '@rollup/plugin-commonjs':
         specifier: ^28.0.6
@@ -226,7 +193,7 @@ importers:
         specifier: catalog:default
         version: 9.20.0(puppeteer-core@22.15.0)
 
-  fixtures/e2e-apps/electron-forge-cjs:
+  fixtures/e2e-apps/electron-forge:
     devDependencies:
       '@electron-forge/cli':
         specifier: ^7.10.2
@@ -271,94 +238,7 @@ importers:
         specifier: catalog:default
         version: 9.20.0(puppeteer-core@22.15.0)
 
-  fixtures/e2e-apps/electron-forge-esm:
-    devDependencies:
-      '@electron-forge/cli':
-        specifier: ^7.10.2
-        version: 7.10.2(encoding@0.1.13)
-      '@rollup/plugin-commonjs':
-        specifier: ^28.0.6
-        version: 28.0.8(rollup@4.52.5)
-      '@rollup/plugin-node-resolve':
-        specifier: ^16.0.2
-        version: 16.0.3(rollup@4.52.5)
-      '@rollup/plugin-typescript':
-        specifier: ^12.1.4
-        version: 12.1.4(rollup@4.52.5)(tslib@2.8.1)(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.7.2
-        version: 24.9.1
-      '@wdio/cli':
-        specifier: catalog:default
-        version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
-      '@wdio/globals':
-        specifier: catalog:default
-        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
-      '@wdio/local-runner':
-        specifier: catalog:default
-        version: 9.20.0(@wdio/globals@9.17.0)(webdriverio@9.20.0(puppeteer-core@22.15.0))
-      '@wdio/mocha-framework':
-        specifier: catalog:default
-        version: 9.20.0
-      electron:
-        specifier: catalog:default
-        version: 38.3.0
-      rollup:
-        specifier: ^4.52.4
-        version: 4.52.5
-      tsx:
-        specifier: ^4.20.6
-        version: 4.20.6
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      webdriverio:
-        specifier: catalog:default
-        version: 9.20.0(puppeteer-core@22.15.0)
-
-  fixtures/e2e-apps/electron-no-binary-cjs:
-    devDependencies:
-      '@rollup/plugin-commonjs':
-        specifier: ^28.0.6
-        version: 28.0.8(rollup@4.52.5)
-      '@rollup/plugin-node-resolve':
-        specifier: ^16.0.2
-        version: 16.0.3(rollup@4.52.5)
-      '@rollup/plugin-typescript':
-        specifier: ^12.1.4
-        version: 12.1.4(rollup@4.52.5)(tslib@2.8.1)(typescript@5.9.3)
-      '@types/node':
-        specifier: ^24.7.2
-        version: 24.9.1
-      '@wdio/cli':
-        specifier: catalog:default
-        version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
-      '@wdio/globals':
-        specifier: catalog:default
-        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
-      '@wdio/local-runner':
-        specifier: catalog:default
-        version: 9.20.0(@wdio/globals@9.17.0)(webdriverio@9.20.0(puppeteer-core@22.15.0))
-      '@wdio/mocha-framework':
-        specifier: catalog:default
-        version: 9.20.0
-      electron:
-        specifier: catalog:default
-        version: 38.3.0
-      rollup:
-        specifier: ^4.52.4
-        version: 4.52.5
-      tsx:
-        specifier: ^4.20.6
-        version: 4.20.6
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      webdriverio:
-        specifier: catalog:default
-        version: 9.20.0(puppeteer-core@22.15.0)
-
-  fixtures/e2e-apps/electron-no-binary-esm:
+  fixtures/e2e-apps/electron-no-binary:
     devDependencies:
       '@rollup/plugin-commonjs':
         specifier: ^28.0.6
@@ -440,7 +320,7 @@ importers:
         specifier: ^7.2.0
         version: 7.2.0(@types/node@24.9.1)(jiti@2.6.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1)
 
-  fixtures/package-tests/electron-builder-app:
+  fixtures/package-tests/electron-builder-app-cjs:
     devDependencies:
       '@types/node':
         specifier: ^24.7.2
@@ -479,7 +359,46 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  fixtures/package-tests/electron-forge-app:
+  fixtures/package-tests/electron-builder-app-esm:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.7.2
+        version: 24.9.1
+      '@wdio/cli':
+        specifier: ^9.20.0
+        version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
+      '@wdio/electron-service':
+        specifier: workspace:*
+        version: link:../../../packages/electron-service
+      '@wdio/globals':
+        specifier: ^9.17.0
+        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
+      '@wdio/local-runner':
+        specifier: ^9.20.0
+        version: 9.20.0(@wdio/globals@9.17.0)(webdriverio@9.20.0(puppeteer-core@22.15.0))
+      '@wdio/mocha-framework':
+        specifier: ^9.20.0
+        version: 9.20.0
+      '@wdio/spec-reporter':
+        specifier: ^9.20.0
+        version: 9.20.0
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      electron:
+        specifier: 38.3.0
+        version: 38.3.0
+      electron-builder:
+        specifier: ^26.0.12
+        version: 26.0.12(electron-builder-squirrel-windows@26.0.12)
+      electron-vite:
+        specifier: ^4.0.1
+        version: 4.0.1(vite@7.2.0(@types/node@24.9.1)(jiti@2.6.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  fixtures/package-tests/electron-forge-app-cjs:
     devDependencies:
       '@electron-forge/cli':
         specifier: ^7.10.2
@@ -536,7 +455,106 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  fixtures/package-tests/electron-script-app:
+  fixtures/package-tests/electron-forge-app-esm:
+    devDependencies:
+      '@electron-forge/cli':
+        specifier: ^7.10.2
+        version: 7.10.2(encoding@0.1.13)
+      '@electron-forge/maker-deb':
+        specifier: ^7.10.2
+        version: 7.10.2
+      '@electron-forge/maker-rpm':
+        specifier: ^7.10.2
+        version: 7.10.2
+      '@electron-forge/maker-squirrel':
+        specifier: ^7.10.2
+        version: 7.10.2
+      '@electron-forge/maker-zip':
+        specifier: ^7.10.2
+        version: 7.10.2
+      '@types/node':
+        specifier: ^24.7.2
+        version: 24.9.1
+      '@wdio/cli':
+        specifier: ^9.20.0
+        version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
+      '@wdio/electron-service':
+        specifier: workspace:*
+        version: link:../../../packages/electron-service
+      '@wdio/globals':
+        specifier: ^9.17.0
+        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
+      '@wdio/local-runner':
+        specifier: ^9.20.0
+        version: 9.20.0(@wdio/globals@9.17.0)(webdriverio@9.20.0(puppeteer-core@22.15.0))
+      '@wdio/mocha-framework':
+        specifier: ^9.20.0
+        version: 9.20.0
+      '@wdio/native-types':
+        specifier: workspace:*
+        version: link:../../../packages/native-types
+      '@wdio/native-utils':
+        specifier: workspace:*
+        version: link:../../../packages/native-utils
+      '@wdio/spec-reporter':
+        specifier: ^9.20.0
+        version: 9.20.0
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      electron:
+        specifier: 38.3.0
+        version: 38.3.0
+      electron-vite:
+        specifier: ^4.0.1
+        version: 4.0.1(vite@7.2.0(@types/node@24.9.1)(jiti@2.6.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  fixtures/package-tests/electron-script-app-cjs:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.7.2
+        version: 24.9.1
+      '@types/semver':
+        specifier: ^7.7.1
+        version: 7.7.1
+      '@wdio/cli':
+        specifier: ^9.20.0
+        version: 9.20.0(@types/node@24.9.1)(expect-webdriverio@5.4.3)(puppeteer-core@22.15.0)
+      '@wdio/electron-service':
+        specifier: workspace:*
+        version: link:../../../packages/electron-service
+      '@wdio/globals':
+        specifier: ^9.17.0
+        version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
+      '@wdio/local-runner':
+        specifier: ^9.20.0
+        version: 9.20.0(@wdio/globals@9.17.0)(webdriverio@9.20.0(puppeteer-core@22.15.0))
+      '@wdio/mocha-framework':
+        specifier: ^9.20.0
+        version: 9.20.0
+      '@wdio/spec-reporter':
+        specifier: ^9.20.0
+        version: 9.20.0
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
+      electron:
+        specifier: 38.3.0
+        version: 38.3.0
+      electron-vite:
+        specifier: ^4.0.1
+        version: 4.0.1(vite@7.2.0(@types/node@24.9.1)(jiti@2.6.1)(terser@5.44.0)(tsx@4.20.6)(yaml@2.8.1))
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  fixtures/package-tests/electron-script-app-esm:
     devDependencies:
       '@types/node':
         specifier: ^24.7.2
