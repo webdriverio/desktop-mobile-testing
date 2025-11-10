@@ -4,6 +4,7 @@ export interface ParsedLog {
   level: LogLevel;
   message: string;
   raw: string;
+  source?: 'backend' | 'frontend';
 }
 
 /**
@@ -29,10 +30,31 @@ const TAURI_DRIVER_PATTERNS = [
 ];
 
 /**
+ * Patterns that indicate frontend console logs (forwarded via attachConsole)
+ * These logs come through stdout but originate from the frontend
+ */
+const FRONTEND_LOG_PATTERNS = [
+  // Console log patterns from our test code
+  /\[Test\].*(Frontend|frontend)/i,
+  /console\.(log|info|warn|error|debug|trace)/i,
+  // Tauri plugin log format might include webview target
+  /webview/i,
+  // Common frontend log patterns
+  /\[App\]/i,
+];
+
+/**
  * Check if a log line is from tauri-driver (should be filtered out)
  */
 function isTauriDriverLog(line: string): boolean {
   return TAURI_DRIVER_PATTERNS.some((pattern) => pattern.test(line));
+}
+
+/**
+ * Check if a log line is from the frontend (console logs forwarded via attachConsole)
+ */
+function isFrontendLog(line: string): boolean {
+  return FRONTEND_LOG_PATTERNS.some((pattern) => pattern.test(line));
 }
 
 /**
@@ -94,10 +116,14 @@ export function parseLogLine(line: string): ParsedLog | undefined {
     return undefined;
   }
 
+  // Determine if this is a frontend log (console logs forwarded via attachConsole)
+  const source = isFrontendLog(trimmedLine) ? 'frontend' : 'backend';
+
   return {
     level: logLevel,
     message,
     raw: trimmedLine,
+    source,
   };
 }
 

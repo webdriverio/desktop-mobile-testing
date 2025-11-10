@@ -461,12 +461,18 @@ export default class TauriLaunchService {
           resolve();
         }
 
-        // Parse and forward backend logs if enabled
-        if (options.captureBackendLogs) {
-          const parsedLogs = parseLogLines(output);
-          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-          for (const parsedLog of parsedLogs) {
+        // Parse and forward logs if enabled
+        const parsedLogs = parseLogLines(output);
+        for (const parsedLog of parsedLogs) {
+          // Forward backend logs
+          if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
+            const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
             forwardLog('backend', parsedLog.level, parsedLog.message, minLevel);
+          }
+          // Forward frontend logs (from attachConsole)
+          if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
+            const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel);
           }
         }
       });
@@ -475,12 +481,18 @@ export default class TauriLaunchService {
         const output = data.toString();
         log.error(`tauri-driver stderr: ${output}`);
 
-        // Parse and forward backend logs from stderr if enabled
-        if (options.captureBackendLogs) {
-          const parsedLogs = parseLogLines(output);
-          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-          for (const parsedLog of parsedLogs) {
+        // Parse and forward logs from stderr if enabled
+        const parsedLogs = parseLogLines(output);
+        for (const parsedLog of parsedLogs) {
+          // Forward backend logs
+          if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
+            const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
             forwardLog('backend', parsedLog.level, parsedLog.message, minLevel);
+          }
+          // Forward frontend logs (from attachConsole)
+          if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
+            const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel);
           }
         }
       });
@@ -548,12 +560,18 @@ export default class TauriLaunchService {
           resolve();
         }
 
-        // Parse and forward backend logs if enabled
-        if (instanceOptions.captureBackendLogs) {
-          const parsedLogs = parseLogLines(output);
-          const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-          for (const parsedLog of parsedLogs) {
+        // Parse and forward logs if enabled
+        const parsedLogs = parseLogLines(output);
+        for (const parsedLog of parsedLogs) {
+          // Forward backend logs
+          if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
+            const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
             forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+          }
+          // Forward frontend logs (from attachConsole)
+          if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
+            const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, instanceId);
           }
         }
       });
@@ -562,12 +580,18 @@ export default class TauriLaunchService {
         const output = data.toString();
         log.error(`[${instanceId}] stderr: ${output.trim()}`);
 
-        // Parse and forward backend logs from stderr if enabled
-        if (instanceOptions.captureBackendLogs) {
-          const parsedLogs = parseLogLines(output);
-          const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-          for (const parsedLog of parsedLogs) {
+        // Parse and forward logs from stderr if enabled
+        const parsedLogs = parseLogLines(output);
+        for (const parsedLog of parsedLogs) {
+          // Forward backend logs
+          if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
+            const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
             forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+          }
+          // Forward frontend logs (from attachConsole)
+          if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
+            const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, instanceId);
           }
         }
       });
