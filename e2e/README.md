@@ -55,7 +55,6 @@ The testing framework uses environment variables to control test execution:
 - **`APP`**: Application type
   - For Electron: `builder` | `forge` | `no-binary`
   - For Tauri: `basic` | `advanced`
-- **`MODULE_TYPE`**: Module system (`cjs` | `esm`)
 - **`TEST_TYPE`**: Test execution mode (`standard` | `window` | `multiremote` | `standalone`)
 - **`BINARY`**: Binary mode (`true` | `false`)
 
@@ -113,14 +112,7 @@ pnpm e2e:multiremote
 pnpm e2e:standalone
 ```
 
-#### Module Type-Specific
-```bash
-# CommonJS tests
-pnpm e2e:cjs
-
-# ES Module tests
-pnpm e2e:esm
-```
+**Note**: E2E tests use ESM only. CJS/ESM module system testing is done in package tests (see `fixtures/package-tests/`).
 
 ### Test Matrix Script
 
@@ -251,15 +243,16 @@ tsx scripts/build-apps.ts --clean
 ## Test Applications
 
 ### Electron Test Apps
-Located in `../fixtures/electron-apps/`:
-- `builder-cjs` / `builder-esm`: Electron Builder apps
-- `forge-cjs` / `forge-esm`: Electron Forge apps
-- `no-binary-cjs` / `no-binary-esm`: Development mode apps
+Located in `../fixtures/e2e-apps/`:
+- `electron-builder`: Electron Builder app (ESM only)
+- `electron-forge`: Electron Forge app (ESM only)
+- `electron-no-binary`: Development mode app (ESM only)
+
+**Note**: E2E tests use ESM-only apps. CJS/ESM variants are tested in package tests.
 
 ### Tauri Test Apps
-Located in `../fixtures/tauri-apps/`:
-- `basic`: Basic Tauri app with core functionality
-- `advanced`: Advanced Tauri app with complex features
+Located in `../fixtures/e2e-apps/`:
+- `tauri`: Tauri app with core functionality
 
 ## CI/CD Integration
 
@@ -281,7 +274,7 @@ Tests are integrated with Turborepo for efficient execution:
 
 ```bash
 # Run specific test combinations
-turbo run test:e2e:electron-builder-cjs
+turbo run test:e2e:electron-builder
 turbo run test:e2e:tauri
 ```
 

@@ -113,25 +113,8 @@ export class BuildManager {
     const appsToBuild: string[] = [];
 
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const appDirName = getE2EAppDirName(
-      envContext.framework,
-      envContext.app,
-      envContext.moduleType,
-      envContext.isNoBinary,
-    );
+    const appDirName = getE2EAppDirName(envContext.framework, envContext.app, envContext.isNoBinary);
     appsToBuild.push(join(e2eAppsDir, appDirName));
-
-    // If Mac Universal, also build the other module type
-    if (envContext.isMacUniversal) {
-      const otherModuleType = envContext.moduleType === 'cjs' ? 'esm' : 'cjs';
-      const otherAppDirName = getE2EAppDirName(
-        envContext.framework,
-        envContext.app,
-        otherModuleType,
-        false, // Mac Universal always uses binary mode
-      );
-      appsToBuild.push(join(e2eAppsDir, otherAppDirName));
-    }
 
     console.log(`📦 Apps to build: ${appsToBuild.map((p) => p.split('/').pop()).join(', ')}`);
 
@@ -149,14 +132,7 @@ export class BuildManager {
 
     // Build Electron apps
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const electronAppDirs = [
-      'electron-builder-cjs',
-      'electron-builder-esm',
-      'electron-forge-cjs',
-      'electron-forge-esm',
-      'electron-no-binary-cjs',
-      'electron-no-binary-esm',
-    ];
+    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-no-binary'];
 
     console.log('📦 Building Electron apps...');
     for (const appDir of electronAppDirs) {
@@ -379,14 +355,7 @@ export class BuildManager {
 
     // Clean Electron apps
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const electronAppDirs = [
-      'electron-builder-cjs',
-      'electron-builder-esm',
-      'electron-forge-cjs',
-      'electron-forge-esm',
-      'electron-no-binary-cjs',
-      'electron-no-binary-esm',
-    ];
+    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-no-binary'];
 
     console.log('🧹 Cleaning Electron apps...');
     for (const appDir of electronAppDirs) {

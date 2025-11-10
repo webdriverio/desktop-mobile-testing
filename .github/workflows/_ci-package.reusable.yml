@@ -15,6 +15,11 @@ on:
         type: string
         required: false
         default: 'both'
+      module-type:
+        description: 'Module type for Electron package tests (cjs, esm, or both)'
+        type: string
+        required: false
+        default: 'both'
       build_id:
         description: 'Build ID from the build job'
         type: string
@@ -160,7 +165,8 @@ jobs:
           case "${{ inputs.service }}" in
             electron)
               echo "Running Electron package tests (apps built in isolated environments)"
-              pnpm run test:package:electron
+              echo "Module type: ${{ inputs.module-type }}"
+              pnpm run test:package:electron -- --module-type=${{ inputs.module-type }}
               ;;
             tauri)
               if [ "${{ inputs.os }}" == "macos-latest" ]; then
@@ -178,11 +184,13 @@ jobs:
             both)
               if [ "${{ inputs.os }}" == "macos-latest" ]; then
                 echo "⚠️  Skipping Tauri package tests on macOS (not supported)"
-                pnpm run test:package:electron
+                echo "Module type: ${{ inputs.module-type }}"
+                pnpm run test:package:electron -- --module-type=${{ inputs.module-type }}
               else
                 echo "Running all package tests (Electron built in isolated environments, Tauri using pre-built binaries)"
+                echo "Module type: ${{ inputs.module-type }}"
                 # Electron: build in isolated environments (no --skip-build)
-                pnpm run test:package:electron
+                pnpm run test:package:electron -- --module-type=${{ inputs.module-type }}
                 # Tauri: use --skip-build for pre-built binaries from separate build job
                 if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
                   xvfb-run -a pnpm run test:package:tauri -- --skip-build

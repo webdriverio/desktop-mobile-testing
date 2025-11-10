@@ -1,0 +1,57 @@
+{
+  "name": "electron-builder-app-example-cjs",
+  "version": "0.0.0",
+  "description": "Electron Builder app example using wdio-electron-service (CJS)",
+  "main": "dist/main/index.js",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "clean": "pnpx shx rm -rf dist dist-electron node_modules",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build && electron-builder",
+    "preview": "electron-vite preview",
+    "start": "electron .",
+    "test": "cross-env DEBUG=wdio-electron-service wdio run wdio.conf.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "@wdio/cli": "^9.20.0",
+    "@wdio/globals": "^9.17.0",
+    "@wdio/local-runner": "^9.20.0",
+    "@wdio/mocha-framework": "^9.20.0",
+    "@wdio/spec-reporter": "^9.20.0",
+    "cross-env": "^10.1.0",
+    "electron": "38.3.0",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^4.0.1",
+    "typescript": "^5.9.3",
+    "@wdio/electron-service": "workspace:*"
+  },
+  "keywords": ["electron", "builder", "electron-vite", "webdriverio", "testing", "example"],
+  "author": "WebDriverIO Community",
+  "license": "MIT",
+  "build": {
+    "appId": "com.example.builder-app",
+    "productName": "Builder App Example",
+    "executableName": "builder-app-example",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": ["dist/**/*", "package.json"],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": "dir",
+      "identity": null
+    },
+    "win": {
+      "target": "dir"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
+  }
+}
