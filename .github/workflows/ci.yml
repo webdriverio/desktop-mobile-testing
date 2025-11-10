@@ -246,28 +246,19 @@ jobs:
   # Mac Universal builds require special handling
   # These are separate from regular macOS tests because they use a different build command
   e2e-mac-universal-matrix:
-    name: E2E [macOS-U] - ${{ matrix.scenario }}${{ matrix.type != '*' && format(' ({0})', matrix.type) || '' }}
+    name: E2E [macOS-U] - ${{ matrix.scenario }}
     needs: [build]
     strategy:
       fail-fast: false
       matrix:
         # Test both application scenarios
         scenario: ['forge', 'builder']
-        # Test both module types and wildcard for combined tests
-        type: ['esm', 'cjs', '*']
-        exclude:
-          # Optimization: Both forge and builder tests run ESM and CJS separately for better error isolation
-          - scenario: 'forge'
-            type: '*'
-          - scenario: 'builder'
-            type: '*'
     uses: ./.github/workflows/_ci-e2e.reusable.yml
     with:
       os: 'macos-latest'
       node-version: '20'
       build-command: 'build:mac-universal'
       scenario: ${{ matrix.scenario }}
-      type: ${{ matrix.type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
