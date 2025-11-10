@@ -1,13 +1,16 @@
 #!/usr/bin/env tsx
 /**
  * Script to test the wdio-electron-service and wdio-tauri-service packages in the package test apps
- * Usage: pnpx tsx scripts/test-package.ts [--package=<package-name>] [--service=<electron|tauri|both>] [--skip-build]
+ * Usage: pnpx tsx scripts/test-package.ts [--package=<package-name>] [--service=<electron|tauri|both>] [--module-type=<cjs|esm|both>] [--skip-build]
  *
  * Examples:
  * pnpx tsx scripts/test-package.ts
  * pnpx tsx scripts/test-package.ts --service=electron
+ * pnpx tsx scripts/test-package.ts --service=electron --module-type=cjs
+ * pnpx tsx scripts/test-package.ts --service=electron --module-type=esm
  * pnpx tsx scripts/test-package.ts --service=tauri
- * pnpx tsx scripts/test-package.ts --package=electron-builder-app
+ * pnpx tsx scripts/test-package.ts --package=electron-builder-app-cjs
+ * pnpx tsx scripts/test-package.ts --package=electron-builder-app-esm
  * pnpx tsx scripts/test-package.ts --package=tauri-app --skip-build
  */
 
@@ -45,6 +48,7 @@ interface TestOptions {
   package?: string;
   skipBuild?: boolean;
   service?: 'electron' | 'tauri' | 'both';
+  moduleType?: 'cjs' | 'esm' | 'both';
 }
 
 function log(message: string) {
@@ -463,10 +467,21 @@ async function main() {
       }
     }
 
+    const moduleTypeArg = args.find((arg) => arg.startsWith('--module-type='))?.split('=')[1];
+    let moduleType: 'cjs' | 'esm' | 'both' = 'both';
+    if (moduleTypeArg) {
+      if (moduleTypeArg === 'cjs' || moduleTypeArg === 'esm' || moduleTypeArg === 'both') {
+        moduleType = moduleTypeArg;
+      } else {
+        throw new Error(`Invalid module-type value: ${moduleTypeArg}. Must be 'cjs', 'esm', or 'both'`);
+      }
+    }
+
     const options: TestOptions = {
       package: args.find((arg) => arg.startsWith('--package='))?.split('=')[1],
       skipBuild: args.includes('--skip-build'),
       service,
+      moduleType,
     };
 
     // Build and pack service (unless skipped)
@@ -543,8 +558,47 @@ async function main() {
     }
     // If service is 'both', don't filter
 
+    // Filter by module type for Electron packages
+    if (options.service === 'electron' || options.service === 'both') {
+      if (options.moduleType === 'cjs') {
+        filteredDirs = filteredDirs.filter((name) => name.endsWith('-cjs') || !name.match(/-cjs$|-esm$/));
+      } else if (options.moduleType === 'esm') {
+        filteredDirs = filteredDirs.filter((name) => name.endsWith('-esm') || !name.match(/-cjs$|-esm$/));
+      }
+      // If moduleType is 'both', include all variants
+    }
+
     // Filter packages if specific one requested
-    const packagesToTest = options.package ? filteredDirs.filter((name) => name === options.package) : filteredDirs;
+    let packagesToTest = options.package ? filteredDirs.filter((name) => name === options.package) : filteredDirs;
+
+    // If moduleType is 'both' and no specific package requested, expand to include both variants
+    if (
+      options.moduleType === 'both' &&
+      !options.package &&
+      (options.service === 'electron' || options.service === 'both')
+    ) {
+      const expandedPackages: string[] = [];
+      const seenBaseNames = new Set<string>();
+
+      for (const dir of packagesToTest) {
+        if (dir.endsWith('-cjs') || dir.endsWith('-esm')) {
+          const baseName = dir.replace(/-cjs$|-esm$/, '');
+          if (!seenBaseNames.has(baseName)) {
+            seenBaseNames.add(baseName);
+            // Add both variants
+            const cjsVariant = `${baseName}-cjs`;
+            const esmVariant = `${baseName}-esm`;
+            if (filteredDirs.includes(cjsVariant)) expandedPackages.push(cjsVariant);
+            if (filteredDirs.includes(esmVariant)) expandedPackages.push(esmVariant);
+          }
+        } else {
+          // Not a variant, add as-is
+          expandedPackages.push(dir);
+        }
+      }
+
+      packagesToTest = expandedPackages.length > 0 ? expandedPackages : packagesToTest;
+    }
 
     if (packagesToTest.length === 0) {
       if (options.package) {
@@ -569,6 +623,12 @@ async function main() {
 
       // Detect service type from package name (already filtered by prefix, but needed for testExample)
       const detectedService: 'electron' | 'tauri' = packageName.startsWith('tauri-') ? 'tauri' : 'electron';
+
+      // Log module type for Electron packages
+      if (detectedService === 'electron') {
+        const moduleType = packageName.endsWith('-cjs') ? 'CJS' : packageName.endsWith('-esm') ? 'ESM' : 'Unknown';
+        log(`Testing ${packageName} (${moduleType})`);
+      }
 
       await testExample(packagePath, packages, detectedService, options.skipBuild ?? false);
     }

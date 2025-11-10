@@ -10,7 +10,7 @@ export const EnvSchema = z.object({
   // Core test configuration
   FRAMEWORK: z.enum(['electron', 'tauri']).default('electron'),
   APP: z.enum(['builder', 'forge', 'no-binary', 'basic']).default('builder'),
-  MODULE_TYPE: z.enum(['cjs', 'esm']).default('esm'),
+  MODULE_TYPE: z.enum(['cjs', 'esm']).optional().default('esm'),
   TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone']).default('standard'),
   BINARY: z.enum(['true', 'false']).default('true'),
 
@@ -68,7 +68,7 @@ export class EnvironmentContext {
   }
 
   get moduleType(): 'cjs' | 'esm' {
-    return this.env.MODULE_TYPE;
+    return this.env.MODULE_TYPE ?? 'esm';
   }
 
   get testType(): 'standard' | 'window' | 'multiremote' | 'standalone' {
@@ -107,7 +107,7 @@ export class EnvironmentContext {
       return this.env.EXAMPLE_DIR;
     }
 
-    return getE2EAppDirName(this.framework, this.app, this.moduleType, this.isNoBinary);
+    return getE2EAppDirName(this.framework, this.app, this.isNoBinary);
   }
 
   /**
@@ -167,7 +167,6 @@ export class EnvironmentContext {
     return {
       FRAMEWORK: merged.FRAMEWORK,
       APP: merged.APP,
-      MODULE_TYPE: merged.MODULE_TYPE,
       TEST_TYPE: merged.TEST_TYPE,
       BINARY: merged.BINARY,
       APP_DIR: merged.APP_DIR || '',
@@ -183,7 +182,7 @@ export class EnvironmentContext {
    * Get human-readable description of this environment
    */
   toString(): string {
-    const parts = [this.framework, this.app, this.moduleType, this.testType, this.isBinary ? 'binary' : 'no-binary'];
+    const parts = [this.framework, this.app, this.testType, this.isBinary ? 'binary' : 'no-binary'];
 
     if (this.isMacUniversal) parts.push('mac-universal');
     if (this.isSplashEnabled) parts.push('splash');

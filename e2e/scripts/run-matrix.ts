@@ -14,7 +14,6 @@ import BuildManager from './build-apps.js';
 interface TestVariant {
   framework: 'electron' | 'tauri';
   app: 'builder' | 'forge' | 'no-binary' | 'basic';
-  moduleType: 'cjs' | 'esm';
   testType: 'standard' | 'window' | 'multiremote' | 'standalone';
   binary: boolean;
 }
@@ -23,13 +22,7 @@ interface TestVariant {
  * Get human-readable test name
  */
 function getTestName(variant: TestVariant): string {
-  const parts = [
-    variant.framework,
-    variant.app,
-    variant.moduleType,
-    variant.testType,
-    variant.binary ? 'binary' : 'no-binary',
-  ];
+  const parts = [variant.framework, variant.app, variant.testType, variant.binary ? 'binary' : 'no-binary'];
   return parts.join('-');
 }
 
@@ -47,7 +40,6 @@ function generateTestVariants(): TestVariant[] {
 
   const electronApps: Array<'builder' | 'forge' | 'no-binary'> = ['builder', 'forge', 'no-binary'];
   const tauriApps: Array<'basic'> = ['basic'];
-  const moduleTypes: Array<'cjs' | 'esm'> = ['cjs', 'esm'];
   const testTypes: Array<'standard' | 'window' | 'multiremote' | 'standalone'> = [
     'standard',
     'window',
@@ -61,23 +53,17 @@ function generateTestVariants(): TestVariant[] {
     const apps = framework === 'electron' ? electronApps : tauriApps;
 
     for (const app of apps) {
-      // Tauri apps are always ESM, Electron apps support both CJS and ESM
-      const frameworkModuleTypes: Array<'cjs' | 'esm'> = framework === 'tauri' ? ['esm'] : moduleTypes;
+      for (const testType of testTypes) {
+        // no-binary app is always non-binary for Electron
+        // Tauri apps are always binary
+        const binary = framework === 'tauri' || app !== 'no-binary';
 
-      for (const moduleType of frameworkModuleTypes) {
-        for (const testType of testTypes) {
-          // no-binary app is always non-binary for Electron
-          // Tauri apps are always binary
-          const binary = framework === 'tauri' || app !== 'no-binary';
-
-          variants.push({
-            framework,
-            app,
-            moduleType,
-            testType,
-            binary,
-          });
-        }
+        variants.push({
+          framework,
+          app,
+          testType,
+          binary,
+        });
       }
     }
   }
@@ -85,7 +71,7 @@ function generateTestVariants(): TestVariant[] {
   console.log(`🔍 Debug: Generated ${variants.length} variants:`);
   variants.forEach((variant, index) => {
     console.log(
-      `  ${index + 1}. ${variant.framework}-${variant.app}-${variant.moduleType}-${variant.testType}-${variant.binary ? 'binary' : 'no-binary'}`,
+      `  ${index + 1}. ${variant.framework}-${variant.app}-${variant.testType}-${variant.binary ? 'binary' : 'no-binary'}`,
     );
   });
 
@@ -99,7 +85,6 @@ function hasEnvironmentFilters(): boolean {
   return !!(
     process.env.FRAMEWORK ||
     process.env.APP ||
-    process.env.MODULE_TYPE ||
     process.env.TEST_TYPE ||
     process.env.BINARY ||
     process.env.MAC_UNIVERSAL === 'true'
@@ -122,12 +107,10 @@ function filterVariants(variants: TestVariant[], envContext: EnvironmentContext)
   console.log('🔍 Debug: Environment filter values:');
   console.log(`  process.env.FRAMEWORK: "${process.env.FRAMEWORK}"`);
   console.log(`  process.env.APP: "${process.env.APP}"`);
-  console.log(`  process.env.MODULE_TYPE: "${process.env.MODULE_TYPE}"`);
   console.log(`  process.env.TEST_TYPE: "${process.env.TEST_TYPE}"`);
   console.log(`  process.env.BINARY: "${process.env.BINARY}"`);
   console.log(`  envContext.framework: "${envContext.framework}"`);
   console.log(`  envContext.app: "${envContext.app}"`);
-  console.log(`  envContext.moduleType: "${envContext.moduleType}"`);
   console.log(`  envContext.testType: "${envContext.testType}"`);
   console.log(`  envContext.isBinary: ${envContext.isBinary}`);
   console.log(`  envContext.isMacUniversal: ${envContext.isMacUniversal}`);
@@ -143,11 +126,6 @@ function filterVariants(variants: TestVariant[], envContext: EnvironmentContext)
       return false;
     }
 
-    // Module type filter - only apply if explicitly set
-    if (process.env.MODULE_TYPE && variant.moduleType !== envContext.moduleType) {
-      return false;
-    }
-
     // Test type filter - only apply if explicitly set
     if (process.env.TEST_TYPE && variant.testType !== envContext.testType) {
       return false;
@@ -158,7 +136,7 @@ function filterVariants(variants: TestVariant[], envContext: EnvironmentContext)
       return false;
     }
 
-    // Mac Universal mode - include both CJS and ESM for builder/forge binary tests (Electron only)
+    // Mac Universal mode - include builder/forge binary tests (Electron only)
     if (envContext.isMacUniversal) {
       return variant.framework === 'electron' && ['builder', 'forge'].includes(variant.app) && variant.binary;
     }
@@ -187,7 +165,7 @@ async function runTest(
     // Determine app directory based on framework
     const fixturesDir = 'e2e-apps';
     const isNoBinary = !variant.binary;
-    const appDirName = getE2EAppDirName(variant.framework, variant.app, variant.moduleType, isNoBinary);
+    const appDirName = getE2EAppDirName(variant.framework, variant.app, isNoBinary);
 
     const appPath = join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
 
@@ -208,7 +186,6 @@ async function runTest(
     const testEnv = envContext.createChildEnvironment({
       FRAMEWORK: variant.framework,
       APP: variant.app,
-      MODULE_TYPE: variant.moduleType,
       TEST_TYPE: variant.testType,
       BINARY: variant.binary ? 'true' : 'false',
       APP_DIR: appPath,
@@ -304,7 +281,6 @@ async function runTests(): Promise<void> {
       console.log('Environment configuration:');
       console.log(`  FRAMEWORK: ${envContext.framework}`);
       console.log(`  APP: ${envContext.app}`);
-      console.log(`  MODULE_TYPE: ${envContext.moduleType}`);
       console.log(`  TEST_TYPE: ${envContext.testType}`);
       console.log(`  BINARY: ${envContext.isBinary}`);
       console.log(`  MAC_UNIVERSAL: ${envContext.isMacUniversal}`);
@@ -437,8 +413,9 @@ function parseCommandLineArgs(): void {
           break;
         case 'module-type':
         case 'modules':
-          process.env.MODULE_TYPE = value;
-          console.log(`Set MODULE_TYPE=${value} from command line`);
+          // MODULE_TYPE is deprecated for E2E tests (ESM only)
+          // Kept for backward compatibility but not used
+          console.log(`⚠️  MODULE_TYPE is deprecated for E2E tests (ESM only). Ignoring: ${value}`);
           break;
         case 'test-type':
         case 'tests':
@@ -514,11 +491,13 @@ EXAMPLES:
   tsx scripts/run-matrix.ts --concurrency=3
 
   # CI mode - run specific combination (set via environment)
-  FRAMEWORK=electron APP=builder MODULE_TYPE=cjs tsx scripts/run-matrix.ts
+  FRAMEWORK=electron APP=builder tsx scripts/run-matrix.ts
 
 ENVIRONMENT VARIABLES:
   All command-line options can also be set via environment variables:
-  FRAMEWORK, APP, MODULE_TYPE, TEST_TYPE, BINARY, MAC_UNIVERSAL, CONCURRENCY
+  FRAMEWORK, APP, TEST_TYPE, BINARY, MAC_UNIVERSAL, CONCURRENCY
+  
+  Note: MODULE_TYPE is deprecated for E2E tests (ESM only). CJS/ESM testing is done in package tests.
 `);
 }
 
