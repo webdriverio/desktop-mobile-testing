@@ -60,6 +60,23 @@ export default class TauriWorkerService {
         this.addTauriApi(mrInstance);
         await waitUntilWindowAvailable(mrInstance);
         log.debug(`Instance ${instanceName} ready`);
+
+        // Wait for plugin initialization on this instance
+        log.debug(`Waiting for Tauri plugin initialization on ${instanceName}...`);
+        try {
+          await mrInstance.execute(async () => {
+            // @ts-expect-error - window.wdioTauri is set by the plugin
+            if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+              // @ts-expect-error
+              await window.wdioTauri.waitForInit();
+              return true;
+            }
+            return false;
+          });
+          log.debug(`Tauri plugin initialization complete for ${instanceName}`);
+        } catch (error) {
+          log.warn(`Failed to wait for plugin initialization on ${instanceName}:`, error);
+        }
       }
     } else {
       log.debug('Initializing standard browser');
@@ -68,8 +85,26 @@ export default class TauriWorkerService {
       log.debug('Standard browser ready');
     }
 
+    // Wait for the plugin to fully initialize (specifically attachConsole())
+    // This ensures frontend console logs will be captured
+    log.debug('Waiting for Tauri plugin initialization...');
+    try {
+      await (browser as WebdriverIO.Browser).execute(async () => {
+        // @ts-expect-error - window.wdioTauri is set by the plugin
+        if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+          // @ts-expect-error
+          await window.wdioTauri.waitForInit();
+          return true;
+        }
+        return false;
+      });
+      log.debug('Tauri plugin initialization complete');
+    } catch (error) {
+      log.warn('Failed to wait for plugin initialization:', error);
+    }
+
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
-    // The plugin intercepts console.log/info/warn/error calls and forwards them
+    // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
   }
 

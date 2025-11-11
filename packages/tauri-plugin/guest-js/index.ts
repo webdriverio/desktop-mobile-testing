@@ -54,6 +54,7 @@ declare global {
       clearMocks: () => Promise<void>;
       resetMocks: () => Promise<void>;
       restoreMocks: () => Promise<void>;
+      waitForInit: () => Promise<void>;
     };
   }
 }
@@ -307,6 +308,7 @@ export async function init(): Promise<void> {
     clearMocks,
     resetMocks,
     restoreMocks,
+    waitForInit,
   };
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
@@ -338,19 +340,34 @@ export async function init(): Promise<void> {
 }
 
 // Auto-initialize when imported
+// Note: We can't await at module level, but we start the initialization immediately
+// and expose a promise that can be awaited by consumers if needed
 const initMessages: string[] = [];
 initMessages.push('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
 initMessages.push(`[WDIO Tauri Plugin] typeof window at module level: ${typeof window}`);
+
+let initPromise: Promise<void> | null = null;
 
 if (typeof window !== 'undefined') {
   initMessages.push('[WDIO Tauri Plugin] Auto-initializing...');
   for (const msg of initMessages) {
     console.log(msg);
   }
-  init();
+  // Start initialization immediately, store the promise
+  initPromise = init();
 } else {
   initMessages.push('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
   for (const msg of initMessages) {
     console.log(msg);
+  }
+}
+
+/**
+ * Wait for plugin initialization to complete
+ * This can be called by the service to ensure attachConsole() has completed
+ */
+export async function waitForInit(): Promise<void> {
+  if (initPromise) {
+    await initPromise;
   }
 }
