@@ -44,7 +44,8 @@ function getLoggerMethod(logger: Logger, level: LogLevel): (...args: unknown[]) 
  * Format log message with context
  */
 function formatLogMessage(source: 'backend' | 'frontend', message: string, instanceId?: string): string {
-  const prefix = instanceId ? `[Tauri:${source}:${instanceId}]` : `[Tauri:${source}]`;
+  const sourceLabel = source === 'frontend' ? 'Frontend' : 'Backend';
+  const prefix = instanceId ? `[Tauri:${sourceLabel}:${instanceId}]` : `[Tauri:${sourceLabel}]`;
   return `${prefix} ${message}`;
 }
 

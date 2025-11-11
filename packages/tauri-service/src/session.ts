@@ -32,29 +32,45 @@ export async function init(
   const hostname = (capabilities as { hostname?: string }).hostname || 'localhost';
   const port = (capabilities as { port?: number }).port || 4444;
 
-  // Remove hostname and port from capabilities - they are not valid W3C WebDriver capabilities
-  // They should only be at the top level of remote() options
-  delete (capabilities as { hostname?: string }).hostname;
-  delete (capabilities as { port?: number }).port;
+  // Create a deep clone for driver initialization so we can strip unsupported props
+  const driverCapabilities = structuredClone(capabilities);
 
-  // Ensure browserName is removed - tauri-driver doesn't accept it
-  // We'll restore it after session creation for display purposes
-  delete (capabilities as { browserName?: string }).browserName;
+  const stripUnsupportedProps = (cap: TauriCapabilities | undefined) => {
+    if (!cap || typeof cap !== 'object') {
+      return;
+    }
+    delete (cap as { hostname?: string }).hostname;
+    delete (cap as { port?: number }).port;
+    delete (cap as { browserName?: string }).browserName;
+  };
 
-  log.debug(
-    `Connection info for remote(): hostname=${hostname}, port=${port}, ` +
-      `browserName=${(capabilities as { browserName?: string }).browserName || 'removed'}`,
-  );
+  if (Array.isArray(driverCapabilities)) {
+    for (const cap of driverCapabilities) {
+      stripUnsupportedProps(cap);
+    }
+  } else if (driverCapabilities && typeof driverCapabilities === 'object') {
+    const maybeMultiRemote = driverCapabilities as Record<string, { capabilities?: TauriCapabilities }>;
+    const entries = Object.values(maybeMultiRemote);
+    const isMultiRemote = entries.every((entry) => entry && typeof entry === 'object' && 'capabilities' in entry);
+    if (isMultiRemote) {
+      for (const entry of entries) {
+        stripUnsupportedProps(entry?.capabilities);
+      }
+    } else {
+      stripUnsupportedProps(driverCapabilities as TauriCapabilities);
+    }
+  }
+
+  log.debug(`Connection info for remote(): hostname=${hostname}, port=${port}, browserName=wry (display only)`);
 
   // Create worker service
   const service = new TauriWorkerService(capabilities['wdio:tauriServiceOptions'] || {}, capabilities);
 
   // Initialize session - connection info must be at top level, not in capabilities
-  // Note: browserName is removed from capabilities to avoid tauri-driver rejection
   const browser = await remote({
     hostname,
     port,
-    capabilities,
+    capabilities: driverCapabilities,
   });
 
   // Initialize the service

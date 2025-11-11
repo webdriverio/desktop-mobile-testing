@@ -105,6 +105,7 @@ export default class TauriLaunchService {
       // Set browserName to 'wry' for display purposes (spec reporter, logs, etc.)
       // This value will be removed in beforeSession so tauri-driver never sees it.
       cap.browserName = 'wry';
+      (cap as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] = 'wry';
 
       // Get Tauri app binary path from tauri:options
       const tauriOptions = cap['tauri:options'];
@@ -509,6 +510,7 @@ export default class TauriLaunchService {
 
         // Parse and forward logs if enabled
         const parsedLogs = parseLogLines(output);
+        let frontendCount = 0;
         for (const parsedLog of parsedLogs) {
           // Forward backend logs
           if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
@@ -519,7 +521,11 @@ export default class TauriLaunchService {
           if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
             forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel);
+            frontendCount += 1;
           }
+        }
+        if (options.captureFrontendLogs && frontendCount === 0) {
+          log.debug('No frontend logs detected in tauri-driver stdout chunk');
         }
       });
 
@@ -529,6 +535,7 @@ export default class TauriLaunchService {
 
         // Parse and forward logs from stderr if enabled
         const parsedLogs = parseLogLines(output);
+        let frontendCount = 0;
         for (const parsedLog of parsedLogs) {
           // Forward backend logs
           if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
@@ -539,7 +546,11 @@ export default class TauriLaunchService {
           if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
             forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel);
+            frontendCount += 1;
           }
+        }
+        if (options.captureFrontendLogs && frontendCount === 0) {
+          log.debug('No frontend logs detected in tauri-driver stderr chunk');
         }
       });
 

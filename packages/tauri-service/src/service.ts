@@ -14,66 +14,6 @@ export default class TauriWorkerService {
   }
 
   /**
-   * Remove browserName just before session creation
-   * This hook runs right before the webdriver session is initialized,
-   * so we can ensure browserName is removed before it's sent to tauri-driver
-   */
-  async beforeSession(
-    _config: WebdriverIO.Config,
-    capabilities:
-      | TauriCapabilities
-      | TauriCapabilities[]
-      | Record<string, { capabilities?: TauriCapabilities }>
-      | undefined,
-    _specs: string[],
-  ): Promise<void> {
-    log.debug('beforeSession: Removing browserName before session creation');
-
-    if (!capabilities) {
-      log.debug('beforeSession: No capabilities provided, skipping browserName removal');
-      return;
-    }
-
-    const capsList: TauriCapabilities[] = [];
-
-    if (Array.isArray(capabilities)) {
-      for (const cap of capabilities) {
-        if (cap && typeof cap === 'object') {
-          capsList.push(cap);
-        }
-      }
-    } else if (typeof capabilities === 'object') {
-      const maybeMultiRemote = capabilities as Record<string, { capabilities?: TauriCapabilities }>;
-      const multiRemoteEntries = Object.values(maybeMultiRemote);
-      const isMultiRemote = multiRemoteEntries.every(
-        (entry) => entry && typeof entry === 'object' && 'capabilities' in entry,
-      );
-
-      if (isMultiRemote) {
-        for (const entry of multiRemoteEntries) {
-          const cap = entry?.capabilities;
-          if (cap && typeof cap === 'object') {
-            capsList.push(cap);
-          }
-        }
-      } else {
-        capsList.push(capabilities as TauriCapabilities);
-      }
-    }
-
-    if (capsList.length === 0) {
-      log.debug('beforeSession: No capability objects found to modify');
-      return;
-    }
-
-    for (const cap of capsList) {
-      // Remove browserName right before session creation - tauri-driver doesn't accept it
-      delete (cap as { browserName?: string }).browserName;
-      log.debug('Removed browserName from capabilities in beforeSession hook');
-    }
-  }
-
-  /**
    * Initialize the service
    */
   async before(
@@ -91,14 +31,18 @@ export default class TauriWorkerService {
       for (const instanceName of mrBrowser.instances) {
         const instance = mrBrowser.getInstance(instanceName);
         if (instance.capabilities && typeof instance.capabilities === 'object') {
-          (instance.capabilities as { browserName?: string }).browserName = 'wry';
-          log.debug(`Restored browserName='wry' for multiremote instance: ${instanceName}`);
+          const displayName =
+            (instance.capabilities as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] ?? 'wry';
+          (instance.capabilities as { browserName?: string }).browserName = displayName;
+          log.debug(`Restored browserName='${displayName}' for multiremote instance: ${instanceName}`);
         }
       }
     } else {
       if (browser.capabilities && typeof browser.capabilities === 'object') {
-        (browser.capabilities as { browserName?: string }).browserName = 'wry';
-        log.debug("Restored browserName='wry' for standard browser");
+        const displayName =
+          (browser.capabilities as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] ?? 'wry';
+        (browser.capabilities as { browserName?: string }).browserName = displayName;
+        log.debug(`Restored browserName='${displayName}' for standard browser`);
       }
     }
 
