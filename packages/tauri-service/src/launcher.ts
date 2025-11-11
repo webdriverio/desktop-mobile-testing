@@ -236,16 +236,59 @@ export default class TauriLaunchService {
   /**
    * Start worker session
    */
-  async onWorkerStart(cid: string, caps: TauriCapabilities | TauriCapabilities[]): Promise<void> {
+  async onWorkerStart(
+    cid: string,
+    caps: TauriCapabilities | TauriCapabilities[] | Record<string, { capabilities?: TauriCapabilities }> | undefined,
+  ): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
 
-    // Ensure browserName is removed - it was already removed in onPrepare,
-    // but double-check here just before session creation
-    const capsList = Array.isArray(caps)
-      ? caps
-      : Object.values(caps as Record<string, { capabilities: TauriCapabilities }>).map(
-          (multiremoteOption) => multiremoteOption.capabilities,
-        );
+    if (!caps) {
+      log.warn('onWorkerStart: No capabilities provided, skipping setup');
+      return;
+    }
+
+    const capsList: TauriCapabilities[] = [];
+    let firstCap: TauriCapabilities | undefined;
+    let instanceId: string | undefined;
+
+    if (Array.isArray(caps)) {
+      for (const cap of caps) {
+        if (cap && typeof cap === 'object') {
+          capsList.push(cap);
+        }
+      }
+
+      firstCap = caps[0];
+    } else {
+      const maybeMultiRemote = caps as Record<string, { capabilities?: TauriCapabilities }>;
+      const entries = Object.entries(maybeMultiRemote);
+      const isMultiRemote = entries.every((entry) => entry && typeof entry === 'object' && 'capabilities' in entry);
+
+      if (isMultiRemote) {
+        for (const [, value] of entries) {
+          const cap = value?.capabilities;
+          if (cap && typeof cap === 'object') {
+            capsList.push(cap);
+          }
+        }
+
+        const [firstKey, firstValue] = entries[0] ?? [];
+        if (firstValue?.capabilities) {
+          firstCap = firstValue.capabilities;
+          instanceId = extractInstanceId(firstValue.capabilities);
+          log.debug(`Multiremote instance detected: ${String(firstKey)} (ID: ${instanceId ?? 'n/a'})`);
+        }
+      } else if (caps && typeof caps === 'object') {
+        const singleCap = caps as TauriCapabilities;
+        capsList.push(singleCap);
+        firstCap = singleCap;
+      }
+    }
+
+    if (capsList.length === 0) {
+      log.warn('onWorkerStart: No capability objects found to modify');
+      return;
+    }
 
     for (const cap of capsList) {
       // Ensure browserName is removed before sending to tauri-driver
@@ -257,30 +300,9 @@ export default class TauriLaunchService {
       log.info(`Worker ${cid} DISPLAY: ${process.env.DISPLAY || 'not set'}`);
     }
 
-    // Handle both multiremote and standard capabilities
-    let firstCap: TauriCapabilities;
-    let instanceId: string | undefined;
-
-    if (Array.isArray(caps)) {
-      // Standard capabilities array
-      firstCap = caps[0];
-    } else {
-      // Multiremote capabilities object - extract the first instance
-      const capKeys = Object.keys(caps);
-      if (capKeys.length > 0) {
-        const firstKey = capKeys[0];
-        const multiremoteCaps = caps as Record<string, { capabilities: TauriCapabilities }>;
-        firstCap = multiremoteCaps[firstKey]?.capabilities;
-        if (!firstCap) {
-          log.warn(`No capabilities found for instance: ${firstKey}`);
-          return;
-        }
-        instanceId = extractInstanceId(firstCap);
-        log.debug(`Multiremote instance detected: ${firstKey} (ID: ${instanceId})`);
-      } else {
-        log.warn('No capabilities found in multiremote object');
-        return;
-      }
+    if (!firstCap) {
+      log.warn('onWorkerStart: Unable to determine primary capabilities, skipping further setup');
+      return;
     }
 
     // App binary path is already resolved in onPrepare
