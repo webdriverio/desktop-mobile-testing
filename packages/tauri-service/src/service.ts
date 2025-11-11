@@ -1,28 +1,10 @@
+import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
 const browsersWithConsoleForwarding = new WeakSet<WebdriverIO.Browser>();
-
-type TauriAPIs = {
-  core: {
-    invoke<ReturnValue = unknown>(command: string, args?: Record<string, unknown>): Promise<ReturnValue>;
-  };
-};
-
-type TauriServiceAPI = {
-  execute<ReturnValue, InnerArguments extends unknown[]>(
-    script: string | ((tauri: TauriAPIs, ...args: InnerArguments) => ReturnValue),
-    ...args: InnerArguments
-  ): Promise<ReturnValue | undefined>;
-  clearAllMocks(apiName?: string): Promise<void>;
-  isMockFunction(fn: unknown): boolean;
-  mock(apiName: string, funcName: string): Promise<unknown>;
-  mockAll(apiName: string): Promise<unknown>;
-  resetAllMocks(apiName?: string): Promise<void>;
-  restoreAllMocks(apiName?: string): Promise<void>;
-};
 
 /**
  * Tauri worker service

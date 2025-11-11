@@ -1,7 +1,8 @@
-import type { Logger } from '@wdio/logger';
 import { createLogger } from '@wdio/native-utils';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
+
+type WdioLogger = ReturnType<typeof createLogger>;
 
 /**
  * Log level priority (higher number = higher priority)
@@ -24,7 +25,7 @@ export function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
 /**
  * Map Tauri log level to WDIO logger method
  */
-function getLoggerMethod(logger: Logger, level: LogLevel): (...args: unknown[]) => void {
+function getLoggerMethod(logger: WdioLogger, level: LogLevel): (...args: unknown[]) => void {
   switch (level) {
     case 'trace':
     case 'debug':
