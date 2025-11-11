@@ -40,10 +40,11 @@ declare global {
         invoke?: (cmd: string, args?: InvokeArgs) => Promise<unknown>;
       };
       log?: {
-        info?: (message: string) => Promise<void>;
-        error?: (message: string) => Promise<void>;
-        warn?: (message: string) => Promise<void>;
+        trace?: (message: string) => Promise<void>;
         debug?: (message: string) => Promise<void>;
+        info?: (message: string) => Promise<void>;
+        warn?: (message: string) => Promise<void>;
+        error?: (message: string) => Promise<void>;
       };
     };
     wdioTauri?: {
@@ -188,6 +189,92 @@ async function tauriLog(message: string): Promise<void> {
 }
 
 /**
+ * Forward console logs to Tauri log plugin
+ * This allows WebDriverIO to capture frontend console logs via the backend stdout
+ */
+function setupConsoleForwarding(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  // Helper function to safely forward to Tauri log plugin
+  async function forwardToTauri(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string): Promise<void> {
+    try {
+      // Check if Tauri log plugin is available
+      if (window.__TAURI__?.log?.[level]) {
+        await window.__TAURI__.log[level](message);
+      }
+    } catch {
+      // Silently ignore if log plugin not available
+    }
+  }
+
+  // Store original console methods
+  const originalConsole = {
+    log: console.log,
+    debug: console.debug,
+    info: console.info,
+    warn: console.warn,
+    error: console.error,
+    trace: console.trace,
+  };
+
+  // Forward console.log to trace level
+  console.log = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.log(...args);
+    forwardToTauri('trace', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.debug
+  console.debug = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.debug(...args);
+    forwardToTauri('debug', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.info
+  console.info = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.info(...args);
+    forwardToTauri('info', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.warn
+  console.warn = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.warn(...args);
+    forwardToTauri('warn', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.error
+  console.error = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.error(...args);
+    forwardToTauri('error', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.trace
+  console.trace = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.trace(...args);
+    forwardToTauri('trace', message).catch(() => {
+      // Ignore errors
+    });
+  };
+}
+
+/**
  * Initialize the plugin frontend API
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
@@ -234,6 +321,11 @@ export function init(): void {
   Promise.all(messages.map((msg) => tauriLog(msg))).catch(() => {
     // Ignore errors
   });
+
+  // Set up console forwarding to capture frontend logs
+  // This should be done after the initialization messages are logged
+  setupConsoleForwarding();
+  console.log('[WDIO Tauri Plugin] Console forwarding enabled');
 }
 
 // Auto-initialize when imported
