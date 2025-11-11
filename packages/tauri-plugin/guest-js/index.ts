@@ -330,12 +330,30 @@ export async function init(): Promise<void> {
     // Import attachConsole from Tauri log plugin
     const { attachConsole } = await import('@tauri-apps/plugin-log');
     await attachConsole();
-    console.log('[WDIO Tauri Plugin] attachConsole() completed - frontend logs will be captured');
+
+    // Now that attachConsole() is done, these logs will be forwarded
+    console.log('[WDIO Tauri Plugin] ✅ attachConsole() completed - frontend logs will be captured');
+    console.info('[WDIO Tauri Plugin] TEST: This is a test INFO log after attachConsole()');
+    console.warn('[WDIO Tauri Plugin] TEST: This is a test WARN log after attachConsole()');
+
+    // Log all accumulated messages now that forwarding is active
+    for (const msg of messages) {
+      console.log(msg);
+    }
   } catch (error) {
+    // Log error using Tauri log API directly if available
+    if (window.__TAURI__?.log?.error) {
+      await window.__TAURI__.log.error(`[WDIO Tauri Plugin] ❌ Failed to attach console: ${error}`);
+    }
     console.warn('[WDIO Tauri Plugin] Failed to attach console:', error);
     // Fallback to manual console forwarding if attachConsole() is not available
     console.log('[WDIO Tauri Plugin] Using manual console forwarding as fallback');
     setupConsoleForwarding();
+
+    // Log accumulated messages
+    for (const msg of messages) {
+      console.log(msg);
+    }
   }
 }
 

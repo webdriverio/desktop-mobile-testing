@@ -119,13 +119,30 @@ describe('Tauri Log Integration', () => {
 
   describe('Frontend Log Capture', () => {
     it('should capture frontend console logs when enabled', async () => {
+      console.log('[DEBUG] About to trigger frontend console logs');
+
+      // First, check if attachConsole was called
+      const initStatus = await browser.execute(() => {
+        // @ts-expect-error - checking internal state
+        return {
+          wdioTauriAvailable: typeof window.wdioTauri !== 'undefined',
+          // @ts-expect-error
+          tauriAvailable: typeof window.__TAURI__ !== 'undefined',
+          // @ts-expect-error
+          tauriLogAvailable: typeof window.__TAURI__?.log !== 'undefined',
+        };
+      });
+      console.log('[DEBUG] Init status:', JSON.stringify(initStatus));
+
       // Trigger frontend logs by executing a script
       // Note: attachConsole() forwards console logs to Rust stdout
+      console.log('[DEBUG] Executing console.info/warn/error...');
       await browser.execute(() => {
         console.info('[Test] Frontend INFO log from test');
         console.warn('[Test] Frontend WARN log from test');
         console.error('[Test] Frontend ERROR log from test');
       });
+      console.log('[DEBUG] Console logs executed');
 
       // Wait longer for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 5000));

@@ -64,10 +64,10 @@ export default class TauriWorkerService {
         // Wait for plugin initialization on this instance
         log.debug(`Waiting for Tauri plugin initialization on ${instanceName}...`);
         try {
-          await mrInstance.execute(async () => {
-            // @ts-expect-error - window.wdioTauri is set by the plugin
+          await mrInstance.execute(async function checkMultiremotePluginInit() {
+            // @ts-expect-error - window exists in browser context
             if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
-              // @ts-expect-error
+              // @ts-expect-error - window exists in browser context
               await window.wdioTauri.waitForInit();
               return true;
             }
@@ -87,20 +87,35 @@ export default class TauriWorkerService {
 
     // Wait for the plugin to fully initialize (specifically attachConsole())
     // This ensures frontend console logs will be captured
-    log.debug('Waiting for Tauri plugin initialization...');
+    log.info('🔍 DEBUG: Waiting for Tauri plugin initialization...');
     try {
-      await (browser as WebdriverIO.Browser).execute(async () => {
-        // @ts-expect-error - window.wdioTauri is set by the plugin
-        if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
-          // @ts-expect-error
-          await window.wdioTauri.waitForInit();
-          return true;
+      const result = await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
+        const debug: string[] = [];
+        // @ts-expect-error - window exists in browser context
+        debug.push(`window.wdioTauri available: ${typeof window.wdioTauri !== 'undefined'}`);
+        // @ts-expect-error - window exists in browser context
+        if (typeof window.wdioTauri !== 'undefined') {
+          // @ts-expect-error - window exists in browser context
+          debug.push(`window.wdioTauri.waitForInit available: ${typeof window.wdioTauri.waitForInit === 'function'}`);
+          // @ts-expect-error - window exists in browser context
+          debug.push(`window.__TAURI__ available: ${typeof window.__TAURI__ !== 'undefined'}`);
+          // @ts-expect-error - window exists in browser context
+          debug.push(`window.__TAURI__?.log available: ${typeof window.__TAURI__?.log !== 'undefined'}`);
         }
-        return false;
+        // @ts-expect-error - window exists in browser context
+        if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+          debug.push('Calling waitForInit...');
+          // @ts-expect-error - window exists in browser context
+          await window.wdioTauri.waitForInit();
+          debug.push('waitForInit completed');
+          return { success: true, debug };
+        }
+        return { success: false, debug };
       });
-      log.debug('Tauri plugin initialization complete');
+      log.info(`🔍 DEBUG: waitForInit result: ${JSON.stringify(result)}`);
+      log.info('✅ Tauri plugin initialization complete');
     } catch (error) {
-      log.warn('Failed to wait for plugin initialization:', error);
+      log.error('❌ Failed to wait for plugin initialization:', error);
     }
 
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
