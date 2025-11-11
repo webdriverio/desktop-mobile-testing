@@ -7,7 +7,7 @@ import type { Options } from '@wdio/types';
 import getPort from 'get-port';
 import { forwardLog, type LogLevel } from './logForwarder.js';
 import { parseLogLines } from './logParser.js';
-import { getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
+import { getTauriAppInfo, getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
@@ -98,9 +98,15 @@ export default class TauriLaunchService {
     // Validate capabilities
     for (const cap of capsList) {
       // Validate that browserName is either not set or set to 'tauri'
+      // Note: We don't set it to 'wry' here because tauri-driver will reject it
+      // We'll set it to 'wry' in the before hook after session creation for display purposes
       if (cap.browserName && cap.browserName !== 'tauri') {
         throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
       }
+
+      // Remove browserName - tauri-driver doesn't accept it and will reject the session
+      // We'll restore it to 'wry' in the before hook after session creation for display
+      delete (cap as { browserName?: string }).browserName;
 
       // Get Tauri app binary path from tauri:options
       const tauriOptions = cap['tauri:options'];
@@ -108,7 +114,9 @@ export default class TauriLaunchService {
         throw new Error('Tauri application path not specified in tauri:options.application');
       }
 
-      const appBinaryPath = await getTauriBinaryPath(tauriOptions.application);
+      // Store original app path for getting version info
+      const originalAppPath = tauriOptions.application;
+      const appBinaryPath = await getTauriBinaryPath(originalAppPath);
       log.debug(`App binary: ${appBinaryPath}`);
 
       // Validate app args if provided
@@ -120,11 +128,16 @@ export default class TauriLaunchService {
       // Update the application path to the resolved binary path
       tauriOptions.application = appBinaryPath;
 
-      // Ensure browserName is not set (WDIO would try to spawn a driver for it)
-      // When hostname and port are set in config, WDIO connects directly to tauri-driver
-      if (cap.browserName) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete (cap as { browserName?: string }).browserName;
+      // Don't set browserName - tauri-driver works best with it unset
+      // Only set browserVersion for display purposes in test output
+      // Note: This will show as "undefined(version)" but at least shows the version
+      try {
+        const appInfo = await getTauriAppInfo(originalAppPath);
+        if (appInfo.version) {
+          cap.browserVersion = appInfo.version;
+        }
+      } catch {
+        // If we can't get the version, leave it undefined
       }
     }
 
@@ -225,6 +238,19 @@ export default class TauriLaunchService {
    */
   async onWorkerStart(cid: string, caps: TauriCapabilities | TauriCapabilities[]): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
+
+    // Ensure browserName is removed - it was already removed in onPrepare,
+    // but double-check here just before session creation
+    const capsList = Array.isArray(caps)
+      ? caps
+      : Object.values(caps as Record<string, { capabilities: TauriCapabilities }>).map(
+          (multiremoteOption) => multiremoteOption.capabilities,
+        );
+
+    for (const cap of capsList) {
+      // Ensure browserName is removed before sending to tauri-driver
+      delete (cap as { browserName?: string }).browserName;
+    }
 
     // Log DISPLAY status
     if (process.platform === 'linux') {

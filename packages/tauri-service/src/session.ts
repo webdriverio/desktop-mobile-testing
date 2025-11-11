@@ -37,15 +37,20 @@ export async function init(
   delete (capabilities as { hostname?: string }).hostname;
   delete (capabilities as { port?: number }).port;
 
+  // Ensure browserName is removed - tauri-driver doesn't accept it
+  // We'll restore it after session creation for display purposes
+  delete (capabilities as { browserName?: string }).browserName;
+
   log.debug(
     `Connection info for remote(): hostname=${hostname}, port=${port}, ` +
-      `browserName=${(capabilities as { browserName?: string }).browserName}`,
+      `browserName=${(capabilities as { browserName?: string }).browserName || 'removed'}`,
   );
 
   // Create worker service
   const service = new TauriWorkerService(capabilities['wdio:tauriServiceOptions'] || {}, capabilities);
 
   // Initialize session - connection info must be at top level, not in capabilities
+  // Note: browserName is removed from capabilities to avoid tauri-driver rejection
   const browser = await remote({
     hostname,
     port,

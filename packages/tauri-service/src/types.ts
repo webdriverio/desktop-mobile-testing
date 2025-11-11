@@ -45,7 +45,10 @@ export interface TauriServiceOptions {
  * Tauri service capabilities
  */
 export interface TauriCapabilities extends WebdriverIO.Capabilities {
-  browserName?: 'tauri';
+  // Allow 'tauri' (from config) or 'wry' (set by service for display)
+  // 'wry' is set in onPrepare for display, removed in onWorkerStart before session creation,
+  // then restored in before hook after session is created
+  browserName?: 'tauri' | 'wry';
   'tauri:options'?: {
     application: string;
     args?: string[];
