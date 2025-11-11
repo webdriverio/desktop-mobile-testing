@@ -97,16 +97,14 @@ export default class TauriLaunchService {
 
     // Validate capabilities
     for (const cap of capsList) {
-      // Validate that browserName is either not set or set to 'tauri'
-      // Note: We don't set it to 'wry' here because tauri-driver will reject it
-      // We'll set it to 'wry' in the before hook after session creation for display purposes
-      if (cap.browserName && cap.browserName !== 'tauri') {
-        throw new Error(`Tauri service only supports 'tauri' browserName, got: ${cap.browserName}`);
+      // Validate that browserName is either not set, 'tauri', or 'wry'
+      if (cap.browserName && cap.browserName !== 'tauri' && cap.browserName !== 'wry') {
+        throw new Error(`Tauri service only supports 'tauri' or 'wry' browserName, got: ${cap.browserName}`);
       }
 
-      // Remove browserName - tauri-driver doesn't accept it and will reject the session
-      // We'll restore it to 'wry' in the before hook after session creation for display
-      delete (cap as { browserName?: string }).browserName;
+      // Set browserName to 'wry' for display purposes (spec reporter, logs, etc.)
+      // This value will be removed in beforeSession so tauri-driver never sees it.
+      cap.browserName = 'wry';
 
       // Get Tauri app binary path from tauri:options
       const tauriOptions = cap['tauri:options'];
