@@ -11,6 +11,7 @@ import { getTauriAppInfo, getTauriBinaryPath, getTauriDriverPath, getWebKitWebDr
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
+let specReporterPatched = false;
 
 /**
  * Extract instance ID from capabilities args (e.g., '--browser=A' -> 'A')
@@ -79,6 +80,36 @@ export default class TauriLaunchService {
     capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
+
+    if (!specReporterPatched) {
+      try {
+        const specReporterModule = (await import('@wdio/spec-reporter')) as {
+          default: {
+            prototype: { onRunnerStart: (runner: unknown) => unknown };
+            __tauriPatched?: boolean;
+          };
+        };
+        const SpecReporter = specReporterModule.default;
+        if (SpecReporter && !SpecReporter.__tauriPatched) {
+          const originalOnRunnerStart = SpecReporter.prototype.onRunnerStart;
+          SpecReporter.prototype.onRunnerStart = function patchedOnRunnerStart(runner: unknown) {
+            const caps = (runner as { capabilities?: Record<string, unknown> })?.capabilities;
+            if (caps && typeof caps === 'object') {
+              const displayName = (caps as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] ?? 'wry';
+              if (!('browserName' in caps) || !(caps as { browserName?: unknown }).browserName) {
+                (caps as { browserName?: string }).browserName = displayName;
+              }
+            }
+            return originalOnRunnerStart.call(this, runner as unknown);
+          };
+          SpecReporter.__tauriPatched = true;
+          specReporterPatched = true;
+          log.debug('Patched @wdio/spec-reporter to display Tauri browser name');
+        }
+      } catch (error) {
+        log.warn(`Failed to patch spec reporter for Tauri display name: ${(error as Error).message}`);
+      }
+    }
 
     // Check for unsupported platforms
     if (process.platform === 'darwin') {
