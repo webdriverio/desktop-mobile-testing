@@ -14,6 +14,32 @@ export default class TauriWorkerService {
   }
 
   /**
+   * Remove browserName just before session creation
+   * This hook runs right before the webdriver session is initialized,
+   * so we can ensure browserName is removed before it's sent to tauri-driver
+   */
+  async beforeSession(
+    _config: WebdriverIO.HookFunctionExtension,
+    capabilities: TauriCapabilities | TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
+    _specs: string[],
+  ): Promise<void> {
+    log.debug('beforeSession: Removing browserName before session creation');
+
+    // Handle both standard array and multiremote object capabilities
+    const capsList = Array.isArray(capabilities)
+      ? capabilities
+      : Object.values(capabilities as Record<string, { capabilities: TauriCapabilities }>).map(
+          (multiremoteOption) => multiremoteOption.capabilities,
+        );
+
+    for (const cap of capsList) {
+      // Remove browserName right before session creation - tauri-driver doesn't accept it
+      delete (cap as { browserName?: string }).browserName;
+      log.debug('Removed browserName from capabilities in beforeSession hook');
+    }
+  }
+
+  /**
    * Initialize the service
    */
   async before(
