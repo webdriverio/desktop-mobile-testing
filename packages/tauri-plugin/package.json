@@ -22,7 +22,8 @@
   "author": "WebDriverIO Community",
   "license": "MIT",
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0"
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-log": "^2.7.1"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

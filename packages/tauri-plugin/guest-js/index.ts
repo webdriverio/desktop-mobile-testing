@@ -278,7 +278,7 @@ function setupConsoleForwarding(): void {
  * Initialize the plugin frontend API
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
-export function init(): void {
+export async function init(): Promise<void> {
   const messages: string[] = [];
   messages.push('[WDIO Tauri Plugin] Initializing...');
   messages.push(`[WDIO Tauri Plugin] typeof window: ${typeof window}`);
@@ -322,10 +322,19 @@ export function init(): void {
     // Ignore errors
   });
 
-  // Set up console forwarding to capture frontend logs
-  // This should be done after the initialization messages are logged
-  setupConsoleForwarding();
-  console.log('[WDIO Tauri Plugin] Console forwarding enabled');
+  // Attach console to Tauri log plugin
+  // This is REQUIRED for TargetKind::Webview to forward console logs to stdout
+  try {
+    // Import attachConsole from Tauri log plugin
+    const { attachConsole } = await import('@tauri-apps/plugin-log');
+    await attachConsole();
+    console.log('[WDIO Tauri Plugin] attachConsole() completed - frontend logs will be captured');
+  } catch (error) {
+    console.warn('[WDIO Tauri Plugin] Failed to attach console:', error);
+    // Fallback to manual console forwarding if attachConsole() is not available
+    console.log('[WDIO Tauri Plugin] Using manual console forwarding as fallback');
+    setupConsoleForwarding();
+  }
 }
 
 // Auto-initialize when imported

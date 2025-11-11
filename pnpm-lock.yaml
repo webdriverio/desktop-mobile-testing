@@ -922,6 +922,9 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.0.0
         version: 2.9.0
+      '@tauri-apps/plugin-log':
+        specifier: ^2.7.1
+        version: 2.7.1
     devDependencies:
       typescript:
         specifier: ^5.0.0
