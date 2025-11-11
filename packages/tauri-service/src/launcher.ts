@@ -93,6 +93,8 @@ export default class TauriLaunchService {
         if (SpecReporter && !SpecReporter.__tauriPatched) {
           const originalOnRunnerStart = SpecReporter.prototype.onRunnerStart;
           SpecReporter.prototype.onRunnerStart = function patchedOnRunnerStart(runner: unknown) {
+            // Restore browserName BEFORE calling the original method
+            // The original method calls getEnviromentCombo() which needs browserName
             const caps = (runner as { capabilities?: Record<string, unknown> })?.capabilities;
             if (caps && typeof caps === 'object') {
               const displayName = (caps as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] ?? 'wry';
@@ -100,6 +102,7 @@ export default class TauriLaunchService {
                 (caps as { browserName?: string }).browserName = displayName;
               }
             }
+            // Now call the original method with restored browserName
             return originalOnRunnerStart.call(this, runner as unknown);
           };
           SpecReporter.__tauriPatched = true;
@@ -134,7 +137,8 @@ export default class TauriLaunchService {
       }
 
       // Set browserName to 'wry' for display purposes (spec reporter, logs, etc.)
-      // This value will be removed in beforeSession so tauri-driver never sees it.
+      // This value will be removed in onWorkerStart so tauri-driver never sees it.
+      // The spec reporter monkey-patch will restore it from wdio:displayBrowserName.
       cap.browserName = 'wry';
       (cap as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] = 'wry';
 

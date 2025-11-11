@@ -46,8 +46,10 @@ export interface TauriServiceOptions {
  */
 export interface TauriCapabilities extends WebdriverIO.Capabilities {
   // Allow 'tauri' (from config) or 'wry' (set by service for display)
-  // 'wry' is set in onPrepare for display, removed in onWorkerStart before session creation,
-  // then restored in before hook after session is created
+  // Flow: onPrepare sets browserName='wry' + wdio:displayBrowserName='wry'
+  //    -> onWorkerStart removes browserName (so tauri-driver doesn't reject it)
+  //    -> spec reporter monkey-patch restores browserName from wdio:displayBrowserName
+  //    -> service.before() restores browserName on browser object for other reporters
   browserName?: 'tauri' | 'wry';
   'tauri:options'?: {
     application: string;
