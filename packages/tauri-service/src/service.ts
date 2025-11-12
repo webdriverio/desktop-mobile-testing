@@ -58,6 +58,7 @@ export default class TauriWorkerService {
         const mrInstance = mrBrowser.getInstance(instanceName);
         log.debug(`Initializing instance: ${instanceName}`);
         this.addTauriApi(mrInstance);
+        this.patchBrowserExecute(mrInstance);
         await waitUntilWindowAvailable(mrInstance);
         log.debug(`Instance ${instanceName} ready`);
 
@@ -81,6 +82,7 @@ export default class TauriWorkerService {
     } else {
       log.debug('Initializing standard browser');
       this.addTauriApi(browser as WebdriverIO.Browser);
+      this.patchBrowserExecute(browser as WebdriverIO.Browser);
       await waitUntilWindowAvailable(browser as WebdriverIO.Browser);
       log.debug('Standard browser ready');
     }
@@ -183,5 +185,84 @@ export default class TauriWorkerService {
         // TODO: Implement Tauri API mocking
       },
     };
+  }
+
+  /**
+   * Patch browser.execute() to automatically inject console forwarding code
+   * This ensures console logs from browser.execute() contexts are captured
+   */
+  private patchBrowserExecute(browser: WebdriverIO.Browser): void {
+    // Store the original execute method
+    const originalExecute = browser.execute.bind(browser);
+
+    // Override execute to inject console forwarding using Object.defineProperty
+    // to handle readonly property
+    const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
+      script: string | ((...args: InnerArguments) => ReturnValue),
+      ...args: InnerArguments
+    ): Promise<ReturnValue> {
+      // Convert script to string if it's a function
+      const scriptString = typeof script === 'function' ? script.toString() : script;
+
+      // Wrap the script with console forwarding setup executed IN THE SAME CONTEXT
+      // The forwarding code wraps console methods, then the test script runs with wrapped console
+      const wrappedScript = `
+        // Setup console forwarding first
+        (function() {
+          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.log) {
+            return;
+          }
+
+          // Store original console methods
+          const originalConsole = {
+            log: console.log.bind(console),
+            debug: console.debug.bind(console),
+            info: console.info.bind(console),
+            warn: console.warn.bind(console),
+            error: console.error.bind(console),
+          };
+
+          // Helper to forward to Tauri log plugin
+          function forward(level, args) {
+            const message = Array.from(args).map(function(arg) {
+              return typeof arg === 'string' ? arg : JSON.stringify(arg);
+            }).join(' ');
+
+            // Call original console method
+            const method = level === 'trace' ? 'log' : level;
+            if (originalConsole[method]) {
+              originalConsole[method](message);
+            }
+
+            // Forward to Tauri log plugin
+            if (window.__TAURI__.log[level]) {
+              window.__TAURI__.log[level](message).catch(function() {});
+            }
+          }
+
+          // Wrap console methods
+          console.log = function() { forward('trace', arguments); };
+          console.debug = function() { forward('debug', arguments); };
+          console.info = function() { forward('info', arguments); };
+          console.warn = function() { forward('warn', arguments); };
+          console.error = function() { forward('error', arguments); };
+        })();
+
+        // Now execute the test script with wrapped console
+        return (${scriptString}).apply(null, arguments);
+      `;
+
+      // Execute the wrapped script
+      return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
+    };
+
+    // Use Object.defineProperty to override readonly property
+    Object.defineProperty(browser, 'execute', {
+      value: patchedExecute,
+      writable: true,
+      configurable: true,
+    });
+
+    log.debug('Patched browser.execute() to auto-inject console forwarding');
   }
 }

@@ -174,6 +174,52 @@ export async function restoreMocks(): Promise<void> {
 }
 
 /**
+ * Get the console forwarding setup code as a string
+ * This can be injected into browser.execute() contexts
+ */
+export function getConsoleForwardingCode(): string {
+  return `
+    // Setup console forwarding to Tauri log plugin
+    (function() {
+      if (typeof window === 'undefined' || !window.__TAURI__?.log) {
+        return;
+      }
+
+      // Store original methods
+      const originalConsole = {
+        log: console.log.bind(console),
+        debug: console.debug.bind(console),
+        info: console.info.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+      };
+
+      // Helper to forward to Tauri
+      function forward(level, args) {
+        const message = Array.from(args).map(arg =>
+          typeof arg === 'string' ? arg : JSON.stringify(arg)
+        ).join(' ');
+
+        // Call original console method
+        originalConsole[level === 'trace' ? 'log' : level](message);
+
+        // Forward to Tauri log plugin
+        if (window.__TAURI__?.log?.[level]) {
+          window.__TAURI__.log[level](message).catch(() => {});
+        }
+      }
+
+      // Wrap console methods
+      console.log = function() { forward('trace', arguments); };
+      console.debug = function() { forward('debug', arguments); };
+      console.info = function() { forward('info', arguments); };
+      console.warn = function() { forward('warn', arguments); };
+      console.error = function() { forward('error', arguments); };
+    })();
+  `;
+}
+
+/**
  * Forward console logs to Tauri log plugin
  * This allows WebDriverIO to capture frontend console logs via the backend stdout
  */
