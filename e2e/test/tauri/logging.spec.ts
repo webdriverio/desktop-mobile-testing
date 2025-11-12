@@ -123,8 +123,8 @@ describe('Tauri Log Integration', () => {
 
       // First, check if attachConsole was called
       const initStatus = await browser.execute(() => {
-        // @ts-expect-error - checking internal state
         return {
+          // @ts-expect-error - checking internal state
           wdioTauriAvailable: typeof window.wdioTauri !== 'undefined',
           // @ts-expect-error
           tauriAvailable: typeof window.__TAURI__ !== 'undefined',
@@ -135,14 +135,18 @@ describe('Tauri Log Integration', () => {
       console.log('[DEBUG] Init status:', JSON.stringify(initStatus));
 
       // Trigger frontend logs by executing a script
-      // Note: attachConsole() forwards console logs to Rust stdout
-      console.log('[DEBUG] Executing console.info/warn/error...');
+      // Note: browser.execute() creates a fresh JS context where console forwarding isn't active
+      // Use window.__TAURI__.log directly instead
+      console.log('[DEBUG] Executing Tauri log API calls...');
       await browser.execute(() => {
-        console.info('[Test] Frontend INFO log from test');
-        console.warn('[Test] Frontend WARN log from test');
-        console.error('[Test] Frontend ERROR log from test');
+        // @ts-expect-error - window.__TAURI__ exists in Tauri context
+        window.__TAURI__.log.info('[Test] Frontend INFO log from test');
+        // @ts-expect-error
+        window.__TAURI__.log.warn('[Test] Frontend WARN log from test');
+        // @ts-expect-error
+        window.__TAURI__.log.error('[Test] Frontend ERROR log from test');
       });
-      console.log('[DEBUG] Console logs executed');
+      console.log('[DEBUG] Tauri log API calls executed');
 
       // Wait longer for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -170,10 +174,12 @@ describe('Tauri Log Integration', () => {
     });
 
     it('should filter frontend logs by level', async () => {
-      // Trigger frontend logs
+      // Trigger frontend logs using Tauri log API
       await browser.execute(() => {
-        console.debug('[Test] Frontend DEBUG log');
-        console.info('[Test] Frontend INFO log');
+        // @ts-expect-error - window.__TAURI__ exists in Tauri context
+        window.__TAURI__.log.debug('[Test] Frontend DEBUG log');
+        // @ts-expect-error
+        window.__TAURI__.log.info('[Test] Frontend INFO log');
       });
 
       // Wait a bit for logs to be captured
@@ -191,7 +197,8 @@ describe('Tauri Log Integration', () => {
       // Generate both backend and frontend logs
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
       await browser.execute(() => {
-        console.info('[Test] Combined test - frontend log');
+        // @ts-expect-error - window.__TAURI__ exists in Tauri context
+        window.__TAURI__.log.info('[Test] Combined test - frontend log');
       });
 
       // Wait longer for logs to be captured and written to disk
