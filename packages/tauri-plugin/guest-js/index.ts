@@ -173,22 +173,6 @@ export async function restoreMocks(): Promise<void> {
   }
 }
 
-// Helper to log using Tauri's log plugin (will output to stdout in tests)
-async function tauriLog(message: string): Promise<void> {
-  try {
-    // Try to use Tauri's log plugin if available
-    if (typeof window !== 'undefined' && window.__TAURI__?.log?.info) {
-      await window.__TAURI__.log.info(message);
-    } else {
-      // Fallback to console.log
-      console.log(message);
-    }
-  } catch {
-    // Silently fail if logging doesn't work
-    console.log(message);
-  }
-}
-
 /**
  * Forward console logs to Tauri log plugin
  * This allows WebDriverIO to capture frontend console logs via the backend stdout
@@ -319,42 +303,22 @@ export async function init(): Promise<void> {
     console.log(msg);
   }
 
-  // Also try to log via Tauri (async, will work after Tauri initializes)
-  Promise.all(messages.map((msg) => tauriLog(msg))).catch(() => {
-    // Ignore errors
-  });
+  // Use manual console forwarding instead of attachConsole()
+  // This is required for WebDriver testing where console logs are executed
+  // dynamically via browser.execute() contexts. The native attachConsole()
+  // from @tauri-apps/plugin-log only captures logs from the static page context.
+  console.log('[WDIO Tauri Plugin] Setting up manual console forwarding for WebDriver compatibility');
+  setupConsoleForwarding();
+  console.log('[WDIO Tauri Plugin] ✅ Console forwarding initialized');
 
-  // Attach console to Tauri log plugin
-  // This is REQUIRED for TargetKind::Webview to forward console logs to stdout
-  try {
-    // Import attachConsole from Tauri log plugin
-    const { attachConsole } = await import('@tauri-apps/plugin-log');
-    await attachConsole();
-
-    // Now that attachConsole() is done, these logs will be forwarded
-    console.log('[WDIO Tauri Plugin] ✅ attachConsole() completed - frontend logs will be captured');
-    console.info('[WDIO Tauri Plugin] TEST: This is a test INFO log after attachConsole()');
-    console.warn('[WDIO Tauri Plugin] TEST: This is a test WARN log after attachConsole()');
-
-    // Log all accumulated messages now that forwarding is active
-    for (const msg of messages) {
-      console.log(msg);
-    }
-  } catch (error) {
-    // Log error using Tauri log API directly if available
-    if (window.__TAURI__?.log?.error) {
-      await window.__TAURI__.log.error(`[WDIO Tauri Plugin] ❌ Failed to attach console: ${error}`);
-    }
-    console.warn('[WDIO Tauri Plugin] Failed to attach console:', error);
-    // Fallback to manual console forwarding if attachConsole() is not available
-    console.log('[WDIO Tauri Plugin] Using manual console forwarding as fallback');
-    setupConsoleForwarding();
-
-    // Log accumulated messages
-    for (const msg of messages) {
-      console.log(msg);
-    }
+  // Log all accumulated messages now that forwarding is active
+  for (const msg of messages) {
+    console.log(msg);
   }
+
+  // Test that console forwarding works
+  console.info('[WDIO Tauri Plugin] TEST: This is a test INFO log after setupConsoleForwarding()');
+  console.warn('[WDIO Tauri Plugin] TEST: This is a test WARN log after setupConsoleForwarding()');
 }
 
 // Auto-initialize when imported
