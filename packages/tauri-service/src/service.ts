@@ -209,7 +209,7 @@ export default class TauriWorkerService {
       const wrappedScript = `
         // Setup console forwarding first
         (function() {
-          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.log) {
+          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.core) {
             return;
           }
 
@@ -222,30 +222,49 @@ export default class TauriWorkerService {
             error: console.error.bind(console),
           };
 
-          // Helper to forward to Tauri log plugin
+          // Log level enum matching Tauri plugin-log
+          const LogLevel = {
+            Trace: 1,
+            Debug: 2,
+            Info: 3,
+            Warn: 4,
+            Error: 5
+          };
+
+          // Helper to forward to Tauri log plugin using invoke
           function forward(level, args) {
             const message = Array.from(args).map(function(arg) {
               return typeof arg === 'string' ? arg : JSON.stringify(arg);
             }).join(' ');
 
             // Call original console method
-            const method = level === 'trace' ? 'log' : level;
+            const method = level === LogLevel.Trace ? 'log' :
+                          level === LogLevel.Debug ? 'debug' :
+                          level === LogLevel.Info ? 'info' :
+                          level === LogLevel.Warn ? 'warn' : 'error';
             if (originalConsole[method]) {
               originalConsole[method](message);
             }
 
-            // Forward to Tauri log plugin
-            if (window.__TAURI__.log[level]) {
-              window.__TAURI__.log[level](message).catch(function() {});
+            // Forward to Tauri log plugin via invoke command
+            if (window.__TAURI__.core.invoke) {
+              window.__TAURI__.core.invoke('plugin:log|log', {
+                level: level,
+                message: message,
+                location: undefined,
+                file: undefined,
+                line: undefined,
+                keyValues: undefined
+              }).catch(function() {});
             }
           }
 
           // Wrap console methods
-          console.log = function() { forward('trace', arguments); };
-          console.debug = function() { forward('debug', arguments); };
-          console.info = function() { forward('info', arguments); };
-          console.warn = function() { forward('warn', arguments); };
-          console.error = function() { forward('error', arguments); };
+          console.log = function() { forward(LogLevel.Trace, arguments); };
+          console.debug = function() { forward(LogLevel.Debug, arguments); };
+          console.info = function() { forward(LogLevel.Info, arguments); };
+          console.warn = function() { forward(LogLevel.Warn, arguments); };
+          console.error = function() { forward(LogLevel.Error, arguments); };
         })();
 
         // Now execute the test script with wrapped console
