@@ -138,6 +138,7 @@ jobs:
       # This helps debug issues without cluttering the GitHub Actions console
       - name: 📦 Upload Test Logs
         if: always()
+        continue-on-error: true
         uses: ./.github/workflows/actions/upload-archive
         with:
           name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}
