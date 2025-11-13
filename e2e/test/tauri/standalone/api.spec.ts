@@ -70,5 +70,5 @@ console.log('✅ Simple execute test passed');
 await browser.deleteSession();
 await cleanupWdioSession(browser);
 
-// Exit cleanly with success code
-process.exit(0);
+console.log('✅ Cleanup complete');
+// Don't call process.exit() - let Node.js exit naturally after cleanup completes

@@ -56,9 +56,9 @@ describe('Tauri Log Integration - Standalone', () => {
       // Clean up - quit the app and stop tauri-driver
       await browser.deleteSession();
       await cleanupWdioSession(browser);
+      console.log('✅ Cleanup complete');
     }
-    // Exit cleanly after all tests
-    process.exit(0);
+    // Don't call process.exit() - let Node.js exit naturally after cleanup completes
   });
 
   it('should capture backend logs in standalone session', async () => {
