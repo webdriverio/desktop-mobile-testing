@@ -255,7 +255,10 @@ export default class TauriWorkerService {
                 file: undefined,
                 line: undefined,
                 keyValues: undefined
-              }).catch(function() {});
+              }).catch(function(err) {
+                // Log error to original console for debugging
+                originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
+              });
             }
           }
 

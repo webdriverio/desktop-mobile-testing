@@ -198,6 +198,8 @@ fn main() {
         .plugin(tauri_plugin_wdio::init())
         .plugin(
             tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Trace)  // Enable all log levels
+                .clear_targets()  // Clear default targets first
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::Stdout,
                 ))
