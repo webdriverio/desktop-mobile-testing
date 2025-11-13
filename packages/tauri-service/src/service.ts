@@ -248,6 +248,9 @@ export default class TauriWorkerService {
 
             // Forward to Tauri log plugin via invoke command
             if (window.__TAURI__.core.invoke) {
+              // DEBUG: Log before and after invoke to trace execution
+              originalConsole.error('=== WDIO DEBUG: BEFORE invoke plugin:log|log level=' + level + ' message=' + message + ' ===');
+
               window.__TAURI__.core.invoke('plugin:log|log', {
                 level: level,
                 message: message,
@@ -255,9 +258,11 @@ export default class TauriWorkerService {
                 file: undefined,
                 line: undefined,
                 keyValues: undefined
+              }).then(function() {
+                originalConsole.error('=== WDIO DEBUG: AFTER invoke SUCCESS for: ' + message + ' ===');
               }).catch(function(err) {
                 // Log error to original console for debugging
-                originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
+                originalConsole.error('=== WDIO DEBUG: AFTER invoke FAILED:', err, ' ===');
               });
             }
           }
