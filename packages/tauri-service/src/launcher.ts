@@ -462,6 +462,18 @@ export default class TauriLaunchService {
    */
   async onWorkerEnd(cid: string): Promise<void> {
     log.debug(`Ending Tauri worker session: ${cid}`);
+
+    // For standalone mode, add a delay to ensure tauri-driver is fully stopped
+    // before the next worker starts. This is critical because standalone tests
+    // manage their own sessions and stop/start tauri-driver between specs.
+    // On Linux CI runners, tauri-driver can take 10+ seconds to fully release port 4444.
+    if (cid === 'standalone') {
+      const cleanupDelay = process.env.CI ? 7000 : 3000;
+      log.debug(`Waiting ${cleanupDelay}ms for tauri-driver cleanup (standalone mode)...`);
+      await new Promise<void>((resolve) => setTimeout(resolve, cleanupDelay));
+      log.debug('Standalone cleanup delay complete');
+    }
+
     // Cleanup handled in onComplete
   }
 

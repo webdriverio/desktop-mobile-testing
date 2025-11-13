@@ -59,6 +59,8 @@ describe('Tauri Log Integration - Standalone', () => {
       console.log('✅ Cleanup complete');
     }
     // Don't call process.exit() - let Node.js exit naturally after cleanup completes
+    // The cleanup delay is now handled in the launcher's onWorkerEnd hook to ensure
+    // WDIO waits before starting the next worker
   });
 
   it('should capture backend logs in standalone session', async () => {
