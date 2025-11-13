@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import url from 'node:url';
-import { createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
+import { cleanupWdioSession, createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
 import '@wdio/native-types';
 import { xvfb } from '@wdio/xvfb';
 
@@ -66,7 +66,9 @@ if (simpleResult !== 3) {
 
 console.log('✅ Simple execute test passed');
 
-// Clean up - quit the app
+// Clean up - quit the app and stop tauri-driver
 await browser.deleteSession();
+await cleanupWdioSession(browser);
 
-process.exit();
+// Exit cleanly with success code
+process.exit(0);

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import url from 'node:url';
-import { createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
+import { cleanupWdioSession, createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
 import '@wdio/native-types';
 import { xvfb } from '@wdio/xvfb';
 
@@ -38,13 +38,31 @@ if (process.platform === 'linux') {
   await xvfb.init();
 }
 
-const browser = await startWdioSession(sessionOptions);
+let browser: WebdriverIO.Browser | null = null;
 
-// Wait a moment to ensure browser is fully initialized
-await new Promise((resolve) => setTimeout(resolve, 1000));
+try {
+  browser = await startWdioSession(sessionOptions);
+
+  // Wait a moment to ensure browser is fully initialized
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+} catch (error) {
+  console.error('Failed to start session:', error);
+  process.exit(1);
+}
 
 describe('Tauri Log Integration - Standalone', () => {
+  after(async () => {
+    if (browser) {
+      // Clean up - quit the app and stop tauri-driver
+      await browser.deleteSession();
+      await cleanupWdioSession(browser);
+    }
+    // Exit cleanly after all tests
+    process.exit(0);
+  });
+
   it('should capture backend logs in standalone session', async () => {
+    if (!browser) throw new Error('Browser not initialized');
     // Generate logs via test command
     await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
@@ -58,6 +76,7 @@ describe('Tauri Log Integration - Standalone', () => {
   });
 
   it('should capture frontend logs in standalone session', async () => {
+    if (!browser) throw new Error('Browser not initialized');
     // Trigger frontend logs
     await browser.execute(() => {
       console.info('[Test] Standalone frontend INFO log');
@@ -75,6 +94,7 @@ describe('Tauri Log Integration - Standalone', () => {
   });
 
   it('should filter logs by level in standalone session', async () => {
+    if (!browser) throw new Error('Browser not initialized');
     // Generate logs at different levels
     await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
     await browser.execute(() => {

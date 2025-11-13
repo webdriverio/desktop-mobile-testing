@@ -1,10 +1,14 @@
 import { createLogger } from '@wdio/native-utils';
+import type { Options } from '@wdio/types';
 import { remote } from 'webdriverio';
 import TauriLaunchService from './launcher.js';
 import TauriWorkerService from './service.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
+
+// Store launcher instances for cleanup
+const activeLaunchers = new Map<WebdriverIO.Browser, TauriLaunchService>();
 
 /**
  * Initialize Tauri service in standalone mode
@@ -73,11 +77,41 @@ export async function init(
     capabilities: driverCapabilities,
   });
 
+  // Store launcher for cleanup
+  activeLaunchers.set(browser, launcher);
+
   // Initialize the service
   await service.before(capabilities, [], browser);
 
   log.debug('Tauri standalone session initialized');
   return browser;
+}
+
+/**
+ * Clean up Tauri service for a standalone session
+ * Call this when you're done with a browser instance created via init()
+ */
+export async function cleanup(browser: WebdriverIO.Browser): Promise<void> {
+  log.debug('Cleaning up Tauri standalone session...');
+
+  const launcher = activeLaunchers.get(browser);
+  if (launcher) {
+    // End worker session
+    await launcher.onWorkerEnd('standalone');
+
+    // Complete the launcher lifecycle to stop tauri-driver
+    // Create minimal config object matching Options.Testrunner
+    const minimalConfig: Options.Testrunner = {
+      capabilities: [],
+    } as Options.Testrunner;
+    await launcher.onComplete(0, minimalConfig, []);
+
+    // Remove from active launchers
+    activeLaunchers.delete(browser);
+    log.debug('Tauri standalone session cleaned up');
+  } else {
+    log.warn('No launcher found for this browser instance');
+  }
 }
 
 /**
@@ -94,7 +128,7 @@ export function createTauriCapabilities(
   } = {},
 ): TauriCapabilities {
   return {
-    browserName: 'tauri',
+    // Don't set browserName - tauri-driver doesn't need it
     'tauri:options': {
       application: appBinaryPath,
       args: options.appArgs || [],
