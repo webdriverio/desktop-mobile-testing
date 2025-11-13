@@ -134,11 +134,10 @@ jobs:
         if: failure()
         run: pnpm run ci:e2e:logs
 
-      # Upload logs as artifacts on failure for later analysis
+      # Upload logs as artifacts for later analysis
       # This helps debug issues without cluttering the GitHub Actions console
-      - name: 📦 Upload Test Logs on Failure
+      - name: 📦 Upload Test Logs
         uses: ./.github/workflows/actions/upload-archive
-        if: failure()
         with:
           name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}
           output: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}.zip

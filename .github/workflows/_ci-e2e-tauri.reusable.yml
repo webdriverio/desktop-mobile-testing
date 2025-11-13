@@ -267,10 +267,9 @@ jobs:
         shell: bash
         run: pnpm run ci:e2e:logs
 
-      # Upload logs as artifacts on failure for later analysis
+      # Upload logs as artifacts for later analysis
       # This helps debug issues without cluttering the GitHub Actions console
-      - name: 📦 Upload Test Logs on Failure
-        if: failure()
+      - name: 📦 Upload Test Logs
         uses: ./.github/workflows/actions/upload-archive
         with:
           name: e2e-tauri-logs-${{ inputs.os }}-${{ inputs.scenario }}-${{ inputs.test-type }}
