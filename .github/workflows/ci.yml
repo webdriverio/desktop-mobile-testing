@@ -65,6 +65,7 @@ jobs:
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     with:
       os: 'windows-latest'
+      build-command: 'build:debug'  # Use debug build on Windows to preserve stdout/stderr for log capture
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
