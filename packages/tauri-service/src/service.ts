@@ -23,29 +23,6 @@ export default class TauriWorkerService {
   ): Promise<void> {
     log.debug('Initializing Tauri worker service');
 
-    // Restore browserName to 'wry' for display purposes in test output
-    // We removed it in onWorkerStart before session creation (tauri-driver doesn't accept it),
-    // but now that the session is created, we can restore it for display in reporters
-    if (browser.isMultiremote) {
-      const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
-      for (const instanceName of mrBrowser.instances) {
-        const instance = mrBrowser.getInstance(instanceName);
-        if (instance.capabilities && typeof instance.capabilities === 'object') {
-          const displayName =
-            (instance.capabilities as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] ?? 'wry';
-          (instance.capabilities as { browserName?: string }).browserName = displayName;
-          log.debug(`Restored browserName='${displayName}' for multiremote instance: ${instanceName}`);
-        }
-      }
-    } else {
-      if (browser.capabilities && typeof browser.capabilities === 'object') {
-        const displayName =
-          (browser.capabilities as { 'wdio:displayBrowserName'?: string })['wdio:displayBrowserName'] ?? 'wry';
-        (browser.capabilities as { browserName?: string }).browserName = displayName;
-        log.debug(`Restored browserName='${displayName}' for standard browser`);
-      }
-    }
-
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
       log.info(`Initializing ${mrBrowser.instances.length} multiremote instances`);
