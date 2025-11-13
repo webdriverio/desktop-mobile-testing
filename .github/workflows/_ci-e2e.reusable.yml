@@ -146,17 +146,6 @@ jobs:
           retention-days: 90
           if-no-files-found: warn
 
-      # Upload logs on failure (duplicate to ensure logs are captured when tests fail)
-      - name: 📦 Upload Test Logs on Failure
-        if: failure()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}-failure
-          path: e2e/logs/**/*.log
-          retention-days: 90
-          if-no-files-found: warn
-
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment
       - name: 🐛 Debug Build on Failure
