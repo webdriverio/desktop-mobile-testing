@@ -804,17 +804,28 @@ export default class TauriLaunchService {
     if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
       log.debug('Stopping tauri-driver...');
       this.tauriDriverProcess.kill('SIGTERM');
+
+      // Wait for process to exit, with force-kill fallback
+      // Use longer timeout on CI where processes can take longer to clean up
+      const stopTimeout = process.env.CI ? 10000 : 5000;
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => {
-          log.warn('tauri-driver did not stop gracefully, forcing kill');
+          log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
           this.tauriDriverProcess?.kill('SIGKILL');
-          resolve();
-        }, 5000);
+          // Give SIGKILL a moment to take effect
+          setTimeout(resolve, 2000);
+        }, stopTimeout);
+
         this.tauriDriverProcess?.on('exit', () => {
+          log.debug('tauri-driver process exited');
           clearTimeout(timeout);
           resolve();
         });
       });
+
+      // Additional delay to ensure port is fully released
+      // This is especially important on slower CI runners
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
     }
   }
 

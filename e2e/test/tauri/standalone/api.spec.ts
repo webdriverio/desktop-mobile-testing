@@ -71,8 +71,10 @@ await browser.deleteSession();
 await cleanupWdioSession(browser);
 
 // Wait for tauri-driver process to fully terminate before script exits
+// Use a longer delay on CI (GitHub runners can be slow) vs local development
 // This ensures the next standalone test can start tauri-driver on the same port
-await new Promise((resolve) => setTimeout(resolve, 2000));
+const cleanupDelay = process.env.CI ? 5000 : 2000;
+await new Promise((resolve) => setTimeout(resolve, cleanupDelay));
 
 console.log('✅ Cleanup complete');
 // Don't call process.exit() - let Node.js exit naturally after cleanup completes
