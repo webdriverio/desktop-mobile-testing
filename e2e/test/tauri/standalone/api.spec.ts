@@ -70,5 +70,9 @@ console.log('✅ Simple execute test passed');
 await browser.deleteSession();
 await cleanupWdioSession(browser);
 
+// Wait for tauri-driver process to fully terminate before script exits
+// This ensures the next standalone test can start tauri-driver on the same port
+await new Promise((resolve) => setTimeout(resolve, 2000));
+
 console.log('✅ Cleanup complete');
 // Don't call process.exit() - let Node.js exit naturally after cleanup completes
