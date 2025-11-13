@@ -122,8 +122,9 @@ export default class TauriLaunchService {
         throw new Error(`Tauri service only supports 'tauri' or 'wry' browserName, got: ${cap.browserName}`);
       }
 
-      // Don't set browserName - let it remain undefined
-      // tauri-driver doesn't need it and reporters can handle undefined
+      // Remove browserName from capabilities before session creation
+      // tauri-driver doesn't need it and will reject it during capability matching
+      delete (cap as { browserName?: string }).browserName;
 
       // Get Tauri app binary path from tauri:options
       const tauriOptions = cap['tauri:options'];
