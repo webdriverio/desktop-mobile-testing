@@ -189,6 +189,20 @@ fn generate_test_logs() -> Result<String, String> {
     Ok("Logs generated".to_string())
 }
 
+/// Custom frontend logging command that uses target="frontend" instead of "webview"
+#[tauri::command]
+fn log_frontend(level: String, message: String) -> Result<(), String> {
+    match level.as_str() {
+        "trace" => log::trace!(target: "frontend", "{}", message),
+        "debug" => log::debug!(target: "frontend", "{}", message),
+        "info" => log::info!(target: "frontend", "{}", message),
+        "warn" => log::warn!(target: "frontend", "{}", message),
+        "error" => log::error!(target: "frontend", "{}", message),
+        _ => return Err(format!("Unknown log level: {}", level)),
+    }
+    Ok(())
+}
+
 fn main() {
     // Log application startup at various levels
     log::info!("[App] Tauri application starting");
@@ -220,7 +234,8 @@ fn main() {
             get_platform_info,
             read_clipboard,
             write_clipboard,
-            generate_test_logs
+            generate_test_logs,
+            log_frontend
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

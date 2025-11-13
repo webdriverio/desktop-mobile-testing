@@ -246,23 +246,21 @@ export default class TauriWorkerService {
               originalConsole[method](message);
             }
 
-            // Forward to Tauri log plugin via invoke command
+            // Forward to custom frontend logging command with target="frontend"
+            // Using custom command instead of plugin:log|log to avoid target="webview" filtering issues
             if (window.__TAURI__.core.invoke) {
-              // DEBUG: Log before and after invoke to trace execution
-              originalConsole.error('=== WDIO DEBUG: BEFORE invoke plugin:log|log level=' + level + ' message=' + message + ' ===');
+              // Map LogLevel enum to string
+              const levelStr = level === LogLevel.Trace ? 'trace' :
+                              level === LogLevel.Debug ? 'debug' :
+                              level === LogLevel.Info ? 'info' :
+                              level === LogLevel.Warn ? 'warn' : 'error';
 
-              window.__TAURI__.core.invoke('plugin:log|log', {
-                level: level,
-                message: message,
-                location: undefined,
-                file: undefined,
-                line: undefined,
-                keyValues: undefined
-              }).then(function() {
-                originalConsole.error('=== WDIO DEBUG: AFTER invoke SUCCESS for: ' + message + ' ===');
+              window.__TAURI__.core.invoke('log_frontend', {
+                level: levelStr,
+                message: message
               }).catch(function(err) {
                 // Log error to original console for debugging
-                originalConsole.error('=== WDIO DEBUG: AFTER invoke FAILED:', err, ' ===');
+                originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
               });
             }
           }
