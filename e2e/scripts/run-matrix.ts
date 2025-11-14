@@ -219,8 +219,12 @@ async function runTest(
         const specPath = join(testDir, specFile);
         console.log(`  Running standalone test: ${specFile}`);
 
-        // Use execWdio (which handles xvfb) but with tsx instead of wdio command
-        lastResult = await execWdio(`tsx ${specPath}`, testEnv, {
+        // Use execWdio but with tsx instead of wdio command
+        const command =
+          process.platform === 'linux' && variant.framework === 'electron'
+            ? `xvfb-run tsx ${specPath}`
+            : `tsx ${specPath}`;
+        lastResult = await execWdio(command, testEnv, {
           cwd: process.cwd(),
           timeout: 300000, // 5 minutes
         });
@@ -539,7 +543,7 @@ EXAMPLES:
 ENVIRONMENT VARIABLES:
   All command-line options can also be set via environment variables:
   FRAMEWORK, APP, TEST_TYPE, BINARY, MAC_UNIVERSAL, CONCURRENCY
-  
+
   Note: MODULE_TYPE is deprecated for E2E tests (ESM only). CJS/ESM testing is done in package tests.
 `);
 }
