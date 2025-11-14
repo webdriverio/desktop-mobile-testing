@@ -33,7 +33,10 @@ if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].backendLogLevel = 'info';
   sessionOptions['wdio:tauriServiceOptions'].frontendLogLevel = 'info';
   // Set log base directory to e2e directory for consistent log paths
-  sessionOptions['wdio:tauriServiceOptions'].logBaseDir = path.join(__dirname, '..', '..', '..');
+  const logBaseDir = path.join(__dirname, '..', '..', '..');
+  sessionOptions['wdio:tauriServiceOptions'].logBaseDir = logBaseDir;
+  console.log(`[DEBUG] Setting logBaseDir to: ${logBaseDir}`);
+  console.log(`[DEBUG] __dirname: ${__dirname}`);
 }
 
 // Initialize xvfb if running on Linux
