@@ -14,15 +14,6 @@ const log = createLogger('tauri-service', 'launcher');
 let specReporterPatched = false;
 
 /**
- * Extract instance ID from capabilities args (e.g., '--browser=A' -> 'A')
- */
-function extractInstanceId(caps: TauriCapabilities): string | undefined {
-  const args = caps['tauri:options']?.args || [];
-  const browserArg = args.find((arg) => arg.startsWith('--browser='));
-  return browserArg?.split('=')[1];
-}
-
-/**
  * Generate unique data directory for multiremote instance
  */
 function generateDataDirectory(instanceId: string): string {
@@ -199,7 +190,8 @@ export default class TauriLaunchService {
       for (let i = 0; i < capEntries.length; i++) {
         const [key, value] = capEntries[i];
         const cap = value.capabilities;
-        const instanceId = extractInstanceId(cap) || String(i);
+        // Use the multiremote key as the instance ID (e.g., 'browserA', 'browserB')
+        const instanceId = String(key);
 
         // Store options for this instance
         const instanceOptions = mergeOptions(this.options, cap['wdio:tauriServiceOptions']);
@@ -293,8 +285,9 @@ export default class TauriLaunchService {
         const [firstKey, firstValue] = entries[0] ?? [];
         if (firstValue?.capabilities) {
           firstCap = firstValue.capabilities;
-          instanceId = extractInstanceId(firstValue.capabilities);
-          log.debug(`Multiremote instance detected: ${String(firstKey)} (ID: ${instanceId ?? 'n/a'})`);
+          // Use the multiremote key as the instance ID
+          instanceId = String(firstKey);
+          log.debug(`Multiremote instance detected: ${String(firstKey)} (ID: ${instanceId})`);
         }
       } else if (caps && typeof caps === 'object') {
         const singleCap = caps as TauriCapabilities;
