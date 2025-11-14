@@ -39,6 +39,12 @@ export interface TauriServiceOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Base directory for log files in standalone mode
+   * If not specified, uses process.cwd()
+   * @default undefined
+   */
+  logBaseDir?: string;
 }
 
 /**

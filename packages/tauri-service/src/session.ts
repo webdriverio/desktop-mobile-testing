@@ -30,10 +30,8 @@ export async function init(
       const appDirName = basename(appDir);
       const writer = getStandaloneLogWriter();
 
-      // Determine log base directory
-      // If TEST env var is set (e2e tests), use cwd (which is e2e dir when running via run-matrix)
-      // Otherwise use cwd as-is
-      const logBaseDir = process.env.TEST === 'true' ? process.cwd() : undefined;
+      // Use logBaseDir from options if specified, otherwise use process.cwd()
+      const logBaseDir = serviceOptions.logBaseDir;
 
       writer.initialize(appDirName, logBaseDir);
       log.debug(`Standalone log writer initialized for: ${appDirName} at ${writer.getLogDir()}`);

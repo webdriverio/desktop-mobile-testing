@@ -32,6 +32,8 @@ if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].captureFrontendLogs = true;
   sessionOptions['wdio:tauriServiceOptions'].backendLogLevel = 'info';
   sessionOptions['wdio:tauriServiceOptions'].frontendLogLevel = 'info';
+  // Set log base directory to e2e directory for consistent log paths
+  sessionOptions['wdio:tauriServiceOptions'].logBaseDir = path.join(__dirname, '..', '..', '..');
 }
 
 // Initialize xvfb if running on Linux
