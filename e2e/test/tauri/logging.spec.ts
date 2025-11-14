@@ -1,81 +1,10 @@
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
-import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
+import { assertLogContains, findLogEntries, readWdioLogs } from './helpers/logging.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-
-/**
- * Read WDIO log files from output directory
- */
-function readWdioLogs(): string {
-  // WDIO outputDir is typically set in wdio config
-  // For tests, logs are in e2e/logs/{testType}-{appDirName}/
-  const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-  if (!fs.existsSync(logBaseDir)) {
-    console.log(`[DEBUG] Log base directory does not exist: ${logBaseDir}`);
-    return '';
-  }
-
-  // Find the most recent log directory (or any log directory)
-  const logDirs = fs
-    .readdirSync(logBaseDir, { withFileTypes: true })
-    .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => dirent.name)
-    .sort()
-    .reverse();
-
-  if (logDirs.length === 0) {
-    console.log(`[DEBUG] No log directories found in: ${logBaseDir}`);
-    return '';
-  }
-
-  console.log(`[DEBUG] Found log directories: ${logDirs.join(', ')}`);
-
-  // Read all log files from the most recent directory
-  const logDir = path.join(logBaseDir, logDirs[0]);
-  const logFiles = fs
-    .readdirSync(logDir)
-    .filter((file) => file.endsWith('.log'))
-    .sort();
-
-  console.log(`[DEBUG] Reading logs from: ${logDir}`);
-  console.log(`[DEBUG] Found log files: ${logFiles.join(', ')}`);
-
-  let allLogs = '';
-  for (const logFile of logFiles) {
-    const logPath = path.join(logDir, logFile);
-    try {
-      const content = fs.readFileSync(logPath, 'utf8');
-      allLogs += content + '\n';
-      console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
-    } catch (error) {
-      console.log(`[DEBUG] Failed to read ${logFile}: ${error}`);
-    }
-  }
-
-  return allLogs;
-}
-
-/**
- * Find log entries matching a pattern
- */
-function findLogEntries(logs: string, pattern: string | RegExp): string[] {
-  const regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern;
-  return logs.split('\n').filter((line) => regex.test(line));
-}
-
-/**
- * Assert log contains expected message
- */
-function assertLogContains(logs: string, expected: string | RegExp): void {
-  const found = typeof expected === 'string' ? logs.includes(expected) : expected.test(logs);
-
-  if (!found) {
-    throw new Error(`Expected log message not found: ${expected}\n\nLogs:\n${logs.slice(0, 1000)}`);
-  }
-}
 
 describe('Tauri Log Integration', () => {
   describe('Backend Log Capture', () => {
@@ -86,7 +15,8 @@ describe('Tauri Log Integration', () => {
       // Wait longer for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      const logs = readWdioLogs();
+      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
+      const logs = readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
       console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
 
@@ -106,7 +36,8 @@ describe('Tauri Log Integration', () => {
       // Wait a bit for logs to be captured
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const logs = readWdioLogs();
+      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
+      const logs = readWdioLogs(logBaseDir);
       // With default 'info' level, should not see trace/debug
       const traceLogs = findLogEntries(logs, /\[Tauri:Backend\].*TRACE/i);
       const debugLogs = findLogEntries(logs, /\[Tauri:Backend\].*DEBUG/i);
@@ -147,7 +78,8 @@ describe('Tauri Log Integration', () => {
       // Wait longer for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      const logs = readWdioLogs();
+      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
+      const logs = readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
 
       // Search for frontend logs - they should have [Tauri:Frontend] prefix
@@ -179,7 +111,8 @@ describe('Tauri Log Integration', () => {
       // Wait a bit for logs to be captured
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const logs = readWdioLogs();
+      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
+      const logs = readWdioLogs(logBaseDir);
       // With default 'info' level, debug should be filtered out
       const debugLogs = findLogEntries(logs, /\[Tauri:Frontend\].*DEBUG/i);
       expect(debugLogs.length).toBe(0);
@@ -197,7 +130,8 @@ describe('Tauri Log Integration', () => {
       // Wait longer for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      const logs = readWdioLogs();
+      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
+      const logs = readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
       console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
 

@@ -5,6 +5,7 @@ import url from 'node:url';
 import { cleanupWdioSession, createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
 import '@wdio/native-types';
 import { xvfb } from '@wdio/xvfb';
+import { assertLogContains, assertLogDoesNotContain, readWdioLogs } from '../helpers/logging.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -46,14 +47,21 @@ const browser = await startWdioSession(sessionOptions);
 await new Promise((resolve) => setTimeout(resolve, 1000));
 
 try {
+  const logBaseDir = path.join(__dirname, '..', '..', '..', 'logs');
+
   // Test 1: Capture backend logs in standalone session
   console.log('Test 1: Backend logs...');
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  const result1 = await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-  if (result1 !== 'Logs generated') {
-    throw new Error(`Backend logs test failed: expected 'Logs generated', got ${result1}`);
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Verify logs were captured with correct prefix
+  const logs1 = readWdioLogs(logBaseDir);
+  if (!logs1) {
+    throw new Error('No logs found in output directory');
   }
+  assertLogContains(logs1, /\[Tauri:Backend\].*\[Test\].*INFO level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend\].*\[Test\].*WARN level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend\].*\[Test\].*ERROR level log/i);
   console.log('✅ Backend logs test passed');
 
   // Test 2: Capture frontend logs in standalone session
@@ -61,28 +69,30 @@ try {
   await browser.execute(() => {
     console.info('[Test] Standalone frontend INFO log');
     console.warn('[Test] Standalone frontend WARN log');
+    console.error('[Test] Standalone frontend ERROR log');
   });
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  const result2 = (await browser.execute(() => {
-    return 'Logs generated';
-  })) as unknown as string;
-  if (result2 !== 'Logs generated') {
-    throw new Error(`Frontend logs test failed: expected 'Logs generated', got ${result2}`);
-  }
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Verify frontend logs were captured with correct prefix
+  const logs2 = readWdioLogs(logBaseDir);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend INFO/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend WARN/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend ERROR/i);
   console.log('✅ Frontend logs test passed');
 
   // Test 3: Filter logs by level in standalone session
   console.log('Test 3: Log level filtering...');
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
   await browser.execute(() => {
-    console.debug('[Test] This DEBUG log should be filtered');
+    console.debug('[Test] This DEBUG log should be filtered out');
     console.info('[Test] This INFO log should appear');
   });
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  const result3 = await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-  if (result3 !== 'Logs generated') {
-    throw new Error(`Log filtering test failed: expected 'Logs generated', got ${result3}`);
-  }
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Verify DEBUG logs are filtered out (info level filtering)
+  const logs3 = readWdioLogs(logBaseDir);
+  assertLogDoesNotContain(logs3, /\[Tauri:Frontend\].*DEBUG.*should be filtered/i);
+  assertLogContains(logs3, /\[Tauri:Frontend\].*INFO.*should appear/i);
   console.log('✅ Log filtering test passed');
 
   console.log('✅ All Tauri standalone logging tests passed');
