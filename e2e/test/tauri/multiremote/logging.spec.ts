@@ -22,8 +22,10 @@ describe('Tauri Log Integration - Multiremote', () => {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Verify logs were captured with correct prefixes and instance IDs
-    const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-    const logs = readWdioLogs(logBaseDir);
+    // For multiremote tests, logs go to logs/multiremote-{appDirName}/
+    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
+    console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
+    const logs = readWdioLogs(logDir);
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -62,8 +64,8 @@ describe('Tauri Log Integration - Multiremote', () => {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Verify frontend logs were captured with correct prefixes
-    const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-    const logs = readWdioLogs(logBaseDir);
+    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
+    const logs = readWdioLogs(logDir);
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -95,8 +97,8 @@ describe('Tauri Log Integration - Multiremote', () => {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Verify both types of logs are captured independently
-    const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-    const logs = readWdioLogs(logBaseDir);
+    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
+    const logs = readWdioLogs(logDir);
 
     if (!logs) {
       throw new Error('No logs found in output directory');

@@ -47,7 +47,10 @@ const browser = await startWdioSession(sessionOptions);
 await new Promise((resolve) => setTimeout(resolve, 1000));
 
 try {
-  const logBaseDir = path.join(__dirname, '..', '..', '..', 'logs');
+  // For standalone tests, logs go to logs/standalone-{appDirName}/
+  // Since standalone tests don't run through WDIO, we need to construct the path manually
+  const appDirName = path.basename(appDir);
+  const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
 
   // Test 1: Capture backend logs in standalone session
   console.log('Test 1: Backend logs...');
@@ -55,7 +58,8 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
   // Verify logs were captured with correct prefix
-  const logs1 = readWdioLogs(logBaseDir);
+  console.log(`[DEBUG] Reading logs from: ${logDir}`);
+  const logs1 = readWdioLogs(logDir);
   if (!logs1) {
     throw new Error('No logs found in output directory');
   }
@@ -74,7 +78,7 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
   // Verify frontend logs were captured with correct prefix
-  const logs2 = readWdioLogs(logBaseDir);
+  const logs2 = readWdioLogs(logDir);
   assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend INFO/i);
   assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend WARN/i);
   assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend ERROR/i);
@@ -90,7 +94,7 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
   // Verify DEBUG logs are filtered out (info level filtering)
-  const logs3 = readWdioLogs(logBaseDir);
+  const logs3 = readWdioLogs(logDir);
   assertLogDoesNotContain(logs3, /\[Tauri:Frontend\].*DEBUG.*should be filtered/i);
   assertLogContains(logs3, /\[Tauri:Frontend\].*INFO.*should appear/i);
   console.log('✅ Log filtering test passed');
