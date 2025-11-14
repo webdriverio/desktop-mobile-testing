@@ -10,7 +10,33 @@ export function readWdioLogs(logBaseDir: string): string {
     return '';
   }
 
-  // Find the most recent log directory (or any log directory)
+  // Check if there are .log files directly in the base directory (standalone mode)
+  const directLogFiles = fs
+    .readdirSync(logBaseDir, { withFileTypes: true })
+    .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.log'))
+    .map((dirent) => dirent.name)
+    .sort();
+
+  if (directLogFiles.length > 0) {
+    // Standalone mode: read log files directly from base directory
+    console.log(`[DEBUG] Reading logs directly from: ${logBaseDir}`);
+    console.log(`[DEBUG] Found log files: ${directLogFiles.join(', ')}`);
+
+    let allLogs = '';
+    for (const logFile of directLogFiles) {
+      const logPath = path.join(logBaseDir, logFile);
+      try {
+        const content = fs.readFileSync(logPath, 'utf8');
+        allLogs += content + '\n';
+        console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
+      } catch (error) {
+        console.log(`[DEBUG] Failed to read ${logFile}: ${error}`);
+      }
+    }
+    return allLogs;
+  }
+
+  // WDIO test runner mode: find the most recent log directory
   const logDirs = fs
     .readdirSync(logBaseDir, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
@@ -19,7 +45,7 @@ export function readWdioLogs(logBaseDir: string): string {
     .reverse();
 
   if (logDirs.length === 0) {
-    console.log(`[DEBUG] No log directories found in: ${logBaseDir}`);
+    console.log(`[DEBUG] No log directories or files found in: ${logBaseDir}`);
     return '';
   }
 
