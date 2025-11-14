@@ -26,7 +26,9 @@ export async function init(
     if (serviceOptions.logDir) {
       // Use explicit logDir if provided
       const writer = getStandaloneLogWriter();
+      console.log(`[DEBUG] Initializing standalone log writer with logDir: ${serviceOptions.logDir}`);
       writer.initialize(serviceOptions.logDir);
+      console.log(`[DEBUG] Log writer initialized. Directory: ${writer.getLogDir()}, File: ${writer.getLogFile()}`);
       log.debug(`Standalone log writer initialized at ${writer.getLogDir()}`);
     } else {
       log.warn('Standalone logging enabled but logDir not specified - logs will not be captured');

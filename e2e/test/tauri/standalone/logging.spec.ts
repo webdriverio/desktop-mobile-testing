@@ -57,6 +57,11 @@ try {
   const appDirName = path.basename(appDir);
   const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
 
+  console.log(`[DEBUG] Test will read logs from: ${logDir}`);
+  console.log(`[DEBUG] appDir: ${appDir}`);
+  console.log(`[DEBUG] appDirName: ${appDirName}`);
+  console.log(`[DEBUG] __dirname: ${__dirname}`);
+
   // Test 1: Capture backend logs in standalone session
   console.log('Test 1: Backend logs...');
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
@@ -64,6 +69,13 @@ try {
 
   // Verify logs were captured with correct prefix
   console.log(`[DEBUG] Reading logs from: ${logDir}`);
+  console.log(`[DEBUG] Directory exists: ${fs.existsSync(logDir)}`);
+  if (fs.existsSync(logDir)) {
+    const files = fs.readdirSync(logDir, { withFileTypes: true });
+    console.log(
+      `[DEBUG] Files in directory: ${files.map((f) => `${f.name} (${f.isDirectory() ? 'dir' : 'file'})`).join(', ')}`,
+    );
+  }
   const logs1 = readWdioLogs(logDir);
   if (!logs1) {
     throw new Error('No logs found in output directory');
