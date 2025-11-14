@@ -31,14 +31,14 @@ describe('Tauri Log Integration - Multiremote', () => {
       throw new Error('No logs found in output directory');
     }
 
-    // Both instances should have backend logs with [Tauri:Backend] prefix
-    assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*INFO level log/i);
-    assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*WARN level log/i);
-    assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*ERROR level log/i);
+    // Both instances should have backend logs with [Tauri:Backend:instanceId] prefix
+    // Multiremote logs include instance ID in the prefix
+    assertLogContains(logs, /\[Tauri:Backend:(browserA|browserB)\].*\[Test\].*INFO level log/i);
+    assertLogContains(logs, /\[Tauri:Backend:(browserA|browserB)\].*\[Test\].*WARN level log/i);
+    assertLogContains(logs, /\[Tauri:Backend:(browserA|browserB)\].*\[Test\].*ERROR level log/i);
 
-    // Verify we have logs from both instances
-    // Note: Instance-specific logging may include instance IDs in the log prefix
-    const backendLogs = findLogEntries(logs, /\[Tauri:Backend\]/i);
+    // Verify we have logs from both instances with their IDs
+    const backendLogs = findLogEntries(logs, /\[Tauri:Backend:(browserA|browserB)\]/i);
     console.log(`[DEBUG] Found ${backendLogs.length} backend log entries from both instances`);
     expect(backendLogs.length).toBeGreaterThan(0);
   });
@@ -71,11 +71,11 @@ describe('Tauri Log Integration - Multiremote', () => {
       throw new Error('No logs found in output directory');
     }
 
-    // Verify both instances' frontend logs are captured
-    assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*Instance A frontend INFO/i);
-    assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*Instance B frontend INFO/i);
+    // Verify both instances' frontend logs are captured with instance IDs
+    assertLogContains(logs, /\[Tauri:Frontend:browserA\].*\[Test\].*Instance A frontend INFO/i);
+    assertLogContains(logs, /\[Tauri:Frontend:browserB\].*\[Test\].*Instance B frontend INFO/i);
 
-    const frontendLogs = findLogEntries(logs, /\[Tauri:Frontend\]/i);
+    const frontendLogs = findLogEntries(logs, /\[Tauri:Frontend:(browserA|browserB)\]/i);
     console.log(`[DEBUG] Found ${frontendLogs.length} frontend log entries from both instances`);
     expect(frontendLogs.length).toBeGreaterThan(0);
   });
@@ -104,15 +104,15 @@ describe('Tauri Log Integration - Multiremote', () => {
       throw new Error('No logs found in output directory');
     }
 
-    // Instance A should have backend logs
-    assertLogContains(logs, /\[Tauri:Backend\].*\[Test\].*INFO level log/i);
+    // Instance A should have backend logs with instance ID
+    assertLogContains(logs, /\[Tauri:Backend:browserA\].*\[Test\].*INFO level log/i);
 
-    // Instance B should have frontend logs
-    assertLogContains(logs, /\[Tauri:Frontend\].*\[Test\].*Instance B only frontend log/i);
+    // Instance B should have frontend logs with instance ID
+    assertLogContains(logs, /\[Tauri:Frontend:browserB\].*\[Test\].*Instance B only frontend log/i);
 
     // Verify both types exist
-    const backendLogs = findLogEntries(logs, /\[Tauri:Backend\]/i);
-    const frontendLogs = findLogEntries(logs, /\[Tauri:Frontend\]/i);
+    const backendLogs = findLogEntries(logs, /\[Tauri:Backend:(browserA|browserB)\]/i);
+    const frontendLogs = findLogEntries(logs, /\[Tauri:Frontend:(browserA|browserB)\]/i);
     console.log(`[DEBUG] Found ${backendLogs.length} backend and ${frontendLogs.length} frontend log entries`);
     expect(backendLogs.length).toBeGreaterThan(0);
     expect(frontendLogs.length).toBeGreaterThan(0);
