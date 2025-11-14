@@ -1,7 +1,9 @@
+import { basename, dirname } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { remote } from 'webdriverio';
 import TauriLaunchService from './launcher.js';
+import { getStandaloneLogWriter } from './logWriter.js';
 import TauriWorkerService from './service.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
@@ -18,6 +20,19 @@ export async function init(
   globalOptions?: TauriServiceGlobalOptions,
 ): Promise<WebdriverIO.Browser> {
   log.debug('Initializing Tauri service in standalone mode...');
+
+  // Initialize standalone log writer if logging is enabled
+  const serviceOptions = capabilities['wdio:tauriServiceOptions'];
+  if (serviceOptions?.captureBackendLogs || serviceOptions?.captureFrontendLogs) {
+    const appBinaryPath = serviceOptions.appBinaryPath;
+    if (appBinaryPath) {
+      const appDir = dirname(appBinaryPath);
+      const appDirName = basename(appDir);
+      const writer = getStandaloneLogWriter();
+      writer.initialize(appDirName);
+      log.debug(`Standalone log writer initialized for: ${appDirName}`);
+    }
+  }
 
   const testRunnerOpts = globalOptions?.rootDir
     ? { rootDir: globalOptions.rootDir, capabilities: [] }
@@ -105,6 +120,10 @@ export async function cleanup(browser: WebdriverIO.Browser): Promise<void> {
       capabilities: [],
     } as Options.Testrunner;
     await launcher.onComplete(0, minimalConfig, []);
+
+    // Close standalone log writer
+    const writer = getStandaloneLogWriter();
+    writer.close();
 
     // Remove from active launchers
     activeLaunchers.delete(browser);

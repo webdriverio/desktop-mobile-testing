@@ -1,4 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
+import { getStandaloneLogWriter, isStandaloneLogWriterInitialized } from './logWriter.js';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
@@ -51,7 +52,7 @@ function formatLogMessage(source: 'backend' | 'frontend', message: string, insta
 }
 
 /**
- * Forward a log message to WDIO logger
+ * Forward a log message to WDIO logger or standalone file writer
  */
 export function forwardLog(
   source: 'backend' | 'frontend',
@@ -64,9 +65,16 @@ export function forwardLog(
     return;
   }
 
-  const logger = createLogger('tauri-service', 'service');
-  const loggerMethod = getLoggerMethod(logger, level);
   const formattedMessage = formatLogMessage(source, message, instanceId);
 
-  loggerMethod(formattedMessage);
+  // Check if we're in standalone mode (log writer initialized)
+  if (isStandaloneLogWriterInitialized()) {
+    const writer = getStandaloneLogWriter();
+    writer.write(formattedMessage);
+  } else {
+    // Use WDIO logger (normal test runner mode)
+    const logger = createLogger('tauri-service', 'service');
+    const loggerMethod = getLoggerMethod(logger, level);
+    loggerMethod(formattedMessage);
+  }
 }
