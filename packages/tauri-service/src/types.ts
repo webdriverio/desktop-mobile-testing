@@ -40,17 +40,12 @@ export interface TauriServiceOptions {
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   /**
-   * Base directory for log files in standalone mode
-   * If not specified, uses process.cwd()
+   * Log directory for standalone mode
+   * Full path where log files should be written
+   * If not specified, uses logs/standalone-{appDirName}/ in current working directory
    * @default undefined
    */
-  logBaseDir?: string;
-  /**
-   * App directory name for log subdirectory naming in standalone mode
-   * If not specified, extracts from appBinaryPath
-   * @default undefined
-   */
-  logAppDirName?: string;
+  logDir?: string;
 }
 
 /**

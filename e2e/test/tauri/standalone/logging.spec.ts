@@ -32,14 +32,11 @@ if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].captureFrontendLogs = true;
   sessionOptions['wdio:tauriServiceOptions'].backendLogLevel = 'info';
   sessionOptions['wdio:tauriServiceOptions'].frontendLogLevel = 'info';
-  // Set log base directory to e2e directory for consistent log paths
-  const logBaseDir = path.join(__dirname, '..', '..', '..');
-  sessionOptions['wdio:tauriServiceOptions'].logBaseDir = logBaseDir;
-  // Set app directory name to match what the test expects
-  sessionOptions['wdio:tauriServiceOptions'].logAppDirName = path.basename(appDir);
-  console.log(`[DEBUG] Setting logBaseDir to: ${logBaseDir}`);
-  console.log(`[DEBUG] Setting logAppDirName to: ${path.basename(appDir)}`);
-  console.log(`[DEBUG] __dirname: ${__dirname}`);
+  // Set log directory - full path where logs should be written
+  const appDirName = path.basename(appDir);
+  const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
+  sessionOptions['wdio:tauriServiceOptions'].logDir = logDir;
+  console.log(`[DEBUG] Setting logDir to: ${logDir}`);
 }
 
 // Initialize xvfb if running on Linux

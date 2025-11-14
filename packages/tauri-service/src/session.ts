@@ -1,4 +1,3 @@
-import { basename, dirname } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { remote } from 'webdriverio';
@@ -24,17 +23,13 @@ export async function init(
   // Initialize standalone log writer if logging is enabled
   const serviceOptions = capabilities['wdio:tauriServiceOptions'];
   if (serviceOptions?.captureBackendLogs || serviceOptions?.captureFrontendLogs) {
-    const appBinaryPath = serviceOptions.appBinaryPath;
-    if (appBinaryPath) {
-      // Use explicit logAppDirName if provided, otherwise extract from binary path
-      const appDirName = serviceOptions.logAppDirName || basename(dirname(appBinaryPath));
+    if (serviceOptions.logDir) {
+      // Use explicit logDir if provided
       const writer = getStandaloneLogWriter();
-
-      // Use logBaseDir from options if specified, otherwise use process.cwd()
-      const logBaseDir = serviceOptions.logBaseDir;
-
-      writer.initialize(appDirName, logBaseDir);
-      log.debug(`Standalone log writer initialized for: ${appDirName} at ${writer.getLogDir()}`);
+      writer.initialize(serviceOptions.logDir);
+      log.debug(`Standalone log writer initialized at ${writer.getLogDir()}`);
+    } else {
+      log.warn('Standalone logging enabled but logDir not specified - logs will not be captured');
     }
   }
 

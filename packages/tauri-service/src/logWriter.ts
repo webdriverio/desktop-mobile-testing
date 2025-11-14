@@ -1,6 +1,5 @@
 import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
-import process from 'node:process';
 
 /**
  * Log writer for standalone mode (when WDIO test runner is not available)
@@ -13,14 +12,10 @@ export class StandaloneLogWriter {
   /**
    * Initialize log writer for standalone mode
    * Creates log directory and file stream
-   * @param appDirName - App directory name for log directory naming
-   * @param logBaseDir - Optional base directory for logs (defaults to process.cwd())
+   * @param logDir - Full path to log directory
    */
-  initialize(appDirName: string, logBaseDir?: string): void {
-    // Calculate log directory based on WDIO convention: logs/standalone-{appDirName}/
-    // Use provided base dir or fallback to cwd
-    const baseDir = logBaseDir || process.cwd();
-    this.logDir = join(baseDir, 'logs', `standalone-${appDirName}`);
+  initialize(logDir: string): void {
+    this.logDir = logDir;
 
     // Create log directory if it doesn't exist
     if (!existsSync(this.logDir)) {
