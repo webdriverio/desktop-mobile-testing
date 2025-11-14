@@ -35,7 +35,10 @@ if (sessionOptions['wdio:tauriServiceOptions']) {
   // Set log base directory to e2e directory for consistent log paths
   const logBaseDir = path.join(__dirname, '..', '..', '..');
   sessionOptions['wdio:tauriServiceOptions'].logBaseDir = logBaseDir;
+  // Set app directory name to match what the test expects
+  sessionOptions['wdio:tauriServiceOptions'].logAppDirName = path.basename(appDir);
   console.log(`[DEBUG] Setting logBaseDir to: ${logBaseDir}`);
+  console.log(`[DEBUG] Setting logAppDirName to: ${path.basename(appDir)}`);
   console.log(`[DEBUG] __dirname: ${__dirname}`);
 }
 

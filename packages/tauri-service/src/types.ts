@@ -45,6 +45,12 @@ export interface TauriServiceOptions {
    * @default undefined
    */
   logBaseDir?: string;
+  /**
+   * App directory name for log subdirectory naming in standalone mode
+   * If not specified, extracts from appBinaryPath
+   * @default undefined
+   */
+  logAppDirName?: string;
 }
 
 /**

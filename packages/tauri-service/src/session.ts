@@ -26,8 +26,8 @@ export async function init(
   if (serviceOptions?.captureBackendLogs || serviceOptions?.captureFrontendLogs) {
     const appBinaryPath = serviceOptions.appBinaryPath;
     if (appBinaryPath) {
-      const appDir = dirname(appBinaryPath);
-      const appDirName = basename(appDir);
+      // Use explicit logAppDirName if provided, otherwise extract from binary path
+      const appDirName = serviceOptions.logAppDirName || basename(dirname(appBinaryPath));
       const writer = getStandaloneLogWriter();
 
       // Use logBaseDir from options if specified, otherwise use process.cwd()
