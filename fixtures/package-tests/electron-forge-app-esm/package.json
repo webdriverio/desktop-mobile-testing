@@ -20,7 +20,7 @@
     "@electron-forge/maker-rpm": "^7.10.2",
     "@electron-forge/maker-squirrel": "^7.10.2",
     "@electron-forge/maker-zip": "^7.10.2",
-    "@types/node": "^24.7.2",
+    "@types/node": "^24.10.1",
     "@wdio/cli": "^9.20.0",
     "@wdio/native-types": "workspace:*",
     "@wdio/native-utils": "workspace:*",
