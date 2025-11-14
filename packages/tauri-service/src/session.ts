@@ -29,8 +29,14 @@ export async function init(
       const appDir = dirname(appBinaryPath);
       const appDirName = basename(appDir);
       const writer = getStandaloneLogWriter();
-      writer.initialize(appDirName);
-      log.debug(`Standalone log writer initialized for: ${appDirName}`);
+
+      // Determine log base directory
+      // If TEST env var is set (e2e tests), use cwd (which is e2e dir when running via run-matrix)
+      // Otherwise use cwd as-is
+      const logBaseDir = process.env.TEST === 'true' ? process.cwd() : undefined;
+
+      writer.initialize(appDirName, logBaseDir);
+      log.debug(`Standalone log writer initialized for: ${appDirName} at ${writer.getLogDir()}`);
     }
   }
 

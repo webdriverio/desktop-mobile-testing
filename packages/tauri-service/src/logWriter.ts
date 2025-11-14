@@ -13,11 +13,14 @@ export class StandaloneLogWriter {
   /**
    * Initialize log writer for standalone mode
    * Creates log directory and file stream
+   * @param appDirName - App directory name for log directory naming
+   * @param logBaseDir - Optional base directory for logs (defaults to process.cwd())
    */
-  initialize(appDirName: string): void {
+  initialize(appDirName: string, logBaseDir?: string): void {
     // Calculate log directory based on WDIO convention: logs/standalone-{appDirName}/
-    const cwd = process.cwd();
-    this.logDir = join(cwd, 'logs', `standalone-${appDirName}`);
+    // Use provided base dir or fallback to cwd
+    const baseDir = logBaseDir || process.cwd();
+    this.logDir = join(baseDir, 'logs', `standalone-${appDirName}`);
 
     // Create log directory if it doesn't exist
     if (!existsSync(this.logDir)) {
