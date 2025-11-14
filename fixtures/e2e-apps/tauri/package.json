@@ -9,7 +9,7 @@
     "build:js": "pnpm --filter @wdio/tauri-plugin build:js",
     "build:web": "vite build",
     "build": "pnpm build:js && pnpm build:web && tauri build",
-    "build:debug": "pnpm build:js && pnpm build:web && tauri build --debug",
+    "build:debug": "pnpm build:js && pnpm build:web && tauri build --debug && tsx scripts/copy-debug-binary.ts",
     "test": "wdio run ./wdio.conf.ts"
   },
   "dependencies": {

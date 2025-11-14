@@ -1,4 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// NOTE: This also detaches stdout/stderr in release mode on Windows, preventing log capture.
+// E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{PhysicalPosition, PhysicalSize, Window};
@@ -178,18 +180,45 @@ async fn write_clipboard(content: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Generate test logs at various levels for E2E testing
+#[tauri::command]
+fn generate_test_logs() -> Result<String, String> {
+    log::trace!("[Test] This is a TRACE level log");
+    log::debug!("[Test] This is a DEBUG level log");
+    log::info!("[Test] This is an INFO level log");
+    log::warn!("[Test] This is a WARN level log");
+    log::error!("[Test] This is an ERROR level log");
+    Ok("Logs generated".to_string())
+}
+
+/// Custom frontend logging command that uses target="frontend" instead of "webview"
+#[tauri::command]
+fn log_frontend(level: String, message: String) -> Result<(), String> {
+    match level.as_str() {
+        "trace" => log::trace!(target: "frontend", "{}", message),
+        "debug" => log::debug!(target: "frontend", "{}", message),
+        "info" => log::info!(target: "frontend", "{}", message),
+        "warn" => log::warn!(target: "frontend", "{}", message),
+        "error" => log::error!(target: "frontend", "{}", message),
+        _ => return Err(format!("Unknown log level: {}", level)),
+    }
+    Ok(())
+}
+
 fn main() {
+    // Log application startup at various levels
+    log::info!("[App] Tauri application starting");
+    log::debug!("[App] Debug: Application initialization");
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_wdio::init())
         .plugin(
             tauri_plugin_log::Builder::new()
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Stdout,
-                ))
-                .target(tauri_plugin_log::Target::new(
-                    tauri_plugin_log::TargetKind::Webview,
-                ))
+                .level(log::LevelFilter::Trace)  // Enable all log levels
+                .targets([
+                    // DIAGNOSTIC TEST: Only Stdout target to see if webview logs appear
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                ])
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![
@@ -206,7 +235,9 @@ fn main() {
             get_current_dir,
             get_platform_info,
             read_clipboard,
-            write_clipboard
+            write_clipboard,
+            generate_test_logs,
+            log_frontend
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

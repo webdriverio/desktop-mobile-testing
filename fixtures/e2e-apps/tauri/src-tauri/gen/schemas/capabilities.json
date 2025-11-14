@@ -1,7 +1,7 @@
 {
   "default": {
     "identifier": "default",
-    "description": "Capability for the main window",
+    "description": "Capability for the main window - includes WebDriverIO plugin permissions for testing",
     "local": true,
     "windows": ["main"],
     "permissions": [

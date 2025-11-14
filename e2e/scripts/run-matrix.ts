@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
 
+import { readdirSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { join } from 'node:path';
 import pLimit from 'p-limit';
@@ -199,11 +200,57 @@ async function runTest(
 
     console.log(`  Environment: ${JSON.stringify(testEnv, null, 2)}`);
 
-    // Run the test - execWdio automatically retries xvfb failures on Linux
-    const result = await execWdio('pnpm wdio run wdio.conf.ts', testEnv, {
-      cwd: process.cwd(),
-      timeout: 300000, // 5 minutes
-    });
+    let result: { code: number; stdout: string; stderr: string };
+
+    // Standalone tests run directly with tsx, not through WDIO test runner
+    // They are simple scripts that call the session API directly
+    // Run each spec file sequentially to avoid port conflicts
+    if (variant.testType === 'standalone') {
+      const testDir =
+        variant.framework === 'electron'
+          ? join(process.cwd(), 'test/electron/standalone')
+          : join(process.cwd(), 'test/tauri/standalone');
+
+      const specFiles = readdirSync(testDir).filter((f) => f.endsWith('.spec.ts'));
+
+      // Run each spec file sequentially
+      let lastResult = { code: 0, stdout: '', stderr: '' };
+      for (const specFile of specFiles) {
+        const specPath = join(testDir, specFile);
+        console.log(`  Running standalone test: ${specFile}`);
+
+        // Use execWdio but with tsx instead of wdio command
+        const command =
+          process.platform === 'linux' && variant.framework === 'electron'
+            ? `xvfb-run tsx ${specPath}`
+            : `tsx ${specPath}`;
+        lastResult = await execWdio(command, testEnv, {
+          cwd: process.cwd(),
+          timeout: 300000, // 5 minutes
+        });
+
+        if (lastResult.code !== 0) {
+          console.log(`  ❌ Standalone test failed: ${specFile}`);
+          break; // Stop on first failure
+        }
+
+        console.log(`  ✅ Standalone test passed: ${specFile}`);
+
+        // Add a small delay between standalone tests to ensure cleanup
+        if (specFiles.indexOf(specFile) < specFiles.length - 1) {
+          console.log(`  Waiting 2s before next standalone test...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      result = lastResult;
+    } else {
+      // Run the test - execWdio automatically retries xvfb failures on Linux
+      result = await execWdio('pnpm wdio run wdio.conf.ts', testEnv, {
+        cwd: process.cwd(),
+        timeout: 300000, // 5 minutes
+      });
+    }
 
     const duration = Date.now() - startTime;
 
@@ -496,7 +543,7 @@ EXAMPLES:
 ENVIRONMENT VARIABLES:
   All command-line options can also be set via environment variables:
   FRAMEWORK, APP, TEST_TYPE, BINARY, MAC_UNIVERSAL, CONCURRENCY
-  
+
   Note: MODULE_TYPE is deprecated for E2E tests (ESM only). CJS/ESM testing is done in package tests.
 `);
 }

@@ -128,21 +128,23 @@ jobs:
         shell: bash
         run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
-      # Show comprehensive debug information on failure
-      - name: 🐛 Debug Information on Failure
+      # Show logs on failure for debugging
+      - name: 🐛 Show Logs on Failure
         shell: bash
         if: failure()
         run: pnpm run ci:e2e:logs
 
-      # Upload logs as artifacts on failure for later analysis
+      # Upload logs as artifacts for later analysis
       # This helps debug issues without cluttering the GitHub Actions console
-      - name: 📦 Upload Test Logs on Failure
-        uses: ./.github/workflows/actions/upload-archive
-        if: failure()
+      - name: 📦 Upload Test Logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
           name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}
-          output: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}.zip
-          paths: e2e/logs/**/*.log
+          path: e2e/logs/**/*.log
+          retention-days: 90
+          if-no-files-found: warn
 
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment

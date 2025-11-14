@@ -19,13 +19,44 @@ export interface TauriServiceOptions {
   logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   commandTimeout?: number;
   startTimeout?: number;
+  /**
+   * Enable/disable capturing Rust backend logs from stdout
+   * @default false
+   */
+  captureBackendLogs?: boolean;
+  /**
+   * Enable/disable capturing frontend console logs from webview
+   * @default false
+   */
+  captureFrontendLogs?: boolean;
+  /**
+   * Minimum log level for backend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Minimum log level for frontend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Log directory for standalone mode
+   * Full path where log files should be written
+   * If not specified, uses logs/standalone-{appDirName}/ in current working directory
+   * @default undefined
+   */
+  logDir?: string;
 }
 
 /**
  * Tauri service capabilities
  */
 export interface TauriCapabilities extends WebdriverIO.Capabilities {
-  browserName?: 'tauri';
+  // Allow 'tauri' or 'wry' in user config, but browserName will remain undefined
+  // Flow: onPrepare validates browserName (if set)
+  //    -> onWorkerStart removes browserName (tauri-driver doesn't need it)
+  //    -> browserName remains undefined throughout - reporters handle this gracefully
+  browserName?: 'tauri' | 'wry';
   'tauri:options'?: {
     application: string;
     args?: string[];
@@ -47,6 +78,26 @@ export interface TauriServiceGlobalOptions {
   startTimeout?: number;
   tauriDriverPort?: number;
   nativeDriverPath?: string;
+  /**
+   * Enable/disable capturing Rust backend logs from stdout
+   * @default false
+   */
+  captureBackendLogs?: boolean;
+  /**
+   * Enable/disable capturing frontend console logs from webview
+   * @default false
+   */
+  captureFrontendLogs?: boolean;
+  /**
+   * Minimum log level for backend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Minimum log level for frontend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
 }
 
 /**

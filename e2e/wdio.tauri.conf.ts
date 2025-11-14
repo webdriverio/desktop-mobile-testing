@@ -137,6 +137,10 @@ type TauriCapability = {
   'wdio:tauriServiceOptions': {
     appBinaryPath: string;
     appArgs: string[];
+    captureBackendLogs?: boolean;
+    captureFrontendLogs?: boolean;
+    backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+    frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   };
 };
 
@@ -169,6 +173,11 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
+          // Enable log capture for logging tests
+          captureBackendLogs: true,
+          captureFrontendLogs: true,
+          backendLogLevel: 'info',
+          frontendLogLevel: 'info',
         },
       },
       hostname: '127.0.0.1',
@@ -184,6 +193,11 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
+          // Enable log capture for logging tests
+          captureBackendLogs: true,
+          captureFrontendLogs: true,
+          backendLogLevel: 'info',
+          frontendLogLevel: 'info',
         },
       },
       hostname: '127.0.0.1',
@@ -202,6 +216,11 @@ if (envContext.isMultiremote) {
       'wdio:tauriServiceOptions': {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
+        // Enable log capture for logging tests
+        captureBackendLogs: true,
+        captureFrontendLogs: true,
+        backendLogLevel: 'info',
+        frontendLogLevel: 'info',
       },
     },
   ];
@@ -215,7 +234,10 @@ export const config = {
   runner: 'local',
   specs,
   exclude: [],
-  maxInstances: 1,
+  // For standalone tests, ensure only 1 spec runs at a time since they manage their own sessions
+  // and share the same tauri-driver port (4444)
+  maxInstances: envContext.testType === 'standalone' ? 1 : 1,
+  maxInstancesPerCapability: envContext.testType === 'standalone' ? 1 : undefined,
   capabilities,
   // Connect to tauri-driver instead of spawning a browser driver
   ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),

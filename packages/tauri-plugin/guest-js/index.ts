@@ -40,10 +40,11 @@ declare global {
         invoke?: (cmd: string, args?: InvokeArgs) => Promise<unknown>;
       };
       log?: {
-        info?: (message: string) => Promise<void>;
-        error?: (message: string) => Promise<void>;
-        warn?: (message: string) => Promise<void>;
+        trace?: (message: string) => Promise<void>;
         debug?: (message: string) => Promise<void>;
+        info?: (message: string) => Promise<void>;
+        warn?: (message: string) => Promise<void>;
+        error?: (message: string) => Promise<void>;
       };
     };
     wdioTauri?: {
@@ -53,6 +54,7 @@ declare global {
       clearMocks: () => Promise<void>;
       resetMocks: () => Promise<void>;
       restoreMocks: () => Promise<void>;
+      waitForInit: () => Promise<void>;
     };
   }
 }
@@ -171,27 +173,143 @@ export async function restoreMocks(): Promise<void> {
   }
 }
 
-// Helper to log using Tauri's log plugin (will output to stdout in tests)
-async function tauriLog(message: string): Promise<void> {
-  try {
-    // Try to use Tauri's log plugin if available
-    if (typeof window !== 'undefined' && window.__TAURI__?.log?.info) {
-      await window.__TAURI__.log.info(message);
-    } else {
-      // Fallback to console.log
-      console.log(message);
-    }
-  } catch {
-    // Silently fail if logging doesn't work
-    console.log(message);
+/**
+ * Get the console forwarding setup code as a string
+ * This can be injected into browser.execute() contexts
+ */
+export function getConsoleForwardingCode(): string {
+  return `
+    // Setup console forwarding to Tauri log plugin
+    (function() {
+      if (typeof window === 'undefined' || !window.__TAURI__?.log) {
+        return;
+      }
+
+      // Store original methods
+      const originalConsole = {
+        log: console.log.bind(console),
+        debug: console.debug.bind(console),
+        info: console.info.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+      };
+
+      // Helper to forward to Tauri
+      function forward(level, args) {
+        const message = Array.from(args).map(arg =>
+          typeof arg === 'string' ? arg : JSON.stringify(arg)
+        ).join(' ');
+
+        // Call original console method
+        originalConsole[level === 'trace' ? 'log' : level](message);
+
+        // Forward to Tauri log plugin
+        if (window.__TAURI__?.log?.[level]) {
+          window.__TAURI__.log[level](message).catch(() => {});
+        }
+      }
+
+      // Wrap console methods
+      console.log = function() { forward('trace', arguments); };
+      console.debug = function() { forward('debug', arguments); };
+      console.info = function() { forward('info', arguments); };
+      console.warn = function() { forward('warn', arguments); };
+      console.error = function() { forward('error', arguments); };
+    })();
+  `;
+}
+
+/**
+ * Forward console logs to Tauri log plugin
+ * This allows WebDriverIO to capture frontend console logs via the backend stdout
+ */
+function setupConsoleForwarding(): void {
+  if (typeof window === 'undefined') {
+    return;
   }
+
+  // Helper function to safely forward to Tauri log plugin
+  async function forwardToTauri(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string): Promise<void> {
+    try {
+      // Check if Tauri log plugin is available
+      if (window.__TAURI__?.log?.[level]) {
+        await window.__TAURI__.log[level](message);
+      }
+    } catch {
+      // Silently ignore if log plugin not available
+    }
+  }
+
+  // Store original console methods
+  const originalConsole = {
+    log: console.log,
+    debug: console.debug,
+    info: console.info,
+    warn: console.warn,
+    error: console.error,
+    trace: console.trace,
+  };
+
+  // Forward console.log to trace level
+  console.log = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.log(...args);
+    forwardToTauri('trace', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.debug
+  console.debug = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.debug(...args);
+    forwardToTauri('debug', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.info
+  console.info = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.info(...args);
+    forwardToTauri('info', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.warn
+  console.warn = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.warn(...args);
+    forwardToTauri('warn', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.error
+  console.error = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.error(...args);
+    forwardToTauri('error', message).catch(() => {
+      // Ignore errors
+    });
+  };
+
+  // Forward console.trace
+  console.trace = (...args: unknown[]) => {
+    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+    originalConsole.trace(...args);
+    forwardToTauri('trace', message).catch(() => {
+      // Ignore errors
+    });
+  };
 }
 
 /**
  * Initialize the plugin frontend API
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
-export function init(): void {
+export async function init(): Promise<void> {
   const messages: string[] = [];
   messages.push('[WDIO Tauri Plugin] Initializing...');
   messages.push(`[WDIO Tauri Plugin] typeof window: ${typeof window}`);
@@ -220,6 +338,7 @@ export function init(): void {
     clearMocks,
     resetMocks,
     restoreMocks,
+    waitForInit,
   };
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
@@ -230,26 +349,53 @@ export function init(): void {
     console.log(msg);
   }
 
-  // Also try to log via Tauri (async, will work after Tauri initializes)
-  Promise.all(messages.map((msg) => tauriLog(msg))).catch(() => {
-    // Ignore errors
-  });
+  // Use manual console forwarding instead of attachConsole()
+  // This is required for WebDriver testing where console logs are executed
+  // dynamically via browser.execute() contexts. The native attachConsole()
+  // from @tauri-apps/plugin-log only captures logs from the static page context.
+  console.log('[WDIO Tauri Plugin] Setting up manual console forwarding for WebDriver compatibility');
+  setupConsoleForwarding();
+  console.log('[WDIO Tauri Plugin] ✅ Console forwarding initialized');
+
+  // Log all accumulated messages now that forwarding is active
+  for (const msg of messages) {
+    console.log(msg);
+  }
+
+  // Test that console forwarding works
+  console.info('[WDIO Tauri Plugin] TEST: This is a test INFO log after setupConsoleForwarding()');
+  console.warn('[WDIO Tauri Plugin] TEST: This is a test WARN log after setupConsoleForwarding()');
 }
 
 // Auto-initialize when imported
+// Note: We can't await at module level, but we start the initialization immediately
+// and expose a promise that can be awaited by consumers if needed
 const initMessages: string[] = [];
 initMessages.push('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
 initMessages.push(`[WDIO Tauri Plugin] typeof window at module level: ${typeof window}`);
+
+let initPromise: Promise<void> | null = null;
 
 if (typeof window !== 'undefined') {
   initMessages.push('[WDIO Tauri Plugin] Auto-initializing...');
   for (const msg of initMessages) {
     console.log(msg);
   }
-  init();
+  // Start initialization immediately, store the promise
+  initPromise = init();
 } else {
   initMessages.push('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
   for (const msg of initMessages) {
     console.log(msg);
+  }
+}
+
+/**
+ * Wait for plugin initialization to complete
+ * This can be called by the service to ensure attachConsole() has completed
+ */
+export async function waitForInit(): Promise<void> {
+  if (initPromise) {
+    await initPromise;
   }
 }

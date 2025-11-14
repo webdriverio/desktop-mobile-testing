@@ -35,6 +35,7 @@ export type {
 } from '@wdio/native-types';
 // Export session management
 export {
+  cleanup as cleanupWdioSession,
   createTauriCapabilities,
   getTauriServiceStatus,
   init as startWdioSession,

@@ -3664,6 +3664,7 @@ name = "tauri-e2e-app"
 version = "0.1.0"
 dependencies = [
  "clipboard",
+ "log",
  "serde",
  "serde_json",
  "sysinfo",
