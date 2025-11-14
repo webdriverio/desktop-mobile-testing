@@ -38,77 +38,63 @@ if (process.platform === 'linux') {
   await xvfb.init();
 }
 
-let browser: WebdriverIO.Browser | null = null;
+console.log('🔍 Debug: Starting Tauri standalone logging test');
+
+const browser = await startWdioSession(sessionOptions);
+
+// Wait a moment to ensure browser is fully initialized
+await new Promise((resolve) => setTimeout(resolve, 1000));
 
 try {
-  browser = await startWdioSession(sessionOptions);
+  // Test 1: Capture backend logs in standalone session
+  console.log('Test 1: Backend logs...');
+  await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const result1 = await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+  if (result1 !== 'Logs generated') {
+    throw new Error(`Backend logs test failed: expected 'Logs generated', got ${result1}`);
+  }
+  console.log('✅ Backend logs test passed');
 
-  // Wait a moment to ensure browser is fully initialized
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Test 2: Capture frontend logs in standalone session
+  console.log('Test 2: Frontend logs...');
+  await browser.execute(() => {
+    console.info('[Test] Standalone frontend INFO log');
+    console.warn('[Test] Standalone frontend WARN log');
+  });
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const result2 = (await browser.execute(() => {
+    return 'Logs generated';
+  })) as unknown as string;
+  if (result2 !== 'Logs generated') {
+    throw new Error(`Frontend logs test failed: expected 'Logs generated', got ${result2}`);
+  }
+  console.log('✅ Frontend logs test passed');
+
+  // Test 3: Filter logs by level in standalone session
+  console.log('Test 3: Log level filtering...');
+  await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+  await browser.execute(() => {
+    console.debug('[Test] This DEBUG log should be filtered');
+    console.info('[Test] This INFO log should appear');
+  });
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const result3 = await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+  if (result3 !== 'Logs generated') {
+    throw new Error(`Log filtering test failed: expected 'Logs generated', got ${result3}`);
+  }
+  console.log('✅ Log filtering test passed');
+
+  console.log('✅ All Tauri standalone logging tests passed');
 } catch (error) {
-  console.error('Failed to start session:', error);
+  console.error('❌ Test failed:', error);
+  // Clean up before exiting with error
+  await browser.deleteSession();
+  await cleanupWdioSession(browser);
   process.exit(1);
 }
 
-describe('Tauri Log Integration - Standalone', () => {
-  after(async () => {
-    if (browser) {
-      // Clean up - quit the app and stop tauri-driver
-      await browser.deleteSession();
-      await cleanupWdioSession(browser);
-      console.log('✅ Cleanup complete');
-    }
-    // Don't call process.exit() - let Node.js exit naturally after cleanup completes
-    // The cleanup delay is now handled in the launcher's onWorkerEnd hook to ensure
-    // WDIO waits before starting the next worker
-  });
-
-  it('should capture backend logs in standalone session', async () => {
-    if (!browser) throw new Error('Browser not initialized');
-    // Generate logs via test command
-    await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-
-    // Wait for logs to be captured
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Note: In standalone mode, logs are written to WDIO outputDir
-    // The test framework will verify logs appear in the output directory
-    const result = await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-    expect(result).toBe('Logs generated');
-  });
-
-  it('should capture frontend logs in standalone session', async () => {
-    if (!browser) throw new Error('Browser not initialized');
-    // Trigger frontend logs
-    await browser.execute(() => {
-      console.info('[Test] Standalone frontend INFO log');
-      console.warn('[Test] Standalone frontend WARN log');
-    });
-
-    // Wait for logs to be captured
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Verify the logs were generated (actual log file verification happens at framework level)
-    const result = await browser.execute(() => {
-      return 'Logs generated';
-    });
-    expect(result).toBe('Logs generated');
-  });
-
-  it('should filter logs by level in standalone session', async () => {
-    if (!browser) throw new Error('Browser not initialized');
-    // Generate logs at different levels
-    await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-    await browser.execute(() => {
-      console.debug('[Test] This DEBUG log should be filtered');
-      console.info('[Test] This INFO log should appear');
-    });
-
-    // Wait for logs to be captured
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Verify logs were generated (filtering verification happens at log file level)
-    const result = await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-    expect(result).toBe('Logs generated');
-  });
-});
+// Clean up - quit the app and stop tauri-driver
+await browser.deleteSession();
+await cleanupWdioSession(browser);
+console.log('✅ Cleanup complete');
