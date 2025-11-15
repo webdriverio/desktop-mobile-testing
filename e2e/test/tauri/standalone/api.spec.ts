@@ -36,7 +36,9 @@ if (process.platform === 'linux') {
 }
 
 console.log('🔍 Debug: Starting session with options:', JSON.stringify(sessionOptions, null, 2));
-const browser = await startWdioSession(sessionOptions);
+const browser = await startWdioSession(sessionOptions, {
+  autoInstallTauriDriver: true,
+});
 
 // Wait a moment to ensure browser is fully initialized with all service capabilities
 await new Promise((resolve) => setTimeout(resolve, 1000));
