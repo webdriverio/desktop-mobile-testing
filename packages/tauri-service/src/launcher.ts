@@ -5,9 +5,10 @@ import { join } from 'node:path';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
+import { ensureTauriDriver, ensureWebKitWebDriver } from './driverManager.js';
 import { forwardLog, type LogLevel } from './logForwarder.js';
 import { parseLogLines } from './logParser.js';
-import { getTauriAppInfo, getTauriBinaryPath, getTauriDriverPath, getWebKitWebDriverPath } from './pathResolver.js';
+import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
@@ -429,17 +430,35 @@ export default class TauriLaunchService {
       }
     }
 
-    // 7. Check WebKitWebDriver availability (Linux only)
+    // 7. Check tauri-driver availability (using global options for diagnostics)
+    // Note: Full driver check with capability-specific options happens in onPrepare
+    const driverOptions: TauriServiceOptions = {
+      autoInstallTauriDriver: this.options.autoInstallTauriDriver,
+    };
+    const driverResult = await ensureTauriDriver(driverOptions);
+
+    if (!driverResult.success) {
+      const errorMsg = driverResult.error || 'Failed to find or install tauri-driver';
+      log.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    log.info(`Using tauri-driver: ${driverResult.path} (${driverResult.method})`);
+
+    // 8. Check WebKitWebDriver availability (Linux only)
     if (process.platform === 'linux') {
-      const webkitDriver = getWebKitWebDriverPath();
-      if (webkitDriver) {
-        log.info(`✅ WebKitWebDriver found: ${webkitDriver}`);
+      const webkitResult = ensureWebKitWebDriver();
+      if (webkitResult.success && webkitResult.path) {
+        log.info(`✅ WebKitWebDriver found: ${webkitResult.path}`);
       } else {
         log.warn('⚠️  WebKitWebDriver not found - tests may fail');
+        if (webkitResult.installInstructions) {
+          log.warn(`   Install it with: ${webkitResult.installInstructions}`);
+        }
       }
     }
 
-    // 8. Check available disk space
+    // 9. Check available disk space
     try {
       const df = execSync('df -h . 2>&1 || true', { encoding: 'utf8', timeout: 2000 });
       log.info(`Disk space:\n${df}`);
@@ -474,7 +493,17 @@ export default class TauriLaunchService {
    * Start tauri-driver process
    */
   private async startTauriDriver(capabilities?: TauriCapabilities[]): Promise<void> {
-    const tauriDriverPath = getTauriDriverPath();
+    // Get options for driver management
+    const firstCap = capabilities?.[0];
+    const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
+
+    // Ensure driver is available
+    const driverResult = await ensureTauriDriver(options);
+    if (!driverResult.success) {
+      throw new Error(driverResult.error || 'Failed to find tauri-driver');
+    }
+
+    const tauriDriverPath = driverResult.path;
     const port = this.options.tauriDriverPort || 4444;
     const nativePort = 4445; // Default native port for single instance
 
@@ -598,7 +627,14 @@ export default class TauriLaunchService {
     env: NodeJS.ProcessEnv,
     options?: TauriServiceOptions,
   ): Promise<void> {
-    const tauriDriverPath = getTauriDriverPath();
+    // Ensure driver is available
+    const instanceOptions = options ?? mergeOptions(this.options, undefined);
+    const driverResult = await ensureTauriDriver(instanceOptions);
+    if (!driverResult.success) {
+      throw new Error(driverResult.error || 'Failed to find tauri-driver');
+    }
+
+    const tauriDriverPath = driverResult.path;
 
     log.info(`Starting tauri-driver [${instanceId}] on port ${port} (native port: ${nativePort})`);
     const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
