@@ -96,17 +96,12 @@ jobs:
             libgtk-3-0t64 \
             libayatana-appindicator3-1
 
-      # Install Rust toolchain only for tauri-driver (minimal install)
-      - name: 🦀 Setup Rust (for tauri-driver)
+      # Install Rust toolchain for auto-installing tauri-driver
+      # The @wdio/tauri-service will automatically install tauri-driver via cargo if not found
+      - name: 🦀 Setup Rust (for tauri-driver auto-install)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-
-      - name: 🚗 Install tauri-driver
-        shell: bash
-        run: |
-          echo "Installing tauri-driver..."
-          cargo install tauri-driver
 
       - name: 🌐 Install WebKit WebDriver (Linux)
         if: runner.os == 'Linux'

@@ -46,7 +46,9 @@ if (process.platform === 'linux') {
 
 console.log('🔍 Debug: Starting Tauri standalone logging test');
 
-const browser = await startWdioSession(sessionOptions);
+const browser = await startWdioSession(sessionOptions, {
+  autoInstallTauriDriver: true,
+});
 
 // Wait a moment to ensure browser is fully initialized
 await new Promise((resolve) => setTimeout(resolve, 1000));

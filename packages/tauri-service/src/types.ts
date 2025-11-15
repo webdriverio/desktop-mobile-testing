@@ -46,6 +46,12 @@ export interface TauriServiceOptions {
    * @default undefined
    */
   logDir?: string;
+  /**
+   * Automatically install tauri-driver if not found
+   * Requires Rust toolchain (cargo) to be installed
+   * @default false
+   */
+  autoInstallTauriDriver?: boolean;
 }
 
 /**
@@ -98,6 +104,11 @@ export interface TauriServiceGlobalOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Automatically install tauri-driver if not found
+   * @default false
+   */
+  autoInstallTauriDriver?: boolean;
 }
 
 /**

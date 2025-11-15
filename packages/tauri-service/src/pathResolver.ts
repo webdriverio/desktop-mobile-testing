@@ -164,62 +164,6 @@ export async function isTauriAppBuilt(appPath: string): Promise<boolean> {
 }
 
 /**
- * Get Tauri driver path
- */
-export function getTauriDriverPath(): string {
-  const isWindows = process.platform === 'win32';
-
-  // Try to find tauri-driver in PATH
-  try {
-    // On Windows, use 'where' instead of 'which' for proper path format
-    const command = isWindows ? 'where tauri-driver' : 'which tauri-driver';
-    const result = execSync(command, { encoding: 'utf8' });
-    const path = result.trim().split('\n')[0]; // 'where' can return multiple paths
-
-    // On Windows, convert Git Bash-style paths (/c/...) to Windows paths (C:\...)
-    if (isWindows && path.startsWith('/')) {
-      return convertGitBashPathToWindows(path);
-    }
-
-    return path;
-  } catch {
-    // Fallback to common installation paths
-    const commonPaths = isWindows
-      ? [
-          join(process.env.USERPROFILE || 'C:\\Users\\Default', '.cargo', 'bin', 'tauri-driver.exe'),
-          'C:\\Users\\runneradmin\\.cargo\\bin\\tauri-driver.exe', // GitHub Actions default
-        ]
-      : [
-          '/usr/local/bin/tauri-driver',
-          '/opt/homebrew/bin/tauri-driver',
-          join(process.env.HOME || '~', '.cargo/bin/tauri-driver'),
-        ];
-
-    for (const path of commonPaths) {
-      if (existsSync(path)) {
-        return path;
-      }
-    }
-
-    throw new Error('tauri-driver not found. Please install it with: cargo install tauri-driver');
-  }
-}
-
-/**
- * Convert Git Bash-style paths to Windows paths
- * Example: /c/Users/foo -> C:\Users\foo
- */
-function convertGitBashPathToWindows(gitBashPath: string): string {
-  // Match pattern like /c/Users/...
-  const match = gitBashPath.match(/^\/([a-z])\/(.+)$/i);
-  if (match) {
-    const [, driveLetter, restOfPath] = match;
-    return `${driveLetter.toUpperCase()}:\\${restOfPath.replace(/\//g, '\\')}`;
-  }
-  return gitBashPath;
-}
-
-/**
  * Get WebKitWebDriver path for Linux
  * This is required by tauri-driver on Linux systems
  */

@@ -78,7 +78,14 @@ export const config = {
   // Don't use autoXvfb - tauri-driver runs in launcher (not worker) and needs display
   // The entire test command must be wrapped with xvfb-run in CI
   autoXvfb: false,
-  services: [['@wdio/tauri-service']],
+  services: [
+    [
+      '@wdio/tauri-service',
+      {
+        autoInstallTauriDriver: true, // Automatically install tauri-driver if not found
+      },
+    ],
+  ],
   framework: 'mocha',
   reporters: ['spec'],
   mochaOpts: {

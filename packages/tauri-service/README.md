@@ -33,13 +33,36 @@ pnpm add @wdio/tauri-service
    ```
 
 2. **tauri-driver** - Install the Tauri WebDriver:
+   
+   **Option A: Automatic Installation (Recommended)**
+   
+   Enable auto-installation in your WebDriverIO config:
+   ```typescript
+   services: [
+     ['@wdio/tauri-service', {
+       autoInstallTauriDriver: true, // Automatically install if missing
+     }]
+   ]
+   ```
+   
+   **Option B: Manual Installation**
+   
    ```bash
    cargo install tauri-driver
    ```
+   
+   **Note:** Automatic installation requires Rust toolchain (`cargo`) to be installed. Get Rust from [https://rustup.rs/](https://rustup.rs/).
 
 3. **Platform-specific WebDriver**:
-   - **Windows**: Microsoft Edge WebDriver (msedgedriver)
-   - **Linux**: WebKitWebDriver (webkit2gtk-driver)
+   - **Windows**: Microsoft Edge WebDriver (msedgedriver) - Automatically handled by tauri-driver
+   - **Linux**: WebKitWebDriver (webkit2gtk-driver) - Must be installed manually
+     ```bash
+     sudo apt-get install -y webkit2gtk-driver
+     # or for other distributions:
+     sudo yum install -y webkit2gtk-driver  # RHEL/CentOS
+     sudo dnf install -y webkit2gtk-driver  # Fedora
+     sudo pacman -S webkit2gtk-driver      # Arch
+     ```
 
 ### Platform Support
 
@@ -416,6 +439,32 @@ Logs will appear as:
 
 ## Configuration Options
 
+### Driver Management
+
+The Tauri service can automatically manage `tauri-driver` installation:
+
+```typescript
+services: [
+  ['@wdio/tauri-service', {
+    // Automatically install tauri-driver if not found (requires Rust/cargo)
+    autoInstallTauriDriver: false, // Default: false (opt-in for safety)
+    
+    // Custom path to tauri-driver binary (overrides auto-install)
+    tauriDriverPath: '/custom/path/to/tauri-driver',
+    
+    // Custom path to native driver (WebKitWebDriver on Linux, msedgedriver on Windows)
+    nativeDriverPath: '/custom/path/to/WebKitWebDriver',
+  }]
+]
+```
+
+**Note:** When `autoInstallTauriDriver` is enabled, the service will:
+1. Check if `tauri-driver` exists in PATH or common installation paths
+2. If not found and `cargo` is available, automatically install via `cargo install tauri-driver` to `~/.cargo/bin`
+3. If `cargo` is not available, provide a helpful error message with installation instructions
+
+## Configuration Options
+
 ### Service Options
 
 | Option | Type | Default | Description |
@@ -467,13 +516,30 @@ Logs will appear as:
 ### Common Issues
 
 1. **"tauri-driver not found"**
+   
+   **Option 1: Enable auto-installation**
+   ```typescript
+   services: [
+     ['@wdio/tauri-service', {
+       autoInstallTauriDriver: true, // Requires Rust/cargo
+     }]
+   ]
+   ```
+   
+   **Option 2: Manual installation**
    ```bash
    cargo install tauri-driver
    ```
 
-2. **"WebDriver not found"**
-   - Windows: Install Microsoft Edge WebDriver
-   - Linux: Install webkit2gtk-driver
+2. **"WebKitWebDriver not found" (Linux only)**
+   - Install webkit2gtk-driver:
+     ```bash
+     sudo apt-get install -y webkit2gtk-driver  # Debian/Ubuntu
+     sudo yum install -y webkit2gtk-driver      # RHEL/CentOS
+     sudo dnf install -y webkit2gtk-driver      # Fedora
+     sudo pacman -S webkit2gtk-driver          # Arch
+     ```
+   - The service will detect your package manager and provide specific instructions if not found
 
 3. **"macOS not supported"**
    - Use Linux or Windows for testing
