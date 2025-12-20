@@ -9,8 +9,8 @@ RUN zypper refresh && \
         ca-certificates \
         sudo \
         git \
-        nodejs20 \
-        npm20 && \
+        nodejs22 \
+        npm22 && \
     zypper clean -a
 
 # Install pnpm globally
