@@ -20,19 +20,19 @@ RUN npm install -g pnpm
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install Tauri runtime dependencies AND webkit2gtk-driver
+# Install Tauri runtime dependencies (webkit2gtk-4.1 includes WebKitWebDriver)
 RUN apk add --no-cache \
+        webkit2gtk-4.1 \
         webkit2gtk-4.1-dev \
         gtk+3.0-dev \
-        librsvg-dev \
-        webkit2gtk-driver
+        librsvg-dev
 
 # Create test user with sudo access
 RUN adduser -D -s /bin/bash testuser && \
     echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Verify WebKitWebDriver IS available
-RUN which WebKitWebDriver || ls -la /usr/lib/webkit2gtk*/WebKitWebDriver
+# Verify WebKitWebDriver is available (version-specific binary)
+RUN which WebKitWebDriver-4.1 || test -f /usr/bin/WebKitWebDriver-4.1
 
 WORKDIR /app
 USER testuser
