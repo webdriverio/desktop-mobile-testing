@@ -2,9 +2,14 @@ FROM voidlinux/voidlinux:latest
 
 ENV CI=true
 
-# Update package database and install basic requirements
+# Configure repository mirror to avoid SSL certificate issues
+RUN mkdir -p /etc/xbps.d && \
+    cp /usr/share/xbps.d/*-repository-*.conf /etc/xbps.d/ && \
+    sed -i 's|https://[^/]*/|https://repo-default.voidlinux.org/|g' /etc/xbps.d/*-repository-*.conf
+
+# Install basic requirements (upgrade system deps to avoid conflicts, ignore failures in base-files)
 RUN xbps-install -Syu xbps && \
-    xbps-install -Syu && \
+    ( xbps-install -Su || true ) && \
     xbps-install -y \
         curl \
         ca-certificates \
@@ -21,15 +26,18 @@ RUN npm install -g pnpm
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# Upgrade util-linux packages first to avoid dependency conflicts
+RUN xbps-install -yf util-linux util-linux-common libblkid libuuid libmount libfdisk libsmartcols || true
+
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
 RUN xbps-install -y \
-        webkit2gtk-devel \
+        libwebkit2gtk41-devel \
         gtk+3-devel \
         librsvg-devel && \
     xbps-remove -O
 
-# Remove webkit2gtk-driver if present
-RUN xbps-remove -y webkit2gtk-driver || true
+# Remove WebKitWebDriver binary to simulate system without driver
+RUN rm -f /usr/sbin/WebKitWebDriver /usr/bin/WebKitWebDriver
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
