@@ -136,6 +136,10 @@ jobs:
             webkit-test:${{ matrix.distro }}-${{ matrix.scenario }} \
             bash -c "
               set -e
+
+              echo '=== Fixing workspace permissions ==='
+              sudo chown -R testuser:testuser /workspace || true
+
               echo '=== Installing dependencies ==='
               pnpm install --frozen-lockfile
 
