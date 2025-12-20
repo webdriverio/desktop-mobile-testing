@@ -1,0 +1,158 @@
+name: Tauri WebKit Detection E2E Tests
+
+on:
+  pull_request:
+    paths:
+      - 'packages/tauri-service/src/driverManager.ts'
+      - 'e2e/wdio/tauri-webkit/**'
+      - '.github/workflows/test-tauri-webkit-e2e.yml'
+  workflow_dispatch:
+
+jobs:
+  webkit-e2e-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu scenarios
+          - distro: ubuntu
+            version: "24.04"
+            scenario: base
+            dockerfile: ubuntu-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: ubuntu
+            version: "24.04"
+            scenario: with-webkit
+            dockerfile: ubuntu-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # Fedora scenarios
+          - distro: fedora
+            version: "40"
+            scenario: base
+            dockerfile: fedora-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: fedora
+            version: "40"
+            scenario: with-webkit
+            dockerfile: fedora-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # Debian scenarios
+          - distro: debian
+            version: "12"
+            scenario: base
+            dockerfile: debian-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: debian
+            version: "12"
+            scenario: with-webkit
+            dockerfile: debian-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # CentOS Stream scenarios
+          - distro: centos-stream
+            version: "9"
+            scenario: base
+            dockerfile: centos-stream-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: centos-stream
+            version: "9"
+            scenario: with-webkit
+            dockerfile: centos-stream-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # Arch scenarios
+          - distro: arch
+            version: "latest"
+            scenario: base
+            dockerfile: arch-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: arch
+            version: "latest"
+            scenario: with-webkit
+            dockerfile: arch-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # Alpine scenarios
+          - distro: alpine
+            version: "latest"
+            scenario: base
+            dockerfile: alpine-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: alpine
+            version: "latest"
+            scenario: with-webkit
+            dockerfile: alpine-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # SUSE scenarios
+          - distro: suse
+            version: "tumbleweed"
+            scenario: base
+            dockerfile: suse-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: suse
+            version: "tumbleweed"
+            scenario: with-webkit
+            dockerfile: suse-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+          # Void scenarios
+          - distro: void
+            version: "latest"
+            scenario: base
+            dockerfile: void-base.dockerfile
+            test_spec: base-install.e2e.ts
+          - distro: void
+            version: "latest"
+            scenario: with-webkit
+            dockerfile: void-with-webkit.dockerfile
+            test_spec: existing-webkit.e2e.ts
+
+    name: ${{ matrix.distro }}-${{ matrix.version }} (${{ matrix.scenario }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test container
+        run: |
+          docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            -f e2e/wdio/tauri-webkit/docker/${{ matrix.dockerfile }} \
+            -t webkit-test:${{ matrix.distro }}-${{ matrix.scenario }} \
+            .
+
+      - name: Run tests in container
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            webkit-test:${{ matrix.distro }}-${{ matrix.scenario }} \
+            bash -c "
+              set -e
+              echo '=== Installing dependencies ==='
+              pnpm install --frozen-lockfile
+
+              echo '=== Building tauri-service package ==='
+              cd packages/tauri-service
+              pnpm build
+              cd ../..
+
+              echo '=== Running WebKit detection tests ==='
+              cd e2e/wdio/tauri-webkit
+              pnpm wdio run ./wdio.conf.ts --spec ${{ matrix.test_spec }}
+            "
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.distro }}-${{ matrix.scenario }}
+          path: e2e/wdio/tauri-webkit/wdio-*.log
+          if-no-files-found: ignore

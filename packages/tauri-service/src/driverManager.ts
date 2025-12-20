@@ -1,8 +1,11 @@
-import { execSync, spawn } from 'node:child_process';
+import { exec, execSync, spawn } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriServiceOptions } from './types.js';
+
+const execAsync = promisify(exec);
 
 const log = createLogger('tauri-service');
 
@@ -206,14 +209,60 @@ export async function ensureTauriDriver(options: TauriServiceOptions): Promise<D
 }
 
 /**
+ * Detect the package manager on Linux systems
+ * Returns the package manager name or 'unknown' if not detected
+ * @public Exported for testing
+ */
+export async function detectPackageManager(): Promise<string> {
+  const packageManagers = [
+    { command: 'apt-get', name: 'apt' },
+    { command: 'dnf', name: 'dnf' },
+    { command: 'yum', name: 'yum' },
+    { command: 'zypper', name: 'zypper' },
+    { command: 'pacman', name: 'pacman' },
+    { command: 'apk', name: 'apk' },
+    { command: 'xbps-install', name: 'xbps' },
+  ];
+
+  for (const { command, name } of packageManagers) {
+    try {
+      await execAsync(`which ${command}`);
+      return name;
+    } catch {
+      // Continue to next package manager
+    }
+  }
+
+  return 'unknown';
+}
+
+/**
+ * Get install command for webkit2gtk-driver based on package manager
+ * @public Exported for testing
+ */
+export function getWebKitDriverInstallCommand(packageManager: string): string {
+  const installCommands: Record<string, string> = {
+    apt: 'sudo apt-get install -y webkit2gtk-driver',
+    dnf: 'sudo dnf install -y webkit2gtk-driver',
+    yum: 'sudo yum install -y webkit2gtk-driver',
+    zypper: 'sudo zypper install -y webkit2gtk-driver',
+    pacman: 'sudo pacman -S webkit2gtk-driver',
+    apk: 'sudo apk add webkit2gtk-driver',
+    xbps: 'sudo xbps-install -y webkit2gtk-driver',
+  };
+
+  return installCommands[packageManager] || installCommands.apt; // Default to apt-get
+}
+
+/**
  * Get WebKitWebDriver path with helpful error messages
  */
-export function ensureWebKitWebDriver(): {
+export async function ensureWebKitWebDriver(): Promise<{
   success: boolean;
   path?: string;
   error?: string;
   installInstructions?: string;
-} {
+}> {
   if (process.platform !== 'linux') {
     return { success: true }; // Not needed on non-Linux
   }
@@ -244,23 +293,11 @@ export function ensureWebKitWebDriver(): {
   }
 
   // Detect package manager and provide specific instructions
-  let installCommand = 'sudo apt-get install -y webkit2gtk-driver';
-  try {
-    execSync('which yum', { stdio: 'ignore' });
-    installCommand = 'sudo yum install -y webkit2gtk-driver';
-  } catch {
-    try {
-      execSync('which dnf', { stdio: 'ignore' });
-      installCommand = 'sudo dnf install -y webkit2gtk-driver';
-    } catch {
-      try {
-        execSync('which pacman', { stdio: 'ignore' });
-        installCommand = 'sudo pacman -S webkit2gtk-driver';
-      } catch {
-        // Default to apt-get
-      }
-    }
-  }
+  log.debug('WebKitWebDriver not found, detecting package manager...');
+  const packageManager = await detectPackageManager();
+  log.debug(`Detected package manager: ${packageManager}`);
+
+  const installCommand = getWebKitDriverInstallCommand(packageManager);
 
   return {
     success: false,

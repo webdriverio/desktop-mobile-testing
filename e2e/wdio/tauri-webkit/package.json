@@ -1,0 +1,28 @@
+{
+  "name": "@wdio-e2e/tauri-webkit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E2E tests for Tauri WebKitWebDriver detection and installation",
+  "scripts": {
+    "test": "wdio run ./wdio.conf.ts",
+    "test:base": "wdio run ./wdio.conf.ts --spec base-install.e2e.ts",
+    "test:existing": "wdio run ./wdio.conf.ts --spec existing-webkit.e2e.ts",
+    "docker:build:ubuntu-base": "docker build -f docker/ubuntu-base.dockerfile -t webkit-test:ubuntu-base .",
+    "docker:build:ubuntu-with": "docker build -f docker/ubuntu-with-webkit.dockerfile -t webkit-test:ubuntu-with-webkit .",
+    "docker:build:fedora-base": "docker build -f docker/fedora-base.dockerfile -t webkit-test:fedora-base .",
+    "docker:build:fedora-with": "docker build -f docker/fedora-with-webkit.dockerfile -t webkit-test:fedora-with-webkit .",
+    "docker:build:all": "pnpm docker:build:ubuntu-base && pnpm docker:build:ubuntu-with && pnpm docker:build:fedora-base && pnpm docker:build:fedora-with",
+    "docker:test:ubuntu-base": "docker run --rm -v $(pwd)/../../..:/workspace -w /workspace webkit-test:ubuntu-base bash -c 'pnpm install && cd e2e/wdio/tauri-webkit && pnpm test:base'",
+    "docker:test:ubuntu-with": "docker run --rm -v $(pwd)/../../..:/workspace -w /workspace webkit-test:ubuntu-with-webkit bash -c 'pnpm install && cd e2e/wdio/tauri-webkit && pnpm test:existing'",
+    "docker:test:fedora-base": "docker run --rm -v $(pwd)/../../..:/workspace -w /workspace webkit-test:fedora-base bash -c 'pnpm install && cd e2e/wdio/tauri-webkit && pnpm test:base'",
+    "docker:test:fedora-with": "docker run --rm -v $(pwd)/../../..:/workspace -w /workspace webkit-test:fedora-with-webkit bash -c 'pnpm install && cd e2e/wdio/tauri-webkit && pnpm test:existing'"
+  },
+  "dependencies": {
+    "@wdio/cli": "workspace:*",
+    "@wdio/globals": "workspace:*",
+    "@wdio/local-runner": "workspace:*",
+    "@wdio/mocha-framework": "workspace:*",
+    "@wdio/spec-reporter": "workspace:*",
+    "@wdio/tauri-service": "workspace:*"
+  }
+}

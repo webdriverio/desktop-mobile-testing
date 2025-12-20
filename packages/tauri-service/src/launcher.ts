@@ -447,7 +447,7 @@ export default class TauriLaunchService {
 
     // 8. Check WebKitWebDriver availability (Linux only)
     if (process.platform === 'linux') {
-      const webkitResult = ensureWebKitWebDriver();
+      const webkitResult = await ensureWebKitWebDriver();
       if (webkitResult.success && webkitResult.path) {
         log.info(`✅ WebKitWebDriver found: ${webkitResult.path}`);
       } else {

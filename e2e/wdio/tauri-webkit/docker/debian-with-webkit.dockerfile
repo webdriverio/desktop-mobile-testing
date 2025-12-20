@@ -1,0 +1,51 @@
+FROM debian:12
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV CI=true
+
+# Install basic requirements
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        ca-certificates \
+        sudo \
+        git \
+        gnupg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20.x
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Install Rust toolchain (needed for tauri-driver)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install Tauri runtime dependencies AND webkit2gtk-driver
+RUN apt-get update && \
+    apt-get install -y \
+        libwebkit2gtk-4.1-dev \
+        libgtk-3-dev \
+        libayatana-appindicator3-dev \
+        librsvg2-dev \
+        webkit2gtk-driver && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create test user with sudo access
+RUN useradd -m -s /bin/bash testuser && \
+    echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Verify WebKitWebDriver IS available
+RUN which WebKitWebDriver || ls -la /usr/lib/*/webkit2gtk*/WebKitWebDriver
+
+WORKDIR /app
+USER testuser
+
+CMD ["bash"]
