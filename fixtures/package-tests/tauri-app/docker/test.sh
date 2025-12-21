@@ -71,6 +71,9 @@ run_tests_in_container() {
             echo '=== Installing workspace dependencies ==='
             pnpm install --frozen-lockfile
 
+            echo '=== Building tauri-service and dependencies ==='
+            pnpm --filter @wdio/tauri-service... build
+
             echo '=== Building tauri-plugin (required for app build) ==='
             pnpm --filter @wdio/tauri-plugin build
 
