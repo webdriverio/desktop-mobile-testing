@@ -128,9 +128,9 @@ jobs:
       - name: Run tests in container
         run: |
           docker run --rm \
+            -u root \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            -u root \
             webkit-test:${{ matrix.distro }}-${{ matrix.scenario }} \
             bash -c "
               set -e
@@ -138,17 +138,11 @@ jobs:
               echo '=== Installing dependencies ==='
               pnpm install --frozen-lockfile
 
-              echo '=== Fixing workspace permissions ==='
-              chown -R testuser:testuser /workspace
-
-              echo '=== Fixing binary permissions ==='
-              chmod -R +x /workspace/node_modules/.bin
-
               echo '=== Building tauri-service package ==='
-              su - testuser -c 'cd /workspace && pnpm turbo run build --filter=@wdio/tauri-service'
+              pnpm turbo run build --filter=@wdio/tauri-service
 
               echo '=== Running WebKit detection tests ==='
-              su - testuser -c 'cd /workspace/e2e/wdio/tauri-webkit && pnpm test -- --spec ${{ matrix.test_spec }}'
+              pnpm --filter @wdio-e2e/tauri-webkit test -- --spec ${{ matrix.test_spec }}
             "
 
       - name: Upload test results
