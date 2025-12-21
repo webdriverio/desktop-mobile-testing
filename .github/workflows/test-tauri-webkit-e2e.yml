@@ -145,7 +145,7 @@ jobs:
 
               echo '=== Running WebKit detection tests ==='
               cd e2e/wdio/tauri-webkit
-              pnpm wdio run ./wdio.conf.ts --spec ${{ matrix.test_spec }}
+              pnpm exec wdio run ./wdio.conf.ts --spec ${{ matrix.test_spec }}
             "
 
       - name: Upload test results
