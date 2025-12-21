@@ -88,16 +88,13 @@ jobs:
             test_spec: existing-webkit.e2e.ts
 
           # SUSE scenarios
+          # Note: SUSE does not provide WebKitWebDriver in any official package,
+          # so we only test the base scenario (auto-install behavior)
           - distro: suse
             version: "tumbleweed"
             scenario: base
             dockerfile: suse-base.dockerfile
             test_spec: base-install.e2e.ts
-          - distro: suse
-            version: "tumbleweed"
-            scenario: with-webkit
-            dockerfile: suse-with-webkit.dockerfile
-            test_spec: existing-webkit.e2e.ts
 
           # Void scenarios
           - distro: void
@@ -144,9 +141,7 @@ jobs:
               pnpm install --frozen-lockfile
 
               echo '=== Building tauri-service package ==='
-              cd packages/tauri-service
-              pnpm build
-              cd ../..
+              pnpm turbo run build --filter=@wdio/tauri-service
 
               echo '=== Running WebKit detection tests ==='
               cd e2e/wdio/tauri-webkit

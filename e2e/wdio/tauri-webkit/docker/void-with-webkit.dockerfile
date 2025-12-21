@@ -29,7 +29,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Upgrade util-linux packages first to avoid dependency conflicts
 RUN xbps-install -yf util-linux util-linux-common libblkid libuuid libmount libfdisk libsmartcols || true
 
-# Install Tauri runtime dependencies (libwebkit2gtk41 includes WebKitWebDriver)
+# Install Tauri runtime dependencies
+# Note: libwebkit2gtk41 includes WebKitWebDriver at /usr/sbin/WebKitWebDriver
 RUN xbps-install -y \
         libwebkit2gtk41 \
         libwebkit2gtk41-devel \
@@ -37,12 +38,15 @@ RUN xbps-install -y \
         librsvg-devel && \
     xbps-remove -O
 
+# Create symlink for WebKitWebDriver in /usr/bin for easier discovery
+RUN ln -s /usr/sbin/WebKitWebDriver /usr/bin/WebKitWebDriver
+
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
     echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Verify WebKitWebDriver IS available
-RUN which WebKitWebDriver || test -f /usr/sbin/WebKitWebDriver
+# Verify WebKitWebDriver is available (via symlink)
+RUN test -f /usr/bin/WebKitWebDriver
 
 WORKDIR /app
 USER testuser

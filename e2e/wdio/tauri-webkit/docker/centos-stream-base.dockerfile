@@ -2,8 +2,8 @@ FROM quay.io/centos/centos:stream9
 
 ENV CI=true
 
-# Install basic requirements
-RUN dnf install -y \
+# Install basic requirements (use --allowerasing to replace curl-minimal with curl)
+RUN dnf install -y --allowerasing \
         curl \
         ca-certificates \
         sudo \
@@ -24,7 +24,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
 RUN dnf install -y \
-        webkit2gtk4.1-devel \
+        webkit2gtk3-devel \
         gtk3-devel \
         librsvg2-devel && \
     dnf clean all

@@ -2,8 +2,8 @@ FROM quay.io/centos/centos:stream9
 
 ENV CI=true
 
-# Install basic requirements
-RUN dnf install -y \
+# Install basic requirements (use --allowerasing to replace curl-minimal with curl)
+RUN dnf install -y --allowerasing \
         curl \
         ca-certificates \
         sudo \
@@ -22,20 +22,21 @@ RUN npm install -g pnpm
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install Tauri runtime dependencies AND webkit2gtk-driver
+# Install Tauri runtime dependencies
+# Note: webkit2gtk3 includes WebKitWebDriver at /usr/bin/WebKitWebDriver
 RUN dnf install -y \
-        webkit2gtk4.1-devel \
+        webkit2gtk3 \
+        webkit2gtk3-devel \
         gtk3-devel \
-        librsvg2-devel \
-        webkit2gtk-driver && \
+        librsvg2-devel && \
     dnf clean all
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
     echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Verify WebKitWebDriver IS available
-RUN which WebKitWebDriver || ls -la /usr/lib*/webkit2gtk*/WebKitWebDriver
+# Verify WebKitWebDriver is available
+RUN test -f /usr/bin/WebKitWebDriver
 
 WORKDIR /app
 USER testuser
