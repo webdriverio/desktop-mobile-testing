@@ -65,8 +65,12 @@ run_tests_in_container() {
             echo '=== Building tauri-service package ==='
             pnpm turbo run build --filter=@wdio/tauri-service
 
+            echo '=== Building Tauri app ==='
+            cd fixtures/package-tests/tauri-app
+            pnpm run build:debug
+
             echo '=== Running Tauri package test ==='
-            cd fixtures/package-tests/tauri-app && pnpm test
+            pnpm test
         " 2>&1 | tee "/tmp/docker-test-$distro-$scenario.log"; then
         echo -e "${GREEN}✓ Tests passed for $distro ($scenario)${NC}"
         return 0
