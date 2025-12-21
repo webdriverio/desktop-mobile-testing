@@ -4,7 +4,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CI=true
 
-# Install basic requirements INCLUDING webkit2gtk-driver
+# Install basic requirements and build tools INCLUDING webkit2gtk-driver
 RUN apt-get update -qq && \
     apt-get install -y \
         curl \
@@ -12,6 +12,9 @@ RUN apt-get update -qq && \
         gnupg \
         sudo \
         git \
+        build-essential \
+        pkg-config \
+        libssl-dev \
         webkit2gtk-driver && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -27,12 +30,15 @@ RUN npm install -g pnpm
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install Tauri runtime dependencies
+# Install Tauri build dependencies
 RUN apt-get update -qq && \
     apt-get install -y \
-        libwebkit2gtk-4.1-0 \
-        libgtk-3-0 \
-        libayatana-appindicator3-1 && \
+        libwebkit2gtk-4.1-dev \
+        libxdo-dev \
+        libayatana-appindicator3-dev \
+        librsvg2-dev \
+        wget \
+        file && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

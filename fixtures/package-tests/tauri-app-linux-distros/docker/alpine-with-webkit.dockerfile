@@ -11,7 +11,8 @@ RUN apk add --no-cache \
         bash \
         nodejs \
         npm \
-        build-base
+        build-base \
+        openssl-dev
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -25,8 +26,9 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN apk add --no-cache \
         webkit2gtk-4.1 \
         webkit2gtk-4.1-dev \
-        gtk+3.0-dev \
-        librsvg-dev
+        libayatana-appindicator-dev \
+        librsvg \
+        wget
 
 # Create generic symlink for WebKitWebDriver
 RUN ln -s /usr/bin/WebKitWebDriver-4.1 /usr/bin/WebKitWebDriver

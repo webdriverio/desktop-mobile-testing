@@ -11,7 +11,8 @@ RUN pacman -Syu --noconfirm && \
         git \
         base-devel \
         nodejs \
-        npm && \
+        npm \
+        openssl && \
     pacman -Scc --noconfirm
 
 # Install pnpm globally
@@ -24,8 +25,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Tauri runtime dependencies (webkit2gtk-4.1 for Tauri)
 RUN pacman -S --noconfirm \
         webkit2gtk-4.1 \
-        gtk3 \
-        librsvg && \
+        libappindicator-gtk3 \
+        librsvg \
+        xdotool \
+        wget \
+        file && \
     pacman -Scc --noconfirm
 
 # Install webkitgtk-6.0 which provides WebKitWebDriver at /usr/bin/WebKitWebDriver

@@ -16,7 +16,11 @@ RUN xbps-install -Syu xbps && \
         sudo \
         git \
         bash \
-        nodejs && \
+        nodejs \
+        gcc \
+        make \
+        pkg-config \
+        openssl-devel && \
     xbps-remove -O
 
 # Install pnpm globally
@@ -35,7 +39,8 @@ RUN xbps-install -y \
         libwebkit2gtk41 \
         libwebkit2gtk41-devel \
         gtk+3-devel \
-        librsvg-devel && \
+        librsvg-devel \
+        wget && \
     xbps-remove -O
 
 # Ensure WebKitWebDriver is in /usr/bin (Void installs it in /usr/bin by default)

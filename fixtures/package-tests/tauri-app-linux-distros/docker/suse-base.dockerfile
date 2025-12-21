@@ -10,7 +10,12 @@ RUN zypper refresh && \
         sudo \
         git \
         nodejs22 \
-        npm22 && \
+        npm22 \
+        gcc \
+        gcc-c++ \
+        make \
+        pkg-config \
+        libopenssl-devel && \
     zypper clean -a
 
 # Install pnpm globally
@@ -22,9 +27,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
 RUN zypper install -y \
-        webkit2gtk4-devel \
-        gtk3-devel \
-        librsvg-devel && \
+        webkit2gtk3-devel \
+        libappindicator3-1 \
+        librsvg-devel \
+        wget \
+        file && \
     zypper clean -a
 
 # Remove webkit2gtk-driver if present

@@ -11,7 +11,8 @@ RUN pacman -Syu --noconfirm && \
         git \
         base-devel \
         nodejs \
-        npm && \
+        npm \
+        openssl && \
     pacman -Scc --noconfirm
 
 # Install pnpm globally
@@ -24,8 +25,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
 RUN pacman -S --noconfirm \
         webkit2gtk-4.1 \
-        gtk3 \
-        librsvg && \
+        libappindicator-gtk3 \
+        librsvg \
+        xdotool \
+        wget \
+        file && \
     pacman -Scc --noconfirm
 
 # Remove webkit2gtk-driver if present (package name may vary on Arch)

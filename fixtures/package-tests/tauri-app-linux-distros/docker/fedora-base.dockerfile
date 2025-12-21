@@ -9,7 +9,12 @@ RUN dnf install -y \
         sudo \
         git \
         nodejs \
-        npm && \
+        npm \
+        gcc \
+        gcc-c++ \
+        make \
+        pkg-config \
+        openssl-devel && \
     dnf clean all
 
 # Install pnpm globally
@@ -22,8 +27,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Tauri runtime dependencies (but NOT webkit2gtk-driver)
 RUN dnf install -y \
         webkit2gtk4.1-devel \
-        gtk3-devel \
-        libayatana-appindicator-gtk3 && \
+        libappindicator-gtk3-devel \
+        librsvg2-devel \
+        libxdo-devel \
+        wget \
+        file && \
     dnf clean all
 
 # Create test user with sudo access

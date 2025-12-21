@@ -7,7 +7,12 @@ RUN dnf install -y --allowerasing \
         curl \
         ca-certificates \
         sudo \
-        git && \
+        git \
+        gcc \
+        gcc-c++ \
+        make \
+        pkg-config \
+        openssl-devel && \
     dnf clean all
 
 # Install Node.js 20.x
@@ -25,10 +30,12 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Tauri runtime dependencies
 # Note: webkit2gtk3 includes WebKitWebDriver at /usr/bin/WebKitWebDriver
 RUN dnf install -y \
-        webkit2gtk3 \
-        webkit2gtk3-devel \
-        gtk3-devel \
-        librsvg2-devel && \
+        webkit2gtk4.1-devel \
+        libappindicator-gtk3-devel \
+        librsvg2-devel \
+        libxdo-devel \
+        wget \
+        file && \
     dnf clean all
 
 # Create test user with sudo access

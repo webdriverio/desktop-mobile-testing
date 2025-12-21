@@ -11,7 +11,8 @@ RUN apk add --no-cache \
         bash \
         nodejs \
         npm \
-        build-base
+        build-base \
+        openssl-dev
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -23,8 +24,9 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
 RUN apk add --no-cache \
         webkit2gtk-4.1-dev \
-        gtk+3.0-dev \
-        librsvg-dev
+        libayatana-appindicator-dev \
+        librsvg \
+        wget
 
 # Remove webkit2gtk-driver if present
 RUN apk del webkit2gtk-driver || true

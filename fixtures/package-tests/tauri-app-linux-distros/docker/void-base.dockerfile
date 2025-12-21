@@ -16,7 +16,11 @@ RUN xbps-install -Syu xbps && \
         sudo \
         git \
         bash \
-        nodejs && \
+        nodejs \
+        gcc \
+        make \
+        pkg-config \
+        openssl-devel && \
     xbps-remove -O
 
 # Install pnpm globally
@@ -33,7 +37,8 @@ RUN xbps-install -yf util-linux util-linux-common libblkid libuuid libmount libf
 RUN xbps-install -y \
         libwebkit2gtk41-devel \
         gtk+3-devel \
-        librsvg-devel && \
+        librsvg-devel \
+        wget && \
     xbps-remove -O
 
 # Remove WebKitWebDriver binary to simulate system without driver
