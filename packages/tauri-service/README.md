@@ -53,24 +53,43 @@ pnpm add @wdio/tauri-service
    
    **Note:** Automatic installation requires Rust toolchain (`cargo`) to be installed. Get Rust from [https://rustup.rs/](https://rustup.rs/).
 
-3. **Platform-specific WebDriver**:
-   - **Windows**: Microsoft Edge WebDriver (msedgedriver) - Automatically handled by tauri-driver
-   - **Linux**: WebKitWebDriver (webkit2gtk-driver) - Must be installed manually
-     ```bash
-     sudo apt-get install -y webkit2gtk-driver
-     # or for other distributions:
-     sudo yum install -y webkit2gtk-driver  # RHEL/CentOS
-     sudo dnf install -y webkit2gtk-driver  # Fedora
-     sudo pacman -S webkit2gtk-driver      # Arch
-     ```
+3. **Platform-specific WebDriver** (REQUIRED):
+   - **Windows**: Microsoft Edge WebDriver (msedgedriver)
+     - ✅ Automatically handled by tauri-driver
+     - No manual installation needed
+
+   - **Linux**: WebKitWebDriver (webkit2gtk-driver)
+     - ⚠️ **Must be installed manually** (not auto-installed by this service)
+     - Installation commands by distro:
+       ```bash
+       # Debian/Ubuntu
+       sudo apt-get install -y webkit2gtk-driver
+
+       # RHEL/CentOS
+       sudo yum install -y webkit2gtk-driver
+
+       # Fedora
+       sudo dnf install -y webkit2gtk-driver
+
+       # Arch Linux
+       sudo pacman -S webkitgtk-6.0  # Provides WebKitWebDriver
+
+       # Alpine Linux
+       sudo apk add webkit2gtk-4.1  # Includes WebKitWebDriver
+
+       # Void Linux
+       sudo xbps-install -y webkit2gtk-devel
+       ```
+     - ⚠️ **SUSE/openSUSE**: No official WebKitWebDriver package available. You must [build WebKitGTK from source](https://webkitgtk.org/building.html) to obtain WebKitWebDriver.
+     - The service will detect your package manager and provide specific instructions if WebKitWebDriver is not found
 
 ### Platform Support
 
-| Platform | Supported | WebDriver | Notes |
-|-----------|------------|-----------|-------|
-| Windows | ✅ | Edge WebDriver | Stable and tested |
-| Linux | ✅ | WebKitWebDriver | Requires webkit2gtk-driver |
-| macOS | ❌ | None | No WKWebView driver support |
+| Platform | Supported | WebDriver | Installation | Notes |
+|-----------|------------|-----------|--------------|-------|
+| Windows | ✅ | Edge WebDriver | Automatic | Stable and tested |
+| Linux | ✅ | WebKitWebDriver | **Manual** | Requires webkit2gtk-driver package |
+| macOS | ❌ | None | N/A | No WKWebView driver support |
 
 ## Configuration
 
@@ -537,8 +556,11 @@ services: [
      sudo apt-get install -y webkit2gtk-driver  # Debian/Ubuntu
      sudo yum install -y webkit2gtk-driver      # RHEL/CentOS
      sudo dnf install -y webkit2gtk-driver      # Fedora
-     sudo pacman -S webkit2gtk-driver          # Arch
+     sudo pacman -S webkitgtk-6.0              # Arch
+     sudo apk add webkit2gtk-4.1               # Alpine
+     sudo xbps-install -y webkit2gtk-devel     # Void
      ```
+   - **SUSE/openSUSE users**: No official package available - you must build WebKitGTK from source
    - The service will detect your package manager and provide specific instructions if not found
 
 3. **"macOS not supported"**
