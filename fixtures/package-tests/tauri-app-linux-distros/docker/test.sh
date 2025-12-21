@@ -32,7 +32,7 @@ test_dockerfile() {
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         --progress=plain \
         -f "$SCRIPT_DIR/$dockerfile" \
-        -t "webkit-test:$distro-$scenario" \
+        -t "tauri-distro-test:$distro-$scenario" \
         "$REPO_ROOT" 2>&1 | tee "/tmp/docker-build-$distro-$scenario.log"; then
         echo -e "${GREEN}✓ Build succeeded for $distro ($scenario)${NC}"
         return 0
@@ -47,7 +47,6 @@ test_dockerfile() {
 run_tests_in_container() {
     local distro=$1
     local scenario=$2
-    local test_spec=$3
 
     echo -e "${YELLOW}=== Running tests for $distro ($scenario) ===${NC}"
 
@@ -55,17 +54,19 @@ run_tests_in_container() {
         -u root \
         -v "$REPO_ROOT:/workspace" \
         -w /workspace \
-        "webkit-test:$distro-$scenario" \
+        "tauri-distro-test:$distro-$scenario" \
         bash -c "
             set -e
+            export TURBO_TELEMETRY_DISABLED=1
+
             echo '=== Installing dependencies ==='
             pnpm install --frozen-lockfile
 
             echo '=== Building tauri-service package ==='
             pnpm turbo run build --filter=@wdio/tauri-service
 
-            echo '=== Running WebKit detection tests ==='
-            pnpm --filter @repo/e2e exec wdio run wdio/tauri-webkit/wdio.conf.ts --spec wdio/tauri-webkit/$test_spec
+            echo '=== Running Tauri package test ==='
+            cd fixtures/package-tests/tauri-app && pnpm test
         " 2>&1 | tee "/tmp/docker-test-$distro-$scenario.log"; then
         echo -e "${GREEN}✓ Tests passed for $distro ($scenario)${NC}"
         return 0
@@ -89,7 +90,7 @@ debug_dockerfile() {
         --progress=plain \
         --no-cache \
         -f "$SCRIPT_DIR/$dockerfile" \
-        -t "webkit-test:$distro-$scenario-debug" \
+        -t "tauri-distro-test:$distro-$scenario-debug" \
         "$REPO_ROOT" || {
             echo -e "${RED}Build failed. You can try building layer by layer to identify the issue.${NC}"
             echo "Tip: Comment out RUN commands in the Dockerfile one by one to find the failing step."
@@ -121,49 +122,49 @@ esac
 get_test_case() {
     case "$1" in
         ubuntu-base)
-            echo "ubuntu base ubuntu-base.dockerfile base-install.e2e.ts"
+            echo "ubuntu base ubuntu-base.dockerfile"
             ;;
         ubuntu-webkit)
-            echo "ubuntu with-webkit ubuntu-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "ubuntu with-webkit ubuntu-with-webkit.dockerfile"
             ;;
         fedora-base)
-            echo "fedora base fedora-base.dockerfile base-install.e2e.ts"
+            echo "fedora base fedora-base.dockerfile"
             ;;
         fedora-webkit)
-            echo "fedora with-webkit fedora-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "fedora with-webkit fedora-with-webkit.dockerfile"
             ;;
         debian-base)
-            echo "debian base debian-base.dockerfile base-install.e2e.ts"
+            echo "debian base debian-base.dockerfile"
             ;;
         debian-webkit)
-            echo "debian with-webkit debian-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "debian with-webkit debian-with-webkit.dockerfile"
             ;;
         centos-base)
-            echo "centos-stream base centos-stream-base.dockerfile base-install.e2e.ts"
+            echo "centos-stream base centos-stream-base.dockerfile"
             ;;
         centos-webkit)
-            echo "centos-stream with-webkit centos-stream-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "centos-stream with-webkit centos-stream-with-webkit.dockerfile"
             ;;
         arch-base)
-            echo "arch base arch-base.dockerfile base-install.e2e.ts"
+            echo "arch base arch-base.dockerfile"
             ;;
         arch-webkit)
-            echo "arch with-webkit arch-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "arch with-webkit arch-with-webkit.dockerfile"
             ;;
         alpine-base)
-            echo "alpine base alpine-base.dockerfile base-install.e2e.ts"
+            echo "alpine base alpine-base.dockerfile"
             ;;
         alpine-webkit)
-            echo "alpine with-webkit alpine-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "alpine with-webkit alpine-with-webkit.dockerfile"
             ;;
         suse-base)
-            echo "suse base suse-base.dockerfile base-install.e2e.ts"
+            echo "suse base suse-base.dockerfile"
             ;;
         void-base)
-            echo "void base void-base.dockerfile base-install.e2e.ts"
+            echo "void base void-base.dockerfile"
             ;;
         void-webkit)
-            echo "void with-webkit void-with-webkit.dockerfile existing-webkit.e2e.ts"
+            echo "void with-webkit void-with-webkit.dockerfile"
             ;;
         *)
             echo ""
@@ -210,7 +211,7 @@ for test_key in $selected_tests; do
         continue
     fi
 
-    IFS=' ' read -r distro scenario dockerfile test_spec <<< "$test_data"
+    IFS=' ' read -r distro scenario dockerfile <<< "$test_data"
 
     total=$((total + 1))
 
@@ -224,7 +225,7 @@ for test_key in $selected_tests; do
             ;;
         test)
             if test_dockerfile "$distro" "$scenario" "$dockerfile"; then
-                if run_tests_in_container "$distro" "$scenario" "$test_spec"; then
+                if run_tests_in_container "$distro" "$scenario"; then
                     passed=$((passed + 1))
                 else
                     failed=$((failed + 1))

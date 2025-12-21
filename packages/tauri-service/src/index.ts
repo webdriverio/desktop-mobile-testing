@@ -12,12 +12,6 @@ export {
   getTauriVersion,
   isTauriApiAvailable,
 } from './commands/execute.js';
-// Export driver manager utilities
-export {
-  detectPackageManager,
-  ensureWebKitWebDriver,
-  getWebKitDriverInstallCommand,
-} from './driverManager.js';
 export { default as launcher } from './launcher.js';
 // Export utilities
 export {
