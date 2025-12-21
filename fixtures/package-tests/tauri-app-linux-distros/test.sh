@@ -128,37 +128,37 @@ get_test_case() {
         ubuntu-base)
             echo "ubuntu base ubuntu-base.dockerfile"
             ;;
-        ubuntu-webkit)
+        ubuntu-with-webkit)
             echo "ubuntu with-webkit ubuntu-with-webkit.dockerfile"
             ;;
         fedora-base)
             echo "fedora base fedora-base.dockerfile"
             ;;
-        fedora-webkit)
+        fedora-with-webkit)
             echo "fedora with-webkit fedora-with-webkit.dockerfile"
             ;;
         debian-base)
             echo "debian base debian-base.dockerfile"
             ;;
-        debian-webkit)
+        debian-with-webkit)
             echo "debian with-webkit debian-with-webkit.dockerfile"
             ;;
         centos-base)
             echo "centos-stream base centos-stream-base.dockerfile"
             ;;
-        centos-webkit)
+        centos-with-webkit)
             echo "centos-stream with-webkit centos-stream-with-webkit.dockerfile"
             ;;
         arch-base)
             echo "arch base arch-base.dockerfile"
             ;;
-        arch-webkit)
+        arch-with-webkit)
             echo "arch with-webkit arch-with-webkit.dockerfile"
             ;;
         alpine-base)
             echo "alpine base alpine-base.dockerfile"
             ;;
-        alpine-webkit)
+        alpine-with-webkit)
             echo "alpine with-webkit alpine-with-webkit.dockerfile"
             ;;
         suse-base)
@@ -167,7 +167,7 @@ get_test_case() {
         void-base)
             echo "void base void-base.dockerfile"
             ;;
-        void-webkit)
+        void-with-webkit)
             echo "void with-webkit void-with-webkit.dockerfile"
             ;;
         *)
@@ -178,7 +178,7 @@ get_test_case() {
 
 # Get all available test keys
 get_all_test_keys() {
-    echo "ubuntu-base ubuntu-webkit fedora-base fedora-webkit debian-base debian-webkit centos-base centos-webkit arch-base arch-webkit alpine-base alpine-webkit suse-base void-base void-webkit"
+    echo "ubuntu-base ubuntu-with-webkit fedora-base fedora-with-webkit debian-base debian-with-webkit centos-base centos-with-webkit arch-base arch-with-webkit alpine-base alpine-with-webkit suse-base void-base void-with-webkit"
 }
 
 # Filter test cases based on distro argument
