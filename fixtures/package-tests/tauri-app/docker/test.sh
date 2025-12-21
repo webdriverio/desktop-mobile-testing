@@ -56,13 +56,35 @@ run_tests_in_container() {
         bash -c "
             set -e
             export TURBO_TELEMETRY_DISABLED=1
+            export DISPLAY=:99
 
-            echo '=== Installing pnpm and tsx globally ==='
-            npm install -g pnpm tsx
+            echo '=== Starting Xvfb ==='
+            # Start Xvfb in background (some distros use different paths)
+            if command -v Xvfb > /dev/null; then
+                Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                XVFB_PID=\$!
+                sleep 2
+            else
+                echo '⚠️  Xvfb not found, tests may fail'
+            fi
 
-            echo '=== Running package tests with xvfb (builds app from source, uses pre-packed services) ==='
-            # Note: xvfb-run is required because tauri-driver runs in launcher (not worker) and needs display
-            xvfb-run -a pnpm exec tsx scripts/test-package.ts --service=tauri
+            echo '=== Installing workspace dependencies ==='
+            pnpm install --frozen-lockfile
+
+            echo '=== Building tauri-plugin (required for app build) ==='
+            pnpm --filter @wdio/tauri-plugin build
+
+            echo '=== Building Tauri app ==='
+            cd fixtures/package-tests/tauri-app
+            pnpm run build
+
+            echo '=== Running Tauri package test ==='
+            pnpm test
+
+            # Clean up Xvfb if it was started
+            if [ ! -z \"\$XVFB_PID\" ]; then
+                kill \$XVFB_PID 2>/dev/null || true
+            fi
         " 2>&1 | tee "/tmp/docker-test-$distro.log"
 
     # Check the exit code of docker run (PIPESTATUS[0]), not tee (PIPESTATUS[1])

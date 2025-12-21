@@ -131,7 +131,7 @@ jobs:
       tauri_cache_key: ${{ needs.build-tauri-package-app-windows.outputs.cache_key }}
 
   # Run Tauri package tests across different Linux distributions using Docker
-  # Tests cross-distro compatibility and tauri-driver auto-installation
+  # Tests cross-distro compatibility, tauri-driver auto-installation, and WebKitWebDriver detection
   # Note: SUSE is excluded because it lacks an official WebKitWebDriver package,
   # requiring a multi-hour source build that is impractical for CI
   package-tauri-distros:
@@ -151,9 +151,6 @@ jobs:
     uses: ./.github/workflows/_ci-package-docker.reusable.yml
     with:
       distro: ${{ matrix.distro }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
 
   # Run build tests outside of the main Linux build job.
   build-matrix:

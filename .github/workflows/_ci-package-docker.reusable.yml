@@ -8,18 +8,6 @@ on:
         description: 'Linux distribution to test (ubuntu, fedora, debian, centos-stream, arch, alpine, void)'
         type: string
         required: true
-      build_id:
-        description: 'Build ID from the build job'
-        type: string
-        required: false
-      artifact_size:
-        description: 'Size of the build artifact in bytes'
-        type: string
-        required: false
-      cache_key:
-        description: 'Cache key to use for downloading build artifacts'
-        type: string
-        required: false
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
@@ -32,41 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-
-      - name: 🛠️ Setup Development Environment
-        uses: ./.github/workflows/actions/setup-workspace
-        with:
-          node-version: '20'
-
-      # Download the pre-built packages from the build job
-      - name: 📦 Download Build Artifacts
-        uses: ./.github/workflows/actions/download-archive
-        with:
-          name: wdio-electron-service
-          path: wdio-electron-service-build
-          filename: artifact.zip
-          cache_key_prefix: wdio-electron-build
-          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
-
-      # Pack services from downloaded artifacts so test-package.ts can use them
-      - name: 📦 Pack Services from Artifacts
-        shell: bash
-        run: |
-          echo "Packing services from downloaded artifacts..."
-          # Pack shared dependencies
-          if [ -d "packages/native-utils/dist" ]; then
-            (cd packages/native-utils && pnpm pack)
-          fi
-          if [ -d "packages/native-types/dist" ]; then
-            (cd packages/native-types && pnpm pack)
-          fi
-
-          # Pack Tauri service
-          if [ -d "packages/tauri-service/dist" ]; then
-            (cd packages/tauri-service && pnpm pack)
-          fi
-
-          echo "✅ Services packed and ready for Docker tests"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
