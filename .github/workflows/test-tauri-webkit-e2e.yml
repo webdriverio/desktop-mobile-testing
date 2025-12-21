@@ -103,38 +103,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build test container
+      - name: Run tests using test.sh
         run: |
-          docker build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            -f fixtures/package-tests/tauri-app-linux-distros/docker/${{ matrix.dockerfile }} \
-            -t tauri-distro-test:${{ matrix.distro }}-${{ matrix.scenario }} \
-            .
-
-      - name: Run tests in container
-        run: |
-          docker run --rm \
-            -u root \
-            -v ${{ github.workspace }}:/workspace \
-            -w /workspace \
-            tauri-distro-test:${{ matrix.distro }}-${{ matrix.scenario }} \
-            bash -c "
-              set -e
-              export TURBO_TELEMETRY_DISABLED=1
-
-              echo '=== Installing dependencies ==='
-              pnpm install --frozen-lockfile
-
-              echo '=== Building tauri-service package ==='
-              pnpm turbo run build --filter=@wdio/tauri-service
-
-              echo '=== Building Tauri app ==='
-              cd fixtures/package-tests/tauri-app
-              pnpm run build:debug
-
-              echo '=== Running Tauri package test ==='
-              pnpm test
-            "
+          cd fixtures/package-tests/tauri-app-linux-distros/docker
+          ./test.sh ${{ matrix.distro }}-${{ matrix.scenario }} test
 
       - name: Upload test results
         if: always()

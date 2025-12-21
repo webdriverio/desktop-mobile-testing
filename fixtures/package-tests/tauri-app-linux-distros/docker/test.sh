@@ -67,7 +67,7 @@ run_tests_in_container() {
 
             echo '=== Building Tauri app ==='
             cd fixtures/package-tests/tauri-app
-            pnpm run build:debug
+            pnpm run build
 
             echo '=== Running Tauri package test ==='
             pnpm test
