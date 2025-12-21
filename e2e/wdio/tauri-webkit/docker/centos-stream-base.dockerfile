@@ -27,10 +27,8 @@ RUN dnf install -y \
         webkit2gtk3-devel \
         gtk3-devel \
         librsvg2-devel && \
-    dnf clean all
-
-# Remove webkit2gtk-driver if present
-RUN dnf remove -y webkit2gtk-driver || true
+    dnf clean all && \
+    rm -f /usr/bin/WebKitWebDriver /usr/sbin/WebKitWebDriver /usr/libexec/webkit2gtk-4.0/WebKitWebDriver
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \

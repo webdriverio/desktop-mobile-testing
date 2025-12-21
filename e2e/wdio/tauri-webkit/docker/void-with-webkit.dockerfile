@@ -38,8 +38,11 @@ RUN xbps-install -y \
         librsvg-devel && \
     xbps-remove -O
 
-# Create symlink for WebKitWebDriver in /usr/bin for easier discovery
-RUN ln -sf /usr/sbin/WebKitWebDriver /usr/bin/WebKitWebDriver
+# Ensure WebKitWebDriver is in /usr/bin (Void installs it in /usr/bin by default)
+# Create symlink only if it's in /usr/sbin and not already in /usr/bin
+RUN if [ -f /usr/sbin/WebKitWebDriver ] && [ ! -f /usr/bin/WebKitWebDriver ]; then \
+      ln -s /usr/sbin/WebKitWebDriver /usr/bin/WebKitWebDriver; \
+    fi
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
