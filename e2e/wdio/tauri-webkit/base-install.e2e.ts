@@ -1,10 +1,6 @@
 import { execSync } from 'node:child_process';
 import { expect } from '@wdio/globals';
-import {
-  detectPackageManager,
-  ensureWebKitWebDriver,
-  getWebKitDriverInstallCommand,
-} from '@wdio/tauri-service/src/driverManager.js';
+import { detectPackageManager, ensureWebKitWebDriver, getWebKitDriverInstallCommand } from '@wdio/tauri-service';
 
 describe('WebKitWebDriver fresh installation', () => {
   it('should detect package manager correctly', async function (this: Mocha.Context) {
