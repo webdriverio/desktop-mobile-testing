@@ -145,10 +145,10 @@ jobs:
               chmod -R +x /workspace/node_modules/.bin
 
               echo '=== Building tauri-service package ==='
-              su testuser -c 'pnpm turbo run build --filter=@wdio/tauri-service'
+              su - testuser -c 'cd /workspace && pnpm turbo run build --filter=@wdio/tauri-service'
 
               echo '=== Running WebKit detection tests ==='
-              su testuser -c 'cd e2e/wdio/tauri-webkit && pnpm test -- --spec ${{ matrix.test_spec }}'
+              su - testuser -c 'cd /workspace/e2e/wdio/tauri-webkit && pnpm test -- --spec ${{ matrix.test_spec }}'
             "
 
       - name: Upload test results
