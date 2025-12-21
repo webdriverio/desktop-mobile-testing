@@ -24,7 +24,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies
 # Note: webkit2gtk-4.1 includes WebKitWebDriver-4.1 at /usr/bin/WebKitWebDriver-4.1
-# Alpine/musl requires additional static libraries for linking
+# Alpine/musl requires static libraries for linking
 RUN apk add --no-cache \
         webkit2gtk-4.1 \
         webkit2gtk-4.1-dev \
@@ -34,6 +34,18 @@ RUN apk add --no-cache \
         glib-static \
         gettext-dev \
         gettext-static \
+        gtk+3.0-dev \
+        cairo-dev \
+        cairo-static \
+        pango-dev \
+        gdk-pixbuf-dev \
+        harfbuzz-dev \
+        harfbuzz-static \
+        libxcb-dev \
+        libxcb-static \
+        xcb-util-dev \
+        zlib-dev \
+        zlib-static \
         wget
 
 # Create generic symlink for WebKitWebDriver

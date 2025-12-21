@@ -35,6 +35,11 @@ RUN dnf install -y \
         webkit2gtk3 \
         webkit2gtk3-devel \
         gtk3-devel \
+        glib2-devel \
+        pango-devel \
+        cairo-devel \
+        gdk-pixbuf2-devel \
+        atk-devel \
         librsvg2-devel \
         wget \
         file && \
