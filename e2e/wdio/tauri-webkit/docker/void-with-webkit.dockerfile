@@ -39,7 +39,7 @@ RUN xbps-install -y \
     xbps-remove -O
 
 # Create symlink for WebKitWebDriver in /usr/bin for easier discovery
-RUN ln -s /usr/sbin/WebKitWebDriver /usr/bin/WebKitWebDriver
+RUN ln -sf /usr/sbin/WebKitWebDriver /usr/bin/WebKitWebDriver
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
