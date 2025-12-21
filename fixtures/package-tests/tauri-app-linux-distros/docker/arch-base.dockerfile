@@ -12,7 +12,8 @@ RUN pacman -Syu --noconfirm && \
         base-devel \
         nodejs \
         npm \
-        openssl && \
+        openssl \
+        python && \
     pacman -Scc --noconfirm
 
 # Install pnpm globally

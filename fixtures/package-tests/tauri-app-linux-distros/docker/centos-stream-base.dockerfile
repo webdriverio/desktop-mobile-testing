@@ -28,11 +28,11 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
+# Note: CentOS Stream 9 only has webkit2gtk3, not 4.1
 RUN dnf install -y \
-        webkit2gtk4.1-devel \
-        libappindicator-gtk3-devel \
+        webkit2gtk3-devel \
+        gtk3-devel \
         librsvg2-devel \
-        libxdo-devel \
         wget \
         file && \
     dnf clean all && \

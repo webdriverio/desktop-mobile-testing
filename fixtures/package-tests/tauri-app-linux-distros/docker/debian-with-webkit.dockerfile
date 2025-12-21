@@ -37,6 +37,8 @@ RUN apt-get update && \
         libxdo-dev \
         libayatana-appindicator3-dev \
         librsvg2-dev \
+        libxcb-shape0-dev \
+        libxcb-xfixes0-dev \
         wget \
         file \
         webkit2gtk-driver && \

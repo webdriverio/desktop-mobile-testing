@@ -22,10 +22,15 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies WITHOUT webkit2gtk-driver
+# Note: Alpine/musl requires additional static libraries for linking
 RUN apk add --no-cache \
         webkit2gtk-4.1-dev \
         libayatana-appindicator-dev \
         librsvg \
+        glib-dev \
+        glib-static \
+        gettext-dev \
+        gettext-static \
         wget
 
 # Remove webkit2gtk-driver if present
