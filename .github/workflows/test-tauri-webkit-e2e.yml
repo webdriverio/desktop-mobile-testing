@@ -142,7 +142,7 @@ jobs:
               pnpm turbo run build --filter=@wdio/tauri-service
 
               echo '=== Running WebKit detection tests ==='
-              pnpm --filter @wdio-e2e/tauri-webkit test -- --spec ${{ matrix.test_spec }}
+              pnpm exec wdio run e2e/wdio/tauri-webkit/wdio.conf.ts --spec e2e/wdio/tauri-webkit/${{ matrix.test_spec }}
             "
 
       - name: Upload test results

@@ -2,7 +2,6 @@ packages:
   - packages/*
   - examples/*
   - e2e
-  - e2e/wdio/tauri-webkit
   - fixtures/e2e-apps/electron-builder
   - fixtures/e2e-apps/electron-forge
   - fixtures/e2e-apps/electron-no-binary
