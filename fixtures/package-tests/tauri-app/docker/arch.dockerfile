@@ -1,21 +1,21 @@
-FROM fedora:40
+FROM archlinux:latest
 
 ENV CI=true
 
-# Install basic requirements INCLUDING webkit2gtk-driver
-RUN dnf install -y \
+# Update package database and install basic requirements
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
         curl \
         ca-certificates \
         sudo \
         git \
+        base-devel \
         nodejs \
         npm \
-        gcc \
-        gcc-c++ \
-        make \
-        pkg-config \
-        openssl-devel && \
-    dnf clean all
+        openssl \
+        python \
+        xorg-server-xvfb && \
+    pacman -Scc --noconfirm
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -24,18 +24,18 @@ RUN npm install -g pnpm
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install Tauri runtime dependencies (webkit2gtk4.1 for Tauri)
-RUN dnf install -y \
-        webkit2gtk4.1-devel \
-        libappindicator-gtk3-devel \
-        librsvg2-devel \
-        libxdo-devel \
+# Install Tauri runtime dependencies (webkit2gtk-4.1 for Tauri)
+RUN pacman -S --noconfirm \
+        webkit2gtk-4.1 \
+        libappindicator-gtk3 \
+        librsvg \
+        xdotool \
         wget \
         file && \
-    dnf clean all
+    pacman -Scc --noconfirm
 
-# Install webkitgtk6.0 which provides WebKitWebDriver at /usr/bin/WebKitWebDriver
-RUN dnf install -y webkitgtk6.0 && dnf clean all
+# Install webkitgtk-6.0 which provides WebKitWebDriver at /usr/bin/WebKitWebDriver
+RUN pacman -S --noconfirm webkitgtk-6.0 && pacman -Scc --noconfirm
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \

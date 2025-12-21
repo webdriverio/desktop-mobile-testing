@@ -2,7 +2,7 @@ FROM alpine:latest
 
 ENV CI=true
 
-# Install basic requirements
+# Install basic requirements including xvfb for headless testing
 RUN apk add --no-cache \
         curl \
         ca-certificates \
@@ -12,7 +12,8 @@ RUN apk add --no-cache \
         nodejs \
         npm \
         build-base \
-        openssl-dev
+        openssl-dev \
+        xvfb
 
 # Install pnpm globally
 RUN npm install -g pnpm

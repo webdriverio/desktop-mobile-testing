@@ -12,7 +12,8 @@ RUN dnf install -y --allowerasing \
         gcc-c++ \
         make \
         pkg-config \
-        openssl-devel && \
+        openssl-devel \
+        xorg-x11-server-Xvfb && \
     dnf clean all
 
 # Install Node.js 20.x

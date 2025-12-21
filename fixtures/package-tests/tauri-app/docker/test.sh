@@ -11,7 +11,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -57,18 +57,12 @@ run_tests_in_container() {
             set -e
             export TURBO_TELEMETRY_DISABLED=1
 
-            echo '=== Installing dependencies ==='
-            pnpm install --frozen-lockfile
+            echo '=== Installing pnpm and tsx globally ==='
+            npm install -g pnpm tsx
 
-            echo '=== Building tauri-service package ==='
-            pnpm turbo run build --filter=@wdio/tauri-service
-
-            echo '=== Building Tauri app ==='
-            cd fixtures/package-tests/tauri-app
-            pnpm run build
-
-            echo '=== Running Tauri package test ==='
-            pnpm test
+            echo '=== Running package tests with xvfb (builds app from source, uses pre-packed services) ==='
+            # Note: xvfb-run is required because tauri-driver runs in launcher (not worker) and needs display
+            xvfb-run -a pnpm exec tsx scripts/test-package.ts --service=tauri
         " 2>&1 | tee "/tmp/docker-test-$distro.log"
 
     # Check the exit code of docker run (PIPESTATUS[0]), not tee (PIPESTATUS[1])

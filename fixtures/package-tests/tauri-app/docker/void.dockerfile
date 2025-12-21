@@ -20,7 +20,8 @@ RUN xbps-install -Syu xbps && \
         gcc \
         make \
         pkg-config \
-        openssl-devel && \
+        openssl-devel \
+        xorg-server-xvfb && \
     xbps-remove -O
 
 # Install pnpm globally

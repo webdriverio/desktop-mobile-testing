@@ -151,6 +151,9 @@ jobs:
     uses: ./.github/workflows/_ci-package-docker.reusable.yml
     with:
       distro: ${{ matrix.distro }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
 
   # Run build tests outside of the main Linux build job.
   build-matrix:
