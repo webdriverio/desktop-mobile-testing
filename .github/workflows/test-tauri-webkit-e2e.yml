@@ -105,7 +105,7 @@ jobs:
 
       - name: Run tests using test.sh
         run: |
-          cd fixtures/package-tests/tauri-app-linux-distros/docker
+          cd fixtures/package-tests/tauri-app-linux-distros
           ./test.sh ${{ matrix.distro }}-${{ matrix.scenario }} test
 
       - name: Upload test results
