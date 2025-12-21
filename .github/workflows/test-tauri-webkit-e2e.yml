@@ -16,85 +16,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu scenarios
           - distro: ubuntu
             version: "24.04"
-            scenario: base
-            dockerfile: ubuntu-base.dockerfile
-          - distro: ubuntu
-            version: "24.04"
-            scenario: with-webkit
-            dockerfile: ubuntu-with-webkit.dockerfile
+            dockerfile: ubuntu.dockerfile
 
-          # Fedora scenarios
           - distro: fedora
             version: "40"
-            scenario: base
-            dockerfile: fedora-base.dockerfile
-          - distro: fedora
-            version: "40"
-            scenario: with-webkit
-            dockerfile: fedora-with-webkit.dockerfile
+            dockerfile: fedora.dockerfile
 
-          # Debian scenarios
           - distro: debian
             version: "12"
-            scenario: base
-            dockerfile: debian-base.dockerfile
-          - distro: debian
-            version: "12"
-            scenario: with-webkit
-            dockerfile: debian-with-webkit.dockerfile
+            dockerfile: debian.dockerfile
 
-          # CentOS Stream scenarios
           - distro: centos-stream
             version: "9"
-            scenario: base
-            dockerfile: centos-stream-base.dockerfile
-          - distro: centos-stream
-            version: "9"
-            scenario: with-webkit
-            dockerfile: centos-stream-with-webkit.dockerfile
+            dockerfile: centos-stream.dockerfile
 
-          # Arch scenarios
           - distro: arch
             version: "latest"
-            scenario: base
-            dockerfile: arch-base.dockerfile
-          - distro: arch
-            version: "latest"
-            scenario: with-webkit
-            dockerfile: arch-with-webkit.dockerfile
+            dockerfile: arch.dockerfile
 
-          # Alpine scenarios
           - distro: alpine
             version: "latest"
-            scenario: base
-            dockerfile: alpine-base.dockerfile
-          - distro: alpine
-            version: "latest"
-            scenario: with-webkit
-            dockerfile: alpine-with-webkit.dockerfile
+            dockerfile: alpine.dockerfile
 
-          # SUSE scenarios
-          # Note: SUSE does not provide WebKitWebDriver in any official package,
-          # so we only test the base scenario (auto-install behavior)
-          - distro: suse
-            version: "tumbleweed"
-            scenario: base
-            dockerfile: suse-base.dockerfile
-
-          # Void scenarios
           - distro: void
             version: "latest"
-            scenario: base
-            dockerfile: void-base.dockerfile
-          - distro: void
-            version: "latest"
-            scenario: with-webkit
-            dockerfile: void-with-webkit.dockerfile
+            dockerfile: void.dockerfile
 
-    name: ${{ matrix.distro }}-${{ matrix.version }} (${{ matrix.scenario }})
+    name: ${{ matrix.distro }}-${{ matrix.version }}
 
     steps:
       - name: Checkout
@@ -106,12 +56,12 @@ jobs:
       - name: Run tests using test.sh
         run: |
           cd fixtures/package-tests/tauri-app-linux-distros
-          ./test.sh ${{ matrix.distro }}-${{ matrix.scenario }} test
+          ./test.sh ${{ matrix.distro }} test
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.distro }}-${{ matrix.scenario }}
+          name: test-results-${{ matrix.distro }}
           path: fixtures/package-tests/tauri-app/wdio-*.log
           if-no-files-found: ignore

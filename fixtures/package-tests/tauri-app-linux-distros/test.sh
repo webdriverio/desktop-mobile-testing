@@ -22,23 +22,22 @@ NC='\033[0m' # No Color
 # Function to test a single dockerfile
 test_dockerfile() {
     local distro=$1
-    local scenario=$2
-    local dockerfile=$3
+    local dockerfile=$2
 
-    echo -e "${YELLOW}=== Testing $distro ($scenario) ===${NC}"
+    echo -e "${YELLOW}=== Testing $distro ===${NC}"
 
     # Try to build the Docker image
     if docker build \
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         --progress=plain \
         -f "$SCRIPT_DIR/$dockerfile" \
-        -t "tauri-distro-test:$distro-$scenario" \
-        "$REPO_ROOT" 2>&1 | tee "/tmp/docker-build-$distro-$scenario.log"; then
-        echo -e "${GREEN}✓ Build succeeded for $distro ($scenario)${NC}"
+        -t "tauri-distro-test:$distro" \
+        "$REPO_ROOT" 2>&1 | tee "/tmp/docker-build-$distro.log"; then
+        echo -e "${GREEN}✓ Build succeeded for $distro${NC}"
         return 0
     else
-        echo -e "${RED}✗ Build failed for $distro ($scenario)${NC}"
-        echo -e "${RED}  Log saved to: /tmp/docker-build-$distro-$scenario.log${NC}"
+        echo -e "${RED}✗ Build failed for $distro${NC}"
+        echo -e "${RED}  Log saved to: /tmp/docker-build-$distro.log${NC}"
         return 1
     fi
 }
@@ -46,15 +45,14 @@ test_dockerfile() {
 # Function to run tests in a built container
 run_tests_in_container() {
     local distro=$1
-    local scenario=$2
 
-    echo -e "${YELLOW}=== Running tests for $distro ($scenario) ===${NC}"
+    echo -e "${YELLOW}=== Running tests for $distro ===${NC}"
 
-    if docker run --rm \
+    docker run --rm \
         -u root \
         -v "$REPO_ROOT:/workspace" \
         -w /workspace \
-        "tauri-distro-test:$distro-$scenario" \
+        "tauri-distro-test:$distro" \
         bash -c "
             set -e
             export TURBO_TELEMETRY_DISABLED=1
@@ -71,12 +69,17 @@ run_tests_in_container() {
 
             echo '=== Running Tauri package test ==='
             pnpm test
-        " 2>&1 | tee "/tmp/docker-test-$distro-$scenario.log"; then
-        echo -e "${GREEN}✓ Tests passed for $distro ($scenario)${NC}"
+        " 2>&1 | tee "/tmp/docker-test-$distro.log"
+
+    # Check the exit code of docker run (PIPESTATUS[0]), not tee (PIPESTATUS[1])
+    local docker_exit_code=${PIPESTATUS[0]}
+
+    if [ $docker_exit_code -eq 0 ]; then
+        echo -e "${GREEN}✓ Tests passed for $distro${NC}"
         return 0
     else
-        echo -e "${RED}✗ Tests failed for $distro ($scenario)${NC}"
-        echo -e "${RED}  Log saved to: /tmp/docker-test-$distro-$scenario.log${NC}"
+        echo -e "${RED}✗ Tests failed for $distro${NC}"
+        echo -e "${RED}  Log saved to: /tmp/docker-test-$distro.log${NC}"
         return 1
     fi
 }
@@ -84,17 +87,16 @@ run_tests_in_container() {
 # Function to debug a failing dockerfile
 debug_dockerfile() {
     local distro=$1
-    local scenario=$2
-    local dockerfile=$3
+    local dockerfile=$2
 
-    echo -e "${YELLOW}=== Debugging $distro ($scenario) ===${NC}"
+    echo -e "${YELLOW}=== Debugging $distro ===${NC}"
     echo "Building with verbose output and stopping at first error..."
 
     docker build \
         --progress=plain \
         --no-cache \
         -f "$SCRIPT_DIR/$dockerfile" \
-        -t "tauri-distro-test:$distro-$scenario-debug" \
+        -t "tauri-distro-test:$distro-debug" \
         "$REPO_ROOT" || {
             echo -e "${RED}Build failed. You can try building layer by layer to identify the issue.${NC}"
             echo "Tip: Comment out RUN commands in the Dockerfile one by one to find the failing step."
@@ -125,50 +127,26 @@ esac
 # Function to get test case data
 get_test_case() {
     case "$1" in
-        ubuntu-base)
-            echo "ubuntu base ubuntu-base.dockerfile"
+        ubuntu)
+            echo "ubuntu ubuntu.dockerfile"
             ;;
-        ubuntu-with-webkit)
-            echo "ubuntu with-webkit ubuntu-with-webkit.dockerfile"
+        fedora)
+            echo "fedora fedora.dockerfile"
             ;;
-        fedora-base)
-            echo "fedora base fedora-base.dockerfile"
+        debian)
+            echo "debian debian.dockerfile"
             ;;
-        fedora-with-webkit)
-            echo "fedora with-webkit fedora-with-webkit.dockerfile"
+        centos-stream)
+            echo "centos-stream centos-stream.dockerfile"
             ;;
-        debian-base)
-            echo "debian base debian-base.dockerfile"
+        arch)
+            echo "arch arch.dockerfile"
             ;;
-        debian-with-webkit)
-            echo "debian with-webkit debian-with-webkit.dockerfile"
+        alpine)
+            echo "alpine alpine.dockerfile"
             ;;
-        centos-base)
-            echo "centos-stream base centos-stream-base.dockerfile"
-            ;;
-        centos-with-webkit)
-            echo "centos-stream with-webkit centos-stream-with-webkit.dockerfile"
-            ;;
-        arch-base)
-            echo "arch base arch-base.dockerfile"
-            ;;
-        arch-with-webkit)
-            echo "arch with-webkit arch-with-webkit.dockerfile"
-            ;;
-        alpine-base)
-            echo "alpine base alpine-base.dockerfile"
-            ;;
-        alpine-with-webkit)
-            echo "alpine with-webkit alpine-with-webkit.dockerfile"
-            ;;
-        suse-base)
-            echo "suse base suse-base.dockerfile"
-            ;;
-        void-base)
-            echo "void base void-base.dockerfile"
-            ;;
-        void-with-webkit)
-            echo "void with-webkit void-with-webkit.dockerfile"
+        void)
+            echo "void void.dockerfile"
             ;;
         *)
             echo ""
@@ -178,7 +156,7 @@ get_test_case() {
 
 # Get all available test keys
 get_all_test_keys() {
-    echo "ubuntu-base ubuntu-with-webkit fedora-base fedora-with-webkit debian-base debian-with-webkit centos-base centos-with-webkit arch-base arch-with-webkit alpine-base alpine-with-webkit suse-base void-base void-with-webkit"
+    echo "ubuntu fedora debian centos-stream arch alpine void"
 }
 
 # Filter test cases based on distro argument
@@ -196,7 +174,7 @@ else
 
     if [ -z "$selected_tests" ]; then
         echo -e "${RED}No tests found for distro: $DISTRO${NC}"
-        echo "Available distros: ubuntu, fedora, debian, centos, arch, alpine, suse, void"
+        echo "Available distros: ubuntu, fedora, debian, centos-stream, arch, alpine, void"
         exit 1
     fi
 fi
@@ -215,21 +193,21 @@ for test_key in $selected_tests; do
         continue
     fi
 
-    IFS=' ' read -r distro scenario dockerfile <<< "$test_data"
+    IFS=' ' read -r distro dockerfile <<< "$test_data"
 
     total=$((total + 1))
 
     case "$MODE" in
         build)
-            if test_dockerfile "$distro" "$scenario" "$dockerfile"; then
+            if test_dockerfile "$distro" "$dockerfile"; then
                 passed=$((passed + 1))
             else
                 failed=$((failed + 1))
             fi
             ;;
         test)
-            if test_dockerfile "$distro" "$scenario" "$dockerfile"; then
-                if run_tests_in_container "$distro" "$scenario"; then
+            if test_dockerfile "$distro" "$dockerfile"; then
+                if run_tests_in_container "$distro"; then
                     passed=$((passed + 1))
                 else
                     failed=$((failed + 1))
@@ -239,7 +217,7 @@ for test_key in $selected_tests; do
             fi
             ;;
         debug)
-            debug_dockerfile "$distro" "$scenario" "$dockerfile"
+            debug_dockerfile "$distro" "$dockerfile"
             ;;
     esac
 
