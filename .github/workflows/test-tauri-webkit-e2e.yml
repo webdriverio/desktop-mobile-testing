@@ -128,8 +128,12 @@ jobs:
               echo '=== Building tauri-service package ==='
               pnpm turbo run build --filter=@wdio/tauri-service
 
+              echo '=== Building Tauri app ==='
+              cd fixtures/package-tests/tauri-app
+              pnpm run build:debug
+
               echo '=== Running Tauri package test ==='
-              cd fixtures/package-tests/tauri-app && pnpm test
+              pnpm test
             "
 
       - name: Upload test results
