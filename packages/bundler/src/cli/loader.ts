@@ -230,7 +230,7 @@ writeFileSync('${tempJsonPath.replace(/\\/g, '\\\\')}', JSON.stringify(serialize
           const child = spawn('pnpx', ['tsx', tempScript], {
             stdio: ['pipe', 'pipe', 'pipe'],
             cwd: this.cwd,
-            shell: true, // Use shell to resolve pnpx on Windows
+            shell: process.platform === 'win32', // Use shell on Windows to resolve pnpx.cmd
           });
 
           let stderr = '';
