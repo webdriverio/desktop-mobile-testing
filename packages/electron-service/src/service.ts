@@ -10,8 +10,13 @@ import type {
 import { createLogger } from '@wdio/native-utils';
 import type { Capabilities, Services } from '@wdio/types';
 import { ElectronCdpBridge, getDebuggerEndpoint } from './bridge.js';
+import { clearAllMocks } from './commands/clearAllMocks.js';
 import { execute } from './commands/executeCdp.js';
-import * as commands from './commands/index.js';
+import { isMockFunction } from './commands/isMockFunction.js';
+import { mock } from './commands/mock.js';
+import { mockAll } from './commands/mockAll.js';
+import { resetAllMocks } from './commands/resetAllMocks.js';
+import { restoreAllMocks } from './commands/restoreAllMocks.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
 import { checkInspectFuse } from './fuses.js';
 import mockStore from './mockStore.js';
@@ -123,13 +128,13 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
 
   async beforeTest() {
     if (this.clearMocks) {
-      await commands.clearAllMocks();
+      await clearAllMocks();
     }
     if (this.resetMocks) {
-      await commands.resetAllMocks();
+      await resetAllMocks();
     }
     if (this.restoreMocks) {
-      await commands.restoreAllMocks();
+      await restoreAllMocks();
     }
   }
 
@@ -295,14 +300,14 @@ function getElectronAPI(this: ServiceConfig, browser: WebdriverIO.Browser, cdpBr
   }
 
   const api = {
-    clearAllMocks: commands.clearAllMocks.bind(this),
+    clearAllMocks: clearAllMocks.bind(this),
     execute: (script: string | AbstractFn, ...args: unknown[]) =>
       execute.apply(this, [browser, cdpBridge, script, ...args]),
-    isMockFunction: commands.isMockFunction.bind(this),
-    mock: commands.mock.bind(this),
-    mockAll: commands.mockAll.bind(this),
-    resetAllMocks: commands.resetAllMocks.bind(this),
-    restoreAllMocks: commands.restoreAllMocks.bind(this),
+    isMockFunction: isMockFunction.bind(this),
+    mock: mock.bind(this),
+    mockAll: mockAll.bind(this),
+    resetAllMocks: resetAllMocks.bind(this),
+    restoreAllMocks: restoreAllMocks.bind(this),
   };
   return Object.assign({}, api) as unknown as BrowserExtension['electron'];
 }
