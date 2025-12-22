@@ -17,7 +17,6 @@ export { default as launcher } from './launcher.js';
 export {
   getTauriAppInfo,
   getTauriBinaryPath,
-  getTauriDriverPath,
   isTauriAppBuilt,
 } from './pathResolver.js';
 // Export the worker service as default

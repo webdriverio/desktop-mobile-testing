@@ -130,7 +130,7 @@ export class ConfigGenerator {
       return await new Promise<string>((resolve, _reject) => {
         const child = spawn('pnpx', ['@biomejs/biome', 'format', '--stdin-file-path=rollup.config.js'], {
           stdio: 'pipe',
-          shell: true,
+          shell: process.platform === 'win32', // Use shell on Windows to resolve pnpx.cmd
         });
 
         let stdout = '';

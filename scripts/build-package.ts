@@ -37,7 +37,7 @@ async function buildBundler(): Promise<void> {
     const child = spawn('pnpm', ['build'], {
       cwd: BUNDLER_PATH,
       stdio: 'inherit',
-      shell: true,
+      shell: false,
     });
 
     child.on('close', (code) => {
@@ -60,7 +60,7 @@ async function executeBundler(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn('node', [BUNDLER_CLI, ...args], {
       stdio: 'inherit',
-      shell: true,
+      shell: false,
     });
 
     child.on('close', (code) => {

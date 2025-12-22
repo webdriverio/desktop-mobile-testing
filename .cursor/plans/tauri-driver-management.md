@@ -83,7 +83,7 @@ Key functions:
 
 ### 3. Update `pathResolver.ts`
 
-Replace `getTauriDriverPath()` to use the new driver manager (deprecated but functional for backward compatibility).
+Remove `getTauriDriverPath()` function - no longer needed as driver management is handled by `driverManager.ts`.
 
 ### 4. Update `launcher.ts`
 
@@ -122,10 +122,10 @@ No new npm dependencies required. Uses Node.js built-ins.
 
 ### 9. Migration Path
 
-**Backward Compatible:**
-- Existing code continues to work (auto-install defaults to `false`)
-- `getTauriDriverPath()` still works (deprecated but functional)
-- Custom paths via `tauriDriverPath` option still work
+**No migration needed** (feature not yet released):
+- Auto-install defaults to `false` (opt-in for safety)
+- Custom paths via `tauriDriverPath` option work as before
+- `driverCacheDir` option reserved for future use with pre-built binary downloads
 
 ## Implementation Order
 

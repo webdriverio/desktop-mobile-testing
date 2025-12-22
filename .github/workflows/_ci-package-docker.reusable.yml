@@ -1,0 +1,38 @@
+name: Package (Docker)
+description: 'Runs Tauri package tests in Docker containers across different Linux distributions'
+
+on:
+  workflow_call:
+    inputs:
+      distro:
+        description: 'Linux distribution to test (ubuntu, fedora, debian, arch, void)'
+        type: string
+        required: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  package-docker:
+    name: ${{ inputs.distro }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run tests using test.sh
+        run: |
+          cd fixtures/package-tests/tauri-app/docker
+          ./test.sh ${{ inputs.distro }} test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ inputs.distro }}
+          path: fixtures/package-tests/tauri-app/wdio-*.log
+          if-no-files-found: ignore

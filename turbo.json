@@ -114,7 +114,7 @@
       "outputs": ["dist-js/**"]
     },
     "@wdio/tauri-service#build": {
-      "dependsOn": ["@wdio/tauri-plugin#build:js", "typecheck"],
+      "dependsOn": ["@wdio/native-utils#build", "@wdio/tauri-plugin#build:js", "typecheck"],
       "outputs": ["dist/**"]
     },
     "electron-builder-e2e-app#build": {

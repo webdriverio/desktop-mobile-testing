@@ -58,19 +58,13 @@ jobs:
         with:
           node-version: '20'
 
-      # Install Rust toolchain and tauri-driver if testing Tauri service
-      - name: 🦀 Setup Rust (for tauri-driver)
+      # Install Rust toolchain for auto-installing tauri-driver if testing Tauri service
+      # The @wdio/tauri-service will automatically install tauri-driver via cargo if not found
+      - name: 🦀 Setup Rust (for tauri-driver auto-install)
         if: inputs.service == 'tauri' || inputs.service == 'both'
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-
-      - name: 🚗 Install tauri-driver
-        if: inputs.service == 'tauri' || inputs.service == 'both'
-        shell: bash
-        run: |
-          echo "Installing tauri-driver..."
-          cargo install tauri-driver
 
       # Install WebKit WebDriver for Linux (required by tauri-driver)
       - name: 🌐 Install WebKit WebDriver (Linux)

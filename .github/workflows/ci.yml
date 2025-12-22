@@ -130,6 +130,29 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ${{ needs.build-tauri-package-app-windows.outputs.cache_key }}
 
+  # Run Tauri package tests across different Linux distributions using Docker
+  # Tests cross-distro compatibility, tauri-driver auto-installation, and WebKitWebDriver detection
+  # Excluded distributions:
+  # - SUSE: No official WebKitWebDriver package (requires multi-hour source build)
+  # - Alpine: musl/static linking incompatible with GTK/webkit (no static libraries available)
+  # - CentOS Stream 9: glib 2.68 too old (Tauri requires >= 2.70)
+  # - CentOS Stream 10: WebKitGTK removed by Red Hat due to 200+ CVEs and unsustainable maintenance
+  package-tauri-distros:
+    name: Package - Tauri (Docker) [Linux-${{ matrix.distro }}]
+    needs: [build, lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+          - distro: fedora
+          - distro: debian
+          - distro: arch
+          - distro: void
+    uses: ./.github/workflows/_ci-package-docker.reusable.yml
+    with:
+      distro: ${{ matrix.distro }}
+
   # Run build tests outside of the main Linux build job.
   build-matrix:
     name: Build [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}]
