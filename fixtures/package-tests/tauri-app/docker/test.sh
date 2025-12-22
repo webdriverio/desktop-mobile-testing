@@ -155,14 +155,8 @@ get_test_case() {
         debian)
             echo "debian debian.dockerfile"
             ;;
-        centos-stream)
-            echo "centos-stream centos-stream.dockerfile"
-            ;;
         arch)
             echo "arch arch.dockerfile"
-            ;;
-        alpine)
-            echo "alpine alpine.dockerfile"
             ;;
         void)
             echo "void void.dockerfile"
@@ -175,7 +169,7 @@ get_test_case() {
 
 # Get all available test keys
 get_all_test_keys() {
-    echo "ubuntu fedora debian centos-stream arch alpine void"
+    echo "ubuntu fedora debian arch void"
 }
 
 # Filter test cases based on distro argument
@@ -193,7 +187,7 @@ else
 
     if [ -z "$selected_tests" ]; then
         echo -e "${RED}No tests found for distro: $DISTRO${NC}"
-        echo "Available distros: ubuntu, fedora, debian, centos-stream, arch, alpine, void"
+        echo "Available distros: ubuntu, fedora, debian, arch, void"
         exit 1
     fi
 fi
