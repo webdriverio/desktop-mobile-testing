@@ -24,7 +24,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies
 # Note: webkit2gtk-4.1 includes WebKitWebDriver-4.1 at /usr/bin/WebKitWebDriver-4.1
-# Alpine/musl requires static libraries for linking
+# Alpine/musl requires some static libraries for linking
 RUN apk add --no-cache \
         webkit2gtk-4.1 \
         webkit2gtk-4.1-dev \
@@ -38,9 +38,7 @@ RUN apk add --no-cache \
         cairo-dev \
         cairo-static \
         pango-dev \
-        pango-static \
         gdk-pixbuf-dev \
-        gdk-pixbuf-static \
         harfbuzz-dev \
         harfbuzz-static \
         libxcb-dev \
@@ -49,13 +47,12 @@ RUN apk add --no-cache \
         xcb-util-renderutil-dev \
         xcb-util-wm-dev \
         xcb-util-image-dev \
+        xcb-util-keysyms-dev \
         zlib-dev \
         zlib-static \
-        atk-dev \
-        atk-static \
+        at-spi2-core-dev \
         libsoup3-dev \
-        libsoup3-static \
-        libintl-static \
+        musl-dev \
         wget
 
 # Set PKG_CONFIG_PATH to ensure .pc files are found
