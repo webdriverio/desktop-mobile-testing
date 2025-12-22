@@ -3615,6 +3615,7 @@ name = "tauri-app-example"
 version = "0.1.0"
 dependencies = [
  "clipboard",
+ "log",
  "serde",
  "serde_json",
  "sysinfo",
