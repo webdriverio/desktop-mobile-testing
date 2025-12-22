@@ -26,11 +26,8 @@ export const browser: WebdriverIO.Browser = wdioBrowser;
 // Re-export types from @wdio/native-types
 export type {
   TauriAPIs,
-  TauriResult,
   TauriServiceAPI,
-  TauriServiceCapabilities,
-  TauriServiceGlobalOptions,
-  TauriServiceOptions,
+  TauriServiceCapabilities as TauriServiceCapabilitiesBase,
 } from '@wdio/native-types';
 // Export session management
 export {
@@ -40,10 +37,13 @@ export {
   init as startWdioSession,
 } from './session.js';
 
-// Export types from local types file
+// Export types from local types file (these extend the base types from native-types)
 export type {
   TauriAppInfo,
   TauriCapabilities,
   TauriCommandContext,
   TauriDriverProcess,
+  TauriResult,
+  TauriServiceGlobalOptions,
+  TauriServiceOptions,
 } from './types.js';
