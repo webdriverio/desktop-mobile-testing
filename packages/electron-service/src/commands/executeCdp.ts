@@ -37,7 +37,10 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   }
 
   if (!cdpBridge) {
-    throw new Error('CDP Bridge is not yet initialised');
+    log.error('CDP Bridge is not available - browser.electron.execute() cannot access the main process');
+    log.error('This may occur if the EnableNodeCliInspectArguments fuse is disabled in your Electron binary');
+    log.error('See: https://www.electronjs.org/docs/latest/tutorial/fuses#nodecliinspect');
+    return undefined;
   }
 
   const functionDeclaration = removeFirstArg(script.toString());
