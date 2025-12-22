@@ -38,15 +38,31 @@ RUN apk add --no-cache \
         cairo-dev \
         cairo-static \
         pango-dev \
+        pango-static \
         gdk-pixbuf-dev \
+        gdk-pixbuf-static \
         harfbuzz-dev \
         harfbuzz-static \
         libxcb-dev \
         libxcb-static \
         xcb-util-dev \
+        xcb-util-renderutil-dev \
+        xcb-util-wm-dev \
+        xcb-util-image-dev \
         zlib-dev \
         zlib-static \
+        atk-dev \
+        atk-static \
+        libsoup3-dev \
+        libsoup3-static \
+        libintl-static \
         wget
+
+# Set PKG_CONFIG_PATH to ensure .pc files are found
+ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig
+
+# Verify pkg-config can find required libraries
+RUN pkg-config --modversion glib-2.0 || (echo "ERROR: pkg-config cannot find glib-2.0" && exit 1)
 
 # Create generic symlink for WebKitWebDriver
 RUN ln -s /usr/bin/WebKitWebDriver-4.1 /usr/bin/WebKitWebDriver

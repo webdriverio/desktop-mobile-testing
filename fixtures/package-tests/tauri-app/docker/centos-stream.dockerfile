@@ -29,7 +29,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Tauri runtime dependencies
-# Note: CentOS Stream 9 only has webkit2gtk3, not 4.1
+# Note: CentOS Stream 9 only has webkit2gtk3, not 4.1  
 # webkit2gtk3 includes WebKitWebDriver at /usr/bin/WebKitWebDriver
 RUN dnf install -y \
         webkit2gtk3 \
@@ -38,12 +38,19 @@ RUN dnf install -y \
         glib2-devel \
         pango-devel \
         cairo-devel \
+        cairo-gobject-devel \
         gdk-pixbuf2-devel \
         atk-devel \
         librsvg2-devel \
         wget \
         file && \
     dnf clean all
+
+# Set PKG_CONFIG_PATH to ensure .pc files are found
+ENV PKG_CONFIG_PATH=/usr/lib64/pkgconfig:/usr/share/pkgconfig
+
+# Verify pkg-config can find glib-2.0 (debug step)
+RUN pkg-config --modversion glib-2.0 || (echo "ERROR: pkg-config cannot find glib-2.0" && exit 1)
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash testuser && \
