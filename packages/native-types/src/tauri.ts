@@ -1,5 +1,9 @@
 import type { Capabilities, Options } from '@wdio/types';
-import type { ChainablePromiseArray, ChainablePromiseElement } from 'webdriverio';
+import type { BrowserBase } from './shared.js';
+
+// ============================================================================
+// Tauri-Specific Types
+// ============================================================================
 
 /**
  * Tauri APIs object type - matches window.__TAURI__ structure
@@ -203,30 +207,17 @@ export type WdioTauriConfig = Options.Testrunner & {
   capabilities: TauriServiceCapabilitiesType | TauriServiceCapabilitiesType[];
 };
 
-type $ = (selector: unknown) => ChainablePromiseElement;
-type $$ = (selector: unknown) => ChainablePromiseArray;
-
-type SelectorsBase = {
-  $: $;
-  $$: $$;
-};
-type BaseWithExecute = {
-  execute<T>(script: string | ((...args: unknown[]) => T), ...args: unknown[]): Promise<T>;
-  execute<T>(script: string | ((...args: unknown[]) => T), ...args: unknown[]): T;
-  executeAsync(script: string | ((...args: unknown[]) => void), ...args: unknown[]): unknown;
-};
-type ElementBase = SelectorsBase & {
-  parent: ElementBase | BaseWithExecute;
-};
-type BrowserBase = SelectorsBase & {
-  addCommand<T extends boolean>(
-    queryName: string,
-    commandFn: (this: T extends true ? ElementBase : BrowserBase, ...args: unknown[]) => void,
-    isElementCommand?: T,
-  ): unknown;
+type TauriServiceCustomCapability = {
+  /**
+   * custom capabilities to configure the Tauri service
+   */
+  'wdio:tauriServiceOptions'?: TauriServiceOptions;
 };
 
-export interface BrowserExtension extends BrowserBase {
+/**
+ * Browser extension for Tauri service
+ */
+export interface TauriBrowserExtension extends BrowserBase {
   /**
    * Access the WebdriverIO Tauri Service API.
    *
@@ -240,28 +231,5 @@ export interface BrowserExtension extends BrowserBase {
   tauri: TauriServiceAPI;
 }
 
-type TauriServiceCustomCapability = {
-  /**
-   * custom capabilities to configure the Tauri service
-   */
-  'wdio:tauriServiceOptions'?: TauriServiceOptions;
-};
-
-declare global {
-  // biome-ignore lint/style/noNamespace: This is a legitimate use of namespace for global augmentation
-  namespace WebdriverIO {
-    interface Browser extends BrowserExtension {}
-    interface Element extends ElementBase {}
-    interface MultiRemoteBrowser extends BrowserExtension {}
-    interface Capabilities extends TauriServiceCustomCapability {}
-    interface ServiceOption extends TauriServiceGlobalOptions {}
-  }
-
-  var browser: WebdriverIO.Browser;
-}
-
-/**
- * Version constant to ensure the module has runtime code
- * This is needed for bundlers that require at least one runtime export
- */
-export const __tauriTypesVersion = '0.1.0';
+// Re-export the custom capability for external use
+export type { TauriServiceCustomCapability };
