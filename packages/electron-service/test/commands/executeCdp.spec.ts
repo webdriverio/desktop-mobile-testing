@@ -47,10 +47,9 @@ describe('execute Command', () => {
     );
   });
 
-  it('should throw an error when called without client', async () => {
-    await expect(() => execute(globalThis.browser, undefined, '() => {}')).rejects.toThrowError(
-      new Error('CDP Bridge is not yet initialised'),
-    );
+  it('should return undefined when called without client', async () => {
+    const result = await execute(globalThis.browser, undefined, '() => {}');
+    expect(result).toBeUndefined();
   });
 
   it('should throw an error when the browser is not initialised', async () => {
