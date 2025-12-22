@@ -132,8 +132,11 @@ jobs:
 
   # Run Tauri package tests across different Linux distributions using Docker
   # Tests cross-distro compatibility, tauri-driver auto-installation, and WebKitWebDriver detection
-  # Note: SUSE is excluded because it lacks an official WebKitWebDriver package,
-  # requiring a multi-hour source build that is impractical for CI
+  # Excluded distributions:
+  # - SUSE: No official WebKitWebDriver package (requires multi-hour source build)
+  # - Alpine: musl/static linking incompatible with GTK/webkit (no static libraries available)
+  # - CentOS Stream 9: glib 2.68 too old (Tauri requires >= 2.70)
+  # - CentOS Stream 10: WebKitGTK removed by Red Hat due to 200+ CVEs and unsustainable maintenance
   package-tauri-distros:
     name: Package - Tauri (Docker) [Linux-${{ matrix.distro }}]
     needs: [build, lint]
@@ -144,9 +147,7 @@ jobs:
           - distro: ubuntu
           - distro: fedora
           - distro: debian
-          - distro: centos-stream
           - distro: arch
-          - distro: alpine
           - distro: void
     uses: ./.github/workflows/_ci-package-docker.reusable.yml
     with:

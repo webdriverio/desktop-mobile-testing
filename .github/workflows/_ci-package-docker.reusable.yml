@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       distro:
-        description: 'Linux distribution to test (ubuntu, fedora, debian, centos-stream, arch, alpine, void)'
+        description: 'Linux distribution to test (ubuntu, fedora, debian, arch, void)'
         type: string
         required: true
 
