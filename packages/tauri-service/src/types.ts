@@ -1,44 +1,25 @@
-/**
- * Tauri service result type
- * Matches the pattern used by Electron service execute function
- */
-export interface TauriResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import type {
+  TauriResult as BaseTauriResult,
+  TauriServiceGlobalOptions as BaseTauriServiceGlobalOptions,
+  TauriServiceOptions as BaseTauriServiceOptions,
+} from '@wdio/native-types';
+
+// Re-export the base result type as-is
+export type TauriResult<T = unknown> = BaseTauriResult<T>;
 
 /**
- * Tauri service options
+ * Extended Tauri service options with implementation-specific fields
+ * Extends the base TauriServiceOptions from native-types with:
+ * - autoInstallTauriDriver: Auto-install driver if not found
+ * - logDir: Custom log directory for standalone mode
  */
-export interface TauriServiceOptions {
-  appBinaryPath?: string;
-  appArgs?: string[];
-  tauriDriverPort?: number;
-  tauriDriverPath?: string;
-  logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  commandTimeout?: number;
-  startTimeout?: number;
+export interface TauriServiceOptions extends BaseTauriServiceOptions {
   /**
-   * Enable/disable capturing Rust backend logs from stdout
+   * Automatically install tauri-driver if not found
+   * Requires Rust toolchain (cargo) to be installed
    * @default false
    */
-  captureBackendLogs?: boolean;
-  /**
-   * Enable/disable capturing frontend console logs from webview
-   * @default false
-   */
-  captureFrontendLogs?: boolean;
-  /**
-   * Minimum log level for backend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Minimum log level for frontend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  autoInstallTauriDriver?: boolean;
   /**
    * Log directory for standalone mode
    * Full path where log files should be written
@@ -46,16 +27,21 @@ export interface TauriServiceOptions {
    * @default undefined
    */
   logDir?: string;
+}
+
+/**
+ * Extended Tauri service global options with implementation-specific fields
+ */
+export interface TauriServiceGlobalOptions extends BaseTauriServiceGlobalOptions {
   /**
    * Automatically install tauri-driver if not found
-   * Requires Rust toolchain (cargo) to be installed
    * @default false
    */
   autoInstallTauriDriver?: boolean;
 }
 
 /**
- * Tauri service capabilities
+ * Tauri service capabilities - extends the base with additional options
  */
 export interface TauriCapabilities extends WebdriverIO.Capabilities {
   // Allow 'tauri' or 'wry' in user config, but browserName will remain undefined
@@ -72,43 +58,6 @@ export interface TauriCapabilities extends WebdriverIO.Capabilities {
     };
   };
   'wdio:tauriServiceOptions'?: TauriServiceOptions;
-}
-
-/**
- * Tauri service global options
- */
-export interface TauriServiceGlobalOptions {
-  rootDir?: string;
-  logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  commandTimeout?: number;
-  startTimeout?: number;
-  tauriDriverPort?: number;
-  nativeDriverPath?: string;
-  /**
-   * Enable/disable capturing Rust backend logs from stdout
-   * @default false
-   */
-  captureBackendLogs?: boolean;
-  /**
-   * Enable/disable capturing frontend console logs from webview
-   * @default false
-   */
-  captureFrontendLogs?: boolean;
-  /**
-   * Minimum log level for backend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Minimum log level for frontend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Automatically install tauri-driver if not found
-   * @default false
-   */
-  autoInstallTauriDriver?: boolean;
 }
 
 /**
