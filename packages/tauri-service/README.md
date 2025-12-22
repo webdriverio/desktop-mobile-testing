@@ -33,9 +33,9 @@ pnpm add @wdio/tauri-service
    ```
 
 2. **tauri-driver** - Install the Tauri WebDriver:
-   
+
    **Option A: Automatic Installation (Recommended)**
-   
+
    Enable auto-installation in your WebDriverIO config:
    ```typescript
    services: [
@@ -44,13 +44,13 @@ pnpm add @wdio/tauri-service
      }]
    ]
    ```
-   
+
    **Option B: Manual Installation**
-   
+
    ```bash
    cargo install tauri-driver
    ```
-   
+
    **Note:** Automatic installation requires Rust toolchain (`cargo`) to be installed. Get Rust from [https://rustup.rs/](https://rustup.rs/).
 
 3. **Platform-specific WebDriver** (REQUIRED):
@@ -62,25 +62,25 @@ pnpm add @wdio/tauri-service
      - ⚠️ **Must be installed manually** (not auto-installed by this service)
      - Installation commands by distro:
        ```bash
-       # Debian/Ubuntu
+       # Debian/Ubuntu (Supported)
        sudo apt-get install -y webkit2gtk-driver
 
-       # RHEL/CentOS
-       sudo yum install -y webkit2gtk-driver
-
-       # Fedora
+       # Fedora 40+ (Supported)
        sudo dnf install -y webkit2gtk-driver
 
-       # Arch Linux
-       sudo pacman -S webkitgtk-6.0  # Provides WebKitWebDriver
-
-       # Alpine Linux
-       sudo apk add webkit2gtk-4.1  # Includes WebKitWebDriver
+       # Arch Linux (Supported)
+       sudo pacman -S webkit2gtk-4.1  # Provides WebKitWebDriver
 
        # Void Linux
        sudo xbps-install -y webkit2gtk-devel
        ```
-     - ⚠️ **SUSE/openSUSE**: No official WebKitWebDriver package available. You must [build WebKitGTK from source](https://webkitgtk.org/building.html) to obtain WebKitWebDriver.
+     - ⚠️ **Unsupported Distributions:**
+       - **Alpine Linux**: Cannot build Tauri apps (musl/static linking incompatibility). Can only be used for runtime containers.
+       - **CentOS Stream / RHEL**:
+         - Stream 9 / RHEL 9: glib too old (2.68 < 2.70 required)
+         - Stream 10 / RHEL 10: WebKitGTK intentionally removed due to security vulnerabilities
+         - Use **Fedora 40+** for RHEL-based workflows
+       - **SUSE/openSUSE**: No official WebKitWebDriver package. Must build from source.
      - The service will detect your package manager and provide specific instructions if WebKitWebDriver is not found
 
 ### Platform Support
@@ -88,8 +88,41 @@ pnpm add @wdio/tauri-service
 | Platform | Supported | WebDriver | Installation | Notes |
 |-----------|------------|-----------|--------------|-------|
 | Windows | ✅ | Edge WebDriver | Automatic | Stable and tested |
-| Linux | ✅ | WebKitWebDriver | **Manual** | Requires webkit2gtk-driver package |
+| Linux | ✅ | WebKitWebDriver | **Manual** | See [Linux Distribution Support](#linux-distribution-support) |
 | macOS | ❌ | None | N/A | No WKWebView driver support |
+
+### Linux Distribution Support
+
+| Distribution | Status | glib Version | webkit2gtk | Notes |
+|-------------|---------|-------------|-----------|-------|
+| Ubuntu 24.04 | ✅ Supported | 2.80+ | ✅ | Stable, well-tested |
+| Debian 12+ | ✅ Supported | 2.74+ | ✅ | Rock-solid stability |
+| Fedora 40+ | ✅ Supported | 2.80+ | ✅ | Latest packages |
+| Arch Linux | ✅ Supported | 2.82+ | ✅ | Rolling release |
+| Void Linux | ✅ Supported | 2.78+ | ✅ | Independent, rolling |
+| Alpine Linux | ❌ Unsupported | 2.86+ | ❌ | musl/static linking incompatible |
+| CentOS Stream 9 | ❌ Unsupported | 2.68 | ❌ | glib too old (< 2.70) |
+| CentOS Stream 10 | ❌ Unsupported | 2.80+ | ❌ | WebKitGTK removed for security |
+| SUSE/openSUSE | ⚠️ Limited | Varies | ⚠️ | Must build from source |
+
+**Requirements for all Linux distributions:**
+- glib-2.0 >= 2.70 (critical)
+- webkit2gtk 4.0 or 4.1 (critical)
+- glibc (musl unsupported for building)
+
+**Why certain distributions are unsupported:**
+
+- **Alpine Linux**: Uses musl libc which defaults to static linking. GTK/webkit libraries don't provide static versions (`.a` files), making it impossible to build Tauri apps. Alpine can be used for runtime-only containers with pre-built binaries.
+
+- **CentOS Stream 10 / RHEL 10**: WebKitGTK was intentionally removed by Red Hat due to:
+  - 200+ unfixed CVEs enabling remote code execution
+  - Unsustainable maintenance burden (frequent upstream changes incompatible with 10-year RHEL lifecycle)
+  - Strategic shift to QtWebEngine (Chromium-based) for better security
+  - [Red Hat RHEL 10 Release Notes](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/10.0_release_notes/removed-features)
+
+- **CentOS Stream 9 / RHEL 9**: Ships with glib 2.68.4, but Tauri requires glib >= 2.70.
+
+**Recommendation:** For RHEL-based workflows, use **Fedora 40+** which has both modern glib and webkit2gtk packages.
 
 ## Configuration
 
@@ -467,10 +500,10 @@ services: [
   ['@wdio/tauri-service', {
     // Automatically install tauri-driver if not found (requires Rust/cargo)
     autoInstallTauriDriver: false, // Default: false (opt-in for safety)
-    
+
     // Custom path to tauri-driver binary (overrides auto-install)
     tauriDriverPath: '/custom/path/to/tauri-driver',
-    
+
     // Custom path to native driver (WebKitWebDriver on Linux, msedgedriver on Windows)
     nativeDriverPath: '/custom/path/to/WebKitWebDriver',
   }]
@@ -535,7 +568,7 @@ services: [
 ### Common Issues
 
 1. **"tauri-driver not found"**
-   
+
    **Option 1: Enable auto-installation**
    ```typescript
    services: [
@@ -544,23 +577,24 @@ services: [
      }]
    ]
    ```
-   
+
    **Option 2: Manual installation**
    ```bash
    cargo install tauri-driver
    ```
 
 2. **"WebKitWebDriver not found" (Linux only)**
-   - Install webkit2gtk-driver:
+   - Install webkit2gtk-driver on supported distributions:
      ```bash
      sudo apt-get install -y webkit2gtk-driver  # Debian/Ubuntu
-     sudo yum install -y webkit2gtk-driver      # RHEL/CentOS
-     sudo dnf install -y webkit2gtk-driver      # Fedora
-     sudo pacman -S webkitgtk-6.0              # Arch
-     sudo apk add webkit2gtk-4.1               # Alpine
-     sudo xbps-install -y webkit2gtk-devel     # Void
+     sudo dnf install -y webkit2gtk-driver      # Fedora 40+
+     sudo pacman -S webkit2gtk-4.1              # Arch Linux
+     sudo xbps-install -y webkit2gtk-devel      # Void Linux
      ```
-   - **SUSE/openSUSE users**: No official package available - you must build WebKitGTK from source
+   - **If using unsupported distributions:**
+     - **Alpine Linux**: Cannot build Tauri apps (musl incompatibility). Use Ubuntu/Debian/Fedora/Arch instead.
+     - **CentOS/RHEL**: Stream 9 has glib too old, Stream 10 removed WebKitGTK. Use **Fedora 40+** instead.
+     - **SUSE/openSUSE**: No official package - must build WebKitGTK from source.
    - The service will detect your package manager and provide specific instructions if not found
 
 3. **"macOS not supported"**
