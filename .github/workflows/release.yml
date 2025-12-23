@@ -1,34 +1,45 @@
-name: Manual Release Publish
+name: Release
 
 on:
   workflow_dispatch:
     inputs:
+      service:
+        description: 'Service to release'
+        required: true
+        type: choice
+        options:
+          - electron
+          - tauri
+        default: electron
       branch:
         description: 'Branch to release from'
         required: true
-        default: 'main' # Default to main for most common case
         type: choice
         options:
-          - main # Current stable
-          - feature # Next major development
-          - maintenance # LTS/maintenance
+          - main
+          - feature
+          - maintenance
+        default: main
       release_version:
-        description: 'Release type - patch, minor, or major'
+        description: 'Release version type'
         required: true
-        default: 'patch' # Default to patch for most common case
         type: choice
-        options: ['patch', 'minor', 'major']
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
       dry_run:
-        description: 'Do not touch or write anything. Show the commands.'
-        required: true
-        default: false
+        description: 'Dry run (show what would happen without publishing)'
+        required: false
         type: boolean
+        default: false
 
 jobs:
   release:
-    name: Release
     uses: ./.github/workflows/_release-orchestration.reusable.yml
     with:
+      service: ${{ inputs.service }}
       branch: ${{ inputs.branch }}
       release_version: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
@@ -36,3 +47,4 @@ jobs:
       github_bot_token: ${{ secrets.GITHUB_TOKEN }}
       npm_token: ${{ secrets.NPM_TOKEN }}
       deploy_key: ${{ secrets.DEPLOY_KEY }}
+      crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
