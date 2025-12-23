@@ -1,0 +1,47 @@
+name: Pre-release - Electron Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to release from'
+        required: true
+        type: choice
+        options:
+          - main
+          - feature
+          - maintenance
+        default: main
+      release_version:
+        description: 'Pre-release version type'
+        required: true
+        type: choice
+        options:
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
+          - prerelease:beta
+          - prerelease:alpha
+          - prerelease:rc
+        default: prerelease:beta
+      dry_run:
+        description: 'Dry run (show what would happen without publishing)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    uses: ./.github/workflows/_release-orchestration.reusable.yml
+    with:
+      service: electron
+      branch: ${{ inputs.branch }}
+      release_version: ${{ inputs.release_version }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets:
+      github_bot_token: ${{ secrets.GITHUB_TOKEN }}
+      npm_token: ${{ secrets.NPM_TOKEN }}
+      deploy_key: ${{ secrets.DEPLOY_KEY }}
+      crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
+
