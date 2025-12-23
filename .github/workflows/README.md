@@ -17,27 +17,37 @@ The release infrastructure is designed to support **independent versioning** of 
 
 These workflows are manually triggered from the GitHub Actions UI:
 
-#### Release Workflows (Stable)
+#### `release.yml` - Stable Releases
 
-- **`release-electron.yml`** - Release the Electron service
-  - Packages: `@wdio/electron-service`, `@wdio/electron-cdp-bridge`, `@wdio/bundler`
-  - Version options: `patch`, `minor`, `major`
-  - Branch options: `main`, `feature`, `maintenance`
+Release stable versions of either service.
 
-- **`release-tauri.yml`** - Release the Tauri service
-  - Packages: `@wdio/tauri-service`, `@wdio/tauri-plugin` (NPM + crates.io)
-  - Version options: `patch`, `minor`, `major`
-  - Branch options: `main`, `feature`, `maintenance`
+**Service options:**
+- `electron` - Releases `@wdio/electron-service`, `@wdio/electron-cdp-bridge`, `@wdio/bundler`
+- `tauri` - Releases `@wdio/tauri-service`, `@wdio/tauri-plugin` (NPM + crates.io)
 
-#### Pre-release Workflows (Beta/Alpha/RC)
+**Version options:** `patch`, `minor`, `major`
 
-- **`pre-release-electron.yml`** - Pre-release the Electron service
-  - Version options: `prepatch`, `preminor`, `premajor`, `prerelease`, `prerelease:beta`, `prerelease:alpha`, `prerelease:rc`
-  - Publishes to NPM with `next` tag
+**Branch options:** `main`, `feature`, `maintenance`
 
-- **`pre-release-tauri.yml`** - Pre-release the Tauri service
-  - Version options: `prepatch`, `preminor`, `premajor`, `prerelease`, `prerelease:beta`, `prerelease:alpha`, `prerelease:rc`
-  - Publishes to NPM with `next` tag and crates.io
+**Additional options:**
+- `dry_run` - Preview changes without publishing (default: `false`)
+
+#### `pre-release.yml` - Pre-releases (Beta/Alpha/RC)
+
+Release pre-release versions of either service.
+
+**Service options:**
+- `electron` - Pre-release Electron service packages
+- `tauri` - Pre-release Tauri service packages (NPM + crates.io)
+
+**Version options:** `prepatch`, `preminor`, `premajor`, `prerelease`, `prerelease:beta`, `prerelease:alpha`, `prerelease:rc`
+
+**Branch options:** `main`, `feature`, `maintenance`
+
+**Additional options:**
+- `dry_run` - Preview changes without publishing (default: `false`)
+
+**Note:** Pre-releases publish to NPM with the `next` tag instead of `latest`.
 
 ### Reusable Workflows
 
@@ -219,10 +229,11 @@ The following secrets must be configured in the repository:
 
 1. Go to Actions tab in GitHub
 2. Select the appropriate workflow:
-   - Stable: `Release - Electron Service` or `Release - Tauri Service`
-   - Pre-release: `Pre-release - Electron Service` or `Pre-release - Tauri Service`
+   - Stable: `Release`
+   - Pre-release: `Pre-release`
 3. Click "Run workflow"
 4. Configure inputs:
+   - **Service**: Select `electron` or `tauri`
    - **Branch**: Select `main`, `feature`, or `maintenance`
    - **Release Version**: Select bump type (e.g., `minor`, `prerelease:beta`)
    - **Dry Run**: ✅ Recommended for first run to verify changes
@@ -260,6 +271,8 @@ The following secrets must be configured in the repository:
 
 **Scenario**: Bug fix in `electron-service`, no shared package changes.
 
+**Workflow**: `Release`
+
 ```yaml
 Service: electron
 Branch: main
@@ -277,6 +290,8 @@ Dry Run: false
 
 **Scenario**: New feature in `tauri-service`, also added utility to `native-utils`.
 
+**Workflow**: `Release`
+
 ```yaml
 Service: tauri
 Branch: main
@@ -293,6 +308,8 @@ Dry Run: false
 #### Example 3: Pre-release (Beta)
 
 **Scenario**: Testing breaking changes for Electron service from a feature branch.
+
+**Workflow**: `Pre-release`
 
 ```yaml
 Service: electron
