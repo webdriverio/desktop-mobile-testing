@@ -235,7 +235,7 @@ async function main() {
 
   // Calculate service version (dry-run to get the version)
   const serviceTargetsArg = serviceScopedNames.join(',');
-  const serviceVersionCmd = `pnpm package-versioner ${bumpFlag} --dry-run --json -t ${serviceTargetsArg}`;
+  const serviceVersionCmd = `pnpm --loglevel=error package-versioner ${bumpFlag} --dry-run --json -t ${serviceTargetsArg}`;
 
   console.log(`\nCalculating service package versions...`);
 
@@ -286,7 +286,7 @@ async function main() {
 
         // Calculate version for this shared package
         const sharedBumpFlag = `--bump ${info.bumpType}`;
-        const sharedVersionCmd = `pnpm package-versioner ${sharedBumpFlag} --dry-run --json -t ${scopedName}`;
+        const sharedVersionCmd = `pnpm --loglevel=error package-versioner ${sharedBumpFlag} --dry-run --json -t ${scopedName}`;
 
         console.log(`   Calculating version for ${scopedName}...`);
 

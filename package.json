@@ -14,9 +14,6 @@
     "node": ">=18 || >=20",
     "pnpm": ">=10.12.0"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["electron", "electron-nightly", "esbuild", "electron-winstaller"]
-  },
   "packageManager": "pnpm@10.26.2",
   "scripts": {
     "backport": "tsx ./scripts/backport.ts",
