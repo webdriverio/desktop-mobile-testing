@@ -12,7 +12,7 @@ on:
           - tauri
         default: electron
       branch:
-        description: 'Branch to release from'
+        description: 'Branch type to release from'
         required: true
         type: choice
         options:
@@ -20,6 +20,14 @@ on:
           - feature
           - maintenance
         default: main
+      feature_branch_name:
+        description: 'Feature branch name (required when branch is "feature")'
+        required: false
+        type: string
+      maintenance_branch_name:
+        description: 'Maintenance branch name (required when branch is "maintenance")'
+        required: false
+        type: string
       release_version:
         description: 'Pre-release version type'
         required: true
@@ -42,6 +50,8 @@ jobs:
     with:
       service: ${{ inputs.service }}
       branch: ${{ inputs.branch }}
+      feature_branch_name: ${{ inputs.feature_branch_name }}
+      maintenance_branch_name: ${{ inputs.maintenance_branch_name }}
       release_version: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
     secrets:

@@ -11,6 +11,16 @@ on:
         description: 'Branch type (main, feature, maintenance)'
         required: true
         type: string
+      feature_branch_name:
+        description: 'Custom feature branch name (only used when branch is "feature")'
+        required: false
+        type: string
+        default: ''
+      maintenance_branch_name:
+        description: 'Custom maintenance branch name (only used when branch is "maintenance")'
+        required: false
+        type: string
+        default: ''
       release_version:
         description: 'Release version type'
         required: true
@@ -84,25 +94,40 @@ jobs:
         run: |
           if [ "${{ inputs.branch }}" = "main" ]; then
             echo "branch=main" >> $GITHUB_OUTPUT
+            echo "Using main branch for release"
           elif [ "${{ inputs.branch }}" = "feature" ]; then
-            echo "branch=$(git branch -r | grep 'origin/feature/' | head -n 1 | sed 's|origin/||')" >> $GITHUB_OUTPUT
+            echo "branch=${{ inputs.feature_branch_name }}" >> $GITHUB_OUTPUT
+            echo "Using feature branch: ${{ inputs.feature_branch_name }}"
           elif [ "${{ inputs.branch }}" = "maintenance" ]; then
-            echo "branch=$(git branch -r | grep 'origin/maintenance/' | head -n 1 | sed 's|origin/||')" >> $GITHUB_OUTPUT
+            echo "branch=${{ inputs.maintenance_branch_name }}" >> $GITHUB_OUTPUT
+            echo "Using maintenance branch: ${{ inputs.maintenance_branch_name }}"
           else
             echo "branch=${{ inputs.branch }}" >> $GITHUB_OUTPUT
+            echo "Using explicit branch: ${{ inputs.branch }}"
           fi
 
       - name: Validate release parameters
         run: |
-          BRANCH="${{ steps.determine_branch.outputs.branch }}"
+          BRANCH_TYPE="${{ inputs.branch }}"
           RELEASE_VERSION="${{ inputs.release_version }}"
-          
-          echo "Branch: $BRANCH"
+
+          echo "Branch Type: $BRANCH_TYPE"
           echo "Release Version: $RELEASE_VERSION"
-          
+
+          # Validate required branch names
+          if [ "$BRANCH_TYPE" = "feature" ] && [ -z "${{ inputs.feature_branch_name }}" ]; then
+            echo "::error::Feature branch name is required when branch type is 'feature'"
+            exit 1
+          fi
+
+          if [ "$BRANCH_TYPE" = "maintenance" ] && [ -z "${{ inputs.maintenance_branch_name }}" ]; then
+            echo "::error::Maintenance branch name is required when branch type is 'maintenance'"
+            exit 1
+          fi
+
           # Major releases should be from feature branches
           if [ "$RELEASE_VERSION" = "major" ] || [ "$RELEASE_VERSION" = "premajor" ]; then
-            if [[ ! "$BRANCH" =~ ^feature/ ]]; then
+            if [ "$BRANCH_TYPE" != "feature" ]; then
               echo "Error: Major releases must be from a feature branch"
               exit 1
             fi
@@ -111,11 +136,28 @@ jobs:
       - name: Verify target branch exists
         run: |
           BRANCH="${{ steps.determine_branch.outputs.branch }}"
+          BRANCH_TYPE="${{ inputs.branch }}"
+
           if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
-            echo "Error: Branch $BRANCH does not exist"
+            if [ "$BRANCH_TYPE" = "feature" ]; then
+              echo "::error::Feature branch '$BRANCH' does not exist. Please create the branch first."
+            elif [ "$BRANCH_TYPE" = "maintenance" ]; then
+              echo "::error::Maintenance branch '$BRANCH' does not exist. Please create the branch first."
+            else
+              echo "::error::Branch '$BRANCH' does not exist on the remote repository."
+            fi
             exit 1
           fi
-          echo "✓ Branch $BRANCH exists"
+
+          if [ "$BRANCH_TYPE" = "feature" ]; then
+            echo "ℹ️ Releasing from feature branch '$BRANCH'"
+          elif [ "$BRANCH_TYPE" = "maintenance" ]; then
+            echo "ℹ️ Releasing from maintenance branch '$BRANCH'"
+          else
+            echo "ℹ️ Releasing from branch '$BRANCH'"
+          fi
+
+          echo "✅ Branch '$BRANCH' exists and is valid"
 
       - name: Checkout target branch
         run: |
