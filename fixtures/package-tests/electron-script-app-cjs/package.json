@@ -31,5 +31,8 @@
   },
   "keywords": ["electron", "electron-vite", "webdriverio", "testing", "example"],
   "author": "WebDriverIO Community",
-  "license": "MIT"
+  "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron"]
+  }
 }
