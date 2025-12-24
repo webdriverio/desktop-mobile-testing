@@ -16,11 +16,6 @@ on:
         required: false
         type: string
         default: ''
-      maintenance_branch_name:
-        description: 'Custom maintenance branch name (only used when branch is "maintenance")'
-        required: false
-        type: string
-        default: ''
       release_version:
         description: 'Release version type'
         required: true
@@ -89,6 +84,31 @@ jobs:
         with:
           version: 9
 
+      - name: Calculate version information
+        id: calculate_versions
+        run: |
+          # Extract the current major version from package.json
+          # Use electron service as the reference for versioning
+          PKG_JSON='packages/electron-service/package.json'
+          if [ -f "$PKG_JSON" ]; then
+            CURRENT_MAJOR_VERSION="$(cat ${PKG_JSON} | jq -r '.version' | grep -o -E "([0-9]+)" | head -n1)"
+            echo "current-major-version=${CURRENT_MAJOR_VERSION}" >> $GITHUB_OUTPUT
+            echo "Calculated current major version: ${CURRENT_MAJOR_VERSION}"
+
+            # LTS is the previous major version
+            LTS_MAJOR_VERSION=$((CURRENT_MAJOR_VERSION - 1))
+            echo "lts-major-version=${LTS_MAJOR_VERSION}" >> $GITHUB_OUTPUT
+            echo "Calculated LTS major version: ${LTS_MAJOR_VERSION}"
+
+            # Feature is the next major version
+            FEATURE_MAJOR_VERSION=$((CURRENT_MAJOR_VERSION + 1))
+            echo "feature-major-version=${FEATURE_MAJOR_VERSION}" >> $GITHUB_OUTPUT
+            echo "Calculated feature major version: ${FEATURE_MAJOR_VERSION}"
+          else
+            echo "::error::Could not find package.json at $PKG_JSON"
+            exit 1
+          fi
+
       - name: Determine target branch
         id: determine_branch
         run: |
@@ -99,8 +119,9 @@ jobs:
             echo "branch=${{ inputs.feature_branch_name }}" >> $GITHUB_OUTPUT
             echo "Using feature branch: ${{ inputs.feature_branch_name }}"
           elif [ "${{ inputs.branch }}" = "maintenance" ]; then
-            echo "branch=${{ inputs.maintenance_branch_name }}" >> $GITHUB_OUTPUT
-            echo "Using maintenance branch: ${{ inputs.maintenance_branch_name }}"
+            LTS_MAJOR_VERSION="${{ steps.calculate_versions.outputs.lts-major-version }}"
+            echo "branch=v${LTS_MAJOR_VERSION}.x" >> $GITHUB_OUTPUT
+            echo "Using calculated maintenance branch: v${LTS_MAJOR_VERSION}.x"
           else
             echo "branch=${{ inputs.branch }}" >> $GITHUB_OUTPUT
             echo "Using explicit branch: ${{ inputs.branch }}"
@@ -120,11 +141,6 @@ jobs:
             exit 1
           fi
 
-          if [ "$BRANCH_TYPE" = "maintenance" ] && [ -z "${{ inputs.maintenance_branch_name }}" ]; then
-            echo "::error::Maintenance branch name is required when branch type is 'maintenance'"
-            exit 1
-          fi
-
           # Major releases should be from feature branches
           if [ "$RELEASE_VERSION" = "major" ] || [ "$RELEASE_VERSION" = "premajor" ]; then
             if [ "$BRANCH_TYPE" != "feature" ]; then
@@ -141,18 +157,24 @@ jobs:
           if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
             if [ "$BRANCH_TYPE" = "feature" ]; then
               echo "::error::Feature branch '$BRANCH' does not exist. Please create the branch first."
+              exit 1
             elif [ "$BRANCH_TYPE" = "maintenance" ]; then
-              echo "::error::Maintenance branch '$BRANCH' does not exist. Please create the branch first."
+              LTS_MAJOR_VERSION="${{ steps.calculate_versions.outputs.lts-major-version }}"
+              echo "::error::Maintenance branch '$BRANCH' does not exist."
+              echo "::error::This is expected when starting new services - maintenance branches are created after releasing the next major version."
+              echo "::error::For example, after releasing v2.0.0 (Tauri) or v11.0.0 (Electron), you can create maintenance branch '$BRANCH'."
+              echo "::error::To create maintenance releases later, create branch '$BRANCH' from the commit before the major version bump."
+              exit 1
             else
               echo "::error::Branch '$BRANCH' does not exist on the remote repository."
+              exit 1
             fi
-            exit 1
           fi
 
           if [ "$BRANCH_TYPE" = "feature" ]; then
             echo "ℹ️ Releasing from feature branch '$BRANCH'"
           elif [ "$BRANCH_TYPE" = "maintenance" ]; then
-            echo "ℹ️ Releasing from maintenance branch '$BRANCH'"
+            echo "ℹ️ Releasing from maintenance branch '$BRANCH' (calculated from version)"
           else
             echo "ℹ️ Releasing from branch '$BRANCH'"
           fi

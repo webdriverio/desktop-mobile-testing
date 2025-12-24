@@ -16,11 +16,6 @@ on:
         required: false
         type: string
         default: ''
-      maintenance_branch_name:
-        description: 'Custom maintenance branch name (only used when branch is "maintenance")'
-        required: false
-        type: string
-        default: ''
       release_version:
         description: 'Release version type (patch, minor, major, prepatch, preminor, premajor, prerelease, prerelease:beta, prerelease:alpha)'
         required: true
@@ -91,7 +86,6 @@ jobs:
       service: ${{ inputs.service }}
       branch: ${{ inputs.branch }}
       feature_branch_name: ${{ inputs.feature_branch_name }}
-      maintenance_branch_name: ${{ inputs.maintenance_branch_name }}
       release_version: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
 

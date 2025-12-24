@@ -24,10 +24,6 @@ on:
         description: 'Feature branch name (required when branch is "feature")'
         required: false
         type: string
-      maintenance_branch_name:
-        description: 'Maintenance branch name (required when branch is "maintenance")'
-        required: false
-        type: string
       release_version:
         description: 'Pre-release version type'
         required: true
