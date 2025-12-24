@@ -196,7 +196,7 @@ jobs:
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
-          tsx .github/workflows/scripts/calculate-version.ts
+          pnpm tsx .github/workflows/scripts/calculate-version.ts
 
       - name: Display calculation summary
         run: |
