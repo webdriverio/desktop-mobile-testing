@@ -135,7 +135,7 @@ Plugin packages for native frameworks should use the `@wdio/` scope:
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
     "directory": "packages/package-name"
   },
   "license": "MIT"

@@ -3,7 +3,7 @@
   "version": "9.2.0",
   "description": "WebdriverIO service to enable Electron testing",
   "author": "Sam Maister <goosewobbler@protonmail.com>",
-  "homepage": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing",
+  "homepage": "https://github.com/webdriverio/desktop-mobile-testing",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -88,7 +88,7 @@
   "files": ["dist"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
     "directory": "packages/electron-service"
   }
 }

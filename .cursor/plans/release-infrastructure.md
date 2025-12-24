@@ -292,7 +292,7 @@ if: ${{ github.repository != 'webdriverio-community/wdio-electron-service' }}
 To:
 
 ```yaml
-if: ${{ github.repository != 'webdriverio-community/wdio-desktop-mobile-testing' }}
+if: ${{ github.repository != 'webdriverio/desktop-mobile-testing' }}
 ```
 
 #### 4.2 Add Secrets Documentation

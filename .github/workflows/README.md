@@ -98,7 +98,7 @@ The release process is orchestrated through four reusable workflows:
 The main orchestrator that validates inputs and coordinates all release phases.
 
 **Responsibilities:**
-- Validate repository (must be `webdriverio-community/wdio-desktop-mobile-testing`)
+- Validate repository (must be `webdriverio/desktop-mobile-testing`)
 - Validate service and release version inputs
 - Coordinate the three-phase release process
 
@@ -387,7 +387,7 @@ Dry Run: false
 
 **Cause**: Workflow is running in a forked repository.
 
-**Solution**: Release workflows are restricted to the main repository (`webdriverio-community/wdio-desktop-mobile-testing`).
+**Solution**: Release workflows are restricted to the main repository (`webdriverio/desktop-mobile-testing`).
 
 #### Branch validation fails
 

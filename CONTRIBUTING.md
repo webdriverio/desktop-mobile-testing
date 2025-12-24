@@ -19,8 +19,8 @@ Please be respectful and constructive in all interactions. We aim to create a we
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/wdio-desktop-mobile-testing.git
-   cd wdio-desktop-mobile-testing
+   git clone https://github.com/YOUR_USERNAME/desktop-mobile-testing.git
+   cd desktop-mobile-testing
    ```
 3. Install dependencies:
    ```bash
@@ -306,8 +306,8 @@ Maintainers handle releases. The process is:
 
 ## Getting Help
 
-- **Questions**: Ask on [GitHub Discussions](https://github.com/webdriverio-community/wdio-desktop-mobile-testing/discussions)
-- **Bugs**: Report on [GitHub Issues](https://github.com/webdriverio-community/wdio-desktop-mobile-testing/issues)
+- **Questions**: Ask on [GitHub Discussions](https://github.com/webdriverio/desktop-mobile-testing/discussions)
+- **Bugs**: Report on [GitHub Issues](https://github.com/webdriverio/desktop-mobile-testing/issues)
 - **Security**: Email maintainers privately for security issues
 
 ## Recognition

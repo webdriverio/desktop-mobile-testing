@@ -149,7 +149,7 @@ describe("My Tests", () => {
 });
 ```
 
-**Note for Service Contributors:** If you're working within the wdio-desktop-mobile-testing repository itself, you can use pnpm overrides to link to the workspace version:
+**Note for Service Contributors:** If you're working within the desktop-mobile-testing repository itself, you can use pnpm overrides to link to the workspace version:
 
 ```json
 {
