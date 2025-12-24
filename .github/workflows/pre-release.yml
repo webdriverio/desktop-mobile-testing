@@ -29,10 +29,7 @@ on:
           - preminor
           - premajor
           - prerelease
-          - prerelease:beta
-          - prerelease:alpha
-          - prerelease:rc
-        default: prerelease:beta
+        default: prerelease
       dry_run:
         description: 'Dry run (show what would happen without publishing)'
         required: false

@@ -213,15 +213,9 @@ async function main() {
   let bumpFlag: string;
   if (['patch', 'minor', 'major'].includes(releaseVersionInput)) {
     bumpFlag = `--bump ${releaseVersionInput}`;
-  } else if (releaseVersionInput === 'prerelease') {
-    bumpFlag = '--bump prerelease';
   } else if (releaseVersionInput.startsWith('pre')) {
-    if (releaseVersionInput.includes(':')) {
-      const [type, identifier] = releaseVersionInput.split(':');
-      bumpFlag = `--bump ${type} --preid ${identifier}`;
-    } else {
-      bumpFlag = `--bump ${releaseVersionInput}`;
-    }
+    // All pre-release types use 'next' as the pre-id (configured in version.config.json)
+    bumpFlag = `--bump ${releaseVersionInput}`;
   } else {
     console.error(`Error: Invalid release version: ${releaseVersionInput}`);
     process.exit(1);

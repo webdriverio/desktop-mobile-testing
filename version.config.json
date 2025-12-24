@@ -1,0 +1,9 @@
+{
+  "versionPrefix": "v",
+  "preset": "angular",
+  "baseBranch": "main",
+  "sync": false,
+  "commitMessage": "chore: release ${packageName}@${version} [skip-ci]",
+  "tagTemplate": "${packageName}@${prefix}${version}",
+  "prereleaseIdentifier": "next"
+}
