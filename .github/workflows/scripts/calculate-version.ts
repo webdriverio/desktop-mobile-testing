@@ -40,21 +40,26 @@ function readPackageJson(pkgPath: string): PackageJson | undefined {
 function runCommand(command: string, allowFailure = false): string {
   console.log(`Executing: ${command}`);
   try {
-    const output = execSync(command, {
+    const result = execSync(command, {
       encoding: 'utf-8',
       maxBuffer: 10 * 1024 * 1024,
     });
+
+    // execSync returns a string when encoding is 'utf-8'
+    const output = result as string;
+    console.log(`Command completed successfully, output length: ${output.length}`);
     return output.trim();
   } catch (error) {
     if (allowFailure) {
       return '';
     }
     console.error(`Error executing command: ${command}`);
-    const stdout = (error as ExecException).stdout;
-    const stderr = (error as ExecException).stderr;
-    if (stdout) console.error(stdout.toString().trim());
-    if (stderr) console.error(stderr.toString().trim());
-    process.exit(1);
+    const execError = error as ExecException;
+
+    // Log error details
+    console.error('Error details:', execError);
+
+    throw new Error(`Command execution failed: ${command}`);
   }
 }
 
@@ -232,23 +237,71 @@ async function main() {
 
   // Calculate service version (dry-run to get the version)
   const serviceTargetsArg = serviceScopedNames.join(',');
-  const serviceVersionCmd = `pnpm package-versioner ${bumpFlag} --dry-run --json -t ${serviceTargetsArg}`;
+  const serviceVersionCmd = `pnpm package-versioner ${bumpFlag} --dry-run --json -t ${serviceTargetsArg} 2>/dev/null`;
+
+  console.log(`\n========== PACKAGE-VERSIONER COMMAND ==========`);
+  console.log(`Command: ${serviceVersionCmd}`);
+  console.log('===============================================\n');
 
   let serviceVersion: string | null = null;
   const serviceOutput = runCommand(serviceVersionCmd);
 
+  console.log(`========== PACKAGE-VERSIONER RAW OUTPUT ==========`);
+  console.log(`Length: ${serviceOutput.length}`);
+  console.log(`Starts with: '${serviceOutput.substring(0, 50)}'`);
+  console.log(`Ends with: '${serviceOutput.slice(-50)}'`);
+  console.log(`Contains 'dryRun'?: ${serviceOutput.includes('dryRun')}`);
+  console.log(`Contains 'updates'?: ${serviceOutput.includes('updates')}`);
+  console.log('Full output:');
+  console.log(serviceOutput);
+  console.log('=================================================\n');
+
   try {
-    const jsonOutput = JSON.parse(serviceOutput);
-    const refPackageUpdate = jsonOutput.updates?.[0];
+    // Clean the output - sometimes there might be extra whitespace or newlines
+    const cleanOutput = serviceOutput.trim();
+
+    // Check for common non-JSON output that might indicate an error
+    if (cleanOutput.includes('ERR_') || cleanOutput.includes('Error:') || cleanOutput.includes('pnpm:')) {
+      throw new Error(`Command output appears to contain an error message: ${cleanOutput.substring(0, 200)}...`);
+    }
+
+    // Validate that the output starts and ends with JSON braces/brackets
+    if (!cleanOutput.startsWith('{') && !cleanOutput.startsWith('[')) {
+      throw new Error(
+        `Output does not appear to be JSON. Expected to start with '{' or '[' but got: ${cleanOutput.substring(0, 100)}...`,
+      );
+    }
+
+    if (!cleanOutput.endsWith('}') && !cleanOutput.endsWith(']')) {
+      throw new Error(
+        `Output does not appear to be valid JSON. Expected to end with '}' or ']' but got: ...${cleanOutput.slice(-100)}`,
+      );
+    }
+
+    console.log('Attempting to parse JSON...');
+    const jsonOutput = JSON.parse(cleanOutput);
+    console.log('JSON parsed successfully!');
+
+    if (!jsonOutput.updates || !Array.isArray(jsonOutput.updates)) {
+      throw new Error('JSON output missing "updates" array');
+    }
+
+    const refPackageUpdate = jsonOutput.updates[0];
 
     if (refPackageUpdate?.newVersion) {
       serviceVersion = refPackageUpdate.newVersion;
       console.log(`✓ Service version: ${serviceVersion}\n`);
     } else {
-      throw new Error('Could not find version in updates array');
+      throw new Error(
+        `Could not find newVersion in first update. Available updates: ${JSON.stringify(jsonOutput.updates, null, 2)}`,
+      );
     }
   } catch (error) {
     console.error(`Error parsing service version: ${(error as Error).message}`);
+    console.error('Raw output was:', serviceOutput);
+    console.error('Output length:', serviceOutput.length);
+    console.error('First 200 chars:', serviceOutput.substring(0, 200));
+    console.error('Last 200 chars:', serviceOutput.slice(-200));
     process.exit(1);
   }
 
@@ -270,8 +323,19 @@ async function main() {
 
         // Calculate version for this shared package
         const sharedBumpFlag = `--bump ${info.bumpType}`;
-        const sharedVersionCmd = `pnpm package-versioner ${sharedBumpFlag} --dry-run --json -t ${scopedName}`;
+        const sharedVersionCmd = `pnpm package-versioner ${sharedBumpFlag} --dry-run --json -t ${scopedName} 2>/dev/null`;
+
+        console.log(`\n========== SHARED PACKAGE COMMAND ==========`);
+        console.log(`Package: ${scopedName}`);
+        console.log(`Command: ${sharedVersionCmd}`);
+        console.log('============================================\n');
+
         const sharedOutput = runCommand(sharedVersionCmd);
+
+        console.log(`========== SHARED PACKAGE RAW OUTPUT ==========`);
+        console.log(`Package: ${scopedName}`);
+        console.log(sharedOutput);
+        console.log('================================================\n');
 
         try {
           const jsonOutput = JSON.parse(sharedOutput);
@@ -285,6 +349,7 @@ async function main() {
           }
         } catch (error) {
           console.error(`Error calculating version for ${scopedName}: ${(error as Error).message}`);
+          console.error('Raw output was:', sharedOutput);
         }
       }
     }
