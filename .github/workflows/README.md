@@ -60,6 +60,26 @@ Release pre-release versions of either service.
 
 **Note:** Pre-releases publish to NPM with the `next` tag instead of `latest` and use `next` as the pre-release identifier (configured in `version.config.json`).
 
+#### `release-native.yml` - Native Packages Release
+
+Release shared native packages independently of service releases.
+
+**Packages included:**
+- `@wdio/native-types` - Shared TypeScript types
+- `@wdio/native-utils` - Shared utility functions
+
+**Version options:** `patch`, `minor`, `major`, `prepatch`, `preminor`, `premajor`, `prerelease`
+
+**Additional options:**
+- `dry_run` - Preview changes without publishing (default: `false`)
+
+**Use cases:**
+- **Initial release**: Get native packages to 1.0.0
+- **Independent updates**: Release bug fixes or features to shared packages without releasing services
+- **API changes**: Release new utilities or type definitions that services will consume later
+
+**Note:** Native packages are also automatically bumped during service releases if they have changes. This workflow provides an **additional** way to release them independently.
+
 ## Branch Behavior
 
 The release workflows support three branch types with intelligent branch resolution:
@@ -360,7 +380,25 @@ Release Version: premajor
 Dry Run: false
 ```
 
-#### Example 4: Maintenance Release (Future Use)
+#### Example 4: Native Packages Release
+
+**Scenario**: Initial release of native packages to 1.0.0, or independent update to shared utilities.
+
+**Workflow**: `Release Native Packages`
+
+```yaml
+Release Version: major  # or minor/patch for updates
+Dry Run: false
+```
+
+**Result**:
+- `@wdio/native-types`: `1.0.0`
+- `@wdio/native-utils`: `1.0.0`
+- Published to NPM
+- Tags: `@wdio/native-types@v1.0.0`, `@wdio/native-utils@v1.0.0`
+- Independent GitHub releases for each package
+
+#### Example 5: Maintenance Release (Future Use)
 
 **Scenario**: Patch release for Electron service from a maintenance branch (calculated automatically).
 
