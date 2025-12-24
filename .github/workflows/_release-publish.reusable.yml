@@ -185,7 +185,7 @@ jobs:
           INPUT_NPM_TAG: ${{ contains(inputs.service_version, '-') && 'next' || 'latest' }}
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          tsx .github/workflows/scripts/publish-npm.ts
+          pnpm tsx .github/workflows/scripts/publish-npm.ts
 
       # Publish Rust crate (tauri only)
       - name: Setup Rust
