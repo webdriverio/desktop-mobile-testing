@@ -82,7 +82,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.12.0
+          version: 10.26.2
 
       - name: Calculate version information
         id: calculate_versions
