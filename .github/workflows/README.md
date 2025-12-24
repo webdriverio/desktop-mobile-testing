@@ -30,11 +30,10 @@ Release stable versions of either service.
 **Branch options:**
 - `main` - Release from main branch
 - `feature` - Release from a feature branch (branch name required)
-- `maintenance` - Release from a maintenance branch (branch name required)
+- `maintenance` - Release from a maintenance branch (calculated automatically)
 
 **Additional options:**
 - `feature_branch_name` - Feature branch name (required when branch = "feature")
-- `maintenance_branch_name` - Maintenance branch name (required when branch = "maintenance")
 - `dry_run` - Preview changes without publishing (default: `false`)
 
 #### `pre-release.yml` - Pre-releases
@@ -50,11 +49,10 @@ Release pre-release versions of either service.
 **Branch options:**
 - `main` - Release from main branch
 - `feature` - Release from a feature branch (branch name required)
-- `maintenance` - Release from a maintenance branch (branch name required)
+- `maintenance` - Release from a maintenance branch (calculated automatically)
 
 **Additional options:**
 - `feature_branch_name` - Feature branch name (required when branch = "feature")
-- `maintenance_branch_name` - Maintenance branch name (required when branch = "maintenance")
 - `dry_run` - Preview changes without publishing (default: `false`)
 
 **Additional options:**
@@ -82,12 +80,14 @@ The release workflows support three branch types with intelligent branch resolut
   - `feature_branch_name = "feature/new-api"` → uses `feature/new-api`
 
 ### **`maintenance`** Branch
-- **Behavior**: Uses the **exact branch name** specified in `maintenance_branch_name`
+- **Behavior**: **Calculated automatically** as `v{previous_major}.x` (e.g., if current version is 10.x, maintenance is v9.x)
 - **Use case**: Patch releases for older versions from maintenance branches
-- **Validation**: Branch must exist on remote
+- **Validation**: Calculated branch must exist on remote
+- **Availability**: Only available after releasing the next major version
 - **Examples**:
-  - `maintenance_branch_name = "maintenance/v1.2.x"` → uses `maintenance/v1.2.x`
-  - `maintenance_branch_name = "legacy-support"` → uses `legacy-support`
+  - Current version: `10.0.0` → uses `v9.x` branch (after v10.0.0 is released)
+  - Current version: `2.1.0` → uses `v1.x` branch (after v2.0.0 is released)
+- **Note**: For new services starting at v1.0/v10.0, maintenance branches won't be available until after the first major version release
 
 ### Reusable Workflows
 
@@ -276,7 +276,6 @@ The following secrets must be configured in the repository:
    - **Service**: Select `electron` or `tauri`
    - **Branch**: Select `main`, `feature`, or `maintenance`
    - **Feature Branch Name**: (required when Branch = "feature") Exact branch name to release from
-   - **Maintenance Branch Name**: (required when Branch = "maintenance") Exact branch name to release from
    - **Release Version**: Select bump type (e.g., `minor`, `prerelease`)
    - **Dry Run**: ✅ Recommended for first run to verify changes
 
@@ -361,19 +360,20 @@ Release Version: premajor
 Dry Run: false
 ```
 
-#### Example 4: Maintenance Release
+#### Example 4: Maintenance Release (Future Use)
 
-**Scenario**: Patch release for Electron service from a maintenance branch.
+**Scenario**: Patch release for Electron service from a maintenance branch (calculated automatically).
 
 **Workflow**: `Release`
 
 ```yaml
 Service: electron
 Branch: maintenance
-Maintenance Branch Name: maintenance/v1.2.x
 Release Version: patch
 Dry Run: false
 ```
+
+*Note: This will only work after releasing v11.0.0+, at which point it will automatically use the `v10.x` branch for patches to the v10.x series.*
 
 **Result**:
 - `@wdio/electron-service`: `10.0.0` → `11.0.0-beta.0`
@@ -391,13 +391,22 @@ Dry Run: false
 
 #### Branch validation fails
 
-**Cause**: Specified branch doesn't exist.
+**Cause**: Specified or calculated branch doesn't exist.
 
 **Solutions**:
 - **For feature branches**: Ensure the branch specified in `feature_branch_name` exists and is pushed to remote
-- **For maintenance branches**: Ensure the branch specified in `maintenance_branch_name` exists and is pushed to remote
-- **Branch names**: Use exact branch names (e.g., `my-feature-branch`, `maintenance/v1.2.x`)
+- **For maintenance branches**: The branch name is calculated as `v{previous_major}.x`. For new services, maintenance branches won't exist until after the first major version release
+- **Branch naming**: Feature branches use exact names; maintenance branches follow `v{major}.x` convention
 - **Push branches**: Make sure branches are pushed to the remote repository before running releases
+
+#### Maintenance branch not available
+
+**Cause**: Trying to use maintenance releases for new services that haven't released their first major version yet.
+
+**Solutions**:
+- **Wait for major release**: Maintenance branches become available after releasing v2.0.0 (Tauri) or v11.0.0 (Electron)
+- **Create manually if needed**: You can create maintenance branches proactively by branching from the commit before a major version release
+- **Use main/feature branches**: For now, use `main` or `feature` branches for all releases
 
 #### Shared package changes not detected
 
