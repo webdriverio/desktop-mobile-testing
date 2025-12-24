@@ -38,7 +38,6 @@ function readPackageJson(pkgPath: string): PackageJson | undefined {
 
 // Execute a command and return its output
 function runCommand(command: string, allowFailure = false): string {
-  console.log(`Executing: ${command}`);
   try {
     const result = execSync(command, {
       encoding: 'utf-8',
@@ -47,7 +46,6 @@ function runCommand(command: string, allowFailure = false): string {
 
     // execSync returns a string when encoding is 'utf-8'
     const output = result as string;
-    console.log(`Command completed successfully, output length: ${output.length}`);
     return output.trim();
   } catch (error) {
     if (allowFailure) {
@@ -237,50 +235,15 @@ async function main() {
 
   // Calculate service version (dry-run to get the version)
   const serviceTargetsArg = serviceScopedNames.join(',');
-  const serviceVersionCmd = `pnpm package-versioner ${bumpFlag} --dry-run --json -t ${serviceTargetsArg} 2>/dev/null`;
+  const serviceVersionCmd = `pnpm package-versioner ${bumpFlag} --dry-run --json -t ${serviceTargetsArg}`;
 
-  console.log(`\n========== PACKAGE-VERSIONER COMMAND ==========`);
-  console.log(`Command: ${serviceVersionCmd}`);
-  console.log('===============================================\n');
+  console.log(`\nCalculating service package versions...`);
 
   let serviceVersion: string | null = null;
   const serviceOutput = runCommand(serviceVersionCmd);
 
-  console.log(`========== PACKAGE-VERSIONER RAW OUTPUT ==========`);
-  console.log(`Length: ${serviceOutput.length}`);
-  console.log(`Starts with: '${serviceOutput.substring(0, 50)}'`);
-  console.log(`Ends with: '${serviceOutput.slice(-50)}'`);
-  console.log(`Contains 'dryRun'?: ${serviceOutput.includes('dryRun')}`);
-  console.log(`Contains 'updates'?: ${serviceOutput.includes('updates')}`);
-  console.log('Full output:');
-  console.log(serviceOutput);
-  console.log('=================================================\n');
-
   try {
-    // Clean the output - sometimes there might be extra whitespace or newlines
-    const cleanOutput = serviceOutput.trim();
-
-    // Check for common non-JSON output that might indicate an error
-    if (cleanOutput.includes('ERR_') || cleanOutput.includes('Error:') || cleanOutput.includes('pnpm:')) {
-      throw new Error(`Command output appears to contain an error message: ${cleanOutput.substring(0, 200)}...`);
-    }
-
-    // Validate that the output starts and ends with JSON braces/brackets
-    if (!cleanOutput.startsWith('{') && !cleanOutput.startsWith('[')) {
-      throw new Error(
-        `Output does not appear to be JSON. Expected to start with '{' or '[' but got: ${cleanOutput.substring(0, 100)}...`,
-      );
-    }
-
-    if (!cleanOutput.endsWith('}') && !cleanOutput.endsWith(']')) {
-      throw new Error(
-        `Output does not appear to be valid JSON. Expected to end with '}' or ']' but got: ...${cleanOutput.slice(-100)}`,
-      );
-    }
-
-    console.log('Attempting to parse JSON...');
-    const jsonOutput = JSON.parse(cleanOutput);
-    console.log('JSON parsed successfully!');
+    const jsonOutput = JSON.parse(serviceOutput.trim());
 
     if (!jsonOutput.updates || !Array.isArray(jsonOutput.updates)) {
       throw new Error('JSON output missing "updates" array');
@@ -323,22 +286,14 @@ async function main() {
 
         // Calculate version for this shared package
         const sharedBumpFlag = `--bump ${info.bumpType}`;
-        const sharedVersionCmd = `pnpm package-versioner ${sharedBumpFlag} --dry-run --json -t ${scopedName} 2>/dev/null`;
+        const sharedVersionCmd = `pnpm package-versioner ${sharedBumpFlag} --dry-run --json -t ${scopedName}`;
 
-        console.log(`\n========== SHARED PACKAGE COMMAND ==========`);
-        console.log(`Package: ${scopedName}`);
-        console.log(`Command: ${sharedVersionCmd}`);
-        console.log('============================================\n');
+        console.log(`   Calculating version for ${scopedName}...`);
 
         const sharedOutput = runCommand(sharedVersionCmd);
 
-        console.log(`========== SHARED PACKAGE RAW OUTPUT ==========`);
-        console.log(`Package: ${scopedName}`);
-        console.log(sharedOutput);
-        console.log('================================================\n');
-
         try {
-          const jsonOutput = JSON.parse(sharedOutput);
+          const jsonOutput = JSON.parse(sharedOutput.trim());
           const update = jsonOutput.updates?.[0];
 
           if (update?.newVersion) {

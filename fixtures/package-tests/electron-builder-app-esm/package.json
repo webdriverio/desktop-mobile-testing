@@ -50,8 +50,5 @@
     "linux": {
       "target": "AppImage"
     }
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["electron", "esbuild"]
   }
 }
