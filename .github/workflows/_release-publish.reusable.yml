@@ -92,7 +92,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10.12.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -137,7 +137,7 @@ jobs:
       - name: Version service packages
         run: |
           echo "Versioning service packages to ${{ inputs.service_version }}"
-          
+
           # Determine bump type from version string
           VERSION="${{ inputs.service_version }}"
           if [[ "$VERSION" =~ -beta\. ]]; then
@@ -152,7 +152,7 @@ jobs:
             # For now, use the version calculation from prepare step
             BUMP_TYPE="patch"
           fi
-          
+
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             pnpm package-versioner --bump $BUMP_TYPE --dry-run -t ${{ inputs.service_package_list }}
           else
@@ -187,14 +187,14 @@ jobs:
         run: |
           # Get tags created by package-versioner (most recent commits)
           RECENT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')
-          
+
           # Identify service vs shared tags
           SERVICE_TAG=$(git tag --points-at HEAD | grep "${{ inputs.service }}-service-v" | head -n 1 || echo "")
           SHARED_TAGS=$(git tag --points-at HEAD | grep "native-" | tr '\n' ',' | sed 's/,$//')
-          
+
           echo "service_release_tag=${SERVICE_TAG}" >> $GITHUB_OUTPUT
           echo "shared_release_tags=${SHARED_TAGS}" >> $GITHUB_OUTPUT
-          
+
           echo "Service tag: ${SERVICE_TAG}"
           echo "Shared tags: ${SHARED_TAGS}"
 

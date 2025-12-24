@@ -82,7 +82,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10.12.0
 
       - name: Calculate version information
         id: calculate_versions
@@ -208,11 +208,11 @@ jobs:
           echo "Shared Packages Changed: ${{ steps.calculate_version.outputs.shared_packages_changed }}"
           if [ "${{ steps.calculate_version.outputs.shared_packages_changed }}" = "true" ]; then
             echo "Changed Shared Packages: ${{ steps.calculate_version.outputs.shared_package_list }}"
-            
+
             if [ -n "${{ steps.calculate_version.outputs.shared_version_native_utils }}" ]; then
               echo "  - native-utils: ${{ steps.calculate_version.outputs.shared_version_native_utils }} (${{ steps.calculate_version.outputs.shared_version_native_utils_bump }})"
             fi
-            
+
             if [ -n "${{ steps.calculate_version.outputs.shared_version_native_types }}" ]; then
               echo "  - native-types: ${{ steps.calculate_version.outputs.shared_version_native_types }} (${{ steps.calculate_version.outputs.shared_version_native_types_bump }})"
             fi
