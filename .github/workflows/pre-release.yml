@@ -47,7 +47,6 @@ jobs:
       service: ${{ inputs.service }}
       branch: ${{ inputs.branch }}
       feature_branch_name: ${{ inputs.feature_branch_name }}
-      maintenance_branch_name: ${{ inputs.maintenance_branch_name }}
       release_version: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
     secrets:

@@ -48,13 +48,13 @@ jobs:
         run: |
           EXPECTED_REPO="webdriverio-community/wdio-desktop-mobile-testing"
           CURRENT_REPO="${{ github.repository }}"
-          
+
           if [ "$CURRENT_REPO" != "$EXPECTED_REPO" ]; then
             echo "❌ Error: This workflow must run in the $EXPECTED_REPO repository"
             echo "Current repository: $CURRENT_REPO"
             exit 1
           fi
-          
+
           echo "✅ Repository validated: $CURRENT_REPO"
 
       - name: Validate service input
@@ -70,7 +70,7 @@ jobs:
         run: |
           VERSION="${{ inputs.release_version }}"
           VALID_VERSIONS="patch|minor|major|prepatch|preminor|premajor|prerelease|prerelease:beta|prerelease:alpha|prerelease:rc"
-          
+
           if ! echo "$VERSION" | grep -qE "^($VALID_VERSIONS)$"; then
             echo "❌ Error: Invalid release version '$VERSION'"
             echo "Valid options: patch, minor, major, prepatch, preminor, premajor, prerelease, prerelease:beta, prerelease:alpha, prerelease:rc"
