@@ -27,12 +27,17 @@ Release stable versions of either service.
 
 **Version options:** `patch`, `minor`, `major`
 
-**Branch options:** `main`, `feature`, `maintenance`
+**Branch options:**
+- `main` - Release from main branch
+- `feature` - Release from a feature branch (branch name required)
+- `maintenance` - Release from a maintenance branch (branch name required)
 
 **Additional options:**
+- `feature_branch_name` - Feature branch name (required when branch = "feature")
+- `maintenance_branch_name` - Maintenance branch name (required when branch = "maintenance")
 - `dry_run` - Preview changes without publishing (default: `false`)
 
-#### `pre-release.yml` - Pre-releases (Beta/Alpha/RC)
+#### `pre-release.yml` - Pre-releases
 
 Release pre-release versions of either service.
 
@@ -42,12 +47,47 @@ Release pre-release versions of either service.
 
 **Version options:** `prepatch`, `preminor`, `premajor`, `prerelease`
 
-**Branch options:** `main`, `feature`, `maintenance`
+**Branch options:**
+- `main` - Release from main branch
+- `feature` - Release from a feature branch (branch name required)
+- `maintenance` - Release from a maintenance branch (branch name required)
+
+**Additional options:**
+- `feature_branch_name` - Feature branch name (required when branch = "feature")
+- `maintenance_branch_name` - Maintenance branch name (required when branch = "maintenance")
+- `dry_run` - Preview changes without publishing (default: `false`)
 
 **Additional options:**
 - `dry_run` - Preview changes without publishing (default: `false`)
 
 **Note:** Pre-releases publish to NPM with the `next` tag instead of `latest` and use `next` as the pre-release identifier (configured in `version.config.json`).
+
+## Branch Behavior
+
+The release workflows support three branch types with intelligent branch resolution:
+
+### **`main`** Branch
+- **Behavior**: Uses the `main` branch directly
+- **Use case**: Standard releases from the main development branch
+- **Validation**: No special restrictions
+
+### **`feature`** Branch
+- **Behavior**: Uses the **exact branch name** specified in `feature_branch_name`
+- **Use case**: Releases from feature branches (required for major/premajor releases)
+- **Validation**:
+  - ✅ Required for **major** and **premajor** releases
+  - ❌ Fails if specified branch doesn't exist
+- **Examples**:
+  - `feature_branch_name = "breaking-changes-v2"` → uses `breaking-changes-v2`
+  - `feature_branch_name = "feature/new-api"` → uses `feature/new-api`
+
+### **`maintenance`** Branch
+- **Behavior**: Uses the **exact branch name** specified in `maintenance_branch_name`
+- **Use case**: Patch releases for older versions from maintenance branches
+- **Validation**: Branch must exist on remote
+- **Examples**:
+  - `maintenance_branch_name = "maintenance/v1.2.x"` → uses `maintenance/v1.2.x`
+  - `maintenance_branch_name = "legacy-support"` → uses `legacy-support`
 
 ### Reusable Workflows
 
@@ -235,6 +275,8 @@ The following secrets must be configured in the repository:
 4. Configure inputs:
    - **Service**: Select `electron` or `tauri`
    - **Branch**: Select `main`, `feature`, or `maintenance`
+   - **Feature Branch Name**: (required when Branch = "feature") Exact branch name to release from
+   - **Maintenance Branch Name**: (required when Branch = "maintenance") Exact branch name to release from
    - **Release Version**: Select bump type (e.g., `minor`, `prerelease`)
    - **Dry Run**: ✅ Recommended for first run to verify changes
 
@@ -305,16 +347,31 @@ Dry Run: false
 - `@wdio/tauri-plugin`: `1.0.0` → `1.1.0` (NPM + crates.io)
 - Tags: `native-utils-v1.1.0`, `tauri-service-v1.1.0`
 
-#### Example 3: Pre-release
+#### Example 3: Pre-release from Feature Branch
 
-**Scenario**: Testing breaking changes for Electron service from a feature branch.
+**Scenario**: Testing breaking changes for Electron service from a specific feature branch.
 
 **Workflow**: `Pre-release`
 
 ```yaml
 Service: electron
 Branch: feature
+Feature Branch Name: breaking-api-changes
 Release Version: premajor
+Dry Run: false
+```
+
+#### Example 4: Maintenance Release
+
+**Scenario**: Patch release for Electron service from a maintenance branch.
+
+**Workflow**: `Release`
+
+```yaml
+Service: electron
+Branch: maintenance
+Maintenance Branch Name: maintenance/v1.2.x
+Release Version: patch
 Dry Run: false
 ```
 
@@ -331,6 +388,16 @@ Dry Run: false
 **Cause**: Workflow is running in a forked repository.
 
 **Solution**: Release workflows are restricted to the main repository (`webdriverio-community/wdio-desktop-mobile-testing`).
+
+#### Branch validation fails
+
+**Cause**: Specified branch doesn't exist.
+
+**Solutions**:
+- **For feature branches**: Ensure the branch specified in `feature_branch_name` exists and is pushed to remote
+- **For maintenance branches**: Ensure the branch specified in `maintenance_branch_name` exists and is pushed to remote
+- **Branch names**: Use exact branch names (e.g., `my-feature-branch`, `maintenance/v1.2.x`)
+- **Push branches**: Make sure branches are pushed to the remote repository before running releases
 
 #### Shared package changes not detected
 
