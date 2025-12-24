@@ -40,14 +40,14 @@ Release pre-release versions of either service.
 - `electron` - Pre-release Electron service packages
 - `tauri` - Pre-release Tauri service packages (NPM + crates.io)
 
-**Version options:** `prepatch`, `preminor`, `premajor`, `prerelease`, `prerelease:beta`, `prerelease:alpha`, `prerelease:rc`
+**Version options:** `prepatch`, `preminor`, `premajor`, `prerelease`
 
 **Branch options:** `main`, `feature`, `maintenance`
 
 **Additional options:**
 - `dry_run` - Preview changes without publishing (default: `false`)
 
-**Note:** Pre-releases publish to NPM with the `next` tag instead of `latest`.
+**Note:** Pre-releases publish to NPM with the `next` tag instead of `latest` and use `next` as the pre-release identifier (configured in `version.config.json`).
 
 ### Reusable Workflows
 
@@ -65,7 +65,7 @@ The main orchestrator that validates inputs and coordinates all release phases.
 **Inputs:**
 - `service`: `electron` or `tauri`
 - `branch`: `main`, `feature`, `maintenance`, or explicit branch name
-- `release_version`: Version bump type (e.g., `patch`, `minor`, `prerelease:beta`)
+- `release_version`: Version bump type (e.g., `patch`, `minor`, `prerelease`)
 - `dry_run`: Show what would happen without publishing (default: `false`)
 
 #### `_release-prepare.reusable.yml`
@@ -235,7 +235,7 @@ The following secrets must be configured in the repository:
 4. Configure inputs:
    - **Service**: Select `electron` or `tauri`
    - **Branch**: Select `main`, `feature`, or `maintenance`
-   - **Release Version**: Select bump type (e.g., `minor`, `prerelease:beta`)
+   - **Release Version**: Select bump type (e.g., `minor`, `prerelease`)
    - **Dry Run**: ✅ Recommended for first run to verify changes
 
 #### 3. Review Dry Run Output
@@ -305,7 +305,7 @@ Dry Run: false
 - `@wdio/tauri-plugin`: `1.0.0` → `1.1.0` (NPM + crates.io)
 - Tags: `native-utils-v1.1.0`, `tauri-service-v1.1.0`
 
-#### Example 3: Pre-release (Beta)
+#### Example 3: Pre-release
 
 **Scenario**: Testing breaking changes for Electron service from a feature branch.
 
@@ -314,7 +314,7 @@ Dry Run: false
 ```yaml
 Service: electron
 Branch: feature
-Release Version: premajor:beta
+Release Version: premajor
 Dry Run: false
 ```
 
