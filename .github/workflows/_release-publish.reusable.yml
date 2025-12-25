@@ -156,26 +156,12 @@ jobs:
       - name: Version service packages
         run: |
           echo "Versioning service packages to ${{ inputs.service_version }}"
-
-          # Determine bump type from version string
-          VERSION="${{ inputs.service_version }}"
-          if [[ "$VERSION" =~ -beta\. ]]; then
-            BUMP_TYPE="prerelease"
-          elif [[ "$VERSION" =~ -alpha\. ]]; then
-            BUMP_TYPE="prerelease"
-          elif [[ "$VERSION" =~ -rc\. ]]; then
-            BUMP_TYPE="prerelease"
-          else
-            # Infer from version numbers (major.minor.patch)
-            # This is simplified - in practice the bump type comes from input
-            # For now, use the version calculation from prepare step
-            BUMP_TYPE="patch"
-          fi
+          echo "Using bump type: ${{ inputs.service_bump_type }}"
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            pnpm package-versioner --bump $BUMP_TYPE --dry-run -t ${{ inputs.service_package_list }}
+            pnpm package-versioner --bump ${{ inputs.service_bump_type }} --dry-run -t ${{ inputs.service_package_list }}
           else
-            pnpm package-versioner --bump $BUMP_TYPE -t ${{ inputs.service_package_list }}
+            pnpm package-versioner --bump ${{ inputs.service_bump_type }} -t ${{ inputs.service_package_list }}
           fi
 
       # Publish all versioned packages to NPM

@@ -275,6 +275,7 @@ async function main() {
   }
   setOutput('service_version', serviceVersion);
   setOutput('service_package_list', serviceScopedNames.join(','));
+  setOutput('service_bump_type', releaseVersionInput);
 
   // Process shared packages
   const changedSharedPackages: string[] = [];

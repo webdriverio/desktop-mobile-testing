@@ -98,6 +98,7 @@ jobs:
       target_branch: ${{ needs.prepare.outputs.target_branch }}
       service_version: ${{ needs.prepare.outputs.service_version }}
       service_package_list: ${{ needs.prepare.outputs.service_package_list }}
+      service_bump_type: ${{ needs.prepare.outputs.service_bump_type }}
       shared_packages_changed: ${{ needs.prepare.outputs.shared_packages_changed }}
       shared_package_list: ${{ needs.prepare.outputs.shared_package_list }}
       shared_version_native_utils: ${{ needs.prepare.outputs.shared_version_native_utils }}
