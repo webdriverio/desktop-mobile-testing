@@ -1,8 +1,8 @@
 [package]
 name = "tauri-plugin-wdio"
-version = "0.1.0"
+version = "0.0.1"
 description = "A Tauri plugin for WebDriverIO testing with execute and mocking capabilities"
-authors = ["WebDriverIO Community"]
+authors = [ "WebDriverIO Community" ]
 license = "MIT OR Apache-2.0"
 edition = "2021"
 rust-version = "1.70"
@@ -33,8 +33,7 @@ version = "2.0.0"
 
 [build-dependencies.tauri-plugin]
 version = "2.0.0"
-features = ["build"]
+features = [ "build" ]
 
 [features]
 custom-protocol = [ "tauri/custom-protocol" ]
-

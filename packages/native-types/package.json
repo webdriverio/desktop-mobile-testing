@@ -1,6 +1,6 @@
 {
   "name": "@wdio/native-types",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Type definitions for WebdriverIO Native Desktop Services (Electron and Tauri)",
   "homepage": "https://github.com/webdriverio/desktop-mobile-testing",
   "license": "MIT",
