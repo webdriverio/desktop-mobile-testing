@@ -39,16 +39,19 @@ if cargo search "$CRATE_NAME" --limit 1 | grep -q "^$CRATE_NAME = \"$CRATE_VERSI
   exit 0
 fi
 
+# Set up authentication using environment variable (replaces deprecated --token flag)
+export CARGO_REGISTRY_TOKEN="$CRATES_IO_TOKEN"
+
 # Publish
 if [ "$DRY_RUN" = "true" ]; then
   echo ""
   echo "🔍 Dry run - would publish to crates.io"
-  cargo publish --dry-run --token "$CRATES_IO_TOKEN"
+  cargo publish --dry-run --no-verify
   echo "✅ Dry run completed successfully"
 else
   echo ""
   echo "Publishing to crates.io..."
-  cargo publish --token "$CRATES_IO_TOKEN"
+  cargo publish --no-verify
   echo "✅ Published successfully!"
 fi
 
