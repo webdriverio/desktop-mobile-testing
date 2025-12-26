@@ -43,6 +43,10 @@ on:
         description: 'Bump type for native-types'
         required: false
         type: string
+      service_bump_type:
+        description: 'Bump type for service packages'
+        required: true
+        type: string
       dry_run:
         description: 'Dry run mode'
         required: false
