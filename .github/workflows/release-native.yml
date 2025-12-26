@@ -116,33 +116,15 @@ jobs:
 
           # Pull latest to ensure we have the most recent state
           echo "Pulling latest changes..."
-          git pull --rebase || echo "Nothing to pull"
+          git pull --rebase
 
           echo "Updating native-types to ${{ steps.version.outputs.types_version }}..."
-          # Check if already at target version to prevent multiple bumps
-          CURRENT_TYPES_VERSION=$(jq -r '.version' packages/native-types/package.json)
-          echo "Current native-types version in package.json: $CURRENT_TYPES_VERSION"
-          echo "Target version: ${{ steps.version.outputs.types_version }}"
-          if [ "$CURRENT_TYPES_VERSION" != "${{ steps.version.outputs.types_version }}" ]; then
-            echo "Versions don't match, running package-versioner..."
-            echo "Command: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
-          else
-            echo "✅ native-types already at version ${{ steps.version.outputs.types_version }}, skipping"
-          fi
+          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
+          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
 
           echo "Updating native-utils to ${{ steps.version.outputs.utils_version }}..."
-          # Check if already at target version to prevent multiple bumps
-          CURRENT_UTILS_VERSION=$(jq -r '.version' packages/native-utils/package.json)
-          echo "Current native-utils version in package.json: $CURRENT_UTILS_VERSION"
-          echo "Target version: ${{ steps.version.outputs.utils_version }}"
-          if [ "$CURRENT_UTILS_VERSION" != "${{ steps.version.outputs.utils_version }}" ]; then
-            echo "Versions don't match, running package-versioner..."
-            echo "Command: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
-          else
-            echo "✅ native-utils already at version ${{ steps.version.outputs.utils_version }}, skipping"
-          fi
+          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
+          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
 
           # Show what was created
           echo ""
@@ -158,8 +140,8 @@ jobs:
 
           # Push changes (package-versioner already committed)
           echo "Pushing changes to repository..."
-          git push --no-verify
-          echo "✅ Changes pushed successfully"
+          git push --no-verify --tags
+          echo "✅ Changes and tags pushed successfully"
 
       - name: Publish to NPM
         if: ${{ !inputs.dry_run }}
