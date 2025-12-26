@@ -205,9 +205,19 @@ async function main() {
     const hasChanges = hasPackageChanged(sharedPkg);
     if (hasChanges) {
       const bumpType = analyzeCommitsForBumpType(sharedPkg);
-      sharedPackageChanges[sharedPkg] = { changed: true, bumpType };
+      // Only bump shared packages for significant changes (minor/major), not patch
+      // This prevents automatic patch bumps during service releases
+      const hasSignificantChanges = bumpType === 'minor' || bumpType === 'major';
+      if (hasSignificantChanges) {
+        sharedPackageChanges[sharedPkg] = { changed: true, bumpType };
+        console.log(`📦 ${sharedPkg}: Significant changes detected (${bumpType} bump)`);
+      } else {
+        sharedPackageChanges[sharedPkg] = { changed: false };
+        console.log(`📦 ${sharedPkg}: Only patch changes - skipping bump`);
+      }
     } else {
       sharedPackageChanges[sharedPkg] = { changed: false };
+      console.log(`📦 ${sharedPkg}: No changes`);
     }
   }
   console.log('====================================================\n');
