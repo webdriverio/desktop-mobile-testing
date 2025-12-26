@@ -54,23 +54,23 @@ jobs:
         id: version
         run: |
           echo "Calculating versions for native packages..."
-          
+
           # Calculate version for native-types
-          TYPES_RESULT=$(pnpm package-versioner --bump ${{ inputs.release_version }} --dry-run --json --loglevel=error -t @wdio/native-types)
+          TYPES_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types)
           TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
-          
+
           # Calculate version for native-utils
-          UTILS_RESULT=$(pnpm package-versioner --bump ${{ inputs.release_version }} --dry-run --json --loglevel=error -t @wdio/native-utils)
+          UTILS_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils)
           UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
-          
+
           if [ -z "$TYPES_VERSION" ] || [ -z "$UTILS_VERSION" ]; then
             echo "❌ Failed to calculate versions"
             exit 1
           fi
-          
+
           echo "📦 @wdio/native-types: $TYPES_VERSION"
           echo "📦 @wdio/native-utils: $UTILS_VERSION"
-          
+
           echo "types_version=$TYPES_VERSION" >> $GITHUB_OUTPUT
           echo "utils_version=$UTILS_VERSION" >> $GITHUB_OUTPUT
 
@@ -78,11 +78,11 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           echo "Updating native-types to ${{ steps.version.outputs.types_version }}..."
-          pnpm package-versioner --bump ${{ inputs.release_version }} --loglevel=error -t @wdio/native-types
-          
+          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
+
           echo "Updating native-utils to ${{ steps.version.outputs.utils_version }}..."
-          pnpm package-versioner --bump ${{ inputs.release_version }} --loglevel=error -t @wdio/native-utils
-          
+          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
+
           # Commit and push changes
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -100,7 +100,7 @@ jobs:
           cd packages/native-types
           pnpm publish --access public --no-git-checks
           cd ../..
-          
+
           echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
           cd packages/native-utils
           pnpm publish --access public --no-git-checks
@@ -116,7 +116,7 @@ jobs:
             --title "@wdio/native-types v${{ steps.version.outputs.types_version }}" \
             --notes-file packages/native-types/CHANGELOG.md \
             --latest=false
-          
+
           # Create release for native-utils
           gh release create "@wdio/native-utils@v${{ steps.version.outputs.utils_version }}" \
             --title "@wdio/native-utils v${{ steps.version.outputs.utils_version }}" \

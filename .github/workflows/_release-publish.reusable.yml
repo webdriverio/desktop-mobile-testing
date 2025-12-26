@@ -145,21 +145,21 @@ jobs:
             # Run each shared package versioning separately in dry-run
             if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
               echo "  - @wdio/native-utils: ${{ inputs.shared_version_native_utils_bump }} → ${{ inputs.shared_version_native_utils }}"
-              pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} --dry-run -t @wdio/native-utils
+              pnpm --loglevel=error package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} --dry-run -t @wdio/native-utils
             fi
             if [ -n "${{ inputs.shared_version_native_types }}" ]; then
               echo "  - @wdio/native-types: ${{ inputs.shared_version_native_types_bump }} → ${{ inputs.shared_version_native_types }}"
-              pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} --dry-run -t @wdio/native-types
+              pnpm --loglevel=error package-versioner --bump ${{ inputs.shared_version_native_types_bump }} --dry-run -t @wdio/native-types
             fi
           else
             # Run each shared package versioning separately
             if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
               echo "  - @wdio/native-utils: ${{ inputs.shared_version_native_utils_bump }} → ${{ inputs.shared_version_native_utils }}"
-              pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} -t @wdio/native-utils
+              pnpm --loglevel=error package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} -t @wdio/native-utils
             fi
             if [ -n "${{ inputs.shared_version_native_types }}" ]; then
               echo "  - @wdio/native-types: ${{ inputs.shared_version_native_types_bump }} → ${{ inputs.shared_version_native_types }}"
-              pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} -t @wdio/native-types
+              pnpm --loglevel=error package-versioner --bump ${{ inputs.shared_version_native_types_bump }} -t @wdio/native-types
             fi
           fi
 
@@ -171,9 +171,9 @@ jobs:
           echo "Service packages: ${{ inputs.service_package_list }}"
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            pnpm package-versioner --bump ${{ inputs.service_bump_type }} --dry-run -t ${{ inputs.service_package_list }}
+            pnpm --loglevel=error package-versioner --bump ${{ inputs.service_bump_type }} --dry-run -t ${{ inputs.service_package_list }}
           else
-            pnpm package-versioner --bump ${{ inputs.service_bump_type }} -t ${{ inputs.service_package_list }}
+            pnpm --loglevel=error package-versioner --bump ${{ inputs.service_bump_type }} -t ${{ inputs.service_package_list }}
           fi
 
 
