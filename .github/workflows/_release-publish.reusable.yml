@@ -135,32 +135,40 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # PHASE 1: Version and publish shared packages (if changed)
-      - name: Version shared packages - native-utils
-        if: ${{ inputs.shared_packages_changed == 'true' && inputs.shared_version_native_utils != '' }}
+      # PHASE 1: Version shared packages (if changed) with their specific bump types
+      - name: Version shared packages
+        if: ${{ inputs.shared_packages_changed == 'true' }}
         run: |
-          echo "Versioning native-utils to ${{ inputs.shared_version_native_utils }}"
+          echo "Versioning shared packages..."
+
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} --dry-run -t @wdio/native-utils
+            # Run each shared package versioning separately in dry-run
+            if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
+              echo "  - @wdio/native-utils: ${{ inputs.shared_version_native_utils_bump }} → ${{ inputs.shared_version_native_utils }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} --dry-run -t @wdio/native-utils
+            fi
+            if [ -n "${{ inputs.shared_version_native_types }}" ]; then
+              echo "  - @wdio/native-types: ${{ inputs.shared_version_native_types_bump }} → ${{ inputs.shared_version_native_types }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} --dry-run -t @wdio/native-types
+            fi
           else
-            pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} -t @wdio/native-utils
+            # Run each shared package versioning separately
+            if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
+              echo "  - @wdio/native-utils: ${{ inputs.shared_version_native_utils_bump }} → ${{ inputs.shared_version_native_utils }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} -t @wdio/native-utils
+            fi
+            if [ -n "${{ inputs.shared_version_native_types }}" ]; then
+              echo "  - @wdio/native-types: ${{ inputs.shared_version_native_types_bump }} → ${{ inputs.shared_version_native_types }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} -t @wdio/native-types
+            fi
           fi
 
-      - name: Version shared packages - native-types
-        if: ${{ inputs.shared_packages_changed == 'true' && inputs.shared_version_native_types != '' }}
-        run: |
-          echo "Versioning native-types to ${{ inputs.shared_version_native_types }}"
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} --dry-run -t @wdio/native-types
-          else
-            pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} -t @wdio/native-types
-          fi
-
-      # PHASE 2: Version service packages (this will update dependencies on shared packages)
+      # PHASE 2: Version service packages
       - name: Version service packages
         run: |
           echo "Versioning service packages to ${{ inputs.service_version }}"
           echo "Using bump type: ${{ inputs.service_bump_type }}"
+          echo "Service packages: ${{ inputs.service_package_list }}"
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             pnpm package-versioner --bump ${{ inputs.service_bump_type }} --dry-run -t ${{ inputs.service_package_list }}
@@ -168,17 +176,6 @@ jobs:
             pnpm package-versioner --bump ${{ inputs.service_bump_type }} -t ${{ inputs.service_package_list }}
           fi
 
-      # Sync Cargo.toml version with package.json for Tauri packages
-      - name: Sync Cargo.toml versions
-        if: ${{ inputs.service == 'tauri' && inputs.dry_run == false }}
-        run: |
-          echo "Syncing Cargo.toml versions with package.json..."
-          # For tauri-plugin, update Cargo.toml to match package.json version
-          if [[ "${{ inputs.service_package_list }}" == *"@wdio/tauri-plugin"* ]]; then
-            PLUGIN_VERSION=$(cat packages/tauri-plugin/package.json | jq -r '.version')
-            echo "Setting tauri-plugin Cargo.toml version to $PLUGIN_VERSION"
-            sed -i "s/^version = \".*\"/version = \"$PLUGIN_VERSION\"/" packages/tauri-plugin/Cargo.toml
-          fi
 
       # Publish all versioned packages to NPM
       - name: Publish to NPM
