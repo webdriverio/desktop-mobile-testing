@@ -168,6 +168,18 @@ jobs:
             pnpm package-versioner --bump ${{ inputs.service_bump_type }} -t ${{ inputs.service_package_list }}
           fi
 
+      # Sync Cargo.toml version with package.json for Tauri packages
+      - name: Sync Cargo.toml versions
+        if: ${{ inputs.service == 'tauri' && inputs.dry_run == false }}
+        run: |
+          echo "Syncing Cargo.toml versions with package.json..."
+          # For tauri-plugin, update Cargo.toml to match package.json version
+          if [[ "${{ inputs.service_package_list }}" == *"@wdio/tauri-plugin"* ]]; then
+            PLUGIN_VERSION=$(cat packages/tauri-plugin/package.json | jq -r '.version')
+            echo "Setting tauri-plugin Cargo.toml version to $PLUGIN_VERSION"
+            sed -i "s/^version = \".*\"/version = \"$PLUGIN_VERSION\"/" packages/tauri-plugin/Cargo.toml
+          fi
+
       # Publish all versioned packages to NPM
       - name: Publish to NPM
         env:
