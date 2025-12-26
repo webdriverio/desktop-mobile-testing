@@ -149,9 +149,31 @@ jobs:
             echo "✅ native-utils already at version ${{ steps.version.outputs.utils_version }}, skipping"
           fi
 
+          # Show what was created
+          echo ""
+          echo "Git status:"
+          git status
+          echo ""
+          echo "Recent commits:"
+          git log --oneline -5
+          echo ""
+          echo "Tags created:"
+          git tag --points-at HEAD
+
           # Push changes (package-versioner already committed)
-          echo "Pushing changes to repository..."
-          git push --no-verify || echo "Nothing to push or push failed"
+          if [ "${{ inputs.skip_publish }}" = "true" ]; then
+            echo ""
+            echo "⚠️ SKIP_PUBLISH=true: Git push skipped"
+            echo "All changes (commits, tags, file modifications) remain LOCAL ONLY"
+            echo "They will be discarded when this CI job completes"
+            echo ""
+            echo "To push these changes to the repository, run the workflow again with skip_publish=false"
+          else
+            echo ""
+            echo "Pushing changes to repository..."
+            git push --no-verify || echo "Nothing to push or push failed"
+            echo "✅ Changes pushed successfully"
+          fi
 
       - name: Publish to NPM
         if: ${{ !inputs.dry_run && !inputs.skip_publish }}
@@ -237,17 +259,20 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "To perform an actual release, run this workflow with **Dry Run: false**" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ inputs.skip_publish }}" = "true" ]; then
-            echo "### ⚠️ Version Only Mode" >> $GITHUB_STEP_SUMMARY
-            echo "The following actions were performed:" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ Test Mode (Local Only)" >> $GITHUB_STEP_SUMMARY
+            echo "The following actions were performed **LOCALLY ONLY**:" >> $GITHUB_STEP_SUMMARY
             echo "- ✅ Updated package.json versions" >> $GITHUB_STEP_SUMMARY
             echo "- ✅ Generated changelogs" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Created git tags and pushed to repository" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Created git commits & tags (local only)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "The following actions were **SKIPPED**:" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ Git push to remote" >> $GITHUB_STEP_SUMMARY
             echo "- ❌ NPM publish" >> $GITHUB_STEP_SUMMARY
             echo "- ❌ GitHub releases" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "To publish these versions, run this workflow again with **Skip Publish: false**" >> $GITHUB_STEP_SUMMARY
+            echo "**⚠️ WARNING:** All changes remain in the CI runner only and will be lost when the job completes." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "To complete the release, run this workflow again with **Skip Publish: false**" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ✅ Release Complete" >> $GITHUB_STEP_SUMMARY
             echo "The following actions were performed:" >> $GITHUB_STEP_SUMMARY
