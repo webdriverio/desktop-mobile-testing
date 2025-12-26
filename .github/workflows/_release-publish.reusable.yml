@@ -227,12 +227,31 @@ jobs:
       - name: Collect release tags
         id: collect_tags
         run: |
-          # Get tags created by package-versioner (most recent commits)
-          RECENT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')
-
-          # Identify service vs shared tags
-          SERVICE_TAG=$(git tag --points-at HEAD | grep "${{ inputs.service }}-service-v" | head -n 1 || echo "")
-          SHARED_TAGS=$(git tag --points-at HEAD | grep "native-" | tr '\n' ',' | sed 's/,$//')
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            # In dry run mode, construct expected tag names from inputs
+            # Service tag: @wdio/tauri-service@v1.0.0-next.0
+            SERVICE_TAG="@wdio/${{ inputs.service }}-service@${{ inputs.service_version }}"
+            # Shared tags: @wdio/native-utils@v1.0.0, @wdio/native-types@v1.0.0
+            SHARED_TAGS=""
+            if [ "${{ inputs.shared_packages_changed }}" = "true" ]; then
+              if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
+                SHARED_TAGS="@wdio/native-utils@${{ inputs.shared_version_native_utils }}"
+              fi
+              if [ -n "${{ inputs.shared_version_native_types }}" ]; then
+                if [ -n "$SHARED_TAGS" ]; then
+                  SHARED_TAGS="$SHARED_TAGS,@wdio/native-types@${{ inputs.shared_version_native_types }}"
+                else
+                  SHARED_TAGS="@wdio/native-types@${{ inputs.shared_version_native_types }}"
+                fi
+              fi
+            fi
+          else
+            # In real mode, get tags from actual git tags
+            # Service tags: @wdio/tauri-service@v1.0.0-next.0, @wdio/tauri-plugin@v1.0.0-next.0
+            SERVICE_TAG=$(git tag --points-at HEAD | grep "@wdio/${{ inputs.service }}-service@" | head -n 1 || echo "")
+            # Shared tags: @wdio/native-utils@v1.0.0, @wdio/native-types@v1.0.0
+            SHARED_TAGS=$(git tag --points-at HEAD | grep "@wdio/native-" | tr '\n' ',' | sed 's/,$//')
+          fi
 
           echo "service_release_tag=${SERVICE_TAG}" >> $GITHUB_OUTPUT
           echo "shared_release_tags=${SHARED_TAGS}" >> $GITHUB_OUTPUT
