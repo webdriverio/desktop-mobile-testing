@@ -15,15 +15,10 @@ on:
           - preminor
           - prepatch
       dry_run:
-        description: 'Dry run (no version changes, no publish)'
+        description: 'Dry run (show what would happen, make no changes)'
         required: false
         type: boolean
-        default: false
-      skip_publish:
-        description: 'Skip NPM publish (test versioning only)'
-        required: false
-        type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: release-native-packages
@@ -159,24 +154,15 @@ jobs:
           echo ""
           echo "Tags created:"
           git tag --points-at HEAD
+          echo ""
 
           # Push changes (package-versioner already committed)
-          if [ "${{ inputs.skip_publish }}" = "true" ]; then
-            echo ""
-            echo "⚠️ SKIP_PUBLISH=true: Git push skipped"
-            echo "All changes (commits, tags, file modifications) remain LOCAL ONLY"
-            echo "They will be discarded when this CI job completes"
-            echo ""
-            echo "To push these changes to the repository, run the workflow again with skip_publish=false"
-          else
-            echo ""
-            echo "Pushing changes to repository..."
-            git push --no-verify || echo "Nothing to push or push failed"
-            echo "✅ Changes pushed successfully"
-          fi
+          echo "Pushing changes to repository..."
+          git push --no-verify
+          echo "✅ Changes pushed successfully"
 
       - name: Publish to NPM
-        if: ${{ !inputs.dry_run && !inputs.skip_publish }}
+        if: ${{ !inputs.dry_run }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -191,15 +177,8 @@ jobs:
           pnpm publish --access public --no-git-checks
           cd ../..
 
-      - name: Publish Skipped Warning
-        if: ${{ !inputs.dry_run && inputs.skip_publish }}
-        run: |
-          echo "⚠️ NPM PUBLISH SKIPPED (skip_publish=true)"
-          echo "Packages were versioned and committed but NOT published to npm"
-          echo "To publish, run this workflow again with skip_publish=false"
-
       - name: Create GitHub Releases
-        if: ${{ !inputs.dry_run && !inputs.skip_publish }}
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -220,66 +199,36 @@ jobs:
           echo "## 📦 Native Packages Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Release Type:** ${{ inputs.release_version }}" >> $GITHUB_STEP_SUMMARY
-
-          # Determine mode
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "**Mode:** 🧪 Dry Run" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ inputs.skip_publish }}" = "true" ]; then
-            echo "**Mode:** ⚠️ Version Only (Publish Skipped)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Mode:** 🚀 Live Release" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "**Mode:** ${{ inputs.dry_run && '🧪 Dry Run' || '🚀 Live Release' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 📋 Package Versions" >> $GITHUB_STEP_SUMMARY
           echo "| Package | Target Version | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|----------------|--------|" >> $GITHUB_STEP_SUMMARY
-
-          # Determine status
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            STATUS="🧪 Would publish"
-          elif [ "${{ inputs.skip_publish }}" = "true" ]; then
-            STATUS="✅ Versioned only"
-          else
-            STATUS="✅ Published"
-          fi
-
-          echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | $STATUS |" >> $GITHUB_STEP_SUMMARY
-          echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | ${{ inputs.dry_run && '🧪 Would publish' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | ${{ inputs.dry_run && '🧪 Would publish' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             echo "### 📝 Dry Run Details" >> $GITHUB_STEP_SUMMARY
-            echo "This was a dry run - no actual changes were made to:" >> $GITHUB_STEP_SUMMARY
-            echo "- 📄 package.json files" >> $GITHUB_STEP_SUMMARY
-            echo "- 📝 Changelog files" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏷️ Git tags" >> $GITHUB_STEP_SUMMARY
-            echo "- 📦 NPM registry" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏷️ GitHub releases" >> $GITHUB_STEP_SUMMARY
+            echo "This was a dry run - no actual changes were made." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "To perform an actual release, run this workflow with **Dry Run: false**" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ inputs.skip_publish }}" = "true" ]; then
-            echo "### ⚠️ Test Mode (Local Only)" >> $GITHUB_STEP_SUMMARY
-            echo "The following actions were performed **LOCALLY ONLY**:" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Updated package.json versions" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Generated changelogs" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Created git commits & tags (local only)" >> $GITHUB_STEP_SUMMARY
+            echo "**What would happen in a live release:**" >> $GITHUB_STEP_SUMMARY
+            echo "- 📄 Update package.json versions" >> $GITHUB_STEP_SUMMARY
+            echo "- 📝 Generate changelogs" >> $GITHUB_STEP_SUMMARY
+            echo "- 🏷️ Create git tags: \`@wdio/native-types@v${{ steps.version.outputs.types_version }}\`, \`@wdio/native-utils@v${{ steps.version.outputs.utils_version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- 📤 Push commits and tags to repository" >> $GITHUB_STEP_SUMMARY
+            echo "- 📦 Publish packages to NPM registry" >> $GITHUB_STEP_SUMMARY
+            echo "- 🏷️ Create GitHub releases" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "The following actions were **SKIPPED**:" >> $GITHUB_STEP_SUMMARY
-            echo "- ❌ Git push to remote" >> $GITHUB_STEP_SUMMARY
-            echo "- ❌ NPM publish" >> $GITHUB_STEP_SUMMARY
-            echo "- ❌ GitHub releases" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**⚠️ WARNING:** All changes remain in the CI runner only and will be lost when the job completes." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "To complete the release, run this workflow again with **Skip Publish: false**" >> $GITHUB_STEP_SUMMARY
+            echo "To perform an actual release, run this workflow with **Dry Run: ☐** (unchecked)" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ✅ Release Complete" >> $GITHUB_STEP_SUMMARY
-            echo "The following actions were performed:" >> $GITHUB_STEP_SUMMARY
-            echo "- 📄 Updated package.json versions" >> $GITHUB_STEP_SUMMARY
-            echo "- 📝 Generated changelogs" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏷️ Created git tags and pushed to repository" >> $GITHUB_STEP_SUMMARY
-            echo "- 📦 Published packages to NPM" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏷️ Created GitHub releases" >> $GITHUB_STEP_SUMMARY
+            echo "**Actions performed:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Updated package.json versions" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Generated changelogs" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Created git tags and pushed to repository" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Published packages to NPM" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Created GitHub releases" >> $GITHUB_STEP_SUMMARY
           fi
 
