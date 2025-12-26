@@ -408,7 +408,7 @@ export const config = {
 - Clear upstream and downstream dependencies
 
 ### 8. **Mobile Testing Focus**
-- Addresses repository name: "wdio-desktop-mobile-testing"
+- Addresses repository name: "desktop-mobile-testing"
 - Only framework with production-ready mobile support
 - Equal treatment of mobile and desktop platforms
 

@@ -1,12 +1,12 @@
 {
-  "name": "wdio-desktop-mobile-testing-monorepo",
+  "name": "webdriverio-desktop-mobile-testing-monorepo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "description": "WebdriverIO services for cross-platform testing on Electron, Flutter, Neutralino, and Tauri",
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git"
+    "url": "https://github.com/webdriverio/desktop-mobile-testing.git"
   },
   "license": "MIT",
   "author": "WebdriverIO Community",
@@ -17,7 +17,7 @@
   "pnpm": {
     "onlyBuiltDependencies": ["electron", "electron-nightly"]
   },
-  "packageManager": "pnpm@10.12.0",
+  "packageManager": "pnpm@10.26.2",
   "scripts": {
     "backport": "tsx ./scripts/backport.ts",
     "build": "turbo run build --filter=./packages/* --filter=./e2e",
@@ -71,6 +71,7 @@
     "globals": "^16.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.4",
+    "package-versioner": "^0.9.3",
     "shx": "^0.4.0",
     "tsx": "^4.20.6",
     "turbo": "2.5.6",

@@ -1,0 +1,134 @@
+name: Release Native Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - premajor
+          - preminor
+          - prepatch
+      dry_run:
+        description: 'Dry run (no actual release)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release-native:
+    name: Release Native Packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm turbo run build --filter='@wdio/native-types...' --filter='@wdio/native-utils...'
+
+      - name: Calculate versions
+        id: version
+        run: |
+          echo "Calculating versions for native packages..."
+          
+          # Calculate version for native-types
+          TYPES_RESULT=$(pnpm package-versioner --bump ${{ inputs.release_version }} --dry-run --json --loglevel=error -t @wdio/native-types)
+          TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
+          
+          # Calculate version for native-utils
+          UTILS_RESULT=$(pnpm package-versioner --bump ${{ inputs.release_version }} --dry-run --json --loglevel=error -t @wdio/native-utils)
+          UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
+          
+          if [ -z "$TYPES_VERSION" ] || [ -z "$UTILS_VERSION" ]; then
+            echo "❌ Failed to calculate versions"
+            exit 1
+          fi
+          
+          echo "📦 @wdio/native-types: $TYPES_VERSION"
+          echo "📦 @wdio/native-utils: $UTILS_VERSION"
+          
+          echo "types_version=$TYPES_VERSION" >> $GITHUB_OUTPUT
+          echo "utils_version=$UTILS_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package versions
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "Updating native-types to ${{ steps.version.outputs.types_version }}..."
+          pnpm package-versioner --bump ${{ inputs.release_version }} --loglevel=error -t @wdio/native-types
+          
+          echo "Updating native-utils to ${{ steps.version.outputs.utils_version }}..."
+          pnpm package-versioner --bump ${{ inputs.release_version }} --loglevel=error -t @wdio/native-utils
+          
+          # Commit and push changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore: release native packages [skip-ci]" || echo "No changes to commit"
+          git push
+
+      - name: Publish to NPM
+        if: ${{ !inputs.dry_run }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+        run: |
+          echo "Publishing @wdio/native-types@${{ steps.version.outputs.types_version }}..."
+          cd packages/native-types
+          pnpm publish --access public --no-git-checks
+          cd ../..
+          
+          echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
+          cd packages/native-utils
+          pnpm publish --access public --no-git-checks
+          cd ../..
+
+      - name: Create GitHub Releases
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create release for native-types
+          gh release create "@wdio/native-types@v${{ steps.version.outputs.types_version }}" \
+            --title "@wdio/native-types v${{ steps.version.outputs.types_version }}" \
+            --notes-file packages/native-types/CHANGELOG.md \
+            --latest=false
+          
+          # Create release for native-utils
+          gh release create "@wdio/native-utils@v${{ steps.version.outputs.utils_version }}" \
+            --title "@wdio/native-utils v${{ steps.version.outputs.utils_version }}" \
+            --notes-file packages/native-utils/CHANGELOG.md \
+            --latest=false
+
+      - name: Summary
+        run: |
+          echo "## 📦 Native Packages Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Version | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | ${{ inputs.dry_run && '🧪 Dry Run' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | ${{ inputs.dry_run && '🧪 Dry Run' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
+

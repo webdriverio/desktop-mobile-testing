@@ -1,25 +1,57 @@
-name: Publish Release
+name: Release Publish (Reusable)
 
 on:
   workflow_call:
     inputs:
+      service:
+        description: 'Service to release (electron or tauri)'
+        required: true
+        type: string
       target_branch:
         description: 'Target branch to release from'
         required: true
         type: string
-      release_version:
-        description: 'Release type (patch, minor, major, prepatch, preminor, premajor, prerelease)'
+      service_version:
+        description: 'New version for service packages'
+        required: true
+        type: string
+      service_package_list:
+        description: 'Comma-separated list of service packages'
+        required: true
+        type: string
+      shared_packages_changed:
+        description: 'Whether shared packages have changes'
+        required: true
+        type: string
+      shared_package_list:
+        description: 'Comma-separated list of changed shared packages'
+        required: false
+        type: string
+      shared_version_native_utils:
+        description: 'New version for native-utils'
+        required: false
+        type: string
+      shared_version_native_utils_bump:
+        description: 'Bump type for native-utils'
+        required: false
+        type: string
+      shared_version_native_types:
+        description: 'New version for native-types'
+        required: false
+        type: string
+      shared_version_native_types_bump:
+        description: 'Bump type for native-types'
+        required: false
+        type: string
+      service_bump_type:
+        description: 'Bump type for service packages'
         required: true
         type: string
       dry_run:
-        description: 'Do not touch or write anything. Show the commands.'
-        required: true
-        default: false
+        description: 'Dry run mode'
+        required: false
         type: boolean
-      branch_type:
-        description: 'Branch type (main, feature, maintenance)'
-        required: true
-        type: string
+        default: false
     secrets:
       github_bot_token:
         description: 'GitHub token for authentication'
@@ -30,282 +62,217 @@ on:
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
+      crates_io_token:
+        description: 'Crates.io token for publishing Rust crates'
+        required: false
     outputs:
-      release_tag:
-        description: 'The created release tag'
-        value: ${{ jobs.publish.outputs.release_tag }}
+      service_release_tag:
+        description: 'The created service release tag'
+        value: ${{ jobs.publish.outputs.service_release_tag }}
+      shared_release_tags:
+        description: 'Comma-separated shared package tags'
+        value: ${{ jobs.publish.outputs.shared_release_tags }}
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     outputs:
-      release_tag: ${{ steps.push_tags.outputs.release_tag }}
-    steps:
-      - name: ⚖️ Define target branch
-        id: define
-        env:
-          TARGET_BRANCH: ${{ inputs.target_branch }}
-          IS_MAJOR: ${{ contains(inputs.release_version, 'major') }}
-          IS_PRE_RELEASE: ${{ contains(inputs.release_version, 'pre') }}
-        run: |
-          if [ "${IS_MAJOR}" == 'true' -a "${IS_PRE_RELEASE}" == 'false' ]; then
-            echo "target_branch=main"
-            echo "target_branch=main" >>"${GITHUB_OUTPUT}"
-          else
-            echo "target_branch=${TARGET_BRANCH}"
-            echo "target_branch=${TARGET_BRANCH}" >>"${GITHUB_OUTPUT}"
-          fi
+      service_release_tag: ${{ steps.collect_tags.outputs.service_release_tag }}
+      shared_release_tags: ${{ steps.collect_tags.outputs.shared_release_tags }}
 
-      - name: 👷 Checkout branch for tagging
-        uses: actions/checkout@v5
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.deploy_key }}
-          # For maintenance releases, we tag directly on the maintenance branch
-          # For all other releases, we tag on main
-          ref: ${{steps.define.outputs.target_branch }}
-          fetch-depth: 0 # Full history needed for versioning
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
 
-      - name: 🛠️ Setup workspace
-        uses: ./.github/workflows/actions/setup-workspace
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 🏗️ Build packages
-        uses: ./.github/workflows/actions/build-verify
-
-      - name: 📦 Configure NPM registry
-        shell: bash
-        run: |
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            echo "DRY RUN: Would configure NPM registry for publishing"
-          else
-            # Set up NPM authentication for publishing
-            pnpm set registry "https://registry.npmjs.org/"
-            pnpm set //registry.npmjs.org/:_authToken ${{ secrets.npm_token }}
-            pnpm whoami
-          fi
-
-      - name: 🏷️ Create Release and Tags
-        # Uses package-versioner to bump versions and create git tags
-        run: |
-          set -e
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            # Get the current version
-            CURRENT_VERSION=$(jq -r '.version' packages/wdio-electron-service/package.json)
-            echo "Current version: $CURRENT_VERSION"
-
-            # Run package-versioner in dry-run mode to calculate the next version
-            echo "Running package-versioner to calculate the next version..."
-            echo "DRY RUN: Would run command: pnpm dlx package-versioner --bump ${{ inputs.release_version }} --dry-run --json"
-            RAW_OUTPUT=$(pnpm dlx package-versioner --bump ${{ inputs.release_version }} --dry-run --json)
-            echo "package-versioner output: $RAW_OUTPUT"
-            NEW_VERSION=$(echo "$RAW_OUTPUT" | jq -r '.updates[0].newVersion')
-            echo "Next version would be: $NEW_VERSION"
-
-            if [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" == "null" ]; then
-              echo "::error::Failed to determine new version from package-versioner output (dry run)"
-              exit 1
-            fi
-
-            # Show what would change
-            echo "DRY RUN: Would create release and tags with command: pnpm dlx package-versioner --bump ${{ inputs.release_version }}"
-            echo "DRY RUN: Would bump version from $CURRENT_VERSION to $NEW_VERSION"
-            echo "DRY RUN: Would create git tag v$NEW_VERSION"
-
-            # Reset any changes that might have been made
-            git reset --hard
-          else
-            # Run package-versioner to calculate the next version
-            echo "Running package-versioner to calculate the next version..."
-            RAW_OUTPUT=$(pnpm dlx package-versioner --bump ${{ inputs.release_version }} --json)
-            echo "package-versioner output: $RAW_OUTPUT"
-            NEW_VERSION=$(echo "$RAW_OUTPUT" | jq -r '.updates[0].newVersion')
-            echo "New version: $NEW_VERSION"
-
-            if [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" == "null" ]; then
-              echo "::error::Failed to determine new version from package-versioner output"
-              exit 1
-            fi
-          fi
-
-          # Store the new version for later use
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-
-      - name: 📢 Publish to NPM
-        shell: bash
-        env:
-          RELEASE_BRANCH: ${{ inputs.branch_type }}
-        run: |
-          # Determine npm tag based on release type and branch
-          if [[ "${{ inputs.release_version }}" == *"pre"* ]]; then
-            # Pre-releases: use 'next' for main/feature branches, 'lts-next' for maintenance branches
-            if [[ "${RELEASE_BRANCH}" == "maintenance" ]]; then
-              TAG="lts-next"
-            else
-              TAG="next"
-            fi
-          elif [[ "${RELEASE_BRANCH}" == "main" ]]; then
-            # Regular releases from main use 'latest' tag (patch, minor, major)
-            TAG="latest"
-          elif [[ "${RELEASE_BRANCH}" == "maintenance" ]]; then
-            # LTS/maintenance releases use 'lts' tag
-            TAG="lts"
-          else
-            # Feature branch releases (should typically be pre-releases)
-            TAG="next"
-          fi
-
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            # Get package names that would be published
-            echo "DRY RUN: Would publish the following packages to NPM with tag '${TAG}':"
-            PACKAGES=()
-            while IFS= read -r pkg_json; do
-              if [[ "$pkg_json" != *"node_modules"* ]]; then
-                PKG_NAME=$(jq -r '.name' "$pkg_json")
-                if [[ "$PKG_NAME" == @wdio/* || "$PKG_NAME" == wdio-* ]]; then
-                  echo "  - $PKG_NAME@${NEW_VERSION}"
-                  PACKAGES+=("$PKG_NAME")
-                fi
-              fi
-            done < <(find packages -name "package.json" -maxdepth 2 -mindepth 2)
-
-            echo "DRY RUN: Would publish to NPM with command: pnpx tsx scripts/publish.ts --tag ${TAG}"
-          else
-            if [[ "${{ github.repository }}" == "webdriverio-community/wdio-electron-service" ]]; then
-              pnpx tsx scripts/publish.ts --tag ${TAG}
-            else
-              echo "Skipping actual publish because this is not the official repository"
-            fi
-          fi
-
-      # Verify the published packages
-      - name: 🔍 Verify published packages
-        shell: bash
-        run: |
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            echo "DRY RUN: Would verify the following packages were published successfully:"
-            PACKAGES=()
-            while IFS= read -r pkg_json; do
-              if [[ "$pkg_json" != *"node_modules"* ]]; then
-                PKG_NAME=$(jq -r '.name' "$pkg_json")
-                if [[ "$PKG_NAME" == @wdio/* || "$PKG_NAME" == wdio-* ]]; then
-                  echo "  - $PKG_NAME@${NEW_VERSION}"
-                  PACKAGES+=("$PKG_NAME")
-                fi
-              fi
-            done < <(find packages -name "package.json" -maxdepth 2 -mindepth 2)
-
-            echo "DRY RUN: Would wait for NPM to index the packages"
-            echo "DRY RUN: Would poll NPM every 60 seconds for up to 10 minutes (10 attempts)"
-            echo "DRY RUN: Would check each package exists on NPM with the expected version"
-          else
-            echo "::group::Verifying published packages"
-            # Get the version that was just published
-            VERSION=$(jq -r '.version' packages/wdio-electron-service/package.json)
-            echo "Published version: $VERSION"
-            # Dynamically get package names from package.json files
-            PACKAGES=()
-            while IFS= read -r pkg_json; do
-              if [[ "$pkg_json" != *"node_modules"* ]]; then
-                PKG_NAME=$(jq -r '.name' "$pkg_json")
-                if [[ "$PKG_NAME" == @wdio/* || "$PKG_NAME" == wdio-* ]]; then
-                  PACKAGES+=("$PKG_NAME")
-                fi
-              fi
-            done < <(find packages -name "package.json" -maxdepth 2 -mindepth 2)
-            echo "Found packages to verify: ${PACKAGES[*]}"
-            # Set up polling for NPM indexing
-            echo "Waiting for NPM to index the packages..."
-            MAX_ATTEMPTS=10  # 10 attempts * 60 seconds = 10 minutes
-
-            # Verify each package was published correctly
-            for pkg in "${PACKAGES[@]}"; do
-              echo "Verifying $pkg@$VERSION..."
-              ATTEMPT=1
-              VERIFIED=false
-
-              while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$VERIFIED" = "false" ]; do
-                echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
-
-                # Check if the package exists on NPM with the expected version
-                if npm view "$pkg@$VERSION" version &>/dev/null; then
-                  echo "✅ $pkg@$VERSION verified"
-                  VERIFIED=true
-                else
-                  if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                    echo "Package $pkg@$VERSION not found on NPM yet. Waiting 60 seconds before retry..."
-                    sleep 60
-                  else
-                    echo "::error::Package $pkg@$VERSION not found on NPM after $MAX_ATTEMPTS attempts (10 minutes)"
-                    exit 1
-                  fi
-                  ATTEMPT=$((ATTEMPT + 1))
-                fi
-              done
-
-              # Ensure the package was verified
-              if [ "$VERIFIED" = "false" ]; then
-                echo "::error::Failed to verify $pkg@$VERSION"
-                exit 1
-              fi
-            done
-            echo "All packages verified successfully"
-            echo "::endgroup::"
-
-            # Print a summary of verification results
-            echo "::group::Verification Summary"
-            echo "✅ Successfully verified all packages on NPM:"
-            for pkg in "${PACKAGES[@]}"; do
-              echo "  - $pkg@$VERSION"
-            done
-            echo "::endgroup::"
-          fi
-
-      - name: 🚀 Push Tags and Commits
-        id: push_tags
-        shell: bash
-        run: |
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            RELEASE_TAG="v${NEW_VERSION}"
-            echo "DRY RUN: Would push tags and commits to remote repository"
-            echo "DRY RUN: Would push tag $RELEASE_TAG"
-            echo "DRY RUN: Would push branch ${{ inputs.target_branch }}"
-
-            # For dry run, set the calculated release tag for downstream jobs
-            echo "release_tag=$RELEASE_TAG" >>"${GITHUB_OUTPUT}"
-            echo "DRY RUN: Set release_tag output to $RELEASE_TAG for downstream jobs"
-          else
-            echo "Git log:"
-            git log --oneline -n 5
-            # Get the most recent tag (the one we just created)
-            RELEASE_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-            echo "Release tag: ${RELEASE_TAG}"
-            echo "Pushing tags and commits..."
-            # Push tags and commits without running the pre-push hook
-            git push --tags --no-verify && git push --no-verify
-            # Pass the release tag to the next step
-            echo "release_tag=${RELEASE_TAG}" >>"${GITHUB_OUTPUT}"
-          fi
-
-      - name: 📝 Create GitHub Release
-        if: ${{ !inputs.dry_run }}
-        uses: softprops/action-gh-release@v2
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          draft: true # Create as draft for manual review
-          generate_release_notes: true
-          prerelease: ${{ contains(inputs.release_version, 'pre') }}
-          repository: ${{ github.repository }}
-          tag_name: ${{ steps.push_tags.outputs.release_tag }}
-          token: ${{ secrets.github_bot_token }}
+          version: 10.26.2
 
-      - name: 📋 Log GitHub Release (dry run only)
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages for ${{ inputs.service }}
+        run: |
+          # Build service-specific packages using Turbo's dependency resolution
+          # The '...' suffix includes all dependencies automatically
+          case "${{ inputs.service }}" in
+            electron)
+              pnpm turbo run build \
+                --filter='@wdio/electron-service...' \
+                --filter='@wdio/electron-cdp-bridge...' \
+                --filter='@wdio/bundler...'
+              ;;
+            tauri)
+              pnpm turbo run build \
+                --filter='@wdio/tauri-service...' \
+                --filter='@wdio/tauri-plugin...'
+              ;;
+            *)
+              echo "Unknown service: ${{ inputs.service }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Configure NPM registry
+        if: ${{ !inputs.dry_run }}
+        run: |
+          pnpm config set registry "https://registry.npmjs.org/"
+          pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.npm_token }}
+          pnpm whoami
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # PHASE 1: Version shared packages (if changed) with their specific bump types
+      - name: Version shared packages
+        if: ${{ inputs.shared_packages_changed == 'true' }}
+        run: |
+          echo "Versioning shared packages..."
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            # Run each shared package versioning separately in dry-run
+            if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
+              echo "  - @wdio/native-utils: ${{ inputs.shared_version_native_utils_bump }} → ${{ inputs.shared_version_native_utils }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} --dry-run -t @wdio/native-utils
+            fi
+            if [ -n "${{ inputs.shared_version_native_types }}" ]; then
+              echo "  - @wdio/native-types: ${{ inputs.shared_version_native_types_bump }} → ${{ inputs.shared_version_native_types }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} --dry-run -t @wdio/native-types
+            fi
+          else
+            # Run each shared package versioning separately
+            if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
+              echo "  - @wdio/native-utils: ${{ inputs.shared_version_native_utils_bump }} → ${{ inputs.shared_version_native_utils }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_utils_bump }} -t @wdio/native-utils
+            fi
+            if [ -n "${{ inputs.shared_version_native_types }}" ]; then
+              echo "  - @wdio/native-types: ${{ inputs.shared_version_native_types_bump }} → ${{ inputs.shared_version_native_types }}"
+              pnpm package-versioner --bump ${{ inputs.shared_version_native_types_bump }} -t @wdio/native-types
+            fi
+          fi
+
+      # PHASE 2: Version service packages
+      - name: Version service packages
+        run: |
+          echo "Versioning service packages to ${{ inputs.service_version }}"
+          echo "Using bump type: ${{ inputs.service_bump_type }}"
+          echo "Service packages: ${{ inputs.service_package_list }}"
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm package-versioner --bump ${{ inputs.service_bump_type }} --dry-run -t ${{ inputs.service_package_list }}
+          else
+            pnpm package-versioner --bump ${{ inputs.service_bump_type }} -t ${{ inputs.service_package_list }}
+          fi
+
+
+      # Publish all versioned packages to NPM
+      - name: Publish to NPM
+        env:
+          INPUT_PACKAGE_LIST: ${{ inputs.shared_packages_changed == 'true' && format('{0},{1}', inputs.shared_package_list, inputs.service_package_list) || inputs.service_package_list }}
+          INPUT_NPM_TAG: ${{ contains(inputs.service_version, '-') && 'next' || 'latest' }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          pnpm tsx .github/workflows/scripts/publish-npm.ts
+
+      # Publish Rust crate (tauri only)
+      - name: Setup Rust
+        if: ${{ inputs.service == 'tauri' }}
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install GTK development libraries
+        if: ${{ inputs.service == 'tauri' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libglib2.0-dev \
+            libsoup2.4-dev \
+            pkg-config
+          # Try to install additional packages if available
+          sudo apt-get install -y libwebkit2gtk-4.0-dev || echo "libwebkit2gtk-4.0-dev not available"
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || echo "libwebkit2gtk-4.1-dev not available"
+          sudo apt-get install -y libappindicator3-dev || echo "libappindicator3-dev not available"
+          sudo apt-get install -y libayatana-appindicator3-dev || echo "libayatana-appindicator3-dev not available"
+          sudo apt-get install -y libsoup3-dev || echo "libsoup3-dev not available, using libsoup2.4-dev"
+          # Verify pkg-config can find the libraries
+          pkg-config --modversion glib-2.0
+          pkg-config --modversion gio-2.0
+          pkg-config --modversion libsoup-2.4
+
+      - name: Publish to crates.io
+        if: ${{ inputs.service == 'tauri' }}
+        env:
+          INPUT_CRATES_IO_TOKEN: ${{ secrets.crates_io_token }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+        run: |
+          bash .github/workflows/scripts/publish-crates.sh
+
+      # Collect all git tags created by package-versioner
+      - name: Collect release tags
+        id: collect_tags
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            # In dry run mode, construct expected tag names from inputs
+            # Service tag: @wdio/tauri-service@v1.0.0-next.0
+            SERVICE_TAG="@wdio/${{ inputs.service }}-service@${{ inputs.service_version }}"
+            # Shared tags: @wdio/native-utils@v1.0.0, @wdio/native-types@v1.0.0
+            SHARED_TAGS=""
+            if [ "${{ inputs.shared_packages_changed }}" = "true" ]; then
+              if [ -n "${{ inputs.shared_version_native_utils }}" ]; then
+                SHARED_TAGS="@wdio/native-utils@${{ inputs.shared_version_native_utils }}"
+              fi
+              if [ -n "${{ inputs.shared_version_native_types }}" ]; then
+                if [ -n "$SHARED_TAGS" ]; then
+                  SHARED_TAGS="$SHARED_TAGS,@wdio/native-types@${{ inputs.shared_version_native_types }}"
+                else
+                  SHARED_TAGS="@wdio/native-types@${{ inputs.shared_version_native_types }}"
+                fi
+              fi
+            fi
+          else
+            # In real mode, get tags from actual git tags
+            # Service tags: @wdio/tauri-service@v1.0.0-next.0, @wdio/tauri-plugin@v1.0.0-next.0
+            SERVICE_TAG=$(git tag --points-at HEAD | grep "@wdio/${{ inputs.service }}-service@" | head -n 1 || echo "")
+            # Shared tags: @wdio/native-utils@v1.0.0, @wdio/native-types@v1.0.0
+            SHARED_TAGS=$(git tag --points-at HEAD | grep "@wdio/native-" | tr '\n' ',' | sed 's/,$//')
+          fi
+
+          echo "service_release_tag=${SERVICE_TAG}" >> $GITHUB_OUTPUT
+          echo "shared_release_tags=${SHARED_TAGS}" >> $GITHUB_OUTPUT
+
+          echo "Service tag: ${SERVICE_TAG}"
+          echo "Shared tags: ${SHARED_TAGS}"
+
+      # Push tags and commits
+      - name: Push tags and commits
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "Pushing tags and commits to ${{ inputs.target_branch }}..."
+          git push --tags --no-verify
+          git push origin "${{ inputs.target_branch }}" --no-verify
+          echo "✅ Successfully pushed tags and commits"
+
+      - name: Log dry run summary
         if: ${{ inputs.dry_run }}
         run: |
-          RELEASE_TAG="v${NEW_VERSION}"
-          echo "DRY RUN: Would create a GitHub release with:"
-          echo "  - Tag name: $RELEASE_TAG"
-          echo "  - Draft: true"
-          echo "  - Generate release notes: true"
-          echo "  - Prerelease: ${{ contains(inputs.release_version, 'pre') }}"
-          echo "  - Repository: ${{ github.repository }}"
-          echo "  - Title: Release $RELEASE_TAG"
+          echo "========== DRY RUN SUMMARY =========="
+          echo "Would have pushed the following:"
+          echo "  - Branch: ${{ inputs.target_branch }}"
+          echo "  - Service tag: ${{ steps.collect_tags.outputs.service_release_tag }}"
+          if [ -n "${{ steps.collect_tags.outputs.shared_release_tags }}" ]; then
+            echo "  - Shared tags: ${{ steps.collect_tags.outputs.shared_release_tags }}"
+          fi
+          echo "===================================="

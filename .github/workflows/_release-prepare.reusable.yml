@@ -1,0 +1,224 @@
+name: Release Prepare (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: 'Service to release (electron or tauri)'
+        required: true
+        type: string
+      branch:
+        description: 'Branch type (main, feature, maintenance)'
+        required: true
+        type: string
+      feature_branch_name:
+        description: 'Custom feature branch name (only used when branch is "feature")'
+        required: false
+        type: string
+        default: ''
+      release_version:
+        description: 'Release version type'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run mode'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      target_branch:
+        description: 'Resolved branch name'
+        value: ${{ jobs.calculate.outputs.target_branch }}
+      service_version:
+        description: 'Calculated service version'
+        value: ${{ jobs.calculate.outputs.service_version }}
+      service_package_list:
+        description: 'Comma-separated list of service packages'
+        value: ${{ jobs.calculate.outputs.service_package_list }}
+      service_bump_type:
+        description: 'Bump type for service packages'
+        value: ${{ jobs.calculate.outputs.service_bump_type }}
+      shared_packages_changed:
+        description: 'Whether shared packages have changes'
+        value: ${{ jobs.calculate.outputs.shared_packages_changed }}
+      shared_package_list:
+        description: 'Comma-separated list of changed shared packages'
+        value: ${{ jobs.calculate.outputs.shared_package_list }}
+      shared_version_native_utils:
+        description: 'New version for native-utils (if changed)'
+        value: ${{ jobs.calculate.outputs.shared_version_native_utils }}
+      shared_version_native_utils_bump:
+        description: 'Bump type for native-utils'
+        value: ${{ jobs.calculate.outputs.shared_version_native_utils_bump }}
+      shared_version_native_types:
+        description: 'New version for native-types (if changed)'
+        value: ${{ jobs.calculate.outputs.shared_version_native_types }}
+      shared_version_native_types_bump:
+        description: 'Bump type for native-types'
+        value: ${{ jobs.calculate.outputs.shared_version_native_types_bump }}
+
+jobs:
+  calculate:
+    runs-on: ubuntu-latest
+    outputs:
+      target_branch: ${{ steps.determine_branch.outputs.branch }}
+      service_version: ${{ steps.calculate_version.outputs.service_version }}
+      service_package_list: ${{ steps.calculate_version.outputs.service_package_list }}
+      service_bump_type: ${{ steps.calculate_version.outputs.service_bump_type }}
+      shared_packages_changed: ${{ steps.calculate_version.outputs.shared_packages_changed }}
+      shared_package_list: ${{ steps.calculate_version.outputs.shared_package_list }}
+      shared_version_native_utils: ${{ steps.calculate_version.outputs.shared_version_native_utils }}
+      shared_version_native_utils_bump: ${{ steps.calculate_version.outputs.shared_version_native_utils_bump }}
+      shared_version_native_types: ${{ steps.calculate_version.outputs.shared_version_native_types }}
+      shared_version_native_types_bump: ${{ steps.calculate_version.outputs.shared_version_native_types_bump }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for git operations
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.2
+
+      - name: Calculate version information
+        id: calculate_versions
+        run: |
+          # Extract the current major version from package.json
+          # Use electron service as the reference for versioning
+          PKG_JSON='packages/electron-service/package.json'
+          if [ -f "$PKG_JSON" ]; then
+            CURRENT_MAJOR_VERSION="$(cat ${PKG_JSON} | jq -r '.version' | grep -o -E "([0-9]+)" | head -n1)"
+            echo "current-major-version=${CURRENT_MAJOR_VERSION}" >> $GITHUB_OUTPUT
+            echo "Calculated current major version: ${CURRENT_MAJOR_VERSION}"
+
+            # LTS is the previous major version
+            LTS_MAJOR_VERSION=$((CURRENT_MAJOR_VERSION - 1))
+            echo "lts-major-version=${LTS_MAJOR_VERSION}" >> $GITHUB_OUTPUT
+            echo "Calculated LTS major version: ${LTS_MAJOR_VERSION}"
+
+            # Feature is the next major version
+            FEATURE_MAJOR_VERSION=$((CURRENT_MAJOR_VERSION + 1))
+            echo "feature-major-version=${FEATURE_MAJOR_VERSION}" >> $GITHUB_OUTPUT
+            echo "Calculated feature major version: ${FEATURE_MAJOR_VERSION}"
+          else
+            echo "::error::Could not find package.json at $PKG_JSON"
+            exit 1
+          fi
+
+      - name: Determine target branch
+        id: determine_branch
+        run: |
+          if [ "${{ inputs.branch }}" = "main" ]; then
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "Using main branch for release"
+          elif [ "${{ inputs.branch }}" = "feature" ]; then
+            echo "branch=${{ inputs.feature_branch_name }}" >> $GITHUB_OUTPUT
+            echo "Using feature branch: ${{ inputs.feature_branch_name }}"
+          elif [ "${{ inputs.branch }}" = "maintenance" ]; then
+            LTS_MAJOR_VERSION="${{ steps.calculate_versions.outputs.lts-major-version }}"
+            echo "branch=v${LTS_MAJOR_VERSION}.x" >> $GITHUB_OUTPUT
+            echo "Using calculated maintenance branch: v${LTS_MAJOR_VERSION}.x"
+          else
+            echo "branch=${{ inputs.branch }}" >> $GITHUB_OUTPUT
+            echo "Using explicit branch: ${{ inputs.branch }}"
+          fi
+
+      - name: Validate release parameters
+        run: |
+          BRANCH_TYPE="${{ inputs.branch }}"
+          RELEASE_VERSION="${{ inputs.release_version }}"
+
+          echo "Branch Type: $BRANCH_TYPE"
+          echo "Release Version: $RELEASE_VERSION"
+
+          # Validate required branch names
+          if [ "$BRANCH_TYPE" = "feature" ] && [ -z "${{ inputs.feature_branch_name }}" ]; then
+            echo "::error::Feature branch name is required when branch type is 'feature'"
+            exit 1
+          fi
+
+          # Major releases should be from feature branches
+          if [ "$RELEASE_VERSION" = "major" ] || [ "$RELEASE_VERSION" = "premajor" ]; then
+            if [ "$BRANCH_TYPE" != "feature" ]; then
+              echo "Error: Major releases must be from a feature branch"
+              exit 1
+            fi
+          fi
+
+      - name: Verify target branch exists
+        run: |
+          BRANCH="${{ steps.determine_branch.outputs.branch }}"
+          BRANCH_TYPE="${{ inputs.branch }}"
+
+          if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+            if [ "$BRANCH_TYPE" = "feature" ]; then
+              echo "::error::Feature branch '$BRANCH' does not exist. Please create the branch first."
+              exit 1
+            elif [ "$BRANCH_TYPE" = "maintenance" ]; then
+              LTS_MAJOR_VERSION="${{ steps.calculate_versions.outputs.lts-major-version }}"
+              echo "::error::Maintenance branch '$BRANCH' does not exist."
+              echo "::error::This is expected when starting new services - maintenance branches are created after releasing the next major version."
+              echo "::error::For example, after releasing v2.0.0 (Tauri) or v11.0.0 (Electron), you can create maintenance branch '$BRANCH'."
+              echo "::error::To create maintenance releases later, create branch '$BRANCH' from the commit before the major version bump."
+              exit 1
+            else
+              echo "::error::Branch '$BRANCH' does not exist on the remote repository."
+              exit 1
+            fi
+          fi
+
+          if [ "$BRANCH_TYPE" = "feature" ]; then
+            echo "ℹ️ Releasing from feature branch '$BRANCH'"
+          elif [ "$BRANCH_TYPE" = "maintenance" ]; then
+            echo "ℹ️ Releasing from maintenance branch '$BRANCH' (calculated from version)"
+          else
+            echo "ℹ️ Releasing from branch '$BRANCH'"
+          fi
+
+          echo "✅ Branch '$BRANCH' exists and is valid"
+
+      - name: Checkout target branch
+        run: |
+          git checkout ${{ steps.determine_branch.outputs.branch }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Calculate versions
+        id: calculate_version
+        env:
+          INPUT_SERVICE: ${{ inputs.service }}
+          INPUT_RELEASE_VERSION: ${{ inputs.release_version }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        run: |
+          pnpm tsx .github/workflows/scripts/calculate-version.ts
+
+      - name: Display calculation summary
+        run: |
+          echo "========== VERSION CALCULATION SUMMARY =========="
+          echo "Service: ${{ inputs.service }}"
+          echo "Service Version: ${{ steps.calculate_version.outputs.service_version }}"
+          echo "Service Packages: ${{ steps.calculate_version.outputs.service_package_list }}"
+          echo ""
+          echo "Shared Packages Changed: ${{ steps.calculate_version.outputs.shared_packages_changed }}"
+          if [ "${{ steps.calculate_version.outputs.shared_packages_changed }}" = "true" ]; then
+            echo "Changed Shared Packages: ${{ steps.calculate_version.outputs.shared_package_list }}"
+
+            if [ -n "${{ steps.calculate_version.outputs.shared_version_native_utils }}" ]; then
+              echo "  - native-utils: ${{ steps.calculate_version.outputs.shared_version_native_utils }} (${{ steps.calculate_version.outputs.shared_version_native_utils_bump }})"
+            fi
+
+            if [ -n "${{ steps.calculate_version.outputs.shared_version_native_types }}" ]; then
+              echo "  - native-types: ${{ steps.calculate_version.outputs.shared_version_native_types }} (${{ steps.calculate_version.outputs.shared_version_native_types_bump }})"
+            fi
+          fi
+          echo "================================================="

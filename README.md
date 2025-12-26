@@ -30,7 +30,7 @@ pnpm turbo lint
 ## Project Structure
 
 ```
-wdio-desktop-mobile-testing/
+desktop-mobile-testing/
 ├── packages/               # Service packages
 │   ├── electron-service/   # @wdio/electron-service
 │   ├── tauri-service/      # @wdio/tauri-service
@@ -187,9 +187,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Links
 
-- [WebdriverIO](https://webdriver.io/)
-- [Documentation](https://webdriver.io/docs/desktop-testing/electron)
-- [Community](https://github.com/webdriverio-community)
+- [WebdriverIO](https://webdriver.io)
+- [Documentation](https://webdriver.io/docs/gettingstarted)
+- [WebdriverIO Community](https://github.com/webdriverio-community)
 
 ---
 

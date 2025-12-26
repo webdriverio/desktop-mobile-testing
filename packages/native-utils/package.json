@@ -1,8 +1,8 @@
 {
   "name": "@wdio/native-utils",
-  "version": "9.2.0",
+  "version": "0.0.1",
   "description": "Utilities for WebdriverIO Native Desktop Services",
-  "homepage": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing",
+  "homepage": "https://github.com/webdriverio/desktop-mobile-testing",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -60,7 +60,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
     "directory": "packages/electron-utils"
   }
 }

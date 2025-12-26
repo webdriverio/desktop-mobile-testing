@@ -407,7 +407,7 @@ N/A - Infrastructure project, no persistent data
 ### Monorepo Structure
 
 ```
-wdio-desktop-mobile-testing/
+desktop-mobile-testing/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                    # Main CI pipeline
@@ -516,7 +516,7 @@ packages/package-name/
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio-community/wdio-desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
     "directory": "packages/package-name"
   },
   "license": "MIT"

@@ -1,25 +1,30 @@
-name: Release Orchestration
-
-# This is a reusable workflow that handles both regular releases and pre-releases
-# It is called by both release.yml and pre-release.yml workflows
-# See: https://docs.github.com/en/actions/using-workflows/reusing-workflows
+name: Release Orchestration (Reusable)
 
 on:
   workflow_call:
     inputs:
-      branch:
-        description: 'Branch type to release from (feature, main, maintenance - will be automatically resolved)'
+      service:
+        description: 'Service to release (electron or tauri)'
         required: true
         type: string
+      branch:
+        description: 'Branch type (main, feature, maintenance)'
+        required: true
+        type: string
+      feature_branch_name:
+        description: 'Custom feature branch name (only used when branch is "feature")'
+        required: false
+        type: string
+        default: ''
       release_version:
-        description: 'Release type (patch, minor, major, prepatch, preminor, premajor, prerelease)'
+        description: 'Release version type (patch, minor, major, prepatch, preminor, premajor, prerelease, prerelease:beta, prerelease:alpha)'
         required: true
         type: string
       dry_run:
-        description: 'Do not touch or write anything. Show the commands.'
-        required: true
-        default: false
+        description: 'Dry run mode - calculate and show what would happen without publishing'
+        required: false
         type: boolean
+        default: false
     secrets:
       github_bot_token:
         description: 'GitHub token for authentication'
@@ -30,56 +35,92 @@ on:
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
-
-env:
-  GITHUB_TOKEN: ${{ secrets.github_bot_token }}
-  NPM_TOKEN: ${{ secrets.npm_token }}
+      crates_io_token:
+        description: 'Crates.io token for publishing Rust crates (required for Tauri)'
+        required: false
 
 jobs:
-  # Verify this is the official repository
-  verify_repository:
+  # Validate that we're running in the correct repository
+  validate-repository:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Official Repository
-        if: ${{ github.repository != 'webdriverio-community/wdio-electron-service' }}
+      - name: Check repository
         run: |
-          echo "::error::This workflow can only be run in the official repository (webdriverio-community/wdio-electron-service)"
-          exit 1
+          EXPECTED_REPO="webdriverio/desktop-mobile-testing"
+          CURRENT_REPO="${{ github.repository }}"
 
-  # Calculate branch names and validate parameters
-  calculate_branches:
-    needs: [verify_repository]
-    uses: ./.github/workflows/_release-calculate.reusable.yml
+          if [ "$CURRENT_REPO" != "$EXPECTED_REPO" ]; then
+            echo "❌ Error: This workflow must run in the $EXPECTED_REPO repository"
+            echo "Current repository: $CURRENT_REPO"
+            exit 1
+          fi
+
+          echo "✅ Repository validated: $CURRENT_REPO"
+
+      - name: Validate service input
+        run: |
+          SERVICE="${{ inputs.service }}"
+          if [ "$SERVICE" != "electron" ] && [ "$SERVICE" != "tauri" ]; then
+            echo "❌ Error: Invalid service '$SERVICE'. Must be 'electron' or 'tauri'"
+            exit 1
+          fi
+          echo "✅ Service validated: $SERVICE"
+
+      - name: Validate release version
+        run: |
+          VERSION="${{ inputs.release_version }}"
+          VALID_VERSIONS="patch|minor|major|prepatch|preminor|premajor|prerelease|prerelease:beta|prerelease:alpha|prerelease:rc"
+
+          if ! echo "$VERSION" | grep -qE "^($VALID_VERSIONS)$"; then
+            echo "❌ Error: Invalid release version '$VERSION'"
+            echo "Valid options: patch, minor, major, prepatch, preminor, premajor, prerelease, prerelease:beta, prerelease:alpha, prerelease:rc"
+            exit 1
+          fi
+          echo "✅ Release version validated: $VERSION"
+
+  # Phase 1: Prepare - Calculate versions and validate
+  prepare:
+    needs: validate-repository
+    uses: ./.github/workflows/_release-prepare.reusable.yml
     with:
+      service: ${{ inputs.service }}
       branch: ${{ inputs.branch }}
-      release_version: ${{ inputs.release_version }}
-
-  # Publish the release (tag, npm publish, GitHub release)
-  publish_release:
-    needs: ['calculate_branches']
-    uses: ./.github/workflows/_release-publish.reusable.yml
-    with:
-      target_branch: ${{ needs.calculate_branches.outputs.target_branch }}
+      feature_branch_name: ${{ inputs.feature_branch_name }}
       release_version: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
-      branch_type: ${{ inputs.branch }}
+
+  # Phase 2: Publish - Version packages and publish to registries
+  publish:
+    needs: prepare
+    uses: ./.github/workflows/_release-publish.reusable.yml
+    with:
+      service: ${{ inputs.service }}
+      target_branch: ${{ needs.prepare.outputs.target_branch }}
+      service_version: ${{ needs.prepare.outputs.service_version }}
+      service_package_list: ${{ needs.prepare.outputs.service_package_list }}
+      service_bump_type: ${{ needs.prepare.outputs.service_bump_type }}
+      shared_packages_changed: ${{ needs.prepare.outputs.shared_packages_changed }}
+      shared_package_list: ${{ needs.prepare.outputs.shared_package_list }}
+      shared_version_native_utils: ${{ needs.prepare.outputs.shared_version_native_utils }}
+      shared_version_native_utils_bump: ${{ needs.prepare.outputs.shared_version_native_utils_bump }}
+      shared_version_native_types: ${{ needs.prepare.outputs.shared_version_native_types }}
+      shared_version_native_types_bump: ${{ needs.prepare.outputs.shared_version_native_types_bump }}
+      dry_run: ${{ inputs.dry_run }}
     secrets:
       github_bot_token: ${{ secrets.github_bot_token }}
       npm_token: ${{ secrets.npm_token }}
       deploy_key: ${{ secrets.deploy_key }}
+      crates_io_token: ${{ secrets.crates_io_token }}
 
-  # Post-release tasks (includes all branch operations)
-  post_release:
-    needs: ['calculate_branches', 'publish_release']
-    if: ${{ always() && (needs.publish_release.result == 'success' || needs.publish_release.result == 'skipped') }}
+  # Phase 3: Post - Create GitHub releases
+  post:
+    needs: [prepare, publish]
     uses: ./.github/workflows/_release-post.reusable.yml
     with:
-      target_branch: ${{ needs.calculate_branches.outputs.target_branch }}
-      next_lts_branch: ${{ needs.calculate_branches.outputs.next_lts_branch }}
-      release_version: ${{ inputs.release_version }}
-      release_tag: ${{ needs.publish_release.outputs.release_tag }}
+      service: ${{ inputs.service }}
+      service_release_tag: ${{ needs.publish.outputs.service_release_tag }}
+      shared_release_tags: ${{ needs.publish.outputs.shared_release_tags }}
+      is_prerelease: ${{ contains(inputs.release_version, 'pre') }}
       dry_run: ${{ inputs.dry_run }}
-      branch_type: ${{ inputs.branch }}
     secrets:
       github_bot_token: ${{ secrets.github_bot_token }}
-      deploy_key: ${{ secrets.deploy_key }}

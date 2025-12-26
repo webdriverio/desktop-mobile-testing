@@ -51,7 +51,7 @@ This is the fourth implementation spec derived from the product roadmap. It impl
 - **Mobile:** iOS, Android (ONLY mobile option in repository)
 - **Desktop:** Windows, macOS, Linux
 
-**Note:** Flutter is the ONLY framework in this repository with production-ready mobile support. This aligns with the repository name "wdio-desktop-mobile-testing".
+**Note:** Flutter is the ONLY framework in this repository with production-ready mobile support. This aligns with the repository name "desktop-mobile-testing".
 
 ## Success Criteria
 

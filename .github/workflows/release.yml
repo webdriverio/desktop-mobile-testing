@@ -1,38 +1,55 @@
-name: Manual Release Publish
+name: Release
 
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'Branch to release from'
+      service:
+        description: 'Service to release'
         required: true
-        default: 'main' # Default to main for most common case
         type: choice
         options:
-          - main # Current stable
-          - feature # Next major development
-          - maintenance # LTS/maintenance
-      release_version:
-        description: 'Release type - patch, minor, or major'
+          - electron
+          - tauri
+        default: electron
+      branch:
+        description: 'Branch type to release from'
         required: true
-        default: 'patch' # Default to patch for most common case
         type: choice
-        options: ['patch', 'minor', 'major']
-      dry_run:
-        description: 'Do not touch or write anything. Show the commands.'
+        options:
+          - main
+          - feature
+          - maintenance
+        default: main
+      feature_branch_name:
+        description: 'Feature branch name (required when branch is "feature")'
+        required: false
+        type: string
+      release_version:
+        description: 'Release version type'
         required: true
-        default: false
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      dry_run:
+        description: 'Dry run (show what would happen without publishing)'
+        required: false
         type: boolean
+        default: false
 
 jobs:
   release:
-    name: Release
     uses: ./.github/workflows/_release-orchestration.reusable.yml
     with:
+      service: ${{ inputs.service }}
       branch: ${{ inputs.branch }}
+      feature_branch_name: ${{ inputs.feature_branch_name }}
       release_version: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
     secrets:
       github_bot_token: ${{ secrets.GITHUB_TOKEN }}
       npm_token: ${{ secrets.NPM_TOKEN }}
       deploy_key: ${{ secrets.DEPLOY_KEY }}
+      crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
