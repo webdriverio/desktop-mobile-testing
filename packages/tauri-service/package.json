@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "WebdriverIO service for testing Tauri applications",
   "author": "WebdriverIO Community",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing",
+  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/tauri-service",
   "license": "MIT",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",

@@ -2,7 +2,7 @@
   "name": "@wdio/native-utils",
   "version": "0.0.1",
   "description": "Utilities for WebdriverIO Native Desktop Services",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing",
+  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/native-utils",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
