@@ -5,5 +5,8 @@
   "sync": false,
   "commitMessage": "chore: release ${packageName}@${version} [skip-ci]",
   "tagTemplate": "${packageName}@${prefix}${version}",
-  "prereleaseIdentifier": "next"
+  "prereleaseIdentifier": "next",
+  "cargo": {
+    "enabled": true
+  }
 }
