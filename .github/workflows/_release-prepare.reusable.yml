@@ -35,6 +35,9 @@ on:
       service_package_list:
         description: 'Comma-separated list of service packages'
         value: ${{ jobs.calculate.outputs.service_package_list }}
+      service_bump_type:
+        description: 'Bump type for service packages'
+        value: ${{ jobs.calculate.outputs.service_bump_type }}
       shared_packages_changed:
         description: 'Whether shared packages have changes'
         value: ${{ jobs.calculate.outputs.shared_packages_changed }}
@@ -61,6 +64,7 @@ jobs:
       target_branch: ${{ steps.determine_branch.outputs.branch }}
       service_version: ${{ steps.calculate_version.outputs.service_version }}
       service_package_list: ${{ steps.calculate_version.outputs.service_package_list }}
+      service_bump_type: ${{ steps.calculate_version.outputs.service_bump_type }}
       shared_packages_changed: ${{ steps.calculate_version.outputs.shared_packages_changed }}
       shared_package_list: ${{ steps.calculate_version.outputs.shared_package_list }}
       shared_version_native_utils: ${{ steps.calculate_version.outputs.shared_version_native_utils }}
