@@ -141,10 +141,8 @@ jobs:
           git tag --points-at HEAD
           echo ""
 
-          # Push changes (package-versioner already committed)
-          echo "Pushing changes to repository..."
-          git push --no-verify --tags
-          echo "✅ Changes and tags pushed successfully"
+          # Note: Commits and tags created locally by package-versioner
+          # Push will happen after successful publish
 
       - name: Configure NPM registry
         if: ${{ !inputs.dry_run }}
@@ -174,6 +172,14 @@ jobs:
           cd packages/native-utils
           pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
           cd ../..
+
+      - name: Push Version Commits and Tags
+        if: ${{ !inputs.dry_run }}
+        run: |
+          echo "Publishing successful - pushing version commits and tags..."
+          git push --no-verify
+          git push --no-verify --tags
+          echo "✅ Version commits and tags pushed successfully"
 
       - name: Create GitHub Releases
         if: ${{ !inputs.dry_run }}
