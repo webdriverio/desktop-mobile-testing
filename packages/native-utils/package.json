@@ -1,6 +1,6 @@
 {
   "name": "@wdio/native-utils",
-  "version": "0.0.1",
+  "version": "2.0.0",
   "description": "Utilities for WebdriverIO Native Desktop Services",
   "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/native-utils",
   "license": "MIT",
