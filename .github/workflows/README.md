@@ -248,16 +248,6 @@ The following secrets must be configured in the repository:
 - **Usage**: Creating GitHub releases, pushing tags
 - **Note**: Automatically provided by GitHub Actions
 
-#### `NPM_TOKEN`
-- **Type**: NPM authentication token
-- **Usage**: Publishing packages to NPM registry
-- **Required for**: All releases
-- **How to obtain**:
-  1. Log in to npmjs.com
-  2. Go to Account Settings → Access Tokens
-  3. Generate a new token with "Automation" type
-  4. Add as a repository secret
-
 #### `DEPLOY_KEY`
 - **Type**: SSH private key
 - **Usage**: Pushing commits and tags to the repository

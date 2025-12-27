@@ -25,19 +25,26 @@ on:
         required: false
         type: string
       release_version:
-        description: 'Release version type'
+        description: 'Release version type (pre* options for pre-releases)'
         required: true
         type: choice
         options:
           - patch
           - minor
           - major
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
         default: patch
       dry_run:
         description: 'Dry run (show what would happen without publishing)'
         required: false
         type: boolean
         default: false
+
+env:
+  NPM_CONFIG_PROVENANCE: true
 
 jobs:
   release:
@@ -50,6 +57,5 @@ jobs:
       dry_run: ${{ inputs.dry_run }}
     secrets:
       github_bot_token: ${{ secrets.GITHUB_TOKEN }}
-      npm_token: ${{ secrets.NPM_TOKEN }}
       deploy_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
