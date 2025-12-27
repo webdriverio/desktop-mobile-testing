@@ -9,20 +9,20 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 describe('Electron Log Integration - Multiremote', () => {
   it('should capture main process logs per instance with instance ID', async () => {
     const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
-    const app1 = multi.getInstance('app1');
-    const app2 = multi.getInstance('app2');
+    const browserA = multi.getInstance('browserA');
+    const browserB = multi.getInstance('browserB');
 
     // Generate logs on both instances
     await Promise.all([
-      app1.electron.execute(() => {
-        console.info('[Test] Instance app1 main process INFO log');
-        console.warn('[Test] Instance app1 main process WARN log');
-        console.error('[Test] Instance app1 main process ERROR log');
+      browserA.electron.execute(() => {
+        console.info('[Test] Instance browserA main process INFO log');
+        console.warn('[Test] Instance browserA main process WARN log');
+        console.error('[Test] Instance browserA main process ERROR log');
       }),
-      app2.electron.execute(() => {
-        console.info('[Test] Instance app2 main process INFO log');
-        console.warn('[Test] Instance app2 main process WARN log');
-        console.error('[Test] Instance app2 main process ERROR log');
+      browserB.electron.execute(() => {
+        console.info('[Test] Instance browserB main process INFO log');
+        console.warn('[Test] Instance browserB main process WARN log');
+        console.error('[Test] Instance browserB main process ERROR log');
       }),
     ]);
 
@@ -39,31 +39,31 @@ describe('Electron Log Integration - Multiremote', () => {
     }
 
     // Both instances should have main process logs with [Electron:MainProcess:instanceId] prefix
-    assertLogContains(logs, /\[Electron:MainProcess:app1\].*\[Test\].*Instance app1.*INFO/i);
-    assertLogContains(logs, /\[Electron:MainProcess:app2\].*\[Test\].*Instance app2.*INFO/i);
-    assertLogContains(logs, /\[Electron:MainProcess:(app1|app2)\].*\[Test\].*WARN/i);
-    assertLogContains(logs, /\[Electron:MainProcess:(app1|app2)\].*\[Test\].*ERROR/i);
+    assertLogContains(logs, /\[Electron:MainProcess:browserA\].*\[Test\].*Instance browserA.*INFO/i);
+    assertLogContains(logs, /\[Electron:MainProcess:browserB\].*\[Test\].*Instance browserB.*INFO/i);
+    assertLogContains(logs, /\[Electron:MainProcess:(browserA|browserB)\].*\[Test\].*WARN/i);
+    assertLogContains(logs, /\[Electron:MainProcess:(browserA|browserB)\].*\[Test\].*ERROR/i);
 
     // Verify we have logs from both instances with their IDs
-    const mainProcessLogs = findLogEntries(logs, /\[Electron:MainProcess:(app1|app2)\]/i);
+    const mainProcessLogs = findLogEntries(logs, /\[Electron:MainProcess:(browserA|browserB)\]/i);
     console.log(`[DEBUG] Found ${mainProcessLogs.length} main process log entries from both instances`);
     expect(mainProcessLogs.length).toBeGreaterThan(0);
   });
 
   it('should capture renderer logs per instance with instance ID', async () => {
     const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
-    const app1 = multi.getInstance('app1');
-    const app2 = multi.getInstance('app2');
+    const browserA = multi.getInstance('browserA');
+    const browserB = multi.getInstance('browserB');
 
     // Generate renderer logs on both instances
     await Promise.all([
-      app1.execute(() => {
-        console.info('[Test] Instance app1 renderer INFO log');
-        console.warn('[Test] Instance app1 renderer WARN log');
+      browserA.execute(() => {
+        console.info('[Test] Instance browserA renderer INFO log');
+        console.warn('[Test] Instance browserA renderer WARN log');
       }),
-      app2.execute(() => {
-        console.info('[Test] Instance app2 renderer INFO log');
-        console.warn('[Test] Instance app2 renderer WARN log');
+      browserB.execute(() => {
+        console.info('[Test] Instance browserB renderer INFO log');
+        console.warn('[Test] Instance browserB renderer WARN log');
       }),
     ]);
 
@@ -79,26 +79,26 @@ describe('Electron Log Integration - Multiremote', () => {
     }
 
     // Verify both instances' renderer logs are captured with instance IDs
-    assertLogContains(logs, /\[Electron:Renderer:app1\].*\[Test\].*Instance app1 renderer INFO/i);
-    assertLogContains(logs, /\[Electron:Renderer:app2\].*\[Test\].*Instance app2 renderer INFO/i);
+    assertLogContains(logs, /\[Electron:Renderer:browserA\].*\[Test\].*Instance browserA renderer INFO/i);
+    assertLogContains(logs, /\[Electron:Renderer:browserB\].*\[Test\].*Instance browserB renderer INFO/i);
 
-    const rendererLogs = findLogEntries(logs, /\[Electron:Renderer:(app1|app2)\]/i);
+    const rendererLogs = findLogEntries(logs, /\[Electron:Renderer:(browserA|browserB)\]/i);
     console.log(`[DEBUG] Found ${rendererLogs.length} renderer log entries from both instances`);
     expect(rendererLogs.length).toBeGreaterThan(0);
   });
 
   it('should capture logs independently per instance', async () => {
     const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
-    const app1 = multi.getInstance('app1');
-    const app2 = multi.getInstance('app2');
+    const browserA = multi.getInstance('browserA');
+    const browserB = multi.getInstance('browserB');
 
     // Generate different logs on each instance
     await Promise.all([
-      app1.electron.execute(() => {
-        console.info('[Test] App1 main process only log');
+      browserA.electron.execute(() => {
+        console.info('[Test] BrowserA main process only log');
       }),
-      app2.execute(() => {
-        console.info('[Test] App2 renderer only log');
+      browserB.execute(() => {
+        console.info('[Test] BrowserB renderer only log');
       }),
     ]);
 
@@ -113,15 +113,15 @@ describe('Electron Log Integration - Multiremote', () => {
       throw new Error('No logs found in output directory');
     }
 
-    // Instance app1 should have main process logs with instance ID
-    assertLogContains(logs, /\[Electron:MainProcess:app1\].*\[Test\].*App1 main process only log/i);
+    // Instance browserA should have main process logs with instance ID
+    assertLogContains(logs, /\[Electron:MainProcess:browserA\].*\[Test\].*BrowserA main process only log/i);
 
-    // Instance app2 should have renderer logs with instance ID
-    assertLogContains(logs, /\[Electron:Renderer:app2\].*\[Test\].*App2 renderer only log/i);
+    // Instance browserB should have renderer logs with instance ID
+    assertLogContains(logs, /\[Electron:Renderer:browserB\].*\[Test\].*BrowserB renderer only log/i);
 
     // Verify both types exist
-    const mainProcessLogs = findLogEntries(logs, /\[Electron:MainProcess:(app1|app2)\]/i);
-    const rendererLogs = findLogEntries(logs, /\[Electron:Renderer:(app1|app2)\]/i);
+    const mainProcessLogs = findLogEntries(logs, /\[Electron:MainProcess:(browserA|browserB)\]/i);
+    const rendererLogs = findLogEntries(logs, /\[Electron:Renderer:(browserA|browserB)\]/i);
     console.log(`[DEBUG] Found ${mainProcessLogs.length} main process and ${rendererLogs.length} renderer log entries`);
     expect(mainProcessLogs.length).toBeGreaterThan(0);
     expect(rendererLogs.length).toBeGreaterThan(0);
@@ -129,18 +129,18 @@ describe('Electron Log Integration - Multiremote', () => {
 
   it('should apply different log levels per instance', async () => {
     const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
-    const app1 = multi.getInstance('app1');
-    const app2 = multi.getInstance('app2');
+    const browserA = multi.getInstance('browserA');
+    const browserB = multi.getInstance('browserB');
 
     // Generate logs at different levels on both instances
     await Promise.all([
-      app1.electron.execute(() => {
-        console.debug('[Test] App1 DEBUG log');
-        console.info('[Test] App1 INFO log');
+      browserA.electron.execute(() => {
+        console.debug('[Test] BrowserA DEBUG log');
+        console.info('[Test] BrowserA INFO log');
       }),
-      app2.electron.execute(() => {
-        console.debug('[Test] App2 DEBUG log');
-        console.info('[Test] App2 INFO log');
+      browserB.electron.execute(() => {
+        console.debug('[Test] BrowserB DEBUG log');
+        console.info('[Test] BrowserB INFO log');
       }),
     ]);
 
@@ -150,11 +150,11 @@ describe('Electron Log Integration - Multiremote', () => {
     const logs = readWdioLogs(logDir);
 
     // With default 'info' level, DEBUG should be filtered out
-    const debugLogs = findLogEntries(logs, /\[Electron:MainProcess:(app1|app2)\].*DEBUG/i);
+    const debugLogs = findLogEntries(logs, /\[Electron:MainProcess:(browserA|browserB)\].*DEBUG/i);
     expect(debugLogs.length).toBe(0);
 
     // INFO logs should be present for both instances
-    assertLogContains(logs, /\[Electron:MainProcess:app1\].*INFO/i);
-    assertLogContains(logs, /\[Electron:MainProcess:app2\].*INFO/i);
+    assertLogContains(logs, /\[Electron:MainProcess:browserA\].*INFO/i);
+    assertLogContains(logs, /\[Electron:MainProcess:browserB\].*INFO/i);
   });
 });
