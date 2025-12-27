@@ -29,9 +29,6 @@ on:
       github_bot_token:
         description: 'GitHub token for authentication'
         required: true
-      npm_token:
-        description: 'NPM token for publishing packages'
-        required: true
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
@@ -108,7 +105,6 @@ jobs:
       dry_run: ${{ inputs.dry_run }}
     secrets:
       github_bot_token: ${{ secrets.github_bot_token }}
-      npm_token: ${{ secrets.npm_token }}
       deploy_key: ${{ secrets.deploy_key }}
       crates_io_token: ${{ secrets.crates_io_token }}
 

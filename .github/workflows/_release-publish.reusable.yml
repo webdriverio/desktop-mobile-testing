@@ -56,9 +56,6 @@ on:
       github_bot_token:
         description: 'GitHub token for authentication'
         required: true
-      npm_token:
-        description: 'NPM token for publishing packages'
-        required: true
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
@@ -127,8 +124,6 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           pnpm config set registry "https://registry.npmjs.org/"
-          pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.npm_token }}
-          pnpm whoami
 
       - name: Configure Git
         run: |
