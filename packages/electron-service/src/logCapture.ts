@@ -39,7 +39,6 @@ export class LogCaptureManager {
   ): Promise<void> {
     try {
       this.cdpBridge = cdpBridge;
-      this.options = options;
       this.instanceId = instanceId;
 
       // Enable Runtime domain
@@ -56,7 +55,6 @@ export class LogCaptureManager {
       };
 
       // Attach listener to CDP bridge
-      // @ts-expect-error - CDP bridge event types are not fully compatible with strict typing
       cdpBridge.on('Runtime.consoleAPICalled', this.mainProcessListener);
 
       log.debug(`Main process log capture initialized${instanceId ? ` for instance ${instanceId}` : ''}`);
@@ -75,7 +73,6 @@ export class LogCaptureManager {
   ): Promise<void> {
     try {
       this.cdpBridge = cdpBridge;
-      this.options = options;
       this.instanceId = instanceId;
 
       // Enable target discovery
@@ -91,7 +88,6 @@ export class LogCaptureManager {
       };
 
       // Attach listener for target creation
-      // @ts-expect-error - CDP bridge event types are not fully compatible with strict typing
       cdpBridge.on('Target.targetCreated', this.targetCreatedListener);
 
       log.debug(`Renderer process log capture initialized${instanceId ? ` for instance ${instanceId}` : ''}`);
@@ -143,7 +139,6 @@ export class LogCaptureManager {
       };
 
       // Attach listener
-      // @ts-expect-error - CDP bridge event types are not fully compatible with strict typing
       this.cdpBridge.on('Runtime.consoleAPICalled', listener);
 
       // Store listener for cleanup
@@ -168,21 +163,18 @@ export class LogCaptureManager {
     try {
       // Remove main process listener
       if (this.mainProcessListener) {
-        // @ts-expect-error - CDP bridge event types are not fully compatible with strict typing
         this.cdpBridge.off('Runtime.consoleAPICalled', this.mainProcessListener);
         this.mainProcessListener = undefined;
       }
 
       // Remove renderer listeners
       for (const listener of this.rendererListeners.values()) {
-        // @ts-expect-error - CDP bridge event types are not fully compatible with strict typing
         this.cdpBridge.off('Runtime.consoleAPICalled', listener);
       }
       this.rendererListeners.clear();
 
       // Remove target created listener
       if (this.targetCreatedListener) {
-        // @ts-expect-error - CDP bridge event types are not fully compatible with strict typing
         this.cdpBridge.off('Target.targetCreated', this.targetCreatedListener);
         this.targetCreatedListener = undefined;
       }
@@ -193,7 +185,6 @@ export class LogCaptureManager {
     }
 
     this.cdpBridge = undefined;
-    this.options = undefined;
     this.instanceId = undefined;
   }
 }
