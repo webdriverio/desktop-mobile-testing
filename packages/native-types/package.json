@@ -48,7 +48,7 @@
     "typescript": "^5.9.3",
     "webdriverio": "catalog:default"
   },
-  "files": ["dist/*"],
+  "files": ["dist/**/*", "LICENSE"],
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile-testing.git",

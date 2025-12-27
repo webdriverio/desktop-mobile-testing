@@ -58,9 +58,10 @@
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
+  "files": ["dist/**/*", "LICENSE"],
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
-    "directory": "packages/electron-utils"
+    "directory": "packages/native-utils"
   }
 }
