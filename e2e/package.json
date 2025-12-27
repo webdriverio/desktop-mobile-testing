@@ -34,7 +34,7 @@
     "@wdio/mocha-framework": "catalog:default",
     "@wdio/xvfb": "catalog:default",
     "electron": "catalog:default",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "webdriverio": "catalog:default"
   },
   "devDependencies": {
