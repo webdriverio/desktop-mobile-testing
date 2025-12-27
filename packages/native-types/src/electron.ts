@@ -103,11 +103,43 @@ export interface ElectronServiceOptions {
    * Calls .mockRestore() on all mocked APIs before each test. This will restore the original API function, the mock will be removed.
    */
   restoreMocks?: boolean;
+  /**
+   * Enable capture of main process console logs via CDP
+   * @default false
+   */
+  captureMainProcessLogs?: boolean;
+  /**
+   * Enable capture of renderer process console logs via CDP
+   * @default false
+   */
+  captureRendererLogs?: boolean;
+  /**
+   * Minimum log level for main process logs
+   * @default 'info'
+   */
+  mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Minimum log level for renderer process logs
+   * @default 'info'
+   */
+  rendererLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Directory for standalone mode logs (when WDIO runner not available)
+   * @default './logs'
+   */
+  logDir?: string;
 }
 
 export type ElectronServiceGlobalOptions = Pick<
   ElectronServiceOptions,
-  'clearMocks' | 'resetMocks' | 'restoreMocks'
+  | 'clearMocks'
+  | 'resetMocks'
+  | 'restoreMocks'
+  | 'captureMainProcessLogs'
+  | 'captureRendererLogs'
+  | 'mainProcessLogLevel'
+  | 'rendererLogLevel'
+  | 'logDir'
 > & {
   rootDir?: string;
   /**

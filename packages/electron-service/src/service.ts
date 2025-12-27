@@ -19,6 +19,7 @@ import { resetAllMocks } from './commands/resetAllMocks.js';
 import { restoreAllMocks } from './commands/restoreAllMocks.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
 import { checkInspectFuse } from './fuses.js';
+import { LogCaptureManager, type LogCaptureOptions } from './logCapture.js';
 import mockStore from './mockStore.js';
 import { ServiceConfig } from './serviceConfig.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
@@ -30,6 +31,8 @@ const isInternalCommand = (args: unknown[]) => Boolean((args.at(-1) as ExecuteOp
 type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 
 export default class ElectronWorkerService extends ServiceConfig implements Services.ServiceInstance {
+  private logCaptureManager?: LogCaptureManager;
+
   constructor(
     globalOptions: ElectronServiceGlobalOptions = {},
     capabilities: WebdriverIO.Capabilities,
@@ -47,6 +50,11 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
 
     this.browser = instance as WebdriverIO.Browser;
     const cdpBridge = this.browser.isMultiremote ? undefined : await initCdpBridge(this.cdpOptions, capabilities);
+
+    // Initialize log capture if enabled
+    if (this.shouldCaptureElectronLogs() && cdpBridge) {
+      await this.initializeLogCapture(cdpBridge);
+    }
 
     /**
      * Add electron API to browser object
@@ -98,6 +106,12 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         }
 
         const mrCdpBridge = await initCdpBridge(this.cdpOptions, caps);
+
+        // Initialize log capture for this multiremote instance
+        if (this.shouldCaptureElectronLogs() && mrCdpBridge) {
+          await this.initializeLogCapture(mrCdpBridge, instance);
+        }
+
         mrInstance.electron = getElectronAPI.call(this, mrInstance, mrCdpBridge);
 
         const mrPuppeteer = await getPuppeteer(mrInstance);
@@ -147,6 +161,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   }
 
   after() {
+    this.logCaptureManager?.stopCapture();
     clearPuppeteerSessions();
   }
 
@@ -181,6 +196,40 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
       browser.overwriteCommand(commandName, testOverride, true);
     } catch {
       // ignore
+    }
+  }
+
+  /**
+   * Check if Electron log capture is enabled
+   */
+  private shouldCaptureElectronLogs(): boolean {
+    return !!(this.globalOptions.captureMainProcessLogs || this.globalOptions.captureRendererLogs);
+  }
+
+  /**
+   * Initialize log capture for Electron processes
+   */
+  private async initializeLogCapture(cdpBridge: ElectronCdpBridge, instanceId?: string): Promise<void> {
+    try {
+      const logOptions: LogCaptureOptions = {
+        captureMainProcessLogs: this.globalOptions.captureMainProcessLogs ?? false,
+        captureRendererLogs: this.globalOptions.captureRendererLogs ?? false,
+        mainProcessLogLevel: this.globalOptions.mainProcessLogLevel ?? 'info',
+        rendererLogLevel: this.globalOptions.rendererLogLevel ?? 'info',
+        logDir: this.globalOptions.logDir,
+      };
+
+      this.logCaptureManager = new LogCaptureManager();
+
+      if (logOptions.captureMainProcessLogs) {
+        await this.logCaptureManager.captureMainProcessLogs(cdpBridge, logOptions, instanceId);
+      }
+
+      if (logOptions.captureRendererLogs) {
+        await this.logCaptureManager.captureRendererLogs(cdpBridge, logOptions, instanceId);
+      }
+    } catch (error) {
+      log.warn('Failed to initialize log capture:', error);
     }
   }
 }
