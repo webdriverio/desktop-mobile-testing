@@ -137,6 +137,11 @@ type ElectronCapability = {
     appEntryPoint?: string;
     appBinaryPath?: string;
     appArgs: string[];
+    apparmorAutoInstall?: string;
+    captureMainProcessLogs?: boolean;
+    captureRendererLogs?: boolean;
+    mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+    rendererLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   };
 };
 
@@ -163,6 +168,10 @@ if (envContext.isMultiremote) {
           ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=A'],
           apparmorAutoInstall: 'sudo',
+          captureMainProcessLogs: true,
+          captureRendererLogs: true,
+          mainProcessLogLevel: 'info',
+          rendererLogLevel: 'info',
         },
       },
     },
@@ -173,6 +182,10 @@ if (envContext.isMultiremote) {
           ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=B'],
           apparmorAutoInstall: 'sudo',
+          captureMainProcessLogs: true,
+          captureRendererLogs: true,
+          mainProcessLogLevel: 'info',
+          rendererLogLevel: 'info',
         },
       },
     },

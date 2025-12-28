@@ -16,8 +16,9 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 process.env.TEST = 'true';
 
-// Electron app directory
-const appDir = path.join(__dirname, '..', '..', '..', '..', 'fixtures', 'e2e-apps', 'electron');
+// Electron app directory - use APP_DIR env var or default to electron-builder
+const defaultAppDir = path.join(__dirname, '..', '..', '..', '..', 'fixtures', 'e2e-apps', 'electron-builder');
+const appDir = process.env.APP_DIR || defaultAppDir;
 
 if (!fs.existsSync(appDir)) {
   throw new Error(`Electron app directory not found: ${appDir}`);
@@ -32,15 +33,19 @@ const sessionOptions = createElectronCapabilities(appBinaryPath, appDir, {
 });
 
 // Enable log capture
-if (sessionOptions['wdio:electronServiceOptions']) {
-  sessionOptions['wdio:electronServiceOptions'].captureMainProcessLogs = true;
-  sessionOptions['wdio:electronServiceOptions'].captureRendererLogs = true;
-  sessionOptions['wdio:electronServiceOptions'].mainProcessLogLevel = 'info';
-  sessionOptions['wdio:electronServiceOptions'].rendererLogLevel = 'info';
+const serviceOptions = (sessionOptions as Record<string, unknown>)['wdio:electronServiceOptions'] as Record<
+  string,
+  unknown
+>;
+if (serviceOptions) {
+  serviceOptions.captureMainProcessLogs = true;
+  serviceOptions.captureRendererLogs = true;
+  serviceOptions.mainProcessLogLevel = 'info';
+  serviceOptions.rendererLogLevel = 'info';
   // Set log directory - full path where logs should be written
   const appDirName = path.basename(appDir);
   const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
-  sessionOptions['wdio:electronServiceOptions'].logDir = logDir;
+  serviceOptions.logDir = logDir;
   console.log(`[DEBUG] Setting logDir to: ${logDir}`);
 }
 

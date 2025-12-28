@@ -17,19 +17,10 @@ process.env.TEST = 'true';
 const isBinary = process.env.BINARY !== 'false';
 console.log('🔍 Debug: Starting standalone test with binary mode:', isBinary);
 
-const exampleDir = process.env.EXAMPLE_DIR || 'forge-esm';
-// Fixed path to use correct fixtures/electron-apps location
-const packageJsonPath = path.join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'fixtures',
-  'e2e-apps',
-  exampleDir,
-  'package.json',
-);
+// Use APP_DIR env var or default to electron-forge
+const defaultAppDir = path.join(__dirname, '..', '..', '..', '..', 'fixtures', 'e2e-apps', 'electron-forge');
+const appDir = process.env.APP_DIR || defaultAppDir;
+const packageJsonPath = path.join(appDir, 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, { encoding: 'utf-8' })) as NormalizedPackageJson;
 const pkg = { packageJson, path: packageJsonPath };
 const electronVersion = await getElectronVersion(pkg);
@@ -53,18 +44,7 @@ if (isBinary) {
   };
 } else {
   // No-binary mode - use appEntryPoint
-  const appEntryPoint = path.join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    'fixtures',
-    'e2e-apps',
-    exampleDir,
-    'dist',
-    'main.js',
-  );
+  const appEntryPoint = path.join(appDir, 'dist', 'main.js');
   console.log('Using app entry point:', appEntryPoint);
 
   if (!fs.existsSync(appEntryPoint)) {

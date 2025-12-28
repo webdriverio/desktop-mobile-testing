@@ -190,7 +190,6 @@ async function runTest(
       TEST_TYPE: variant.testType,
       BINARY: variant.binary ? 'true' : 'false',
       APP_DIR: appPath,
-      EXAMPLE_DIR: appDirName,
     });
 
     // Enable splash screen for window tests
