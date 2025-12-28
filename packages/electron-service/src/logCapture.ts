@@ -78,6 +78,16 @@ export class LogCaptureManager {
       // Enable target discovery
       await cdpBridge.send('Target.setDiscoverTargets', { discover: true });
 
+      // Get existing targets and attach to them
+      const targetsResult = await cdpBridge.send('Target.getTargets', {});
+      const targets = (targetsResult as { targetInfos?: TargetInfo[] })?.targetInfos || [];
+
+      for (const targetInfo of targets) {
+        if (targetInfo.type === 'page') {
+          await this.attachToRendererTarget(targetInfo.targetId, options, instanceId);
+        }
+      }
+
       // Create listener for new targets
       this.targetCreatedListener = async (targetInfo: unknown) => {
         const info = targetInfo as TargetInfo;
@@ -122,8 +132,8 @@ export class LogCaptureManager {
         return;
       }
 
-      // Enable Runtime domain on this session
-      await this.cdpBridge.send('Runtime.enable');
+      // Note: Runtime.enable was already called on the main session
+      // In flatten mode, events from all sessions are forwarded with a sessionId parameter
 
       // Create listener for this specific renderer session
       const listener = (event: unknown, sid?: string) => {
