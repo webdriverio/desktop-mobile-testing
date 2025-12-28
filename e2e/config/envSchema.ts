@@ -26,7 +26,6 @@ export const EnvSchema = z.object({
 
   // App directory override (for testing)
   APP_DIR: z.string().optional(),
-  EXAMPLE_DIR: z.string().optional(),
 });
 
 export type TestEnvironment = z.infer<typeof EnvSchema>;
@@ -103,10 +102,6 @@ export class EnvironmentContext {
    * Get the app directory name for this environment
    */
   get appDirName(): string {
-    if (this.env.EXAMPLE_DIR) {
-      return this.env.EXAMPLE_DIR;
-    }
-
     return getE2EAppDirName(this.framework, this.app, this.isNoBinary);
   }
 
@@ -115,7 +110,7 @@ export class EnvironmentContext {
    */
   get appDirPath(): string {
     const fixturesDir = 'e2e-apps';
-    const appDirName = getE2EAppDirName(this.framework, this.app, this.moduleType, this.isNoBinary);
+    const appDirName = getE2EAppDirName(this.framework, this.app, this.isNoBinary);
     return path.join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
   }
 
@@ -170,7 +165,6 @@ export class EnvironmentContext {
       TEST_TYPE: merged.TEST_TYPE,
       BINARY: merged.BINARY,
       APP_DIR: merged.APP_DIR || '',
-      EXAMPLE_DIR: merged.EXAMPLE_DIR || this.appDirName,
       ...(merged.MAC_UNIVERSAL === 'true' && { MAC_UNIVERSAL: 'true' }),
       ...(merged.ENABLE_SPLASH_WINDOW === 'true' && { ENABLE_SPLASH_WINDOW: 'true' }),
       ...(merged.WDIO_VERBOSE === 'true' && { WDIO_VERBOSE: 'true' }),
