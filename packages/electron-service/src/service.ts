@@ -219,7 +219,10 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         logDir: this.globalOptions.logDir,
       };
 
-      this.logCaptureManager = new LogCaptureManager();
+      // Create log capture manager only once (for multiremote, reuse the same instance)
+      if (!this.logCaptureManager) {
+        this.logCaptureManager = new LogCaptureManager();
+      }
 
       if (logOptions.captureMainProcessLogs) {
         await this.logCaptureManager.captureMainProcessLogs(cdpBridge, logOptions, instanceId);

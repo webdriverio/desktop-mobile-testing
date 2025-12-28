@@ -43,13 +43,13 @@ export async function init(
   }
 
   const testRunnerOpts: Options.Testrunner = (globalOptions?.rootDir
-    ? { rootDir: globalOptions.rootDir, capabilities: [] }
-    : { capabilities: [] }) as unknown as Options.Testrunner;
+    ? { rootDir: globalOptions.rootDir }
+    : {}) as unknown as Options.Testrunner;
   const launcher = new ElectronLaunchService(globalOptions || {}, capabilities, testRunnerOpts);
 
   await launcher.onPrepare(testRunnerOpts, capabilities);
 
-  await launcher.onWorkerStart('standalone', capabilities as WebdriverIO.Capabilities);
+  await launcher.onWorkerStart('', capabilities as WebdriverIO.Capabilities);
 
   log.debug('Session capabilities:', JSON.stringify(capabilities, null, 2));
 
@@ -103,6 +103,7 @@ export function createElectronCapabilities(
   } = {},
 ): ElectronServiceCapabilities {
   return {
+    browserName: 'electron',
     'goog:chromeOptions': {
       binary: appBinaryPath,
       args: options.appArgs || [],

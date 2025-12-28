@@ -126,6 +126,7 @@ switch (envContext.testType) {
       './test/electron/application.spec.ts',
       './test/electron/dom.spec.ts',
       './test/electron/interaction.spec.ts',
+      './test/electron/logging.spec.ts',
     ];
     break;
 }
@@ -199,6 +200,10 @@ if (envContext.isMultiremote) {
         ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
         appArgs: ['foo', 'bar=baz'],
         apparmorAutoInstall: 'sudo',
+        captureMainProcessLogs: true,
+        captureRendererLogs: true,
+        mainProcessLogLevel: 'info',
+        rendererLogLevel: 'info',
       },
     },
   ];
