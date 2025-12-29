@@ -61,15 +61,18 @@ const browser = await startWdioSession([{
   }
 }]);
 
-// Your test code - logs are being captured
-await browser.electron.execute(() => {
-  console.log('[Main] Application started');
-  console.warn('[Main] Using deprecated API');
+// Execute code in the main process - logs will be captured with [Electron:MainProcess] prefix
+await browser.electron.execute((electron) => {
+  console.log('Application initialized');
+  console.info('App name:', electron.app.getName());
+  console.warn('Using deprecated API in production build');
 });
 
+// Execute code in the renderer process - logs will be captured with [Electron:Renderer] prefix
 await browser.execute(() => {
-  console.log('[Renderer] Page loaded');
-  console.error('[Renderer] Failed to fetch data');
+  console.log('Page loaded successfully');
+  console.debug('Window dimensions:', window.innerWidth, window.innerHeight);
+  console.error('Failed to fetch user data from API');
 });
 
 // Cleanup - closes log file
@@ -81,10 +84,12 @@ await cleanupWdioSession(browser);
 Logs are written to `{logDir}/wdio-{timestamp}.log`:
 
 ```
-2025-12-29T19:07:00.123Z INFO electron-service:service: [Electron:MainProcess] [Main] Application started
-2025-12-29T19:07:00.456Z WARN electron-service:service: [Electron:MainProcess] [Main] Using deprecated API
-2025-12-29T19:07:01.123Z INFO electron-service:service: [Electron:Renderer] [Renderer] Page loaded
-2025-12-29T19:07:01.456Z ERROR electron-service:service: [Electron:Renderer] [Renderer] Failed to fetch data
+2025-12-29T19:07:00.123Z INFO electron-service:service: [Electron:MainProcess] Application initialized
+2025-12-29T19:07:00.234Z INFO electron-service:service: [Electron:MainProcess] App name: MyElectronApp
+2025-12-29T19:07:00.456Z WARN electron-service:service: [Electron:MainProcess] Using deprecated API in production build
+2025-12-29T19:07:01.123Z INFO electron-service:service: [Electron:Renderer] Page loaded successfully
+2025-12-29T19:07:01.234Z DEBUG electron-service:service: [Electron:Renderer] Window dimensions: 1920 1080
+2025-12-29T19:07:01.456Z ERROR electron-service:service: [Electron:Renderer] Failed to fetch user data from API
 ```
 
 ### Log Level Filtering
