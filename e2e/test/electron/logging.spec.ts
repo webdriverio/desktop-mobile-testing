@@ -9,16 +9,12 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 describe('Electron Log Integration', () => {
   describe('Main Process Log Capture', () => {
     it('should capture main process logs when enabled', async () => {
-      console.log('[DEBUG] About to trigger main process console logs');
-
       // Trigger main process logs via electron.execute
       await browser.electron.execute(() => {
         console.info('[Test] Main process INFO log');
         console.warn('[Test] Main process WARN log');
         console.error('[Test] Main process ERROR log');
       });
-
-      console.log('[DEBUG] Main process logs executed');
 
       // Wait for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -58,16 +54,12 @@ describe('Electron Log Integration', () => {
 
   describe('Renderer Process Log Capture', () => {
     it('should capture renderer console logs when enabled', async () => {
-      console.log('[DEBUG] About to trigger renderer console logs');
-
       // Trigger renderer logs via browser.execute
       await browser.execute(() => {
         console.info('[Test] Renderer INFO log');
         console.warn('[Test] Renderer WARN log');
         console.error('[Test] Renderer ERROR log');
       });
-
-      console.log('[DEBUG] Renderer logs executed');
 
       // Wait for logs to be captured and written to disk
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -113,8 +105,6 @@ describe('Electron Log Integration', () => {
 
   describe('Combined Log Capture', () => {
     it('should capture both main and renderer logs simultaneously', async () => {
-      console.log('[DEBUG] Triggering both main and renderer logs');
-
       // Trigger main process log
       await browser.electron.execute(() => {
         console.info('[Test] Combined main process log');
