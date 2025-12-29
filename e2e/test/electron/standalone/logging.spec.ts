@@ -1,95 +1,28 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
 import url from 'node:url';
-import {
-  cleanupWdioSession,
-  createElectronCapabilities,
-  getElectronBinaryPath,
-  startWdioSession,
-} from '@wdio/electron-service';
-import type { ElectronServiceOptions } from '@wdio/native-types';
-import type { Capabilities } from '@wdio/types';
-import { xvfb } from '@wdio/xvfb';
 import { assertLogContains, assertLogDoesNotContain, readWdioLogs } from '../helpers/logging.js';
+import { setupStandaloneTest } from './helpers/setup.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-process.env.TEST = 'true';
-
-// Electron app directory - use APP_DIR env var or default to electron-builder
-const defaultAppDir = path.join(__dirname, '..', '..', '..', '..', 'fixtures', 'e2e-apps', 'electron-builder');
-const appDir = process.env.APP_DIR || defaultAppDir;
-
-if (!fs.existsSync(appDir)) {
-  throw new Error(`Electron app directory not found: ${appDir}`);
-}
-
-// Determine if this is a no-binary app (has dist/main.js instead of a built binary)
-const appDirName = path.basename(appDir);
-const isNoBinary = appDirName.includes('no-binary');
-const entryPoint = path.join(appDir, 'dist', 'main.js');
-
-// Type for individual standalone capability (before wrapping in array)
-type StandaloneCapability = Capabilities.RequestedStandaloneCapabilities & {
-  'wdio:electronServiceOptions'?: ElectronServiceOptions;
-};
-
-let sessionOptions: StandaloneCapability;
-
-if (isNoBinary && fs.existsSync(entryPoint)) {
-  // No-binary mode: use entry point
-  sessionOptions = {
-    browserName: 'electron',
-    'wdio:electronServiceOptions': {
-      appEntryPoint: entryPoint,
-      appArgs: ['foo', 'bar=baz'],
-    },
-  };
-} else {
-  // Binary mode: resolve binary path
-  const appBinaryPath = await getElectronBinaryPath(appDir);
-  const capabilities = createElectronCapabilities(appBinaryPath, appDir, {
-    appArgs: ['foo', 'bar=baz'],
-  });
-  // createElectronCapabilities returns an array, unwrap it
-  sessionOptions = Array.isArray(capabilities) ? capabilities[0] : capabilities;
-}
-
-// Enable log capture
-const serviceOptions = (sessionOptions as Record<string, unknown>)['wdio:electronServiceOptions'] as Record<
-  string,
-  unknown
->;
-if (serviceOptions) {
-  serviceOptions.captureMainProcessLogs = true;
-  serviceOptions.captureRendererLogs = true;
-  serviceOptions.mainProcessLogLevel = 'info';
-  serviceOptions.rendererLogLevel = 'info';
-  // Set log directory - full path where logs should be written
-  const appDirName = path.basename(appDir);
-  const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
-  serviceOptions.logDir = logDir;
-}
-
-// Initialize xvfb if running on Linux
-if (process.platform === 'linux') {
-  await xvfb.init();
-}
+// Determine log directory based on app
+const appDirName = path.basename(process.env.APP_DIR || 'electron-builder');
+const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
 
 console.log('🔍 Debug: Starting Electron standalone logging test');
 
-const browser = await startWdioSession([sessionOptions]);
-
-// Wait a moment to ensure browser is fully initialized
-await new Promise((resolve) => setTimeout(resolve, 1000));
+// Set up standalone test session with log capture enabled
+const { browser, cleanup } = await setupStandaloneTest({
+  logConfig: {
+    captureMainProcessLogs: true,
+    captureRendererLogs: true,
+    mainProcessLogLevel: 'info',
+    rendererLogLevel: 'info',
+    logDir,
+  },
+});
 
 try {
-  // For standalone tests, logs go to logs/standalone-{appDirName}/
-  // Since standalone tests don't run through WDIO, we need to construct the path manually
-  const appDirName = path.basename(appDir);
-  const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
-
   // Test 1: Capture main process logs in standalone session
   console.log('Test 1: Main process logs...');
   await browser.electron.execute(() => {
@@ -149,12 +82,10 @@ try {
 } catch (error) {
   console.error('❌ Test failed:', error);
   // Clean up before exiting with error
-  await browser.deleteSession();
-  await cleanupWdioSession(browser);
+  await cleanup();
   process.exit(1);
 }
 
 // Clean up - quit the app
-await browser.deleteSession();
-await cleanupWdioSession(browser);
+await cleanup();
 console.log('✅ Cleanup complete');
