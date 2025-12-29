@@ -87,7 +87,7 @@ export async function cleanup(browser: WebdriverIO.Browser): Promise<void> {
   if (launcher) {
     // Close standalone log writer
     const writer = getStandaloneLogWriter();
-    writer.close();
+    await writer.close();
 
     // Remove from active launchers
     activeLaunchers.delete(browser);

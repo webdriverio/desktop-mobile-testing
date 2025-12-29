@@ -47,12 +47,19 @@ export class StandaloneLogWriter {
 
   /**
    * Close log stream
+   * Waits for the stream to finish writing before resolving
    */
-  close(): void {
-    if (this.logStream) {
-      this.logStream.end();
-      this.logStream = undefined;
-    }
+  close(): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.logStream) {
+        this.logStream.end(() => {
+          this.logStream = undefined;
+          resolve();
+        });
+      } else {
+        resolve();
+      }
+    });
   }
 
   /**

@@ -21,7 +21,7 @@ describe('logWriter', () => {
   });
 
   describe('StandaloneLogWriter', () => {
-    it('should initialize with log directory', () => {
+    it('should initialize with log directory', async () => {
       const writer = new StandaloneLogWriter();
       writer.initialize(testLogDir);
 
@@ -29,10 +29,10 @@ describe('logWriter', () => {
       expect(writer.getLogDir()).toBe(testLogDir);
       expect(writer.getLogFile()).toBeDefined();
 
-      writer.close();
+      await writer.close();
     });
 
-    it('should create log file with timestamp', () => {
+    it('should create log file with timestamp', async () => {
       const writer = new StandaloneLogWriter();
       writer.initialize(testLogDir);
 
@@ -40,17 +40,17 @@ describe('logWriter', () => {
       expect(logFile).toBeDefined();
       expect(logFile).toMatch(/wdio-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/);
 
-      writer.close();
+      await writer.close();
     });
 
-    it('should create nested directories recursively', () => {
+    it('should create nested directories recursively', async () => {
       const nestedDir = join(testLogDir, 'nested', 'dirs');
       const writer = new StandaloneLogWriter();
       writer.initialize(nestedDir);
 
       expect(existsSync(nestedDir)).toBe(true);
 
-      writer.close();
+      await writer.close();
     });
 
     it('should write log messages to file', async () => {
@@ -59,10 +59,7 @@ describe('logWriter', () => {
 
       writer.write('Test message 1');
       writer.write('Test message 2');
-
-      // Wait for writes to flush
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      writer.close();
+      await writer.close();
 
       const logFile = writer.getLogFile();
       expect(logFile).toBeDefined();
@@ -77,10 +74,7 @@ describe('logWriter', () => {
       writer.initialize(testLogDir);
 
       writer.write('Test message');
-
-      // Wait for writes to flush
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      writer.close();
+      await writer.close();
 
       const logFile = writer.getLogFile();
       const content = readFileSync(logFile!, 'utf-8');
@@ -106,10 +100,7 @@ describe('logWriter', () => {
       writer.initialize(testLogDir);
 
       writer.write('Test message');
-
-      // Wait for writes to flush
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      writer.close();
+      await writer.close();
 
       // Should be able to read file after closing
       const logFile = writer.getLogFile();
@@ -125,10 +116,7 @@ describe('logWriter', () => {
       for (let i = 0; i < 100; i++) {
         writer.write(`Message ${i}`);
       }
-
-      // Wait for writes to flush
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      writer.close();
+      await writer.close();
 
       const logFile = writer.getLogFile();
       const content = readFileSync(logFile!, 'utf-8');
@@ -169,13 +157,13 @@ describe('logWriter', () => {
       expect(isStandaloneLogWriterInitialized()).toBe(false);
     });
 
-    it('should return true when initialized', () => {
+    it('should return true when initialized', async () => {
       const writer = getStandaloneLogWriter();
       writer.initialize(testLogDir);
 
       expect(isStandaloneLogWriterInitialized()).toBe(true);
 
-      writer.close();
+      await writer.close();
     });
   });
 });
