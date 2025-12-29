@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { init } from '../src/session.js';
 
@@ -30,7 +30,7 @@ vi.mock('webdriverio', () => ({
 
 describe('Session Management', () => {
   describe('init()', () => {
-    beforeAll(() => {
+    beforeEach(() => {
       vi.clearAllMocks();
     });
     it('should create a new browser session', async () => {

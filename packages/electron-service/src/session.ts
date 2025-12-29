@@ -55,7 +55,8 @@ export async function init(
   // onPrepare expects array or multiremote format, so wrap as array
   await launcher.onPrepare(testRunnerOpts, [capability] as ElectronServiceCapabilities);
 
-  await launcher.onWorkerStart('', capability as WebdriverIO.Capabilities);
+  // onWorkerStart also expects array format for consistency
+  await launcher.onWorkerStart('', [capability] as WebdriverIO.Capabilities);
 
   log.debug('Session capabilities:', JSON.stringify(capability, null, 2));
 
