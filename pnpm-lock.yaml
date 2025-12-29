@@ -25,7 +25,7 @@ catalogs:
       specifier: ^9.20.0
       version: 9.20.0
     '@wdio/types':
-      specifier: ^9.20.0
+      specifier: 9.20.0
       version: 9.20.0
     '@wdio/xvfb':
       specifier: ^9.20.0
@@ -138,6 +138,9 @@ importers:
       '@wdio/native-types':
         specifier: workspace:*
         version: link:../packages/native-types
+      '@wdio/types':
+        specifier: 'catalog:'
+        version: 9.20.0
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
