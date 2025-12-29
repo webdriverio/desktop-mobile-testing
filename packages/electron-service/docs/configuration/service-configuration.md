@@ -159,6 +159,192 @@ Default: `false`
 
 **Note:** This feature requires appropriate system permissions. When enabled, the service will attempt to create and load a custom AppArmor profile for your Electron binary if the system has AppArmor restrictions that would prevent Electron from starting.
 
+### `captureMainProcessLogs`:
+
+Enable capture of Electron main process console logs. When enabled, console output from `console.log()`, `console.warn()`, `console.error()`, etc. in the main process will be forwarded to WDIO logs with the `[Electron:MainProcess]` prefix.
+
+Uses Chrome DevTools Protocol (CDP) `Runtime.consoleAPICalled` events to capture logs in real-time. Requires the `EnableNodeCliInspectArguments` Electron fuse to be enabled.
+
+Type: `boolean`
+Default: `false`
+
+Example:
+
+```ts
+export const config = {
+  services: [
+    ['electron', {
+      captureMainProcessLogs: true,
+      mainProcessLogLevel: 'info'
+    }]
+  ]
+};
+```
+
+### `captureRendererLogs`:
+
+Enable capture of Electron renderer process console logs. When enabled, console output from `console.log()`, `console.warn()`, `console.error()`, etc. in renderer processes (browser windows) will be forwarded to WDIO logs with the `[Electron:Renderer]` prefix.
+
+Uses Puppeteer CDP sessions to capture logs from all renderer targets. Unlike main process logs, renderer logs work independently and do NOT require the `EnableNodeCliInspectArguments` fuse or main process CDP bridge.
+
+Type: `boolean`
+Default: `false`
+
+Example:
+
+```ts
+export const config = {
+  services: [
+    ['electron', {
+      captureRendererLogs: true,
+      rendererLogLevel: 'info'
+    }]
+  ]
+};
+```
+
+### `mainProcessLogLevel`:
+
+Minimum log level for main process logs. Only logs at or above this level will be captured and forwarded.
+
+Log level priority (from lowest to highest): `trace` < `debug` < `info` < `warn` < `error`
+
+Type: `'trace' | 'debug' | 'info' | 'warn' | 'error'`
+Default: `'info'`
+
+Example:
+
+```ts
+export const config = {
+  services: [
+    ['electron', {
+      captureMainProcessLogs: true,
+      mainProcessLogLevel: 'warn' // Only capture warn and error logs
+    }]
+  ]
+};
+```
+
+### `rendererLogLevel`:
+
+Minimum log level for renderer process logs. Only logs at or above this level will be captured and forwarded.
+
+Log level priority (from lowest to highest): `trace` < `debug` < `info` < `warn` < `error`
+
+Type: `'trace' | 'debug' | 'info' | 'warn' | 'error'`
+Default: `'info'`
+
+Example:
+
+```ts
+export const config = {
+  services: [
+    ['electron', {
+      captureRendererLogs: true,
+      rendererLogLevel: 'debug' // Capture debug, info, warn, and error logs
+    }]
+  ]
+};
+```
+
+### `logDir`:
+
+Directory path for log file output in standalone mode. When using `startWdioSession()` without the WDIO test runner, logs will be written to timestamped files in this directory instead of being forwarded to the WDIO logger.
+
+In test runner mode (normal WDIO usage), this option is ignored and logs are forwarded to the WDIO logger under your configured `outputDir`.
+
+Type: `string`
+Default: `undefined` (no file logging)
+
+Example:
+
+```ts
+import { startWdioSession } from '@wdio/electron-service';
+
+const browser = await startWdioSession([{
+  browserName: 'electron',
+  'wdio:electronServiceOptions': {
+    appBinaryPath: '/path/to/binary',
+    captureMainProcessLogs: true,
+    captureRendererLogs: true,
+    logDir: './logs'  // Logs written to ./logs/wdio-{timestamp}.log
+  }
+}]);
+```
+
+## Log Output Format
+
+### Test Runner Mode
+
+Logs are forwarded to WDIO's logger and appear in your test output with appropriate prefixes:
+
+```
+[Electron:MainProcess] Application started
+[Electron:Renderer] Page loaded successfully
+[Electron:MainProcess:app1] Multiremote instance log
+```
+
+### Standalone Mode
+
+Logs are written to timestamped files with full metadata:
+
+```
+2025-12-29T19:07:00.123Z INFO electron-service:service: [Electron:MainProcess] Application started
+2025-12-29T19:07:01.456Z WARN electron-service:service: [Electron:Renderer] Deprecated API used
+```
+
+## Multiremote Support
+
+When using multiremote configurations, logs automatically include the instance ID:
+
+```ts
+export const config = {
+  capabilities: {
+    app1: {
+      capabilities: {
+        browserName: 'electron',
+        'wdio:electronServiceOptions': {
+          appBinaryPath: '/path/to/app1',
+          captureMainProcessLogs: true
+        }
+      }
+    },
+    app2: {
+      capabilities: {
+        browserName: 'electron',
+        'wdio:electronServiceOptions': {
+          appBinaryPath: '/path/to/app2',
+          captureMainProcessLogs: true
+        }
+      }
+    }
+  }
+};
+```
+
+Output:
+
+```
+[Electron:MainProcess:app1] App 1 started
+[Electron:MainProcess:app2] App 2 started
+```
+
+## Log Capture Requirements
+
+**Main Process Logs:**
+
+- Requires the `EnableNodeCliInspectArguments` Electron fuse to be enabled
+- Requires CDP bridge connection to main process
+- If CDP bridge is unavailable (e.g., fuse disabled), main process log capture will be disabled with a warning
+
+**Renderer Process Logs:**
+
+- Uses Puppeteer CDP sessions - works independently of main process CDP bridge
+- Does NOT require the `EnableNodeCliInspectArguments` fuse
+- Will continue to work even if main process CDP bridge is unavailable
+
+This means you can capture renderer logs even when the CDP bridge is unavailable for the main process.
+
 ## Automatic detection of App binary
 
 The service will automatically determine the path to the Electron binary of your app based on the configuration of supported build tools.
