@@ -89,3 +89,5 @@ try {
 // Clean up - quit the app
 await cleanup();
 console.log('✅ Cleanup complete');
+
+process.exit();
