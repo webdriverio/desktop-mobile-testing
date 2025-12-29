@@ -1,4 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
+import type { CDPSession, Browser as PuppeteerBrowser } from 'puppeteer-core';
 import type { ElectronCdpBridge } from './bridge.js';
 import { forwardLog, type LogLevel, shouldLog } from './logForwarder.js';
 import type { ConsoleAPICalledEvent } from './logParser.js';
@@ -17,15 +18,10 @@ export interface LogCaptureOptions {
 /**
  * Manages CDP event listeners for console log capture
  */
-interface TargetInfo {
-  targetId: string;
-  type: string;
-}
-
 export class LogCaptureManager {
   private mainProcessListener?: (event: unknown, sessionId?: string) => void;
   private rendererListeners: Map<string, (event: unknown, sessionId?: string) => void> = new Map();
-  private targetCreatedListener?: (targetInfo: unknown) => void;
+  private rendererCdpSessions: Map<string, CDPSession> = new Map();
   private cdpBridge?: ElectronCdpBridge;
   private instanceId?: string;
 
@@ -46,17 +42,28 @@ export class LogCaptureManager {
 
       // Create listener for console events
       this.mainProcessListener = (event: unknown) => {
+        console.log('[TRACE] Main process CDP event received:', JSON.stringify(event, null, 2).substring(0, 500));
         const parsed = parseConsoleEvent(event as ConsoleAPICalledEvent, 'main');
+        console.log('[TRACE] Parsed main process log:', parsed);
 
         // Check if we should log this level
         if (shouldLog(parsed.level, options.mainProcessLogLevel)) {
+          console.log('[TRACE] Forwarding main process log:', parsed.level, parsed.message);
           forwardLog('main', parsed.level, parsed.message, options.mainProcessLogLevel, instanceId);
+        } else {
+          console.log(
+            '[TRACE] Filtering out main process log:',
+            parsed.level,
+            'min level:',
+            options.mainProcessLogLevel,
+          );
         }
       };
 
       // Attach listener to CDP bridge
       cdpBridge.on('Runtime.consoleAPICalled', this.mainProcessListener);
 
+      console.log('[TRACE] Main process listener attached to CDP bridge');
       log.debug(`Main process log capture initialized${instanceId ? ` for instance ${instanceId}` : ''}`);
     } catch (error) {
       log.error('Failed to initialize main process log capture:', error);
@@ -64,101 +71,96 @@ export class LogCaptureManager {
   }
 
   /**
-   * Initialize capture for renderer process console logs
+   * Initialize capture for renderer process console logs using Puppeteer
    */
   async captureRendererLogs(
-    cdpBridge: ElectronCdpBridge,
+    puppeteerBrowser: PuppeteerBrowser,
     options: LogCaptureOptions,
     instanceId?: string,
   ): Promise<void> {
+    console.log('[TRACE] captureRendererLogs function ENTERED');
     try {
-      this.cdpBridge = cdpBridge;
+      console.log('[TRACE] captureRendererLogs try block started');
       this.instanceId = instanceId;
 
-      // Enable target discovery
-      await cdpBridge.send('Target.setDiscoverTargets', { discover: true });
+      console.log('[TRACE] Getting page targets from Puppeteer');
+      // Get all existing page targets (renderer windows)
+      const targets = puppeteerBrowser.targets().filter((target) => target.type() === 'page');
+      console.log('[TRACE] Found existing page targets:', targets.length);
 
-      // Get existing targets and attach to them
-      const targetsResult = await cdpBridge.send('Target.getTargets', {});
-      const targets = (targetsResult as { targetInfos?: TargetInfo[] })?.targetInfos || [];
-
-      for (const targetInfo of targets) {
-        if (targetInfo.type === 'page') {
-          await this.attachToRendererTarget(targetInfo.targetId, options, instanceId);
-        }
+      // Attach to existing targets
+      for (const target of targets) {
+        const targetId = (target as unknown as { _targetId: string })._targetId;
+        console.log('[TRACE] Attaching to existing page target:', targetId);
+        await this.attachToPuppeteerTarget(target, options, instanceId);
       }
 
-      // Create listener for new targets
-      this.targetCreatedListener = async (targetInfo: unknown) => {
-        const info = targetInfo as TargetInfo;
-        // Only attach to page targets (renderer windows)
-        if (info.type === 'page') {
-          await this.attachToRendererTarget(info.targetId, options, instanceId);
+      // Listen for new targets
+      puppeteerBrowser.on('targetcreated', async (target) => {
+        if (target.type() === 'page') {
+          const targetId = (target as unknown as { _targetId: string })._targetId;
+          console.log('[TRACE] New page target created:', targetId);
+          await this.attachToPuppeteerTarget(target, options, instanceId);
         }
-      };
+      });
 
-      // Attach listener for target creation
-      cdpBridge.on('Target.targetCreated', this.targetCreatedListener);
-
+      console.log('[TRACE] Renderer log capture initialization complete');
       log.debug(`Renderer process log capture initialized${instanceId ? ` for instance ${instanceId}` : ''}`);
     } catch (error) {
+      console.log('[TRACE] captureRendererLogs caught error:', error);
       log.error('Failed to initialize renderer process log capture:', error);
     }
+    console.log('[TRACE] captureRendererLogs function EXITED');
   }
 
   /**
-   * Attach to a specific renderer target
+   * Attach to a specific Puppeteer target to capture console logs
    */
-  private async attachToRendererTarget(
-    targetId: string,
+  private async attachToPuppeteerTarget(
+    target: import('puppeteer-core').Target,
     options: LogCaptureOptions,
     instanceId?: string,
   ): Promise<void> {
-    if (!this.cdpBridge) {
-      return;
-    }
-
     try {
-      // Attach to the target
-      const result = await this.cdpBridge.send('Target.attachToTarget', {
-        targetId,
-        flatten: true,
-      });
+      const targetId = (target as unknown as { _targetId: string })._targetId;
+      console.log('[TRACE] attachToPuppeteerTarget called for target:', targetId);
 
-      const sessionId = (result as { sessionId?: string })?.sessionId;
+      // Get CDP session for this target
+      const cdpSession = await target.createCDPSession();
+      console.log('[TRACE] CDP session created for target:', targetId);
 
-      if (!sessionId) {
-        log.warn(`Failed to get sessionId for target ${targetId}`);
-        return;
-      }
+      // Enable Runtime domain to receive console events
+      await cdpSession.send('Runtime.enable');
+      console.log('[TRACE] Runtime.enable sent for target:', targetId);
 
-      // Note: Runtime.enable was already called on the main session
-      // In flatten mode, events from all sessions are forwarded with a sessionId parameter
+      // Create listener for console events from this target
+      const listener = (event: unknown) => {
+        const consoleEvent = event as ConsoleAPICalledEvent;
+        console.log('[TRACE] Renderer console event received for target:', targetId, 'type:', consoleEvent.type);
+        const parsed = parseConsoleEvent(consoleEvent, 'renderer');
+        console.log('[TRACE] Parsed renderer log:', parsed);
 
-      // Create listener for this specific renderer session
-      const listener = (event: unknown, sid?: string) => {
-        // Only process events from this specific session
-        if (sid === sessionId) {
-          const parsed = parseConsoleEvent(event as ConsoleAPICalledEvent, 'renderer');
-
-          // Check if we should log this level
-          if (shouldLog(parsed.level, options.rendererLogLevel)) {
-            forwardLog('renderer', parsed.level, parsed.message, options.rendererLogLevel, instanceId);
-          }
+        // Check if we should log this level
+        if (shouldLog(parsed.level, options.rendererLogLevel)) {
+          console.log('[TRACE] Forwarding renderer log:', parsed.level, parsed.message);
+          forwardLog('renderer', parsed.level, parsed.message, options.rendererLogLevel, instanceId);
+        } else {
+          console.log('[TRACE] Filtering out renderer log:', parsed.level, 'min level:', options.rendererLogLevel);
         }
       };
 
-      // Attach listener
-      this.cdpBridge.on('Runtime.consoleAPICalled', listener);
+      // Attach listener to CDP session
+      cdpSession.on('Runtime.consoleAPICalled', listener as (event: unknown, sessionId?: string) => void);
 
-      // Store listener for cleanup
-      this.rendererListeners.set(sessionId, listener);
+      // Store session and listener for cleanup
+      this.rendererCdpSessions.set(targetId, cdpSession);
+      this.rendererListeners.set(targetId, listener);
 
-      log.debug(
-        `Attached to renderer target ${targetId} with session ${sessionId}${instanceId ? ` for instance ${instanceId}` : ''}`,
-      );
+      console.log('[TRACE] Renderer listener attached for target:', targetId);
+      log.debug(`Attached to renderer target ${targetId}${instanceId ? ` for instance ${instanceId}` : ''}`);
     } catch (error) {
-      log.error(`Failed to attach to renderer target ${targetId}:`, error);
+      console.log('[TRACE] Failed to attach to Puppeteer target:', error);
+      log.error(`Failed to attach to Puppeteer target:`, error);
     }
   }
 
@@ -166,28 +168,29 @@ export class LogCaptureManager {
    * Stop all log capture and clean up listeners
    */
   stopCapture(): void {
-    if (!this.cdpBridge) {
-      return;
-    }
-
     try {
       // Remove main process listener
-      if (this.mainProcessListener) {
+      if (this.cdpBridge && this.mainProcessListener) {
         this.cdpBridge.off('Runtime.consoleAPICalled', this.mainProcessListener);
         this.mainProcessListener = undefined;
       }
 
-      // Remove renderer listeners
-      for (const listener of this.rendererListeners.values()) {
-        this.cdpBridge.off('Runtime.consoleAPICalled', listener);
+      // Remove renderer CDP sessions and listeners
+      for (const [targetId, cdpSession] of this.rendererCdpSessions.entries()) {
+        try {
+          const listener = this.rendererListeners.get(targetId);
+          if (listener) {
+            cdpSession.off('Runtime.consoleAPICalled', listener);
+          }
+          cdpSession.detach().catch(() => {
+            // Ignore detach errors
+          });
+        } catch {
+          // Ignore cleanup errors for individual sessions
+        }
       }
+      this.rendererCdpSessions.clear();
       this.rendererListeners.clear();
-
-      // Remove target created listener
-      if (this.targetCreatedListener) {
-        this.cdpBridge.off('Target.targetCreated', this.targetCreatedListener);
-        this.targetCreatedListener = undefined;
-      }
 
       log.debug(`Log capture stopped${this.instanceId ? ` for instance ${this.instanceId}` : ''}`);
     } catch (error) {
