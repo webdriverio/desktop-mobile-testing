@@ -80,8 +80,9 @@ describe('Session Management', () => {
     });
 
     it('should call before with the expected parameters', async () => {
-      await init([{ 'wdio:electronServiceOptions': { appBinaryPath: '/path/to/binary' } }]);
-      expect(beforeMock).toHaveBeenCalledWith({}, [], browserMock);
+      const caps = { 'wdio:electronServiceOptions': { appBinaryPath: '/path/to/binary' } };
+      await init([caps]);
+      expect(beforeMock).toHaveBeenCalledWith(caps, [], browserMock);
     });
   });
 });
