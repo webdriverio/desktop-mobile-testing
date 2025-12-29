@@ -6,7 +6,6 @@ import path from 'node:path';
  */
 export function readWdioLogs(logBaseDir: string): string {
   if (!fs.existsSync(logBaseDir)) {
-    console.log(`[DEBUG] Log base directory does not exist: ${logBaseDir}`);
     return '';
   }
 
@@ -19,18 +18,14 @@ export function readWdioLogs(logBaseDir: string): string {
 
   if (directLogFiles.length > 0) {
     // Standalone mode: read log files directly from base directory
-    console.log(`[DEBUG] Reading logs directly from: ${logBaseDir}`);
-    console.log(`[DEBUG] Found log files: ${directLogFiles.join(', ')}`);
-
     let allLogs = '';
     for (const logFile of directLogFiles) {
       const logPath = path.join(logBaseDir, logFile);
       try {
         const content = fs.readFileSync(logPath, 'utf8');
         allLogs += content + '\n';
-        console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
-      } catch (error) {
-        console.log(`[DEBUG] Failed to read ${logFile}: ${error}`);
+      } catch {
+        // Ignore read errors
       }
     }
     return allLogs;
@@ -48,11 +43,8 @@ export function readWdioLogs(logBaseDir: string): string {
     .map((dir) => dir.name);
 
   if (logDirs.length === 0) {
-    console.log(`[DEBUG] No log directories or files found in: ${logBaseDir}`);
     return '';
   }
-
-  console.log(`[DEBUG] Found log directories: ${logDirs.join(', ')}`);
 
   // Read all log files from the most recent directory
   const logDir = path.join(logBaseDir, logDirs[0]);
@@ -61,18 +53,14 @@ export function readWdioLogs(logBaseDir: string): string {
     .filter((file) => file.endsWith('.log'))
     .sort();
 
-  console.log(`[DEBUG] Reading logs from: ${logDir}`);
-  console.log(`[DEBUG] Found log files: ${logFiles.join(', ')}`);
-
   let allLogs = '';
   for (const logFile of logFiles) {
     const logPath = path.join(logDir, logFile);
     try {
       const content = fs.readFileSync(logPath, 'utf8');
       allLogs += content + '\n';
-      console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
-    } catch (error) {
-      console.log(`[DEBUG] Failed to read ${logFile}: ${error}`);
+    } catch {
+      // Ignore read errors
     }
   }
 
