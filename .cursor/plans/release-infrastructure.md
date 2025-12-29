@@ -167,7 +167,6 @@ Core publishing workflow:
   - `dry_run`: Boolean for dry-run mode
 - **Secrets:**
   - `github_bot_token`: GitHub authentication
-  - `npm_token`: NPM registry token
   - `deploy_key`: SSH key for git operations
   - `crates_io_token`: crates.io token (for tauri only)
 - **Steps:**
@@ -301,7 +300,6 @@ if: ${{ github.repository != 'webdriverio/desktop-mobile-testing' }}
 
 Update or create README documenting required secrets:
 
-- `NPM_TOKEN`: NPM registry authentication token
 - `DEPLOY_KEY`: SSH deploy key for pushing tags
 - `CRATES_IO_TOKEN`: crates.io authentication token for tauri-plugin
 
@@ -594,7 +592,6 @@ Before using in production:
 
 Must be configured in repository settings:
 
-- `NPM_TOKEN`: NPM authentication (org-level token with publish permissions)
 - `DEPLOY_KEY`: SSH deploy key (read/write access for pushing tags)
 - `CRATES_IO_TOKEN`: crates.io API token (for tauri-plugin publishing)
 

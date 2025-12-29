@@ -148,8 +148,6 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           pnpm config set registry "https://registry.npmjs.org/"
-          pnpm config set //registry.npmjs.org/:_authToken ${{ secrets.NPM_TOKEN }}
-          pnpm whoami
 
       - name: Publish to NPM
         env:
