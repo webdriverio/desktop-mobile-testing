@@ -8,7 +8,8 @@ import {
   getElectronBinaryPath,
   startWdioSession,
 } from '@wdio/electron-service';
-import '@wdio/native-types';
+import type { ElectronServiceOptions } from '@wdio/native-types';
+import type { Capabilities } from '@wdio/types';
 import { xvfb } from '@wdio/xvfb';
 import { assertLogContains, assertLogDoesNotContain, readWdioLogs } from '../helpers/logging.js';
 
@@ -24,13 +25,36 @@ if (!fs.existsSync(appDir)) {
   throw new Error(`Electron app directory not found: ${appDir}`);
 }
 
-// Resolve binary path
-const appBinaryPath = await getElectronBinaryPath(appDir);
+// Determine if this is a no-binary app (has dist/main.js instead of a built binary)
+const appDirName = path.basename(appDir);
+const isNoBinary = appDirName.includes('no-binary');
+const entryPoint = path.join(appDir, 'dist', 'main.js');
 
-// Create session options with log capture enabled
-const sessionOptions = createElectronCapabilities(appBinaryPath, appDir, {
-  appArgs: ['foo', 'bar=baz'],
-});
+// Type for individual standalone capability (before wrapping in array)
+type StandaloneCapability = Capabilities.RequestedStandaloneCapabilities & {
+  'wdio:electronServiceOptions'?: ElectronServiceOptions;
+};
+
+let sessionOptions: StandaloneCapability;
+
+if (isNoBinary && fs.existsSync(entryPoint)) {
+  // No-binary mode: use entry point
+  sessionOptions = {
+    browserName: 'electron',
+    'wdio:electronServiceOptions': {
+      appEntryPoint: entryPoint,
+      appArgs: ['foo', 'bar=baz'],
+    },
+  };
+} else {
+  // Binary mode: resolve binary path
+  const appBinaryPath = await getElectronBinaryPath(appDir);
+  const capabilities = createElectronCapabilities(appBinaryPath, appDir, {
+    appArgs: ['foo', 'bar=baz'],
+  });
+  // createElectronCapabilities returns an array, unwrap it
+  sessionOptions = Array.isArray(capabilities) ? capabilities[0] : capabilities;
+}
 
 // Enable log capture
 const serviceOptions = (sessionOptions as Record<string, unknown>)['wdio:electronServiceOptions'] as Record<
@@ -46,7 +70,6 @@ if (serviceOptions) {
   const appDirName = path.basename(appDir);
   const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
   serviceOptions.logDir = logDir;
-  console.log(`[DEBUG] Setting logDir to: ${logDir}`);
 }
 
 // Initialize xvfb if running on Linux
@@ -56,7 +79,7 @@ if (process.platform === 'linux') {
 
 console.log('🔍 Debug: Starting Electron standalone logging test');
 
-const browser = await startWdioSession(sessionOptions);
+const browser = await startWdioSession([sessionOptions]);
 
 // Wait a moment to ensure browser is fully initialized
 await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -66,11 +89,6 @@ try {
   // Since standalone tests don't run through WDIO, we need to construct the path manually
   const appDirName = path.basename(appDir);
   const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
-
-  console.log(`[DEBUG] Test will read logs from: ${logDir}`);
-  console.log(`[DEBUG] appDir: ${appDir}`);
-  console.log(`[DEBUG] appDirName: ${appDirName}`);
-  console.log(`[DEBUG] __dirname: ${__dirname}`);
 
   // Test 1: Capture main process logs in standalone session
   console.log('Test 1: Main process logs...');
@@ -82,14 +100,6 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
   // Verify logs were captured with correct prefix
-  console.log(`[DEBUG] Reading logs from: ${logDir}`);
-  console.log(`[DEBUG] Directory exists: ${fs.existsSync(logDir)}`);
-  if (fs.existsSync(logDir)) {
-    const files = fs.readdirSync(logDir, { withFileTypes: true });
-    console.log(
-      `[DEBUG] Files in directory: ${files.map((f) => `${f.name} (${f.isDirectory() ? 'dir' : 'file'})`).join(', ')}`,
-    );
-  }
   const logs1 = readWdioLogs(logDir);
   if (!logs1) {
     throw new Error('No logs found in output directory');
