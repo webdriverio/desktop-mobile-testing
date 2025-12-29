@@ -53,7 +53,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
 
     // Initialize log capture if enabled
     if (this.shouldCaptureElectronLogs() && cdpBridge) {
-      await this.initializeLogCapture(cdpBridge);
+      await this.initializeLogCapture(cdpBridge, this.browser);
     }
 
     /**
@@ -108,8 +108,11 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         const mrCdpBridge = await initCdpBridge(this.cdpOptions, caps);
 
         // Initialize log capture for this multiremote instance
-        if (this.shouldCaptureElectronLogs() && mrCdpBridge) {
-          await this.initializeLogCapture(mrCdpBridge, instance);
+        // Check if this specific instance has logging enabled
+        const instanceOptions = caps[CUSTOM_CAPABILITY_NAME] || {};
+        const shouldCaptureForInstance = instanceOptions.captureMainProcessLogs || instanceOptions.captureRendererLogs;
+        if (shouldCaptureForInstance && mrCdpBridge) {
+          await this.initializeLogCapture(mrCdpBridge, mrInstance, instance, caps);
         }
 
         mrInstance.electron = getElectronAPI.call(this, mrInstance, mrCdpBridge);
@@ -209,14 +212,23 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   /**
    * Initialize log capture for Electron processes
    */
-  private async initializeLogCapture(cdpBridge: ElectronCdpBridge, instanceId?: string): Promise<void> {
+  private async initializeLogCapture(
+    cdpBridge: ElectronCdpBridge,
+    browser: WebdriverIO.Browser,
+    instanceId?: string,
+    capabilities?: WebdriverIO.Capabilities,
+  ): Promise<void> {
     try {
+      // For multiremote, use capabilities from the specific instance
+      // For standard mode, use globalOptions
+      const options = capabilities?.[CUSTOM_CAPABILITY_NAME] || this.globalOptions;
+
       const logOptions: LogCaptureOptions = {
-        captureMainProcessLogs: this.globalOptions.captureMainProcessLogs ?? false,
-        captureRendererLogs: this.globalOptions.captureRendererLogs ?? false,
-        mainProcessLogLevel: this.globalOptions.mainProcessLogLevel ?? 'info',
-        rendererLogLevel: this.globalOptions.rendererLogLevel ?? 'info',
-        logDir: this.globalOptions.logDir,
+        captureMainProcessLogs: options.captureMainProcessLogs ?? false,
+        captureRendererLogs: options.captureRendererLogs ?? false,
+        mainProcessLogLevel: options.mainProcessLogLevel ?? 'info',
+        rendererLogLevel: options.rendererLogLevel ?? 'info',
+        logDir: options.logDir,
       };
 
       // Create log capture manager only once (for multiremote, reuse the same instance)
@@ -229,7 +241,8 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
       }
 
       if (logOptions.captureRendererLogs) {
-        await this.logCaptureManager.captureRendererLogs(cdpBridge, logOptions, instanceId);
+        const puppeteerBrowser = await getPuppeteer(browser);
+        await this.logCaptureManager.captureRendererLogs(puppeteerBrowser, logOptions, instanceId);
       }
     } catch (error) {
       log.warn('Failed to initialize log capture:', error);
