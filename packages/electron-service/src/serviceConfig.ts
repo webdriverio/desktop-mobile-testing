@@ -11,22 +11,24 @@ export abstract class ServiceConfig {
   #restoreMocks = false;
   #browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
 
-  constructor(globalOptions: ElectronServiceGlobalOptions = {}, capabilities: WebdriverIO.Capabilities) {
-    this.#globalOptions = globalOptions;
+  constructor(baseOptions: ElectronServiceGlobalOptions = {}, capabilities: WebdriverIO.Capabilities) {
+    // Merge base options with capability-level options
+    // Capability-level options take precedence
+    this.#globalOptions = Object.assign({}, baseOptions, capabilities[CUSTOM_CAPABILITY_NAME]);
 
-    const { clearMocks, resetMocks, restoreMocks } = Object.assign(
-      {},
-      this.#globalOptions,
-      capabilities[CUSTOM_CAPABILITY_NAME],
-    );
+    const { clearMocks, resetMocks, restoreMocks } = this.#globalOptions;
     this.#clearMocks = clearMocks ?? false;
     this.#resetMocks = resetMocks ?? false;
     this.#restoreMocks = restoreMocks ?? false;
 
     this.#cdpOptions = {
-      ...(globalOptions.cdpBridgeTimeout && { timeout: globalOptions.cdpBridgeTimeout }),
-      ...(globalOptions.cdpBridgeWaitInterval && { waitInterval: globalOptions.cdpBridgeWaitInterval }),
-      ...(globalOptions.cdpBridgeRetryCount && { connectionRetryCount: globalOptions.cdpBridgeRetryCount }),
+      ...(this.#globalOptions.cdpBridgeTimeout && { timeout: this.#globalOptions.cdpBridgeTimeout }),
+      ...(this.#globalOptions.cdpBridgeWaitInterval && {
+        waitInterval: this.#globalOptions.cdpBridgeWaitInterval,
+      }),
+      ...(this.#globalOptions.cdpBridgeRetryCount && {
+        connectionRetryCount: this.#globalOptions.cdpBridgeRetryCount,
+      }),
     };
   }
 

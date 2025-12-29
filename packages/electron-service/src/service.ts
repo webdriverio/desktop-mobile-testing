@@ -19,6 +19,7 @@ import { resetAllMocks } from './commands/resetAllMocks.js';
 import { restoreAllMocks } from './commands/restoreAllMocks.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
 import { checkInspectFuse } from './fuses.js';
+import { LogCaptureManager, type LogCaptureOptions } from './logCapture.js';
 import mockStore from './mockStore.js';
 import { ServiceConfig } from './serviceConfig.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
@@ -30,6 +31,8 @@ const isInternalCommand = (args: unknown[]) => Boolean((args.at(-1) as ExecuteOp
 type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 
 export default class ElectronWorkerService extends ServiceConfig implements Services.ServiceInstance {
+  private logCaptureManager?: LogCaptureManager;
+
   constructor(
     globalOptions: ElectronServiceGlobalOptions = {},
     capabilities: WebdriverIO.Capabilities,
@@ -47,6 +50,13 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
 
     this.browser = instance as WebdriverIO.Browser;
     const cdpBridge = this.browser.isMultiremote ? undefined : await initCdpBridge(this.cdpOptions, capabilities);
+
+    // Initialize log capture if enabled
+    // Note: Renderer logs work via Puppeteer and don't require CDP bridge
+    // Main process logs require CDP bridge
+    if (this.shouldCaptureElectronLogs()) {
+      await this.initializeLogCapture(cdpBridge, this.browser);
+    }
 
     /**
      * Add electron API to browser object
@@ -98,6 +108,15 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         }
 
         const mrCdpBridge = await initCdpBridge(this.cdpOptions, caps);
+
+        // Initialize log capture for this multiremote instance
+        // Check if this specific instance has logging enabled
+        const instanceOptions = caps[CUSTOM_CAPABILITY_NAME] || {};
+        const shouldCaptureForInstance = instanceOptions.captureMainProcessLogs || instanceOptions.captureRendererLogs;
+        if (shouldCaptureForInstance) {
+          await this.initializeLogCapture(mrCdpBridge, mrInstance, instance, caps);
+        }
+
         mrInstance.electron = getElectronAPI.call(this, mrInstance, mrCdpBridge);
 
         const mrPuppeteer = await getPuppeteer(mrInstance);
@@ -147,6 +166,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   }
 
   after() {
+    this.logCaptureManager?.stopCapture();
     clearPuppeteerSessions();
   }
 
@@ -181,6 +201,63 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
       browser.overwriteCommand(commandName, testOverride, true);
     } catch {
       // ignore
+    }
+  }
+
+  /**
+   * Check if Electron log capture is enabled
+   */
+  private shouldCaptureElectronLogs(): boolean {
+    return !!(this.globalOptions.captureMainProcessLogs || this.globalOptions.captureRendererLogs);
+  }
+
+  /**
+   * Initialize log capture for Electron processes
+   * Main process logs require CDP bridge; renderer logs use Puppeteer independently
+   */
+  private async initializeLogCapture(
+    cdpBridge: ElectronCdpBridge | undefined,
+    browser: WebdriverIO.Browser,
+    instanceId?: string,
+    capabilities?: WebdriverIO.Capabilities,
+  ): Promise<void> {
+    try {
+      // For multiremote, use capabilities from the specific instance
+      // For standard mode, use globalOptions
+      const options = capabilities?.[CUSTOM_CAPABILITY_NAME] || this.globalOptions;
+
+      const logOptions: LogCaptureOptions = {
+        captureMainProcessLogs: options.captureMainProcessLogs ?? false,
+        captureRendererLogs: options.captureRendererLogs ?? false,
+        mainProcessLogLevel: options.mainProcessLogLevel ?? 'info',
+        rendererLogLevel: options.rendererLogLevel ?? 'info',
+        logDir: options.logDir,
+      };
+
+      // Create log capture manager only once (for multiremote, reuse the same instance)
+      if (!this.logCaptureManager) {
+        this.logCaptureManager = new LogCaptureManager();
+      }
+
+      // Main process logs require CDP bridge
+      if (logOptions.captureMainProcessLogs) {
+        if (cdpBridge) {
+          await this.logCaptureManager.captureMainProcessLogs(cdpBridge, logOptions, instanceId);
+        } else {
+          log.warn(
+            'Main process log capture requested but CDP bridge is unavailable. ' +
+              'This may be due to EnableNodeCliInspectArguments fuse being disabled.',
+          );
+        }
+      }
+
+      // Renderer logs use Puppeteer and work independently of CDP bridge
+      if (logOptions.captureRendererLogs) {
+        const puppeteerBrowser = await getPuppeteer(browser);
+        await this.logCaptureManager.captureRendererLogs(puppeteerBrowser, logOptions, instanceId);
+      }
+    } catch (error) {
+      log.warn('Failed to initialize log capture:', error);
     }
   }
 }

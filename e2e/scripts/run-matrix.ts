@@ -190,7 +190,6 @@ async function runTest(
       TEST_TYPE: variant.testType,
       BINARY: variant.binary ? 'true' : 'false',
       APP_DIR: appPath,
-      EXAMPLE_DIR: appDirName,
     });
 
     // Enable splash screen for window tests
@@ -220,6 +219,7 @@ async function runTest(
         console.log(`  Running standalone test: ${specFile}`);
 
         // Use execWdio but with tsx instead of wdio command
+        // On Linux, wrap with xvfb-run to provide virtual display
         const command =
           process.platform === 'linux' && variant.framework === 'electron'
             ? `xvfb-run tsx ${specPath}`

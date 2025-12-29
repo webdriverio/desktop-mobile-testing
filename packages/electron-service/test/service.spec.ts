@@ -76,6 +76,16 @@ vi.mock('../src/mockStore', () => {
   };
 });
 
+vi.mock('../src/logCapture', () => {
+  return {
+    LogCaptureManager: vi.fn().mockImplementation(() => ({
+      captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
+      captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+      stopCapture: vi.fn(),
+    })),
+  };
+});
+
 // Mock waitUntilWindowAvailable function specifically
 vi.mock('../src/service', async () => {
   const actual = await vi.importActual('../src/service.js');
@@ -468,9 +478,392 @@ describe('Electron Worker Service', () => {
       } as unknown as WebdriverIO.Browser;
 
       await instance.before({}, [], browser);
-      await instance.after();
+      instance.after();
 
       expect(clearPuppeteerSessions).toHaveBeenCalled();
+    });
+
+    it('should stop log capture if it was initialized', async () => {
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+      const mockStopCapture = vi.fn();
+      vi.mocked(LogCaptureManager).mockImplementation(
+        () =>
+          ({
+            captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
+            captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+            stopCapture: mockStopCapture,
+          }) as any,
+      );
+
+      instance = new ElectronWorkerService(
+        {
+          captureMainProcessLogs: true,
+        },
+        {},
+      );
+
+      browser = {
+        sessionId: 'dummyId',
+        waitUntil: vi.fn().mockImplementation(async (condition) => {
+          await condition();
+        }),
+        execute: vi.fn().mockImplementation((fn) => fn()),
+        getWindowHandles: vi.fn().mockResolvedValue(['dummy']),
+        switchToWindow: vi.fn(),
+        getPuppeteer: vi.fn(),
+        overwriteCommand: vi.fn(),
+        electron: {},
+      } as unknown as WebdriverIO.Browser;
+
+      await instance.before({}, [], browser);
+      instance.after();
+
+      expect(mockStopCapture).toHaveBeenCalled();
+      expect(clearPuppeteerSessions).toHaveBeenCalled();
+    });
+  });
+
+  describe('Log Capture', () => {
+    beforeEach(async () => {
+      vi.clearAllMocks();
+
+      // Mock getPuppeteer to return a Puppeteer browser object
+      const { getPuppeteer } = await import('../src/window.js');
+      vi.mocked(getPuppeteer).mockResolvedValue({} as any);
+
+      browser = {
+        sessionId: 'dummyId',
+        waitUntil: vi.fn().mockImplementation(async (condition) => {
+          await condition();
+        }),
+        execute: vi.fn().mockImplementation((fn) => fn()),
+        getWindowHandles: vi.fn().mockResolvedValue(['dummy']),
+        switchToWindow: vi.fn(),
+        getPuppeteer: vi.fn().mockResolvedValue({}),
+        overwriteCommand: vi.fn(),
+        electron: {},
+      } as unknown as WebdriverIO.Browser;
+    });
+
+    it('should initialize log capture when main process logging is enabled', async () => {
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+      const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(LogCaptureManager).mockImplementation(
+        () =>
+          ({
+            captureMainProcessLogs: mockCaptureMainProcessLogs,
+            captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+            stopCapture: vi.fn(),
+          }) as any,
+      );
+
+      instance = new ElectronWorkerService(
+        {
+          captureMainProcessLogs: true,
+          mainProcessLogLevel: 'debug',
+        },
+        {},
+      );
+
+      await instance.before({}, [], browser);
+
+      expect(LogCaptureManager).toHaveBeenCalled();
+      expect(mockCaptureMainProcessLogs).toHaveBeenCalledWith(
+        expect.anything(), // cdpBridge
+        expect.objectContaining({
+          captureMainProcessLogs: true,
+          captureRendererLogs: false,
+          mainProcessLogLevel: 'debug',
+          rendererLogLevel: 'info',
+        }),
+        undefined, // instanceId
+      );
+    });
+
+    it('should initialize log capture when renderer process logging is enabled', async () => {
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+      const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(LogCaptureManager).mockImplementation(
+        () =>
+          ({
+            captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
+            captureRendererLogs: mockCaptureRendererLogs,
+            stopCapture: vi.fn(),
+          }) as any,
+      );
+
+      instance = new ElectronWorkerService(
+        {
+          captureRendererLogs: true,
+          rendererLogLevel: 'warn',
+        },
+        {},
+      );
+
+      await instance.before({}, [], browser);
+
+      expect(LogCaptureManager).toHaveBeenCalled();
+      expect(mockCaptureRendererLogs).toHaveBeenCalledWith(
+        expect.any(Object), // puppeteerBrowser
+        expect.objectContaining({
+          captureMainProcessLogs: false,
+          captureRendererLogs: true,
+          mainProcessLogLevel: 'info',
+          rendererLogLevel: 'warn',
+        }),
+        undefined, // instanceId
+      );
+    });
+
+    it('should initialize log capture for both main and renderer processes', async () => {
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+      const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
+      const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(LogCaptureManager).mockImplementation(
+        () =>
+          ({
+            captureMainProcessLogs: mockCaptureMainProcessLogs,
+            captureRendererLogs: mockCaptureRendererLogs,
+            stopCapture: vi.fn(),
+          }) as any,
+      );
+
+      instance = new ElectronWorkerService(
+        {
+          captureMainProcessLogs: true,
+          captureRendererLogs: true,
+          mainProcessLogLevel: 'info',
+          rendererLogLevel: 'debug',
+        },
+        {},
+      );
+
+      await instance.before({}, [], browser);
+
+      expect(LogCaptureManager).toHaveBeenCalled();
+      expect(mockCaptureMainProcessLogs).toHaveBeenCalled();
+      expect(mockCaptureRendererLogs).toHaveBeenCalled();
+    });
+
+    it('should not initialize log capture when logging is disabled', async () => {
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+
+      instance = new ElectronWorkerService({}, {});
+
+      await instance.before({}, [], browser);
+
+      expect(LogCaptureManager).not.toHaveBeenCalled();
+    });
+
+    it('should allow renderer logs to work even when CDP bridge is unavailable', async () => {
+      const { checkInspectFuse } = await import('../src/fuses.js');
+      vi.mocked(checkInspectFuse).mockResolvedValueOnce({ canUseCdpBridge: false });
+
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+      const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
+      const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(LogCaptureManager).mockImplementation(
+        () =>
+          ({
+            captureMainProcessLogs: mockCaptureMainProcessLogs,
+            captureRendererLogs: mockCaptureRendererLogs,
+            stopCapture: vi.fn(),
+          }) as any,
+      );
+
+      instance = new ElectronWorkerService(
+        {
+          captureMainProcessLogs: true, // This won't work without CDP bridge
+          captureRendererLogs: true, // This should still work
+        },
+        {},
+      );
+
+      const capabilities = {
+        'goog:chromeOptions': {
+          binary: '/path/to/electron',
+        },
+      };
+
+      await instance.before(capabilities, [], browser);
+
+      // LogCaptureManager should still be created
+      expect(LogCaptureManager).toHaveBeenCalled();
+
+      // Main process logs should not be captured (CDP bridge unavailable)
+      expect(mockCaptureMainProcessLogs).not.toHaveBeenCalled();
+
+      // Renderer logs should still be captured (works independently)
+      expect(mockCaptureRendererLogs).toHaveBeenCalled();
+    });
+
+    it('should pass logDir option to log capture', async () => {
+      const { LogCaptureManager } = await import('../src/logCapture.js');
+      const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(LogCaptureManager).mockImplementation(
+        () =>
+          ({
+            captureMainProcessLogs: mockCaptureMainProcessLogs,
+            captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+            stopCapture: vi.fn(),
+          }) as any,
+      );
+
+      instance = new ElectronWorkerService(
+        {
+          captureMainProcessLogs: true,
+          logDir: './custom-logs',
+        },
+        {},
+      );
+
+      await instance.before({}, [], browser);
+
+      expect(mockCaptureMainProcessLogs).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          logDir: './custom-logs',
+        }),
+        undefined,
+      );
+    });
+
+    describe('multiremote', () => {
+      it('should initialize log capture for multiremote instances', async () => {
+        const { LogCaptureManager } = await import('../src/logCapture.js');
+        const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
+        const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
+        vi.mocked(LogCaptureManager).mockImplementation(
+          () =>
+            ({
+              captureMainProcessLogs: mockCaptureMainProcessLogs,
+              captureRendererLogs: mockCaptureRendererLogs,
+              stopCapture: vi.fn(),
+            }) as any,
+        );
+
+        instance = new ElectronWorkerService({}, {});
+
+        browser.requestedCapabilities = {
+          alwaysMatch: {
+            browserName: 'electron',
+            'wdio:electronServiceOptions': {
+              captureMainProcessLogs: true,
+              captureRendererLogs: true,
+            },
+          },
+        };
+
+        const rootBrowser = {
+          instances: ['app1'],
+          getInstance: (name: string) => (name === 'app1' ? browser : undefined),
+          execute: vi.fn().mockResolvedValue(true),
+          isMultiremote: true,
+          overwriteCommand: vi.fn(),
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        await instance.before({}, [], rootBrowser);
+
+        // Should be called with instance ID
+        expect(mockCaptureMainProcessLogs).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            captureMainProcessLogs: true,
+            captureRendererLogs: true,
+          }),
+          'app1', // instanceId
+        );
+
+        expect(mockCaptureRendererLogs).toHaveBeenCalledWith(
+          expect.any(Object),
+          expect.objectContaining({
+            captureMainProcessLogs: true,
+            captureRendererLogs: true,
+          }),
+          'app1', // instanceId
+        );
+      });
+
+      it('should allow multiremote renderer logs without CDP bridge', async () => {
+        const { checkInspectFuse } = await import('../src/fuses.js');
+        vi.mocked(checkInspectFuse).mockResolvedValue({ canUseCdpBridge: false });
+
+        const { LogCaptureManager } = await import('../src/logCapture.js');
+        const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
+        const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
+        vi.mocked(LogCaptureManager).mockImplementation(
+          () =>
+            ({
+              captureMainProcessLogs: mockCaptureMainProcessLogs,
+              captureRendererLogs: mockCaptureRendererLogs,
+              stopCapture: vi.fn(),
+            }) as any,
+        );
+
+        instance = new ElectronWorkerService({}, {});
+
+        browser.requestedCapabilities = {
+          alwaysMatch: {
+            browserName: 'electron',
+            'wdio:electronServiceOptions': {
+              captureMainProcessLogs: true,
+              captureRendererLogs: true,
+            },
+            'goog:chromeOptions': {
+              binary: '/path/to/electron',
+            },
+          },
+        };
+
+        const rootBrowser = {
+          instances: ['app1'],
+          getInstance: (name: string) => (name === 'app1' ? browser : undefined),
+          execute: vi.fn().mockResolvedValue(true),
+          isMultiremote: true,
+          overwriteCommand: vi.fn(),
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        await instance.before({}, [], rootBrowser);
+
+        // Main process logs should not be captured (CDP bridge unavailable)
+        expect(mockCaptureMainProcessLogs).not.toHaveBeenCalled();
+
+        // Renderer logs should still be captured
+        expect(mockCaptureRendererLogs).toHaveBeenCalledWith(
+          expect.any(Object),
+          expect.objectContaining({
+            captureMainProcessLogs: true,
+            captureRendererLogs: true,
+          }),
+          'app1',
+        );
+      });
+
+      it('should not initialize log capture for multiremote instances without logging options', async () => {
+        const { LogCaptureManager } = await import('../src/logCapture.js');
+
+        instance = new ElectronWorkerService({}, {});
+
+        browser.requestedCapabilities = {
+          alwaysMatch: {
+            browserName: 'electron',
+            'wdio:electronServiceOptions': {},
+          },
+        };
+
+        const rootBrowser = {
+          instances: ['app1'],
+          getInstance: (name: string) => (name === 'app1' ? browser : undefined),
+          execute: vi.fn().mockResolvedValue(true),
+          isMultiremote: true,
+          overwriteCommand: vi.fn(),
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        await instance.before({}, [], rootBrowser);
+
+        // LogCaptureManager should not be called
+        expect(LogCaptureManager).not.toHaveBeenCalled();
+      });
     });
   });
 });
