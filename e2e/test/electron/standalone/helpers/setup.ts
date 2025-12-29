@@ -10,7 +10,6 @@ import {
 } from '@wdio/electron-service';
 import type { ElectronServiceOptions } from '@wdio/native-types';
 import type { Capabilities } from '@wdio/types';
-import { xvfb } from '@wdio/xvfb';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -100,11 +99,6 @@ export async function setupStandaloneTest(options: StandaloneTestOptions = {}): 
         serviceOptions.logDir = options.logConfig.logDir;
       }
     }
-  }
-
-  // Initialize xvfb if running on Linux
-  if (process.platform === 'linux') {
-    await xvfb.init();
   }
 
   // Start the session

@@ -219,8 +219,11 @@ async function runTest(
         console.log(`  Running standalone test: ${specFile}`);
 
         // Use execWdio but with tsx instead of wdio command
-        // Note: xvfb is managed internally by standalone test setup helper
-        const command = `tsx ${specPath}`;
+        // On Linux, wrap with xvfb-run to provide virtual display
+        const command =
+          process.platform === 'linux' && variant.framework === 'electron'
+            ? `xvfb-run tsx ${specPath}`
+            : `tsx ${specPath}`;
         lastResult = await execWdio(command, testEnv, {
           cwd: process.cwd(),
           timeout: 300000, // 5 minutes
