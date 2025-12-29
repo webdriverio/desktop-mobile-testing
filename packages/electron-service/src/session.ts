@@ -25,17 +25,18 @@ export async function init(
 ): Promise<WebdriverIO.Browser> {
   log.debug('Initializing Electron service in standalone mode...');
 
+  // Unwrap array if needed
+  const capability = Array.isArray(capabilities) ? capabilities[0] : capabilities;
+
   // Initialize standalone log writer if logging is enabled
-  const serviceOptions = (capabilities as Record<string, unknown>)['wdio:electronServiceOptions'] as
+  const serviceOptions = (capability as Record<string, unknown>)['wdio:electronServiceOptions'] as
     | ElectronServiceOptions
     | undefined;
   if (serviceOptions?.captureMainProcessLogs || serviceOptions?.captureRendererLogs) {
     if (serviceOptions.logDir) {
       // Use explicit logDir if provided
       const writer = getStandaloneLogWriter();
-      console.log(`[DEBUG] Initializing standalone log writer with logDir: ${serviceOptions.logDir}`);
       writer.initialize(serviceOptions.logDir);
-      console.log(`[DEBUG] Log writer initialized. Directory: ${writer.getLogDir()}, File: ${writer.getLogFile()}`);
       log.debug(`Standalone log writer initialized at ${writer.getLogDir()}`);
     } else {
       log.warn('Standalone logging enabled but logDir not specified - logs will not be captured');
@@ -45,15 +46,18 @@ export async function init(
   const testRunnerOpts: Options.Testrunner = (globalOptions?.rootDir
     ? { rootDir: globalOptions.rootDir }
     : {}) as unknown as Options.Testrunner;
-  const launcher = new ElectronLaunchService(globalOptions || {}, capabilities, testRunnerOpts);
+  const launcher = new ElectronLaunchService(
+    globalOptions || {},
+    capability as ElectronServiceCapabilities,
+    testRunnerOpts,
+  );
 
-  await launcher.onPrepare(testRunnerOpts, capabilities);
+  // onPrepare expects array or multiremote format, so wrap as array
+  await launcher.onPrepare(testRunnerOpts, [capability] as ElectronServiceCapabilities);
 
-  await launcher.onWorkerStart('', capabilities as WebdriverIO.Capabilities);
+  await launcher.onWorkerStart('', capability as WebdriverIO.Capabilities);
 
-  log.debug('Session capabilities:', JSON.stringify(capabilities, null, 2));
-
-  const capability = Array.isArray(capabilities) ? capabilities[0] : capabilities;
+  log.debug('Session capabilities:', JSON.stringify(capability, null, 2));
 
   const service = new ElectronWorkerService(globalOptions, capability);
 
