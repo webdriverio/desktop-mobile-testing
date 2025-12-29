@@ -36,13 +36,16 @@ export function readWdioLogs(logBaseDir: string): string {
     return allLogs;
   }
 
-  // WDIO test runner mode: find the most recent log directory
+  // WDIO test runner mode: find the most recent log directory by modification time
   const logDirs = fs
     .readdirSync(logBaseDir, { withFileTypes: true })
     .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => dirent.name)
-    .sort()
-    .reverse();
+    .map((dirent) => ({
+      name: dirent.name,
+      mtime: fs.statSync(path.join(logBaseDir, dirent.name)).mtime,
+    }))
+    .sort((a, b) => b.mtime.getTime() - a.mtime.getTime()) // Sort by modification time, newest first
+    .map((dir) => dir.name);
 
   if (logDirs.length === 0) {
     console.log(`[DEBUG] No log directories or files found in: ${logBaseDir}`);
