@@ -110,10 +110,13 @@ describe('CdpBridge', () => {
     // Reset WebSocket instance
     mockWebSocketInstance = null;
 
+    // Reset debugger list
+    debuggerList = undefined;
+
     vi.mocked(DevTool).mockImplementation(
       () =>
         ({
-          list: vi.fn(async () => debuggerList),
+          list: vi.fn().mockResolvedValue(debuggerList),
         }) as unknown as DevTool,
     );
   });
@@ -134,7 +137,7 @@ describe('CdpBridge', () => {
           throw Error('Dummy Error');
         }
         return {
-          list: vi.fn(async () => [{ webSocketDebuggerUrl: 'ws://localhost:123/uuid' }] as DebuggerList),
+          list: vi.fn().mockResolvedValue([{ webSocketDebuggerUrl: 'ws://localhost:123/uuid' }] as DebuggerList),
         } as unknown as DevTool;
       });
       const client = new CdpBridge({ waitInterval: 10 });
