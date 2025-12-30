@@ -100,12 +100,6 @@ function mapConsoleTypeToLogLevel(type: ConsoleAPICalledEvent['type']): LogLevel
     case 'debug':
     case 'trace':
       return 'debug';
-    case 'log':
-    case 'dir':
-    case 'dirxml':
-    case 'table':
-    case 'count':
-    case 'timeEnd':
     default:
       return 'info';
   }

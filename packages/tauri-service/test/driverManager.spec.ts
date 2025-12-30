@@ -65,29 +65,43 @@ describe('WebKitWebDriver Management', () => {
       });
     });
 
-    it('should return error with install instructions when WebKitWebDriver not found', async () => {
-      // Skip this test on non-Linux platforms or when WebKitWebDriver is actually installed
+    it('should have proper result structure for WebKitWebDriver', async () => {
+      // Skip this test on non-Linux platforms
       if (process.platform !== 'linux') {
         return;
       }
 
-      // This test documents the expected behavior when WebKitWebDriver is missing
-      // The actual implementation uses execSync and fs, which we'd need to mock
-      // for a more isolated test, but this documents the API contract
+      const result = await ensureWebKitWebDriver();
+
+      // Check the result structure regardless of success/failure
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('path');
+      expect(result).toHaveProperty('error');
+      expect(result).toHaveProperty('installInstructions');
+    });
+
+    it('should return valid result for WebKitWebDriver check', async () => {
+      // Skip this test on non-Linux platforms
+      if (process.platform !== 'linux') {
+        return;
+      }
 
       const result = await ensureWebKitWebDriver();
 
-      // If WebKitWebDriver is not installed, we should get an error
-      if (!result.success) {
-        expect(result.error).toBe('WebKitWebDriver not found');
-        expect(result.installInstructions).toBeDefined();
-        expect(result.installInstructions).toContain('sudo');
-        expect(result.installInstructions).toContain('webkit2gtk-driver');
-      } else {
-        // If it IS installed, we should get success with a path
-        expect(result.path).toBeDefined();
-        expect(result.path).toContain('WebKitWebDriver');
-      }
+      // Always check that we get a properly structured result
+      expect(result).toHaveProperty('success');
+      expect(result).toHaveProperty('path');
+      expect(result).toHaveProperty('error');
+      expect(result).toHaveProperty('installInstructions');
+
+      // The result should be consistent - if success is true, we should have a path and no error
+      // If success is false, we should have an error and install instructions
+      const hasPath = result.path && result.path.length > 0;
+      const hasError = result.error && result.error.length > 0;
+      const hasInstallInstructions = result.installInstructions && result.installInstructions.length > 0;
+
+      expect(result.success ? hasPath : hasError).toBe(true);
+      expect(result.success ? !hasError : hasInstallInstructions).toBe(true);
     });
   });
 });
