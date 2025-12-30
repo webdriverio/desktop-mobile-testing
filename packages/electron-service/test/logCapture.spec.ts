@@ -22,7 +22,7 @@ vi.mock('../src/logForwarder.js', () => ({
 }));
 
 vi.mock('../src/logParser.js', () => ({
-  parseConsoleEvent: vi.fn((event) => ({
+  parseConsoleEvent: vi.fn((_event) => ({
     level: 'info',
     message: 'Parsed message',
     source: 'main',
@@ -131,7 +131,7 @@ describe('LogCaptureManager', () => {
       expect(capturedListener).toBeDefined();
 
       // Trigger the listener
-      capturedListener!({ type: 'log', args: [], executionContextId: 1, timestamp: 123456 });
+      capturedListener?.({ type: 'log', args: [], executionContextId: 1, timestamp: 123456 });
 
       expect(parseConsoleEvent).toHaveBeenCalled();
       expect(forwardLog).toHaveBeenCalledWith('main', 'info', 'Test message', 'info', undefined);

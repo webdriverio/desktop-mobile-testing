@@ -23,7 +23,7 @@ export function readWdioLogs(logBaseDir: string): string {
       const logPath = path.join(logBaseDir, logFile);
       try {
         const content = fs.readFileSync(logPath, 'utf8');
-        allLogs += content + '\n';
+        allLogs += `${content}\n`;
       } catch {
         // Ignore read errors
       }
@@ -58,7 +58,7 @@ export function readWdioLogs(logBaseDir: string): string {
     const logPath = path.join(logDir, logFile);
     try {
       const content = fs.readFileSync(logPath, 'utf8');
-      allLogs += content + '\n';
+      allLogs += `${content}\n`;
     } catch {
       // Ignore read errors
     }

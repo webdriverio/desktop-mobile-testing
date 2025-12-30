@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getStandaloneLogWriter, isStandaloneLogWriterInitialized, StandaloneLogWriter } from '../src/logWriter.js';
@@ -63,7 +63,7 @@ describe('logWriter', () => {
 
       const logFile = writer.getLogFile();
       expect(logFile).toBeDefined();
-      const content = readFileSync(logFile!, 'utf-8');
+      const content = readFileSync(logFile as string, 'utf-8');
 
       expect(content).toContain('Test message 1');
       expect(content).toContain('Test message 2');
@@ -77,7 +77,7 @@ describe('logWriter', () => {
       await writer.close();
 
       const logFile = writer.getLogFile();
-      const content = readFileSync(logFile!, 'utf-8');
+      const content = readFileSync(logFile as string, 'utf-8');
 
       expect(content).toMatch(
         /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z INFO electron-service:service: Test message/,
@@ -105,7 +105,7 @@ describe('logWriter', () => {
       // Should be able to read file after closing
       const logFile = writer.getLogFile();
       expect(logFile).toBeDefined();
-      const content = readFileSync(logFile!, 'utf-8');
+      const content = readFileSync(logFile as string, 'utf-8');
       expect(content).toContain('Test message');
     });
 
@@ -119,7 +119,7 @@ describe('logWriter', () => {
       await writer.close();
 
       const logFile = writer.getLogFile();
-      const content = readFileSync(logFile!, 'utf-8');
+      const content = readFileSync(logFile as string, 'utf-8');
       const lines = content.split('\n').filter((line) => line.length > 0);
 
       expect(lines.length).toBe(100);
