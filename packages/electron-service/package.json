@@ -85,7 +85,7 @@
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
-  "files": ["dist"],
+  "files": ["dist", "docs", "README.md"],
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
