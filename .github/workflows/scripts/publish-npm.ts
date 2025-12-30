@@ -109,6 +109,21 @@ async function main() {
     console.log(`   Version: ${pkgJson.version}`);
     console.log(`   Tag: ${npmTag}`);
 
+    // Copy LICENSE file to package directory
+    const licensePath = path.join(workspaceRoot, 'LICENSE');
+    const targetLicensePath = path.join(packagesDir, packageDir, 'LICENSE');
+
+    if (fs.existsSync(licensePath)) {
+      try {
+        fs.copyFileSync(licensePath, targetLicensePath);
+        console.log(`   📄 Copied LICENSE file`);
+      } catch (error) {
+        console.warn(`   ⚠️  Warning: Could not copy LICENSE file: ${(error as Error).message}`);
+      }
+    } else {
+      console.warn(`   ⚠️  Warning: LICENSE file not found at ${licensePath}`);
+    }
+
     try {
       if (dryRun) {
         console.log(`   🔍 Dry run - would publish to NPM with tag "${npmTag}"`);

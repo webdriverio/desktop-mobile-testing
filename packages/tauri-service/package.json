@@ -23,7 +23,7 @@
       "./dist/cjs/index.js"
     ]
   },
-  "files": ["dist", "docs", "README.md"],
+  "files": ["dist", "docs", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsx ../../scripts/build-package.ts",
     "build:watch": "tsx ../../scripts/build-package.ts --watch",
