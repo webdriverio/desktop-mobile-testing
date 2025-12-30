@@ -96,7 +96,7 @@
       "includes": ["**/*.spec.ts", "**/mocks/*.ts"],
       "linter": {
         "rules": {
-          "style": {
+          "complexity": {
             // Vitest v4 requires vi.fn() and mockImplementation() to use proper function declarations
             "useArrowFunction": "off"
           },
