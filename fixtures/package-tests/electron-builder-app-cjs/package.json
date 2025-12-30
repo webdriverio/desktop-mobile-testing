@@ -16,14 +16,14 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
-    "@wdio/cli": "catalog:",
+    "@wdio/cli": "^9.20.0",
     "@wdio/electron-service": "workspace:*",
     "@wdio/globals": "^9.17.0",
-    "@wdio/local-runner": "catalog:",
-    "@wdio/mocha-framework": "catalog:",
+    "@wdio/local-runner": "^9.20.0",
+    "@wdio/mocha-framework": "^9.20.0",
     "@wdio/spec-reporter": "^9.20.0",
     "cross-env": "^10.1.0",
-    "electron": "catalog:",
+    "electron": "39.2.7",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3"

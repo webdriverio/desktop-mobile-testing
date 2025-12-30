@@ -347,7 +347,7 @@ importers:
         specifier: ^25.0.3
         version: 25.0.3
       '@wdio/cli':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@types/node@25.0.3)(expect-webdriverio@5.6.1)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
         specifier: workspace:*
@@ -356,10 +356,10 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.6.1)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/local-runner':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@wdio/globals@9.17.0)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/mocha-framework':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0
       '@wdio/spec-reporter':
         specifier: ^9.20.0
@@ -368,7 +368,7 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       electron:
-        specifier: 'catalog:'
+        specifier: 39.2.7
         version: 39.2.7
       electron-builder:
         specifier: ^26.0.12
@@ -386,7 +386,7 @@ importers:
         specifier: ^25.0.3
         version: 25.0.3
       '@wdio/cli':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@types/node@25.0.3)(expect-webdriverio@5.6.1)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
         specifier: workspace:*
@@ -395,10 +395,10 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.6.1)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/local-runner':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@wdio/globals@9.17.0)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/mocha-framework':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0
       '@wdio/spec-reporter':
         specifier: ^9.20.0
@@ -407,7 +407,7 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       electron:
-        specifier: 'catalog:'
+        specifier: 39.2.7
         version: 39.2.7
       electron-builder:
         specifier: ^26.0.12
@@ -440,7 +440,7 @@ importers:
         specifier: ^25.0.3
         version: 25.0.3
       '@wdio/cli':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@types/node@25.0.3)(expect-webdriverio@5.6.1)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
         specifier: workspace:*
@@ -449,10 +449,10 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.6.1)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/local-runner':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@wdio/globals@9.17.0)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/mocha-framework':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0
       '@wdio/native-types':
         specifier: workspace:*
@@ -467,7 +467,7 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       electron:
-        specifier: 'catalog:'
+        specifier: 39.2.7
         version: 39.2.7
       electron-vite:
         specifier: ^5.0.0
@@ -497,7 +497,7 @@ importers:
         specifier: ^25.0.3
         version: 25.0.3
       '@wdio/cli':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@types/node@25.0.3)(expect-webdriverio@5.6.1)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
         specifier: workspace:*
@@ -506,10 +506,10 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.6.1)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/local-runner':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@wdio/globals@9.17.0)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/mocha-framework':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0
       '@wdio/native-types':
         specifier: workspace:*
@@ -524,7 +524,7 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       electron:
-        specifier: 'catalog:'
+        specifier: 39.2.7
         version: 39.2.7
       electron-vite:
         specifier: ^5.0.0
@@ -542,7 +542,7 @@ importers:
         specifier: ^7.7.1
         version: 7.7.1
       '@wdio/cli':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@types/node@25.0.3)(expect-webdriverio@5.6.1)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
         specifier: workspace:*
@@ -551,10 +551,10 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.6.1)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/local-runner':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@wdio/globals@9.17.0)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/mocha-framework':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0
       '@wdio/spec-reporter':
         specifier: ^9.20.0
@@ -563,7 +563,7 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       electron:
-        specifier: 'catalog:'
+        specifier: 39.2.7
         version: 39.2.7
       electron-vite:
         specifier: ^5.0.0
@@ -584,7 +584,7 @@ importers:
         specifier: ^7.7.1
         version: 7.7.1
       '@wdio/cli':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@types/node@25.0.3)(expect-webdriverio@5.6.1)(puppeteer-core@22.15.0)
       '@wdio/electron-service':
         specifier: workspace:*
@@ -593,10 +593,10 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(expect-webdriverio@5.6.1)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/local-runner':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0(@wdio/globals@9.17.0)(webdriverio@9.22.0(puppeteer-core@22.15.0))
       '@wdio/mocha-framework':
-        specifier: 'catalog:'
+        specifier: ^9.20.0
         version: 9.22.0
       '@wdio/spec-reporter':
         specifier: ^9.20.0
@@ -605,7 +605,7 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       electron:
-        specifier: 'catalog:'
+        specifier: 39.2.7
         version: 39.2.7
       electron-vite:
         specifier: ^5.0.0
