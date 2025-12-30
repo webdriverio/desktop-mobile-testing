@@ -211,6 +211,12 @@ async function testExample(
     mkdirSync(tempDir, { recursive: true });
     cpSync(packagePath, packageDir, { recursive: true });
 
+    // Copy pnpm-workspace.yaml to enable catalog resolution
+    const workspaceYamlPath = join(rootDir, 'pnpm-workspace.yaml');
+    if (existsSync(workspaceYamlPath)) {
+      cpSync(workspaceYamlPath, join(tempDir, 'pnpm-workspace.yaml'));
+    }
+
     // Create .pnpmrc to prevent hoisting and ensure proper resolution
     const pnpmrcPath = join(packageDir, '.pnpmrc');
     writeFileSync(pnpmrcPath, 'hoist=false\nnode-linker=isolated\n');
