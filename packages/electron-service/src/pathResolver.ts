@@ -49,8 +49,9 @@ function configureEntryPoint(
   existingAppArgs: string[],
 ): { appBinaryPath: string; appArgs: string[] } {
   const electronBinary = process.platform === 'win32' ? 'electron.CMD' : 'electron';
-  const packageDir = path.dirname(pkg.path);
-  const appBinaryPath = path.join(packageDir, 'node_modules', '.bin', electronBinary);
+  // Normalize pkg.path to ensure consistent path separators across platforms
+  const packageDir = path.dirname(path.normalize(pkg.path));
+  const appBinaryPath = path.normalize(path.join(packageDir, 'node_modules', '.bin', electronBinary));
   const appArgs = [`--app=${appEntryPoint}`, ...existingAppArgs];
   return { appBinaryPath, appArgs };
 }
