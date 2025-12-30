@@ -18,7 +18,7 @@ const config: BundlerConfig = {
         packageName: 'fast-copy',
         targetFile: 'src/service.ts',
         bundleRegExp: /export.*$/m,
-        importName: '{ default: copy }',
+        importName: '{ copy: fastCopy }',
         bundleReplace: (importName) => `const ${importName} = { default: index };`,
       },
     },
