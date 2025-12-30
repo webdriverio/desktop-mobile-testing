@@ -113,12 +113,11 @@ describe('CdpBridge', () => {
     // Reset debugger list
     debuggerList = undefined;
 
-    vi.mocked(DevTool).mockImplementation(
-      () =>
-        ({
-          list: vi.fn().mockResolvedValue(debuggerList),
-        }) as unknown as DevTool,
-    );
+    vi.mocked(DevTool).mockImplementation(function () {
+      return {
+        list: vi.fn().mockResolvedValue(debuggerList),
+      } as unknown as DevTool;
+    });
   });
 
   describe('connect', () => {
@@ -131,7 +130,7 @@ describe('CdpBridge', () => {
 
     it('should establish a connection successfully after retrying', async () => {
       let retry: number = 0;
-      vi.mocked(DevTool).mockImplementation(() => {
+      vi.mocked(DevTool).mockImplementation(function () {
         retry++;
         if (retry < 3) {
           throw Error('Dummy Error');
