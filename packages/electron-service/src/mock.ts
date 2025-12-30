@@ -37,7 +37,8 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
 
 export async function createMock(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   log.debug(`[${apiName}.${funcName}] createMock called - starting mock creation`);
-  const outerMock = vitestFn(() => {
+  // biome-ignore lint/complexity/useArrowFunction: Vitest v4 requires vi.fn() to use function declarations, not arrow functions
+  const outerMock = vitestFn(function () {
     // Default empty implementation
   });
   const outerMockImplementation = outerMock.mockImplementation;
