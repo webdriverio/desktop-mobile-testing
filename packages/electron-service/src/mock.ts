@@ -37,7 +37,9 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
 
 export async function createMock(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   log.debug(`[${apiName}.${funcName}] createMock called - starting mock creation`);
-  const outerMock = vitestFn();
+  const outerMock = vitestFn(() => {
+    // Default empty implementation
+  });
   const outerMockImplementation = outerMock.mockImplementation;
   const outerMockImplementationOnce = outerMock.mockImplementationOnce;
   const outerMockClear = outerMock.mockClear;
@@ -99,7 +101,12 @@ export async function createMock(apiName: string, funcName: string, browserConte
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
       const spy = await import('@vitest/spy');
-      const mockFn = spy.fn();
+      // Store original function before mocking
+      const originalFn = electronApi[funcName as keyof typeof electronApi] as ElectronApiFn;
+      const mockFn = spy.fn(function (...args: unknown[]) {
+        // Default implementation calls the original function
+        return originalFn?.apply?.(this, args);
+      });
 
       // replace target API with mock
       electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
