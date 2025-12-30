@@ -486,14 +486,13 @@ describe('Electron Worker Service', () => {
     it('should stop log capture if it was initialized', async () => {
       const { LogCaptureManager } = await import('../src/logCapture.js');
       const mockStopCapture = vi.fn();
-      vi.mocked(LogCaptureManager).mockImplementation(
-        () =>
-          ({
-            captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
-            captureRendererLogs: vi.fn().mockResolvedValue(undefined),
-            stopCapture: mockStopCapture,
-          }) as any,
-      );
+      vi.mocked(LogCaptureManager).mockImplementation(function () {
+        return {
+          captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
+          captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+          stopCapture: mockStopCapture,
+        } as any;
+      });
 
       instance = new ElectronWorkerService(
         {
@@ -548,14 +547,13 @@ describe('Electron Worker Service', () => {
     it('should initialize log capture when main process logging is enabled', async () => {
       const { LogCaptureManager } = await import('../src/logCapture.js');
       const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(LogCaptureManager).mockImplementation(
-        () =>
-          ({
-            captureMainProcessLogs: mockCaptureMainProcessLogs,
-            captureRendererLogs: vi.fn().mockResolvedValue(undefined),
-            stopCapture: vi.fn(),
-          }) as any,
-      );
+      vi.mocked(LogCaptureManager).mockImplementation(function () {
+        return {
+          captureMainProcessLogs: mockCaptureMainProcessLogs,
+          captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+          stopCapture: vi.fn(),
+        } as any;
+      });
 
       instance = new ElectronWorkerService(
         {
@@ -583,14 +581,13 @@ describe('Electron Worker Service', () => {
     it('should initialize log capture when renderer process logging is enabled', async () => {
       const { LogCaptureManager } = await import('../src/logCapture.js');
       const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(LogCaptureManager).mockImplementation(
-        () =>
-          ({
-            captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
-            captureRendererLogs: mockCaptureRendererLogs,
-            stopCapture: vi.fn(),
-          }) as any,
-      );
+      vi.mocked(LogCaptureManager).mockImplementation(function () {
+        return {
+          captureMainProcessLogs: vi.fn().mockResolvedValue(undefined),
+          captureRendererLogs: mockCaptureRendererLogs,
+          stopCapture: vi.fn(),
+        } as any;
+      });
 
       instance = new ElectronWorkerService(
         {
@@ -619,14 +616,13 @@ describe('Electron Worker Service', () => {
       const { LogCaptureManager } = await import('../src/logCapture.js');
       const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
       const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(LogCaptureManager).mockImplementation(
-        () =>
-          ({
-            captureMainProcessLogs: mockCaptureMainProcessLogs,
-            captureRendererLogs: mockCaptureRendererLogs,
-            stopCapture: vi.fn(),
-          }) as any,
-      );
+      vi.mocked(LogCaptureManager).mockImplementation(function () {
+        return {
+          captureMainProcessLogs: mockCaptureMainProcessLogs,
+          captureRendererLogs: mockCaptureRendererLogs,
+          stopCapture: vi.fn(),
+        } as any;
+      });
 
       instance = new ElectronWorkerService(
         {
@@ -662,14 +658,13 @@ describe('Electron Worker Service', () => {
       const { LogCaptureManager } = await import('../src/logCapture.js');
       const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
       const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(LogCaptureManager).mockImplementation(
-        () =>
-          ({
-            captureMainProcessLogs: mockCaptureMainProcessLogs,
-            captureRendererLogs: mockCaptureRendererLogs,
-            stopCapture: vi.fn(),
-          }) as any,
-      );
+      vi.mocked(LogCaptureManager).mockImplementation(function () {
+        return {
+          captureMainProcessLogs: mockCaptureMainProcessLogs,
+          captureRendererLogs: mockCaptureRendererLogs,
+          stopCapture: vi.fn(),
+        } as any;
+      });
 
       instance = new ElectronWorkerService(
         {
@@ -700,14 +695,13 @@ describe('Electron Worker Service', () => {
     it('should pass logDir option to log capture', async () => {
       const { LogCaptureManager } = await import('../src/logCapture.js');
       const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
-      vi.mocked(LogCaptureManager).mockImplementation(
-        () =>
-          ({
-            captureMainProcessLogs: mockCaptureMainProcessLogs,
-            captureRendererLogs: vi.fn().mockResolvedValue(undefined),
-            stopCapture: vi.fn(),
-          }) as any,
-      );
+      vi.mocked(LogCaptureManager).mockImplementation(function () {
+        return {
+          captureMainProcessLogs: mockCaptureMainProcessLogs,
+          captureRendererLogs: vi.fn().mockResolvedValue(undefined),
+          stopCapture: vi.fn(),
+        } as any;
+      });
 
       instance = new ElectronWorkerService(
         {
@@ -733,14 +727,13 @@ describe('Electron Worker Service', () => {
         const { LogCaptureManager } = await import('../src/logCapture.js');
         const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
         const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
-        vi.mocked(LogCaptureManager).mockImplementation(
-          () =>
-            ({
-              captureMainProcessLogs: mockCaptureMainProcessLogs,
-              captureRendererLogs: mockCaptureRendererLogs,
-              stopCapture: vi.fn(),
-            }) as any,
-        );
+        vi.mocked(LogCaptureManager).mockImplementation(function () {
+          return {
+            captureMainProcessLogs: mockCaptureMainProcessLogs,
+            captureRendererLogs: mockCaptureRendererLogs,
+            stopCapture: vi.fn(),
+          } as any;
+        });
 
         instance = new ElectronWorkerService({}, {});
 
@@ -791,14 +784,13 @@ describe('Electron Worker Service', () => {
         const { LogCaptureManager } = await import('../src/logCapture.js');
         const mockCaptureMainProcessLogs = vi.fn().mockResolvedValue(undefined);
         const mockCaptureRendererLogs = vi.fn().mockResolvedValue(undefined);
-        vi.mocked(LogCaptureManager).mockImplementation(
-          () =>
-            ({
-              captureMainProcessLogs: mockCaptureMainProcessLogs,
-              captureRendererLogs: mockCaptureRendererLogs,
-              stopCapture: vi.fn(),
-            }) as any,
-        );
+        vi.mocked(LogCaptureManager).mockImplementation(function () {
+          return {
+            captureMainProcessLogs: mockCaptureMainProcessLogs,
+            captureRendererLogs: mockCaptureRendererLogs,
+            stopCapture: vi.fn(),
+          } as any;
+        });
 
         instance = new ElectronWorkerService({}, {});
 

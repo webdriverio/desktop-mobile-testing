@@ -36,7 +36,9 @@ describe('buildCommand', () => {
         cjs: {},
       }),
     };
-    vi.mocked(ConfigLoader).mockImplementation(() => mockLoader);
+    vi.mocked(ConfigLoader).mockImplementation(function () {
+      return mockLoader;
+    });
 
     // Mock ConfigGenerator
     mockGenerator = {
@@ -47,16 +49,20 @@ describe('buildCommand', () => {
       }),
       writeConfig: vi.fn().mockResolvedValue(undefined),
     };
-    vi.mocked(ConfigGenerator).mockImplementation(() => mockGenerator);
+    vi.mocked(ConfigGenerator).mockImplementation(function () {
+      return mockGenerator;
+    });
 
     // Mock RollupExecutor
     mockExecutor = {
       executeBuild: vi.fn().mockResolvedValue(undefined),
     };
-    vi.mocked(RollupExecutor).mockImplementation(() => mockExecutor);
+    vi.mocked(RollupExecutor).mockImplementation(function () {
+      return mockExecutor;
+    });
 
     // Mock process.exit
-    processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+    processExitSpy = vi.spyOn(process, 'exit').mockImplementation(function () {
       throw new Error('process.exit called');
     });
   });
