@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildCommand } from '../../../src/cli/commands.js';
 import { RollupExecutor } from '../../../src/cli/executor.js';
 import { ConfigGenerator } from '../../../src/cli/generator.js';
