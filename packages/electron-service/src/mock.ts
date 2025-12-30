@@ -102,10 +102,13 @@ export async function createMock(apiName: string, funcName: string, browserConte
       const electronApi = electron[apiName as keyof typeof electron];
       const spy = await import('@vitest/spy');
       // Store original function before mocking
-      const originalFn = electronApi[funcName as keyof typeof electronApi] as ElectronApiFn;
-      const mockFn = spy.fn(function (...args: unknown[]) {
+      const originalFn = electronApi[funcName as keyof typeof electronApi] as unknown as Function;
+      const mockFn = spy.fn(function (this: unknown, ...args: unknown[]) {
         // Default implementation calls the original function
-        return originalFn?.apply?.(this, args);
+        if (typeof originalFn === 'function') {
+          return originalFn.apply(this, args);
+        }
+        return undefined;
       });
 
       // replace target API with mock
