@@ -340,14 +340,14 @@ export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser) => 
 const copyOriginalApi = async (browser: WebdriverIO.Browser) => {
   await browser.electron.execute<void, [ExecuteOpts]>(
     async (electron) => {
-      const { default: copy } = await import('fast-copy');
+      const { copy: fastCopy } = await import('fast-copy');
       globalThis.originalApi = {} as unknown as Record<ElectronInterface, ElectronType[ElectronInterface]>;
       for (const api in electron) {
         const apiName = api as keyof ElectronType;
         globalThis.originalApi[apiName] = {} as ElectronType[ElectronInterface];
         for (const apiElement in electron[apiName]) {
           const apiElementName = apiElement as keyof ElectronType[ElectronInterface];
-          globalThis.originalApi[apiName][apiElementName] = copy(electron[apiName][apiElementName]);
+          globalThis.originalApi[apiName][apiElementName] = fastCopy(electron[apiName][apiElementName]);
         }
       }
     },
