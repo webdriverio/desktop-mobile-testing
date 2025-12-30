@@ -67,7 +67,7 @@ describe('ElectronCdpBridge', () => {
   });
 
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
   describe('connect', async () => {
     const expectedContextId = 999;
