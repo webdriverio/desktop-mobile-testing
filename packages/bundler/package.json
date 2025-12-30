@@ -52,7 +52,7 @@
     "shx": "^0.4.0",
     "vitest": "^3.2.4"
   },
-  "files": ["dist/**/*", "LICENSE"],
+  "files": ["dist", "LICENSE"],
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
