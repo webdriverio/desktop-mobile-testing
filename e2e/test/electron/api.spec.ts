@@ -32,6 +32,12 @@ const getExpectedAppVersion = async (): Promise<string> => {
 };
 
 describe('Electron APIs', () => {
+  beforeEach(async () => {
+    // Reset app name to original value to ensure test isolation
+    const expectedName = getExpectedAppName();
+    await browser.electron.execute((electron, appName) => electron.app.setName(appName), expectedName);
+  });
+
   it('should retrieve the app name through the electron API', async () => {
     const appName = await browser.electron.execute((electron) => electron.app.getName());
     const expectedName = getExpectedAppName();
@@ -50,6 +56,9 @@ describe('Electron APIs', () => {
     describe('mock', () => {
       it('should mock an electron API function', async () => {
         const mockShowOpenDialog = await browser.electron.mock('dialog', 'showOpenDialog');
+        // Mock return value to prevent real dialog from appearing
+        await mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+
         await browser.electron.execute(async (electron) => {
           await electron.dialog.showOpenDialog({
             title: 'my dialog',
@@ -67,6 +76,9 @@ describe('Electron APIs', () => {
 
       it('should mock a synchronous electron API function', async () => {
         const mockShowOpenDialogSync = await browser.electron.mock('dialog', 'showOpenDialogSync');
+        // Mock return value to prevent real dialog from appearing
+        await mockShowOpenDialogSync.mockReturnValue([]);
+
         await browser.electron.execute((electron) =>
           electron.dialog.showOpenDialogSync({
             title: 'my dialog',
@@ -85,6 +97,10 @@ describe('Electron APIs', () => {
     describe('mockAll', () => {
       it('should mock all functions on an API', async () => {
         const mockedDialog = await browser.electron.mockAll('dialog');
+        // Mock return values to prevent real dialogs from appearing
+        await mockedDialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+        await mockedDialog.showOpenDialogSync.mockReturnValue([]);
+
         await browser.electron.execute(
           async (electron) =>
             await electron.dialog.showOpenDialog({
@@ -229,10 +245,11 @@ describe('Electron APIs', () => {
 
         await browser.electron.resetAllMocks();
 
+        // After reset, mocks restore to original pass-through behavior (Vitest v4)
         const appName = await browser.electron.execute((electron) => electron.app.getName());
         const clipboardText = await browser.electron.execute((electron) => electron.clipboard.readText());
-        expect(appName).toBeUndefined();
-        expect(clipboardText).toBeUndefined();
+        expect(appName).toBe(getExpectedAppName());
+        expect(clipboardText).toBeDefined(); // Real clipboard text
       });
 
       it('should reset existing mocks on an API', async () => {
@@ -243,9 +260,10 @@ describe('Electron APIs', () => {
 
         await browser.electron.resetAllMocks('app');
 
+        // App mock reset to pass-through, clipboard mock unchanged (Vitest v4)
         const appName = await browser.electron.execute((electron) => electron.app.getName());
         const clipboardText = await browser.electron.execute((electron) => electron.clipboard.readText());
-        expect(appName).toBeUndefined();
+        expect(appName).toBe(getExpectedAppName());
         expect(clipboardText).toBe('mocked clipboardText');
       });
     });
@@ -587,8 +605,9 @@ describe('Electron APIs', () => {
 
           await mockGetName.mockReset();
 
+          // After reset, mock restores to original pass-through behavior (Vitest v4)
           const name = await browser.electron.execute((electron) => electron.app.getName());
-          expect(name).toBeUndefined();
+          expect(name).toBe(getExpectedAppName());
         });
 
         it('should reset mockReturnValueOnce implementations of an existing mock', async () => {
@@ -599,8 +618,9 @@ describe('Electron APIs', () => {
 
           await mockGetName.mockReset();
 
+          // After reset, mock restores to original pass-through behavior (Vitest v4)
           const name = await browser.electron.execute((electron) => electron.app.getName());
-          expect(name).toBeUndefined();
+          expect(name).toBe(getExpectedAppName());
         });
 
         it('should reset mockImplementationOnce implementations of an existing mock', async () => {
@@ -611,8 +631,9 @@ describe('Electron APIs', () => {
 
           await mockGetName.mockReset();
 
+          // After reset, mock restores to original pass-through behavior (Vitest v4)
           const name = await browser.electron.execute((electron) => electron.app.getName());
-          expect(name).toBeUndefined();
+          expect(name).toBe(getExpectedAppName());
         });
 
         it('should clear the history of an existing mock', async () => {
@@ -777,6 +798,8 @@ describe('Electron APIs', () => {
       describe('mock.lastCall', () => {
         it('should return the last call of the mock execution', async () => {
           const mockGetFileIcon = await browser.electron.mock('app', 'getFileIcon');
+          // Mock the implementation to avoid calling real getFileIcon which crashes with non-existent paths
+          await mockGetFileIcon.mockResolvedValue({ toDataURL: () => 'mocked-icon' } as any);
 
           await browser.electron.execute((electron) => electron.app.getFileIcon('/path/to/icon'));
           expect(mockGetFileIcon.mock.lastCall).toStrictEqual(['/path/to/icon']);
@@ -879,6 +902,8 @@ describe('Command Override Debugging', () => {
     console.log('🔍 DEBUG: Testing command override mechanism');
 
     const mockShowOpenDialog = await browser.electron.mock('dialog', 'showOpenDialog');
+    // Mock return value to prevent real dialog from appearing
+    await mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
     console.log('🔍 DEBUG: Mock created for command override test');
 
     // Find a simple button that should work
@@ -926,6 +951,8 @@ describe('showOpenDialog with complex object', () => {
   // https://github.com/webdriverio-community/wdio-electron-service/issues/895
   it('should be mocked', async () => {
     const mockShowOpenDialog = await browser.electron.mock('dialog', 'showOpenDialog');
+    // Mock return value to prevent real dialog from appearing
+    await mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
 
     // Check if button exists before clicking (potential fix)
     const showDialogButton = await $('.show-dialog');
@@ -950,6 +977,8 @@ describe('showOpenDialog with complex object', () => {
   // Test to isolate the double element lookup potential fix
   it('should be mocked with double lookup', async () => {
     const mockShowOpenDialog = await browser.electron.mock('dialog', 'showOpenDialog');
+    // Mock return value to prevent real dialog from appearing
+    await mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
 
     // First lookup (like our debugging code did)
     const _element = await $('.show-dialog');
@@ -971,6 +1000,9 @@ describe('showOpenDialog with complex object', () => {
   // Test the original simple version to see if it still fails
   it('should be mocked - original simple version', async () => {
     const mockShowOpenDialog = await browser.electron.mock('dialog', 'showOpenDialog');
+    // Mock return value to prevent real dialog from appearing
+    await mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+
     const showDialogButton = await $('.show-dialog');
     await showDialogButton.click();
 
