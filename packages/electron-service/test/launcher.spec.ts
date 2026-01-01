@@ -791,7 +791,8 @@ describe('Electron Launch Service', () => {
           ),
         );
 
-        vi.resetModules();
+        // Clean up the mock but avoid vi.resetModules() which causes path issues on Windows
+        vi.doUnmock('read-package-up');
         vi.clearAllMocks();
       });
 

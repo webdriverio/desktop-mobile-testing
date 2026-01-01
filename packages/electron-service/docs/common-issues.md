@@ -1,27 +1,8 @@
-## Common Issues & Debugging
+# Common Issues
 
-These are some common issues which others have encountered whilst using the service.
+These are some common issues which others have encountered whilst using the service. For debugging tools and features, see the [Debugging guide](./debugging.md).
 
-If you need extra insight into what the service is doing you can enable namespaced debug logging via the `DEBUG` environment variable.
-
-- `DEBUG=wdio-electron-service` is equivalent to `DEBUG=wdio-electron-service:*` (enable all service namespaces)
-- You can target specific areas, e.g. `DEBUG=wdio-electron-service:service,mock`
-
-Examples:
-
-```bash
-# enable all service logs
-DEBUG=wdio-electron-service:* wdio run ./wdio.conf.ts
-
-# enable only core service + mocks
-DEBUG=wdio-electron-service:service,mock wdio run ./wdio.conf.ts
-```
-
-Logs are also forwarded into WDIO runner logs under your configured `outputDir`.
-
-This is utilising the [`debug`](https://github.com/debug-js/debug) logging package.
-
-### CDP bridge cannot be initialized: EnableNodeCliInspectArguments fuse is disabled
+## CDP bridge cannot be initialized: EnableNodeCliInspectArguments fuse is disabled
 
 This warning appears when your Electron app has the `EnableNodeCliInspectArguments` fuse explicitly disabled. The CDP (Chrome DevTools Protocol) bridge relies on the `--inspect` flag to connect to Electron's main process, so when this fuse is disabled, the service cannot provide access to the main process APIs.
 
@@ -30,7 +11,9 @@ This warning appears when your Electron app has the `EnableNodeCliInspectArgumen
 When this fuse is disabled:
 - ❌ `browser.electron.execute()` - main process API access will not work
 - ❌ `browser.electron.mock()` - mocking main process APIs will not work
+- ❌ Main process log capture will not work (see [Debugging - Log Capture Requirements](./debugging.md#log-capture-requirements))
 - ✅ Renderer process testing continues to work normally
+- ✅ Renderer process log capture continues to work (uses Puppeteer, not CDP bridge)
 - ✅ Service initialization continues normally - no crashes or failures
 - ✅ Clear error messages when attempting to use disabled APIs
 

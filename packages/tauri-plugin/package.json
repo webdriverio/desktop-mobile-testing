@@ -15,7 +15,7 @@
       }
     }
   },
-  "files": ["README.md", "dist-js"],
+  "files": ["README.md", "dist-js", "LICENSE"],
   "scripts": {
     "build:js": "tsc guest-js/index.ts --outDir dist-js --module ESNext --moduleResolution bundler --target ESNext --declaration --esModuleInterop --skipLibCheck"
   },
@@ -23,7 +23,7 @@
   "author": "WebDriverIO Community",
   "license": "MIT",
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-log": "^2.7.1"
   },
   "devDependencies": {

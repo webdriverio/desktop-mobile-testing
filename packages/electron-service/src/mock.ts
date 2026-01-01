@@ -16,16 +16,21 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
+      const target = electronApi[funcName as keyof typeof electronApi] as unknown;
+
+      // Get the original function from globalThis.originalApi
       const originalApi = globalThis.originalApi as Record<ElectronInterface, ElectronType[ElectronInterface]>;
       const originalApiMethod = originalApi[apiName as keyof typeof originalApi][
         funcName as keyof ElectronType[ElectronInterface]
       ] as ElectronApiFn;
 
-      const target = electronApi[funcName as keyof typeof electronApi] as unknown;
-      if (target && typeof (target as { mockImplementation?: unknown }).mockImplementation === 'function') {
-        (target as Mock).mockImplementation(originalApiMethod);
+      // Restore the mock by resetting it and setting implementation to the original function
+      // This keeps it as a mock (for tracking calls) but with original behavior
+      if (target && typeof (target as { mockReset?: unknown }).mockReset === 'function') {
+        (target as Mock).mockReset();
+        (target as Mock).mockImplementation(originalApiMethod as AbstractFn);
       } else {
-        // Fallback: directly restore the original function using Reflect to avoid index signature issues
+        // Fallback: if not a mock, replace entirely with original function
         Reflect.set(electronApi as unknown as object, funcName, originalApiMethod as unknown as ElectronApiFn);
       }
     },
@@ -37,6 +42,7 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
 
 export async function createMock(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   log.debug(`[${apiName}.${funcName}] createMock called - starting mock creation`);
+  // biome-ignore lint/complexity/useArrowFunction: Vitest v4 requires vi.fn() to use function declarations, not arrow functions
   const outerMock = vitestFn();
   const outerMockImplementation = outerMock.mockImplementation;
   const outerMockImplementationOnce = outerMock.mockImplementationOnce;
@@ -99,7 +105,15 @@ export async function createMock(apiName: string, funcName: string, browserConte
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
       const spy = await import('@vitest/spy');
-      const mockFn = spy.fn();
+      // Store original function before mocking
+      const originalFn = electronApi[funcName as keyof typeof electronApi] as unknown as Function;
+      const mockFn = spy.fn(function (this: unknown, ...args: unknown[]) {
+        // Default implementation calls the original function
+        if (typeof originalFn === 'function') {
+          return originalFn.apply(this, args);
+        }
+        return undefined;
+      });
 
       // replace target API with mock
       electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
@@ -288,6 +302,9 @@ export async function createMock(apiName: string, funcName: string, browserConte
   };
 
   mock.mockReset = async () => {
+    // Store the current mock name to preserve it across reset
+    const currentName = outerMock.getMockName();
+
     // resets inner implementation to an empty function and clears mock history
     await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
       (electron, apiName, funcName) => {
@@ -301,6 +318,9 @@ export async function createMock(apiName: string, funcName: string, browserConte
     );
     outerMockReset();
 
+    // Restore the mock name after reset (Vitest v4 clears it)
+    outerMock.mockName(currentName);
+
     // vitest mockReset doesn't clear mock history so we need to explicitly clear both mocks
     await mock.mockClear();
 
@@ -308,12 +328,12 @@ export async function createMock(apiName: string, funcName: string, browserConte
   };
 
   mock.mockRestore = async () => {
+    // clear mocks before restoring (since after restore, the inner function is no longer a mock)
+    await mock.mockClear();
+    outerMockClear();
+
     // restores inner mock implementation to the original function
     await restoreElectronFunctionality(apiName, funcName, browserToUse);
-
-    // clear mocks
-    outerMockClear();
-    await mock.mockClear();
 
     return mock;
   };
