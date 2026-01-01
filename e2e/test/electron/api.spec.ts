@@ -245,11 +245,11 @@ describe('Electron APIs', () => {
 
         await browser.electron.resetAllMocks();
 
-        // After reset, mocks restore to original pass-through behavior (Vitest v4)
+        // After reset, mocks return undefined (Vitest v4 behavior)
         const appName = await browser.electron.execute((electron) => electron.app.getName());
         const clipboardText = await browser.electron.execute((electron) => electron.clipboard.readText());
-        expect(appName).toBe(getExpectedAppName());
-        expect(clipboardText).toBeDefined(); // Real clipboard text
+        expect(appName).toBeUndefined();
+        expect(clipboardText).toBeUndefined();
       });
 
       it('should reset existing mocks on an API', async () => {
@@ -260,10 +260,10 @@ describe('Electron APIs', () => {
 
         await browser.electron.resetAllMocks('app');
 
-        // App mock reset to pass-through, clipboard mock unchanged (Vitest v4)
+        // App mock reset to undefined, clipboard mock unchanged (Vitest v4 behavior)
         const appName = await browser.electron.execute((electron) => electron.app.getName());
         const clipboardText = await browser.electron.execute((electron) => electron.clipboard.readText());
-        expect(appName).toBe(getExpectedAppName());
+        expect(appName).toBeUndefined();
         expect(clipboardText).toBe('mocked clipboardText');
       });
     });
@@ -605,9 +605,9 @@ describe('Electron APIs', () => {
 
           await mockGetName.mockReset();
 
-          // After reset, mock restores to original pass-through behavior (Vitest v4)
+          // After reset, mock returns undefined (Vitest v4 behavior)
           const name = await browser.electron.execute((electron) => electron.app.getName());
-          expect(name).toBe(getExpectedAppName());
+          expect(name).toBeUndefined();
         });
 
         it('should reset mockReturnValueOnce implementations of an existing mock', async () => {
@@ -618,9 +618,9 @@ describe('Electron APIs', () => {
 
           await mockGetName.mockReset();
 
-          // After reset, mock restores to original pass-through behavior (Vitest v4)
+          // After reset, mock returns undefined (Vitest v4 behavior)
           const name = await browser.electron.execute((electron) => electron.app.getName());
-          expect(name).toBe(getExpectedAppName());
+          expect(name).toBeUndefined();
         });
 
         it('should reset mockImplementationOnce implementations of an existing mock', async () => {
@@ -631,9 +631,9 @@ describe('Electron APIs', () => {
 
           await mockGetName.mockReset();
 
-          // After reset, mock restores to original pass-through behavior (Vitest v4)
+          // After reset, mock returns undefined (Vitest v4 behavior)
           const name = await browser.electron.execute((electron) => electron.app.getName());
-          expect(name).toBe(getExpectedAppName());
+          expect(name).toBeUndefined();
         });
 
         it('should clear the history of an existing mock', async () => {
