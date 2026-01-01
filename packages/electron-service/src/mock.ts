@@ -16,16 +16,18 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
-      const originalApi = globalThis.originalApi as Record<ElectronInterface, ElectronType[ElectronInterface]>;
-      const originalApiMethod = originalApi[apiName as keyof typeof originalApi][
-        funcName as keyof ElectronType[ElectronInterface]
-      ] as ElectronApiFn;
-
       const target = electronApi[funcName as keyof typeof electronApi] as unknown;
-      if (target && typeof (target as { mockImplementation?: unknown }).mockImplementation === 'function') {
-        (target as Mock).mockImplementation(originalApiMethod);
+
+      // In Vitest v4, mockReset() on vi.fn(implementation) correctly restores to the initial implementation
+      // Since our mocks are created with vi.fn(passThrough), mockReset should restore to pass-through
+      if (target && typeof (target as { mockReset?: unknown }).mockReset === 'function') {
+        (target as Mock).mockReset();
       } else {
-        // Fallback: directly restore the original function using Reflect to avoid index signature issues
+        // Fallback: if mockReset doesn't exist, replace the mock entirely
+        const originalApi = globalThis.originalApi as Record<ElectronInterface, ElectronType[ElectronInterface]>;
+        const originalApiMethod = originalApi[apiName as keyof typeof originalApi][
+          funcName as keyof ElectronType[ElectronInterface]
+        ] as ElectronApiFn;
         Reflect.set(electronApi as unknown as object, funcName, originalApiMethod as unknown as ElectronApiFn);
       }
     },
@@ -297,6 +299,9 @@ export async function createMock(apiName: string, funcName: string, browserConte
   };
 
   mock.mockReset = async () => {
+    // Store the current mock name to preserve it across reset
+    const currentName = outerMock.getMockName();
+
     // resets inner implementation to an empty function and clears mock history
     await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
       (electron, apiName, funcName) => {
@@ -309,6 +314,9 @@ export async function createMock(apiName: string, funcName: string, browserConte
       { internal: true },
     );
     outerMockReset();
+
+    // Restore the mock name after reset (Vitest v4 clears it)
+    outerMock.mockName(currentName);
 
     // vitest mockReset doesn't clear mock history so we need to explicitly clear both mocks
     await mock.mockClear();
