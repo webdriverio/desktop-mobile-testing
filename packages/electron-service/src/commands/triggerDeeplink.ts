@@ -122,12 +122,28 @@ export function getPlatformCommand(
         args: ['/c', 'start', '', url],
       };
 
-    case 'darwin':
+    case 'darwin': {
       // macOS: Use open command
+      // Decode the query string to prevent double-encoding by the 'open' command
+      // The 'open' command will re-encode it when passing to the protocol handler
+      let decodedUrl = url;
+      const queryIndex = url.indexOf('?');
+      if (queryIndex !== -1) {
+        const base = url.substring(0, queryIndex);
+        const queryAndFragment = url.substring(queryIndex + 1);
+        try {
+          const decodedQuery = decodeURIComponent(queryAndFragment);
+          decodedUrl = `${base}?${decodedQuery}`;
+        } catch (_error) {
+          // If decoding fails, use original URL
+          decodedUrl = url;
+        }
+      }
       return {
         command: 'open',
-        args: [url],
+        args: [decodedUrl],
       };
+    }
 
     case 'linux':
       // Linux: Use xdg-open command
