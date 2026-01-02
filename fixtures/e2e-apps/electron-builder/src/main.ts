@@ -192,7 +192,13 @@ function handleDeeplink(url: string) {
     // Remove userData parameter before storing (it's only for internal use)
     const cleanUrl = new URL(url);
     cleanUrl.searchParams.delete('userData');
-    const cleanUrlString = cleanUrl.toString();
+    let cleanUrlString = cleanUrl.toString();
+
+    // Normalize: remove trailing slashes from pathname-only URLs (Windows adds these)
+    // e.g., "testapp://simple/" -> "testapp://simple"
+    if (cleanUrl.pathname === '/' && !cleanUrl.search && !cleanUrl.hash) {
+      cleanUrlString = cleanUrlString.replace(/\/$/, '');
+    }
 
     // Store the received deeplink for test verification
     globalThis.receivedDeeplinks.push(cleanUrlString);
