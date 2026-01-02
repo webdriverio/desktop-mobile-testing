@@ -94,15 +94,10 @@ export async function createMock(apiName: string, funcName: string, browserConte
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
       const spy = await import('@vitest/spy');
-      // Store original function before mocking
-      const originalFn = electronApi[funcName as keyof typeof electronApi] as unknown as (
-        ...args: unknown[]
-      ) => unknown;
-      const mockFn = spy.fn(function (this: unknown, ...args: unknown[]) {
-        // Default implementation calls the original function
-        if (typeof originalFn === 'function') {
-          return originalFn.apply(this, args);
-        }
+      const mockFn = spy.fn(function (this: unknown) {
+        // Default implementation returns undefined (does not call the original function)
+        // This prevents real dialogs/actions from occurring when mocking
+        // Users can call mockImplementation() to provide custom behavior
         return undefined;
       });
 
