@@ -35,12 +35,21 @@ export class ElectronCdpBridge extends CdpBridge {
     log.debug('CdpBridge options:', this.options);
 
     await super.connect();
+    log.debug('CDP connection established, setting up context handler');
 
     const contextHandler = this.#getContextIdHandler();
+    log.debug('Context handler promise created');
 
+    log.debug('Sending Runtime.enable');
     await this.send('Runtime.enable');
-    this.#contextId = await contextHandler;
+    log.debug('Runtime.enable completed');
+
+    log.debug('Sending Runtime.disable');
     await this.send('Runtime.disable');
+    log.debug('Runtime.disable completed, now waiting for context ID');
+
+    this.#contextId = await contextHandler;
+    log.debug(`Context ID received: ${this.#contextId}`);
 
     await this.send('Runtime.evaluate', {
       expression: getInitializeScript(),
@@ -48,20 +57,57 @@ export class ElectronCdpBridge extends CdpBridge {
       replMode: true,
       contextId: this.#contextId,
     });
+    log.debug('Initialization script executed');
   }
 
   #getContextIdHandler() {
     return new Promise<number>((resolve, reject) => {
+      log.debug(`Setting up Runtime.executionContextCreated listener (timeout: ${this.options.timeout}ms)`);
+      let eventCount = 0;
+      let firstContextId: number | null = null;
+      let resolved = false;
+
       this.on('Runtime.executionContextCreated', (params) => {
-        if (params.context.auxData.isDefault) {
+        eventCount++;
+        log.debug(`Runtime.executionContextCreated event #${eventCount} received:`, {
+          contextId: params.context.id,
+          name: params.context.name,
+          origin: params.context.origin,
+          isDefault: params.context.auxData?.isDefault,
+          auxData: params.context.auxData,
+        });
+
+        // Store the first context we see as a fallback
+        if (firstContextId === null) {
+          firstContextId = params.context.id;
+          log.debug(`Stored first context ID as fallback: ${firstContextId}`);
+        }
+
+        // Prefer contexts marked as default
+        if (params.context.auxData?.isDefault) {
+          log.debug(`Found default context with ID: ${params.context.id}`);
+          resolved = true;
           resolve(params.context.id);
+        } else {
+          log.debug(`Context is not marked as default, waiting for next event`);
         }
       });
 
       setTimeout(() => {
-        const err = new Error('Timeout exceeded to get the ContextId.');
-        log.error(err.message);
-        reject(err);
+        if (!resolved) {
+          if (firstContextId !== null) {
+            log.warn(
+              `No default context found after ${this.options.timeout}ms, using first context ID: ${firstContextId} (received ${eventCount} context events)`,
+            );
+            resolve(firstContextId);
+          } else {
+            const err = new Error(
+              `Timeout exceeded to get the ContextId after ${this.options.timeout}ms (received ${eventCount} context events)`,
+            );
+            log.error(err.message);
+            reject(err);
+          }
+        }
       }, this.options.timeout);
     });
   }
