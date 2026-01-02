@@ -232,46 +232,62 @@ export async function executeDeeplinkCommand(command: string, args: string[], ti
 export async function triggerDeeplink(this: ServiceContext, url: string): Promise<void> {
   log.debug(`triggerDeeplink called with URL: ${url}`);
 
-  // Step 1: Validate the URL
+  // Validate the URL format and reject disallowed protocols
   const validatedUrl = validateDeeplinkUrl(url);
 
-  // Step 2: Extract configuration from service context
+  // Extract service configuration
   const { appBinaryPath, appEntryPoint } = this.globalOptions;
-  const userDataDir = this.userDataDir;
+  let userDataDir = this.userDataDir;
   const platform = process.platform;
 
-  // Step 3: Windows-specific warnings and configuration
+  // Auto-detect user data directory if not already configured
+  // Critical for Windows/Linux: ensures second instance matches the test instance via single-instance lock
+  if (!userDataDir && this.browser) {
+    try {
+      log.debug('Fetching user data directory from running app...');
+      userDataDir = await this.browser.electron.execute((electron: typeof import('electron')) => {
+        return electron.app.getPath('userData');
+      });
+      this.userDataDir = userDataDir; // Cache for future calls
+      log.debug(`Detected user data directory: ${userDataDir}`);
+    } catch (error) {
+      log.warn(
+        `Failed to fetch user data directory from app: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  // Windows-specific configuration warnings
   let finalUrl = validatedUrl;
 
   if (platform === 'win32') {
-    // Warn if using appEntryPoint instead of appBinaryPath
     if (appEntryPoint && !appBinaryPath) {
       log.warn(
         'Using appEntryPoint with protocol handlers on Windows may not work correctly for deeplink testing. ' +
           'Consider using appBinaryPath for protocol handler tests on Windows.',
       );
     }
+  }
 
-    // Warn if user data directory is missing
+  // For Windows and Linux: append userData to URL so second instance can match the test instance
+  // The app reads this parameter and sets its userData before requesting the single-instance lock
+  if (platform === 'win32' || platform === 'linux') {
     if (!userDataDir) {
       log.warn(
         'No user data directory detected. The deeplink may launch a new instance instead of reaching the test instance. ' +
           'Consider explicitly setting --user-data-dir in appArgs.',
       );
-    }
-
-    // Append user data directory to URL (Windows only)
-    if (userDataDir) {
+    } else {
       finalUrl = appendUserDataDir(validatedUrl, userDataDir);
       log.debug(`Appended user data directory to URL: ${finalUrl}`);
     }
   }
 
-  // Step 4: Get platform-specific command
+  // Generate the OS-specific command to trigger the deeplink
   const { command, args } = getPlatformCommand(finalUrl, platform, appBinaryPath);
   log.debug(`Executing deeplink command: ${command} ${args.join(' ')}`);
 
-  // Step 5: Execute the command with timeout (default 5 seconds)
+  // Execute the command and wait for completion (with timeout to prevent hanging)
   const timeout = 5000;
   try {
     await executeDeeplinkCommand(command, args, timeout);
