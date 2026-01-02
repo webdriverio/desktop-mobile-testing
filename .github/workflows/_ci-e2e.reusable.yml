@@ -109,16 +109,47 @@ jobs:
         if: contains(inputs.scenario, 'builder')
         shell: bash
         run: |
+          echo "=== Protocol Handler Setup ==="
+          echo "Runner OS: $RUNNER_OS"
+          echo "Working directory: $(pwd)"
+          echo ""
+
           if [ "$RUNNER_OS" == "Windows" ]; then
             echo "Setting up Windows protocol handler..."
+            echo "Checking if dist directory exists..."
+            ls -la ./fixtures/e2e-apps/electron-builder/dist/ || echo "dist/ not found"
+            echo ""
+
             powershell -ExecutionPolicy Bypass -File ./fixtures/e2e-apps/electron-builder/scripts/setup-protocol-handler.ps1
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Error: Protocol handler setup failed with exit code $EXIT_CODE"
+              exit 1
+            fi
+
           elif [ "$RUNNER_OS" == "Linux" ]; then
             echo "Setting up Linux protocol handler..."
+            echo "Checking if dist directory exists..."
+            ls -la ./fixtures/e2e-apps/electron-builder/dist/ || echo "dist/ not found"
+            echo ""
+
             chmod +x ./fixtures/e2e-apps/electron-builder/scripts/setup-protocol-handler.sh
             ./fixtures/e2e-apps/electron-builder/scripts/setup-protocol-handler.sh
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Error: Protocol handler setup failed with exit code $EXIT_CODE"
+              exit 1
+            fi
+
           else
-            echo "macOS protocol handlers are registered by the app itself, no setup needed"
+            echo "macOS: Protocol handlers are registered by the app itself via setAsDefaultProtocolClient"
+            echo "No external setup needed - the app registers on first launch"
           fi
+
+          echo ""
+          echo "=== Protocol Handler Setup Complete ==="
 
       # Dynamically generate the test commands to run
       # This handles both single and multiple scenarios
