@@ -1,0 +1,267 @@
+import { spawn } from 'node:child_process';
+import type { ElectronServiceGlobalOptions } from '@wdio/native-types';
+import { createLogger } from '@wdio/native-utils';
+
+const log = createLogger('electron-service', 'service');
+
+/**
+ * Context interface for the triggerDeeplink command.
+ * Provides access to service configuration and state.
+ */
+interface ServiceContext {
+  browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
+  globalOptions: ElectronServiceGlobalOptions;
+  userDataDir?: string;
+}
+
+/**
+ * Validates that the provided URL is a valid deeplink URL.
+ * Rejects http/https/file protocols and ensures the URL is properly formatted.
+ *
+ * @param url - The URL to validate
+ * @returns The validated URL
+ * @throws Error if the URL is invalid or uses a disallowed protocol
+ *
+ * @example
+ * ```ts
+ * validateDeeplinkUrl('myapp://test'); // Returns 'myapp://test'
+ * validateDeeplinkUrl('https://example.com'); // Throws error
+ * ```
+ */
+export function validateDeeplinkUrl(url: string): string {
+  // Parse the URL to validate its format
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch (_error) {
+    throw new Error(`Invalid deeplink URL: ${url}`);
+  }
+
+  // Reject http/https/file protocols
+  const disallowedProtocols = ['http:', 'https:', 'file:'];
+  if (disallowedProtocols.includes(parsedUrl.protocol)) {
+    const protocol = parsedUrl.protocol.slice(0, -1); // Remove trailing colon
+    throw new Error(`Invalid deeplink protocol: ${protocol}. Expected a custom protocol (e.g., myapp://).`);
+  }
+
+  return url;
+}
+
+/**
+ * Appends the user data directory as a query parameter to the deeplink URL.
+ * This is required on Windows to ensure the deeplink reaches the test instance.
+ *
+ * @param url - The deeplink URL
+ * @param userDataDir - The user data directory path
+ * @returns The modified URL with userData parameter
+ *
+ * @example
+ * ```ts
+ * appendUserDataDir('myapp://test', '/tmp/user-data');
+ * // Returns 'myapp://test?userData=/tmp/user-data'
+ *
+ * appendUserDataDir('myapp://test?foo=bar', '/tmp/user-data');
+ * // Returns 'myapp://test?foo=bar&userData=/tmp/user-data'
+ * ```
+ */
+export function appendUserDataDir(url: string, userDataDir: string): string {
+  const parsedUrl = new URL(url);
+
+  // Check if userData parameter already exists
+  if (parsedUrl.searchParams.has('userData')) {
+    log.warn(`URL already contains a userData parameter. It will be overwritten with: ${userDataDir}`);
+  }
+
+  // Append or overwrite the userData parameter
+  parsedUrl.searchParams.set('userData', userDataDir);
+
+  return parsedUrl.toString();
+}
+
+/**
+ * Generates the platform-specific command to trigger the deeplink.
+ *
+ * @param url - The deeplink URL to trigger
+ * @param platform - The platform (win32, darwin, linux)
+ * @param appBinaryPath - The path to the app binary (required for Windows)
+ * @returns Command and arguments for child_process.spawn
+ * @throws Error if platform is unsupported or required parameters are missing
+ *
+ * @example
+ * ```ts
+ * // Windows
+ * getPlatformCommand('myapp://test', 'win32', 'C:\\app.exe');
+ * // Returns { command: 'cmd', args: ['/c', 'start', '', 'myapp://test'] }
+ *
+ * // macOS
+ * getPlatformCommand('myapp://test', 'darwin');
+ * // Returns { command: 'open', args: ['myapp://test'] }
+ *
+ * // Linux
+ * getPlatformCommand('myapp://test', 'linux');
+ * // Returns { command: 'xdg-open', args: ['myapp://test'] }
+ * ```
+ */
+export function getPlatformCommand(
+  url: string,
+  platform: string,
+  appBinaryPath?: string,
+): { command: string; args: string[] } {
+  switch (platform) {
+    case 'win32':
+      if (!appBinaryPath) {
+        throw new Error(
+          'triggerDeeplink requires appBinaryPath to be configured on Windows. ' +
+            'Please set appBinaryPath in your wdio:electronServiceOptions.',
+        );
+      }
+      // Windows: Use cmd /c start to trigger the deeplink
+      // Empty string after 'start' is the window title (required when URL might start with quotes)
+      return {
+        command: 'cmd',
+        args: ['/c', 'start', '', url],
+      };
+
+    case 'darwin':
+      // macOS: Use open command
+      return {
+        command: 'open',
+        args: [url],
+      };
+
+    case 'linux':
+      // Linux: Use xdg-open command
+      return {
+        command: 'xdg-open',
+        args: [url],
+      };
+
+    default:
+      throw new Error(
+        `Unsupported platform for deeplink triggering: ${platform}. ` +
+          'Supported platforms are: win32, darwin, linux.',
+      );
+  }
+}
+
+/**
+ * Executes the deeplink command using child_process.spawn.
+ * The process is detached to avoid blocking the test execution.
+ *
+ * @param command - The command to execute
+ * @param args - The command arguments
+ * @param timeout - Maximum time to wait for the command (milliseconds)
+ * @returns A promise that resolves when the command has been executed
+ * @throws Error if the command fails or times out
+ *
+ * @example
+ * ```ts
+ * await executeDeeplinkCommand('open', ['myapp://test'], 5000);
+ * ```
+ */
+export async function executeDeeplinkCommand(command: string, args: string[], timeout: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Set up timeout
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Deeplink command timed out after ${timeout}ms`));
+    }, timeout);
+
+    try {
+      // Spawn the command with detached process
+      const childProcess = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore',
+        shell: process.platform === 'win32', // Windows needs shell: true
+      });
+
+      // Unref the child process to allow parent to exit
+      childProcess.unref();
+
+      // Handle spawn errors
+      childProcess.on('error', (error) => {
+        clearTimeout(timeoutId);
+        reject(new Error(`Failed to trigger deeplink: ${error.message}`));
+      });
+
+      // Consider spawn successful if it doesn't error immediately
+      // We can't wait for 'exit' because the process is detached
+      process.nextTick(() => {
+        clearTimeout(timeoutId);
+        resolve();
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      reject(new Error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  });
+}
+
+/**
+ * Triggers a deeplink to the Electron application for testing protocol handlers.
+ *
+ * On Windows, this automatically appends the test instance's user-data-dir to ensure
+ * the deeplink reaches the correct instance. On macOS and Linux, it works transparently.
+ *
+ * @param this - Service context with access to browser and options
+ * @param url - The deeplink URL to trigger (e.g., 'myapp://open?path=/test')
+ * @returns A promise that resolves when the deeplink has been triggered
+ * @throws Error if appBinaryPath is not configured (Windows only)
+ * @throws Error if the URL is invalid or uses http/https/file protocols
+ *
+ * @example
+ * ```ts
+ * await browser.electron.triggerDeeplink('myapp://open?file=test.txt');
+ * ```
+ */
+export async function triggerDeeplink(this: ServiceContext, url: string): Promise<void> {
+  log.debug(`triggerDeeplink called with URL: ${url}`);
+
+  // Step 1: Validate the URL
+  const validatedUrl = validateDeeplinkUrl(url);
+
+  // Step 2: Extract configuration from service context
+  const { appBinaryPath, appEntryPoint } = this.globalOptions;
+  const userDataDir = this.userDataDir;
+  const platform = process.platform;
+
+  // Step 3: Windows-specific warnings and configuration
+  let finalUrl = validatedUrl;
+
+  if (platform === 'win32') {
+    // Warn if using appEntryPoint instead of appBinaryPath
+    if (appEntryPoint && !appBinaryPath) {
+      log.warn(
+        'Using appEntryPoint with protocol handlers on Windows may not work correctly for deeplink testing. ' +
+          'Consider using appBinaryPath for protocol handler tests on Windows.',
+      );
+    }
+
+    // Warn if user data directory is missing
+    if (!userDataDir) {
+      log.warn(
+        'No user data directory detected. The deeplink may launch a new instance instead of reaching the test instance. ' +
+          'Consider explicitly setting --user-data-dir in appArgs.',
+      );
+    }
+
+    // Append user data directory to URL (Windows only)
+    if (userDataDir) {
+      finalUrl = appendUserDataDir(validatedUrl, userDataDir);
+      log.debug(`Appended user data directory to URL: ${finalUrl}`);
+    }
+  }
+
+  // Step 4: Get platform-specific command
+  const { command, args } = getPlatformCommand(finalUrl, platform, appBinaryPath);
+  log.debug(`Executing deeplink command: ${command} ${args.join(' ')}`);
+
+  // Step 5: Execute the command with timeout (default 5 seconds)
+  const timeout = 5000;
+  try {
+    await executeDeeplinkCommand(command, args, timeout);
+    log.debug('Deeplink triggered successfully');
+  } catch (error) {
+    log.error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  }
+}

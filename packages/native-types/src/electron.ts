@@ -70,6 +70,37 @@ export interface ElectronServiceAPI {
    * Checks that a given parameter is an Electron mock function. If you are using TypeScript, it will also narrow down its type.
    */
   isMockFunction: (fn: unknown) => fn is ElectronMockInstance;
+  /**
+   * Trigger a deeplink to the Electron application for testing protocol handlers.
+   *
+   * On Windows, this automatically appends the test instance's user-data-dir to ensure
+   * the deeplink reaches the correct instance. On macOS and Linux, it works transparently.
+   *
+   * The app must implement protocol handler registration via `app.setAsDefaultProtocolClient()`
+   * and single instance lock via `app.requestSingleInstanceLock()`. On Windows, the app must
+   * also parse the userData query parameter and call `app.setPath('userData', userDataDir)`
+   * early in startup.
+   *
+   * @param url - The deeplink URL to trigger (e.g., 'myapp://test')
+   * @returns a Promise that resolves when the deeplink has been triggered
+   * @throws Error if appBinaryPath is not configured (Windows only)
+   * @throws Error if the URL is invalid or uses http/https/file protocols
+   *
+   * @example
+   * ```ts
+   * // Trigger a simple deeplink
+   * await browser.electron.triggerDeeplink('myapp://open?path=/test');
+   *
+   * // Wait for app to process the deeplink
+   * await browser.waitUntil(async () => {
+   *   const openedPath = await browser.electron.execute(() => {
+   *     return globalThis.lastOpenedPath;
+   *   });
+   *   return openedPath === '/test';
+   * });
+   * ```
+   */
+  triggerDeeplink: (url: string) => Promise<void>;
 }
 
 /**
@@ -128,6 +159,11 @@ export interface ElectronServiceOptions {
    * @default './logs'
    */
   logDir?: string;
+  /**
+   * Auto-install AppArmor profiles on Linux systems that require them
+   * @default false
+   */
+  apparmorAutoInstall?: boolean | 'sudo';
 }
 
 export type ElectronServiceGlobalOptions = Pick<
@@ -140,6 +176,8 @@ export type ElectronServiceGlobalOptions = Pick<
   | 'mainProcessLogLevel'
   | 'rendererLogLevel'
   | 'logDir'
+  | 'appBinaryPath'
+  | 'appEntryPoint'
 > & {
   rootDir?: string;
   /**
@@ -318,7 +356,7 @@ export type ElectronServiceCapabilities =
   | ElectronServiceRequestedMultiremoteCapabilities
   | ElectronServiceRequestedMultiremoteCapabilities[];
 
-export type WdioElectronConfig = Options.Testrunner & {
+export type WdioElectronConfig = Omit<Options.Testrunner, 'capabilities'> & {
   capabilities: ElectronServiceCapabilities | ElectronServiceCapabilities[];
 };
 
@@ -331,10 +369,12 @@ export interface ElectronBrowserExtension extends BrowserBase {
    *
    * - {@link ElectronServiceAPI.clearAllMocks `browser.electron.clearAllMocks`} - Clear the Electron API mock functions
    * - {@link ElectronServiceAPI.execute `browser.electron.execute`} - Execute code in the Electron main process context
+   * - {@link ElectronServiceAPI.isMockFunction `browser.electron.isMockFunction`} - Check if a function is an Electron mock
    * - {@link ElectronServiceAPI.mock `browser.electron.mock`} - Mock a function from the Electron API, e.g. `dialog.showOpenDialog`
    * - {@link ElectronServiceAPI.mockAll `browser.electron.mockAll`} - Mock an entire API object of the Electron API, e.g. `app` or `dialog`
    * - {@link ElectronServiceAPI.resetAllMocks `browser.electron.resetAllMocks`} - Reset the Electron API mock functions
    * - {@link ElectronServiceAPI.restoreAllMocks `browser.electron.restoreAllMocks`} - Restore the original Electron API functionality
+   * - {@link ElectronServiceAPI.triggerDeeplink `browser.electron.triggerDeeplink`} - Trigger a deeplink to test protocol handlers
    * - {@link ElectronServiceAPI.windowHandle `browser.electron.windowHandle`} - Get the current window handle
    */
   electron: ElectronServiceAPI;
