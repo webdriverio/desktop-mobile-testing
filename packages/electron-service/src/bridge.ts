@@ -32,45 +32,65 @@ export class ElectronCdpBridge extends CdpBridge {
   }
 
   async connect(): Promise<void> {
+    const startTime = Date.now();
     log.debug('CdpBridge options:', this.options);
 
     await super.connect();
-    log.debug('CDP connection established, setting up context handler');
+    log.debug(`[+${Date.now() - startTime}ms] CDP connection established, setting up context handler`);
 
+    const t2 = Date.now();
     const contextHandler = this.#getContextIdHandler();
-    log.debug('Context handler promise created');
+    log.debug(`[+${Date.now() - startTime}ms] Context handler promise created (took ${Date.now() - t2}ms)`);
 
-    log.debug('Sending Runtime.enable');
-    await this.send('Runtime.enable');
-    log.debug('Runtime.enable completed');
+    const t3 = Date.now();
+    log.debug(`[+${Date.now() - startTime}ms] Sending Runtime.enable`);
+    try {
+      await this.send('Runtime.enable');
+      log.debug(`[+${Date.now() - startTime}ms] Runtime.enable completed (took ${Date.now() - t3}ms)`);
+    } catch (error) {
+      log.error(`[+${Date.now() - startTime}ms] Runtime.enable failed after ${Date.now() - t3}ms:`, error);
+      throw error;
+    }
 
-    log.debug('Waiting for context ID');
+    const t5 = Date.now();
+    log.debug(`[+${Date.now() - startTime}ms] Sending Runtime.disable`);
+    try {
+      await this.send('Runtime.disable');
+      log.debug(`[+${Date.now() - startTime}ms] Runtime.disable completed (took ${Date.now() - t5}ms)`);
+    } catch (error) {
+      log.error(`[+${Date.now() - startTime}ms] Runtime.disable failed after ${Date.now() - t5}ms:`, error);
+      throw error;
+    }
+
+    const t4 = Date.now();
+    log.debug(`[+${Date.now() - startTime}ms] Waiting for context ID`);
     this.#contextId = await contextHandler;
-    log.debug(`Context ID received: ${this.#contextId}`);
+    log.debug(`[+${Date.now() - startTime}ms] Context ID received: ${this.#contextId} (waited ${Date.now() - t4}ms)`);
 
-    log.debug('Sending Runtime.disable');
-    await this.send('Runtime.disable');
-    log.debug('Runtime.disable completed');
-
+    const t6 = Date.now();
     await this.send('Runtime.evaluate', {
       expression: getInitializeScript(),
       includeCommandLineAPI: true,
       replMode: true,
       contextId: this.#contextId,
     });
-    log.debug('Initialization script executed');
+    log.debug(`[+${Date.now() - startTime}ms] Initialization script executed (took ${Date.now() - t6}ms)`);
   }
 
   #getContextIdHandler() {
     return new Promise<number>((resolve, reject) => {
-      log.debug(`Setting up Runtime.executionContextCreated listener (timeout: ${this.options.timeout}ms)`);
+      const handlerStartTime = Date.now();
+      log.debug(
+        `[Handler +0ms] Setting up Runtime.executionContextCreated listener (timeout: ${this.options.timeout}ms)`,
+      );
       let eventCount = 0;
       let firstContextId: number | null = null;
       let resolved = false;
 
       this.on('Runtime.executionContextCreated', (params) => {
         eventCount++;
-        log.debug(`Runtime.executionContextCreated event #${eventCount} received:`, {
+        const eventTime = Date.now() - handlerStartTime;
+        log.debug(`[Handler +${eventTime}ms] Runtime.executionContextCreated event #${eventCount} received:`, {
           contextId: params.context.id,
           name: params.context.name,
           origin: params.context.origin,
@@ -81,33 +101,45 @@ export class ElectronCdpBridge extends CdpBridge {
         // Store the first context we see as a fallback
         if (firstContextId === null) {
           firstContextId = params.context.id;
-          log.debug(`Stored first context ID as fallback: ${firstContextId}`);
+          log.debug(`[Handler +${eventTime}ms] Stored first context ID as fallback: ${firstContextId}`);
         }
 
         // Prefer contexts marked as default
         if (params.context.auxData?.isDefault) {
-          log.debug(`Found default context with ID: ${params.context.id}`);
+          log.debug(
+            `[Handler +${eventTime}ms] Found default context with ID: ${params.context.id}, resolving immediately`,
+          );
           resolved = true;
           resolve(params.context.id);
         } else {
-          log.debug(`Context is not marked as default, waiting for next event`);
+          log.debug(`[Handler +${eventTime}ms] Context is not marked as default, waiting for next event`);
         }
       });
 
+      log.debug(
+        `[Handler +${Date.now() - handlerStartTime}ms] Listener registered, setting ${this.options.timeout}ms timeout`,
+      );
+
       setTimeout(() => {
+        const timeoutTime = Date.now() - handlerStartTime;
+        log.debug(
+          `[Handler +${timeoutTime}ms] Timeout fired, resolved=${resolved}, eventCount=${eventCount}, firstContextId=${firstContextId}`,
+        );
         if (!resolved) {
           if (firstContextId !== null) {
             log.warn(
-              `No default context found after ${this.options.timeout}ms, using first context ID: ${firstContextId} (received ${eventCount} context events)`,
+              `[Handler +${timeoutTime}ms] No default context found after ${this.options.timeout}ms, using first context ID: ${firstContextId} (received ${eventCount} context events)`,
             );
             resolve(firstContextId);
           } else {
             const err = new Error(
               `Timeout exceeded to get the ContextId after ${this.options.timeout}ms (received ${eventCount} context events)`,
             );
-            log.error(err.message);
+            log.error(`[Handler +${timeoutTime}ms] ${err.message}`);
             reject(err);
           }
+        } else {
+          log.debug(`[Handler +${timeoutTime}ms] Already resolved, timeout is a no-op`);
         }
       }, this.options.timeout);
     });
