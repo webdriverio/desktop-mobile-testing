@@ -183,10 +183,10 @@ export async function executeDeeplinkCommand(command: string, args: string[], ti
         reject(new Error(`Failed to trigger deeplink: ${error.message}`));
       });
 
-      // Consider spawn successful if it doesn't error immediately
-      // We can't wait for 'exit' because the process is detached
+      // Resolve immediately after spawning - the process will continue in background
       process.nextTick(() => {
         clearTimeout(timeoutId);
+        log.debug('Deeplink command spawned successfully');
         resolve();
       });
     } catch (error) {
