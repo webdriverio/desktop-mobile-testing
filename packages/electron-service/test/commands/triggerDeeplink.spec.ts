@@ -478,16 +478,16 @@ describe('triggerDeeplink', () => {
       await expect(triggerDeeplink.call(mockContext, 'myapp://test')).resolves.toBeUndefined();
     });
 
-    it('should not append userData on Linux', async () => {
+    it('should append userData on Linux', async () => {
       mockContext.globalOptions = {};
       mockContext.userDataDir = '/tmp/user-data';
 
       await triggerDeeplink.call(mockContext, 'myapp://test');
 
-      // Verify that spawn was called with the original URL
+      // Verify that spawn was called with userData appended
       const spawnCall = mockSpawn.mock.calls[0];
-      expect(spawnCall[1][0]).toBe('myapp://test');
-      expect(spawnCall[1][0]).not.toContain('userData=');
+      expect(spawnCall[1][0]).toContain('userData=');
+      expect(spawnCall[1][0]).toContain(encodeURIComponent('/tmp/user-data'));
     });
   });
 
