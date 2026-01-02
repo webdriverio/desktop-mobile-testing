@@ -44,12 +44,13 @@ export class ElectronCdpBridge extends CdpBridge {
     await this.send('Runtime.enable');
     log.debug('Runtime.enable completed');
 
-    log.debug('Sending Runtime.disable');
-    await this.send('Runtime.disable');
-    log.debug('Runtime.disable completed, now waiting for context ID');
-
+    log.debug('Waiting for context ID');
     this.#contextId = await contextHandler;
     log.debug(`Context ID received: ${this.#contextId}`);
+
+    log.debug('Sending Runtime.disable');
+    await this.send('Runtime.disable');
+    log.debug('Runtime.disable completed');
 
     await this.send('Runtime.evaluate', {
       expression: getInitializeScript(),
