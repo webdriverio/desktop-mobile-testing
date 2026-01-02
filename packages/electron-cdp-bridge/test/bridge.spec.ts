@@ -95,7 +95,11 @@ vi.mock('ws', async (importOriginal) => {
 let debuggerList: { webSocketDebuggerUrl: string }[] | undefined;
 vi.mock('../src/devTool', () => {
   return {
-    DevTool: vi.fn(),
+    DevTool: vi.fn().mockImplementation(function (this: any) {
+      return {
+        list: vi.fn(),
+      };
+    }),
   };
 });
 
@@ -113,12 +117,11 @@ describe('CdpBridge', () => {
     // Reset debugger list
     debuggerList = undefined;
 
-    vi.mocked(DevTool).mockImplementation(
-      () =>
-        ({
-          list: vi.fn().mockResolvedValue(debuggerList),
-        }) as unknown as DevTool,
-    );
+    vi.mocked(DevTool).mockImplementation(function (this: any) {
+      return {
+        list: vi.fn().mockResolvedValue(debuggerList),
+      } as unknown as DevTool;
+    });
   });
 
   describe('connect', () => {
@@ -131,7 +134,7 @@ describe('CdpBridge', () => {
 
     it('should establish a connection successfully after retrying', async () => {
       let retry: number = 0;
-      vi.mocked(DevTool).mockImplementation(() => {
+      vi.mocked(DevTool).mockImplementation(function (this: any) {
         retry++;
         if (retry < 3) {
           throw Error('Dummy Error');
