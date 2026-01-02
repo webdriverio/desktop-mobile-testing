@@ -103,6 +103,23 @@ jobs:
         shell: bash
         run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
 
+      # Setup protocol handlers for deeplink testing
+      # Required for Windows and Linux to properly handle testapp:// protocol
+      - name: 🔗 Setup Protocol Handlers
+        if: contains(inputs.scenario, 'builder')
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "Setting up Windows protocol handler..."
+            powershell -ExecutionPolicy Bypass -File ./fixtures/e2e-apps/electron-builder/scripts/setup-protocol-handler.ps1
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+            echo "Setting up Linux protocol handler..."
+            chmod +x ./fixtures/e2e-apps/electron-builder/scripts/setup-protocol-handler.sh
+            ./fixtures/e2e-apps/electron-builder/scripts/setup-protocol-handler.sh
+          else
+            echo "macOS protocol handlers are registered by the app itself, no setup needed"
+          fi
+
       # Dynamically generate the test commands to run
       # This handles both single and multiple scenarios
       - name: 🪄 Generate Test Execution Plan
