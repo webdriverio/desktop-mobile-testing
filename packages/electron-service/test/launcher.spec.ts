@@ -106,6 +106,9 @@ afterEach(() => {
   instance = undefined;
   revertProcessProperty('platform');
   vi.mocked(access).mockReset().mockResolvedValue(undefined);
+  // Note: Not using vi.resetModules() here due to Windows path issues in Vitest 4
+  // See: https://github.com/vitest-dev/vitest/issues/693
+  vi.clearAllMocks();
 });
 
 describe('Electron Launch Service', () => {
@@ -761,7 +764,7 @@ describe('Electron Launch Service', () => {
         vi.resetModules();
 
         // Now import the module after setting up the mock
-        let { default: LaunchService } = await import('../src/launcher.js');
+        const { default: LaunchService } = await import('../src/launcher.js');
 
         delete options.appBinaryPath;
         options.appEntryPoint = 'path/to/main.bundle.js';
@@ -795,12 +798,8 @@ describe('Electron Launch Service', () => {
           ),
         );
 
-        // Clean up the mock and re-import to ensure clean state
-        vi.doUnmock('read-package-up');
-        vi.clearAllMocks();
-        // Re-import LaunchService to reset module state after unmocking
-        const module = await import('../src/launcher.js');
-        LaunchService = module.default;
+        // Note: Not cleaning up the read-package-up mock to avoid Windows path issues
+        // The mock won't affect other tests since they don't use read-package-up
       });
 
       it('should set the expected capabilities when setting custom chromedriverOptions', async () => {
