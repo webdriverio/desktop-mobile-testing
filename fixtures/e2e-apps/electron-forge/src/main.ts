@@ -69,9 +69,10 @@ const createSplashWindow = () => {
   });
 };
 
-// Parse userData from command line on Windows BEFORE app.ready
+// Parse userData from command line BEFORE app.ready
 // This must be done early to ensure single instance lock works correctly
-if (process.platform === 'win32') {
+// On Windows and Linux, deeplinks come through command line args when app is launched
+if (process.platform === 'win32' || process.platform === 'linux') {
   const url = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
   if (url) {
     try {
@@ -192,7 +193,13 @@ function handleDeeplink(url: string) {
     // Remove userData parameter before storing (it's only for internal use)
     const cleanUrl = new URL(url);
     cleanUrl.searchParams.delete('userData');
-    const cleanUrlString = cleanUrl.toString();
+    let cleanUrlString = cleanUrl.toString();
+
+    // Normalize: remove trailing slashes from pathname-only URLs (Windows adds these)
+    // e.g., "testapp://simple/" -> "testapp://simple"
+    if (cleanUrl.pathname === '/' && !cleanUrl.search && !cleanUrl.hash) {
+      cleanUrlString = cleanUrlString.replace(/\/$/, '');
+    }
 
     // Store the received deeplink for test verification
     globalThis.receivedDeeplinks.push(cleanUrlString);
