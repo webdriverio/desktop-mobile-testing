@@ -36,6 +36,12 @@
     "copyright": "goosewobbler",
     "productName": "electron-builder",
     "files": ["./dist/*"],
+    "protocols": [
+      {
+        "name": "testapp",
+        "schemes": ["testapp"]
+      }
+    ],
     "mac": {
       "target": "dir",
       "identity": null
@@ -43,7 +49,7 @@
     "linux": {
       "executableName": "electron-builder",
       "category": "Utility",
-      "target": ["AppImage"]
+      "target": "dir"
     },
     "win": {
       "target": "dir"

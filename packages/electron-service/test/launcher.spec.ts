@@ -7,7 +7,7 @@ import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import ElectronLaunchService from '../src/launcher.js';
 import { mockProcessProperty, revertProcessProperty } from './helpers.js';
-import { getAppBuildInfo, getBinaryPath, getElectronVersion, getMockLogger } from './mocks/native-utils.js';
+import { getAppBuildInfo, getBinaryPath, getElectronVersion } from './mocks/native-utils.js';
 
 let LaunchService: typeof ElectronLaunchService;
 let instance: ElectronLaunchService | undefined;
@@ -74,7 +74,7 @@ beforeEach(async () => {
   mockProcessProperty('platform', 'darwin');
   // Ensure the launcher logger is created before importing the service
   const { createLogger } = await import('./mocks/native-utils.js');
-  createLogger('electron-service');
+  createLogger();
   LaunchService = (await import('../src/launcher.js')).default;
   options = {
     appBinaryPath: 'workspace/my-test-app/dist/my-test-app',
@@ -106,6 +106,9 @@ afterEach(() => {
   instance = undefined;
   revertProcessProperty('platform');
   vi.mocked(access).mockReset().mockResolvedValue(undefined);
+  // Note: Not using vi.resetModules() here due to Windows path issues in Vitest 4
+  // See: https://github.com/vitest-dev/vitest/issues/693
+  vi.clearAllMocks();
 });
 
 describe('Electron Launch Service', () => {
@@ -237,9 +240,13 @@ describe('Electron Launch Service', () => {
           },
         ];
         await instance?.onPrepare({} as never, capabilities);
-        const mockLogger = getMockLogger('electron-service');
-        expect(mockLogger?.info).toHaveBeenCalledWith(
-          'Both appEntryPoint and appBinaryPath are set, using appEntryPoint (appBinaryPath ignored)',
+
+        // Verify appEntryPoint is used (in args) and appBinaryPath is ignored
+        expect(capabilities[0]['goog:chromeOptions']?.args).toContain(
+          '--app=./path/to/bundled/electron/main.bundle.js',
+        );
+        expect(capabilities[0]['goog:chromeOptions']?.binary).toBe(
+          path.join(getFixtureDir('package-scenarios', 'no-build-tool'), 'node_modules', '.bin', 'electron'),
         );
       });
 
@@ -791,9 +798,8 @@ describe('Electron Launch Service', () => {
           ),
         );
 
-        // Clean up the mock but avoid vi.resetModules() which causes path issues on Windows
-        vi.doUnmock('read-package-up');
-        vi.clearAllMocks();
+        // Note: Not cleaning up the read-package-up mock to avoid Windows path issues
+        // The mock won't affect other tests since they don't use read-package-up
       });
 
       it('should set the expected capabilities when setting custom chromedriverOptions', async () => {

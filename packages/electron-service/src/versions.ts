@@ -1,3 +1,4 @@
+/// <reference types="../../../@types/electron-to-chromium/index.d.ts" />
 import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'service');

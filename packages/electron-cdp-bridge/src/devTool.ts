@@ -54,7 +54,7 @@ export class DevTool {
     const result = await this.#executeRequest<VersionReturnValue>({
       path: '/json/version',
     });
-    log.info(result);
+    log.info(`Browser: ${result.Browser}, Protocol: ${result['Protocol-Version']}`);
     return {
       browser: result.Browser,
       protocolVersion: result['Protocol-Version'],
