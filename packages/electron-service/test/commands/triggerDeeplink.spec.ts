@@ -133,7 +133,7 @@ describe('getPlatformCommand', () => {
       const result = getPlatformCommand('myapp://test', 'win32', 'C:\\app.exe');
       expect(result).toEqual({
         command: 'cmd',
-        args: ['/c', 'start', '', 'myapp://test'],
+        args: ['/c', 'start', '', '"myapp://test"'],
       });
     });
 
@@ -152,7 +152,7 @@ describe('getPlatformCommand', () => {
 
     it('should handle URLs with query parameters', () => {
       const result = getPlatformCommand('myapp://test?foo=bar&userData=/tmp/data', 'win32', 'C:\\app.exe');
-      expect(result.args).toContain('myapp://test?foo=bar&userData=/tmp/data');
+      expect(result.args).toContain('"myapp://test?foo=bar&userData=/tmp/data"');
     });
   });
 
@@ -410,10 +410,10 @@ describe('triggerDeeplink', () => {
 
       await triggerDeeplink.call(mockContext, 'myapp://test');
 
-      // Verify that spawn was called with the original URL
+      // Verify that spawn was called with the original URL (quoted for Windows)
       const spawnCall = mockSpawn.mock.calls[0];
       const urlArg = spawnCall[1][3];
-      expect(urlArg).toBe('myapp://test');
+      expect(urlArg).toBe('"myapp://test"');
     });
   });
 
