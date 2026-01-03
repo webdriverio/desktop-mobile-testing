@@ -116,11 +116,11 @@ export function getPlatformCommand(
         );
       }
       // Windows: Use cmd /c start to trigger the deeplink
-      // The empty string after 'start' is the window title
+      // The empty quoted string after 'start' is the window title (required)
       // URL must be quoted to handle special characters like & in query strings
       return {
         command: 'cmd',
-        args: ['/c', 'start', '', `"${url}"`],
+        args: ['/c', 'start', '""', `"${url}"`],
       };
 
     case 'darwin': {

@@ -133,7 +133,7 @@ describe('getPlatformCommand', () => {
       const result = getPlatformCommand('myapp://test', 'win32', 'C:\\app.exe');
       expect(result).toEqual({
         command: 'cmd',
-        args: ['/c', 'start', '', '"myapp://test"'],
+        args: ['/c', 'start', '""', '"myapp://test"'],
       });
     });
 
@@ -248,11 +248,11 @@ describe('executeDeeplinkCommand', () => {
       configurable: true,
     });
 
-    await executeDeeplinkCommand('cmd', ['/c', 'start', '', 'myapp://test'], 5000);
+    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test'], 5000);
 
     expect(mockSpawn).toHaveBeenCalledWith(
       'cmd',
-      ['/c', 'start', '', 'myapp://test'],
+      ['/c', 'start', '""', 'myapp://test'],
       expect.objectContaining({
         shell: true,
       }),
@@ -303,9 +303,9 @@ describe('executeDeeplinkCommand', () => {
   });
 
   it('should handle multiple args correctly', async () => {
-    await executeDeeplinkCommand('cmd', ['/c', 'start', '', 'myapp://test'], 5000);
+    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test'], 5000);
 
-    expect(mockSpawn).toHaveBeenCalledWith('cmd', ['/c', 'start', '', 'myapp://test'], expect.any(Object));
+    expect(mockSpawn).toHaveBeenCalledWith('cmd', ['/c', 'start', '""', 'myapp://test'], expect.any(Object));
   });
 
   it('should clear timeout on success', async () => {
@@ -400,7 +400,7 @@ describe('triggerDeeplink', () => {
 
       // Verify that spawn was called with a URL containing userData
       const spawnCall = mockSpawn.mock.calls[0];
-      const urlArg = spawnCall[1][3]; // The URL is the 4th argument in ['/c', 'start', '', url]
+      const urlArg = spawnCall[1][3]; // The URL is the 4th argument in ['/c', 'start', '""', url]
       expect(urlArg).toContain('userData=');
     });
 
@@ -542,7 +542,7 @@ describe('triggerDeeplink', () => {
 
       expect(mockSpawn).toHaveBeenCalledWith(
         'cmd',
-        expect.arrayContaining(['/c', 'start', '']),
+        expect.arrayContaining(['/c', 'start', '""']),
         expect.objectContaining({
           detached: true,
           stdio: 'ignore',
