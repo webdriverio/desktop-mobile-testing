@@ -33,13 +33,13 @@ jobs:
 
   # Run unit tests after linting to ensure code quality first
   unit-matrix:
-    name: Unit [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}]
+    name: Unit [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}]
     needs: [build, lint]
     strategy:
       fail-fast: false
       matrix:
-        # Test on all major operating systems to ensure cross-platform compatibility
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        # Test on all major operating systems and architectures to ensure cross-platform compatibility
+        os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
     uses: ./.github/workflows/_ci-unit.reusable.yml
     with:
       os: ${{ matrix.os }}
@@ -90,12 +90,12 @@ jobs:
   # Tauri apps are built separately due to longer build times and system dependencies
   # Electron package tests are split by module type (CJS/ESM) for better error isolation
   package-electron-matrix:
-    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}] - ${{ matrix.module-type }}
+    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.module-type }}
     needs: [build, lint]
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
         module-type: ['cjs', 'esm']
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -155,29 +155,29 @@ jobs:
 
   # Run build tests outside of the main Linux build job.
   build-matrix:
-    name: Build [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}]
+    name: Build [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}]
     needs: [build, lint]
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest', 'macos-latest']
+        os: ['windows-latest', 'macos-latest', 'macos-15-intel']
     uses: ./.github/workflows/_ci-build.reusable.yml
     with:
       os: ${{ matrix.os }}
 
   # E2E test matrix strategy:
-  # - Run tests across 3 operating systems (Linux, Windows, macOS)
+  # - Run tests across operating systems and architectures (Linux, Windows, macOS ARM, macOS Intel)
   # - Test 3 scenarios (builder, forge, no-binary)
   # - E2E tests use ESM only (CJS/ESM testing is done in package tests)
   # - Optimize for GitHub Actions concurrency limits
   e2e-matrix:
-    name: E2E - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || 'macOS' }}] - ${{ matrix.scenario }}
+    name: E2E - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.scenario }}
     needs: [build]
     strategy:
       fail-fast: false
       matrix:
-        # Test across all major operating systems
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        # Test across all major operating systems and macOS architectures
+        os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
         # Test all application scenarios
         scenario: ['builder', 'forge', 'no-binary']
     uses: ./.github/workflows/_ci-e2e.reusable.yml
@@ -252,22 +252,80 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ''
 
-  # Mac Universal builds require special handling
-  # These are separate from regular macOS tests because they use a different build command
-  e2e-mac-universal-matrix:
-    name: E2E [macOS-U] - ${{ matrix.scenario }}
-    needs: [build]
-    strategy:
-      fail-fast: false
-      matrix:
-        # Test both application scenarios
-        scenario: ['forge', 'builder']
-    uses: ./.github/workflows/_ci-e2e.reusable.yml
-    with:
-      os: 'macos-latest'
-      node-version: '20'
-      build-command: 'build:mac-universal'
-      scenario: ${{ matrix.scenario }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
+  # Universal binary verification - ensures binaries contain both ARM64 and Intel architectures
+  # Replaces redundant universal e2e tests (which only tested ARM64 slice when run on ARM64 runner)
+  package-electron-mac-universal:
+    name: Package - Electron [macOS-Universal-Verify]
+    needs: [build, lint]
+    runs-on: macos-latest
+    steps:
+      - name: 👷 Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: 🛠️ Setup Development Environment
+        uses: ./.github/workflows/actions/setup-workspace
+        with:
+          node-version: '20'
+
+      - name: 📦 Download Build Artifacts
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: wdio-electron-service
+          path: wdio-electron-service-build
+          filename: artifact.zip
+          cache_key_prefix: wdio-electron-build
+          exact_cache_key: ${{ needs.build.outputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+
+      - name: 🔨 Build Universal Binary (Electron Builder)
+        run: pnpm --filter electron-builder-e2e-app build:mac-universal
+
+      - name: ✅ Verify Universal Binary Contains Both Architectures (Builder)
+        run: |
+          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist/mac-universal/wdio-electron-service-e2e-app.app/Contents/MacOS/wdio-electron-service-e2e-app"
+
+          if [ ! -f "$BINARY_PATH" ]; then
+            echo "❌ Binary not found at $BINARY_PATH"
+            exit 1
+          fi
+
+          ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures:" | cut -d: -f2 | xargs)
+          echo "Found architectures: $ARCHS"
+
+          if [[ "$ARCHS" != *"x86_64"* ]]; then
+            echo "❌ Missing x86_64 architecture"
+            exit 1
+          fi
+
+          if [[ "$ARCHS" != *"arm64"* ]]; then
+            echo "❌ Missing arm64 architecture"
+            exit 1
+          fi
+
+          echo "✅ Universal binary verified: $ARCHS"
+
+      - name: 🔨 Build Universal Binary (Electron Forge)
+        run: pnpm --filter electron-forge-e2e-app build:mac-universal
+
+      - name: ✅ Verify Universal Binary Contains Both Architectures (Forge)
+        run: |
+          BINARY_PATH="fixtures/e2e-apps/electron-forge/out/wdio-electron-service-e2e-app-darwin-universal/wdio-electron-service-e2e-app.app/Contents/MacOS/wdio-electron-service-e2e-app"
+
+          if [ ! -f "$BINARY_PATH" ]; then
+            echo "❌ Binary not found at $BINARY_PATH"
+            exit 1
+          fi
+
+          ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures:" | cut -d: -f2 | xargs)
+          echo "Found architectures: $ARCHS"
+
+          if [[ "$ARCHS" != *"x86_64"* ]]; then
+            echo "❌ Missing x86_64 architecture"
+            exit 1
+          fi
+
+          if [[ "$ARCHS" != *"arm64"* ]]; then
+            echo "❌ Missing arm64 architecture"
+            exit 1
+          fi
+
+          echo "✅ Universal binary verified: $ARCHS"
