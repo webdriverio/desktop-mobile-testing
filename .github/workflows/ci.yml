@@ -285,8 +285,13 @@ jobs:
 
           if [ ! -f "$BINARY_PATH" ]; then
             echo "❌ Binary not found at $BINARY_PATH"
+            echo "Contents of dist/mac-universal:"
+            ls -la fixtures/e2e-apps/electron-builder/dist/mac-universal/ || echo "Directory does not exist"
             exit 1
           fi
+
+          echo "Binary found, checking architecture..."
+          lipo -info "$BINARY_PATH"
 
           ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures:" | cut -d: -f2 | xargs)
           echo "Found architectures: $ARCHS"
@@ -312,8 +317,13 @@ jobs:
 
           if [ ! -f "$BINARY_PATH" ]; then
             echo "❌ Binary not found at $BINARY_PATH"
+            echo "Contents of out/:"
+            ls -la fixtures/e2e-apps/electron-forge/out/ || echo "Directory does not exist"
             exit 1
           fi
+
+          echo "Binary found, checking architecture..."
+          lipo -info "$BINARY_PATH"
 
           ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures:" | cut -d: -f2 | xargs)
           echo "Found architectures: $ARCHS"
