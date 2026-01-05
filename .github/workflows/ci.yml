@@ -281,7 +281,7 @@ jobs:
 
       - name: ✅ Verify Universal Binary Contains Both Architectures (Builder)
         run: |
-          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist/mac-universal/wdio-electron-service-e2e-app.app/Contents/MacOS/wdio-electron-service-e2e-app"
+          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist/mac-universal/electron-builder-e2e-app.app/Contents/MacOS/electron-builder-e2e-app"
 
           if [ ! -f "$BINARY_PATH" ]; then
             echo "❌ Binary not found at $BINARY_PATH"
@@ -308,7 +308,7 @@ jobs:
 
       - name: ✅ Verify Universal Binary Contains Both Architectures (Forge)
         run: |
-          BINARY_PATH="fixtures/e2e-apps/electron-forge/out/wdio-electron-service-e2e-app-darwin-universal/wdio-electron-service-e2e-app.app/Contents/MacOS/wdio-electron-service-e2e-app"
+          BINARY_PATH="fixtures/e2e-apps/electron-forge/out/electron-forge-e2e-app-darwin-universal/electron-forge-e2e-app.app/Contents/MacOS/electron-forge-e2e-app"
 
           if [ ! -f "$BINARY_PATH" ]; then
             echo "❌ Binary not found at $BINARY_PATH"
