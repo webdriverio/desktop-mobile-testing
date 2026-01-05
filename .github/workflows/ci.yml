@@ -293,7 +293,7 @@ jobs:
           echo "Binary found, checking architecture..."
           lipo -info "$BINARY_PATH"
 
-          ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures:" | cut -d: -f2 | xargs)
+          ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures" | awk '{print $(NF-1), $NF}')
           echo "Found architectures: $ARCHS"
 
           if [[ "$ARCHS" != *"x86_64"* ]]; then
@@ -325,7 +325,7 @@ jobs:
           echo "Binary found, checking architecture..."
           lipo -info "$BINARY_PATH"
 
-          ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures:" | cut -d: -f2 | xargs)
+          ARCHS=$(lipo -info "$BINARY_PATH" | grep "Architectures" | awk '{print $(NF-1), $NF}')
           echo "Found architectures: $ARCHS"
 
           if [[ "$ARCHS" != *"x86_64"* ]]; then
