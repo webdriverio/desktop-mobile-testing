@@ -22,6 +22,7 @@ Makes testing Electron applications much easier via:
   - supports [Electron Forge](https://www.electronforge.io/), [Electron Builder](https://www.electron.build/) and unpackaged apps
 - 🧩 access Electron APIs within your tests
 - 🕵️ mocking of Electron APIs via a Vitest-like API
+- 🔗 deeplink/protocol handler testing support
 - 📊 console log capture from main and renderer processes
 - 🖥️ headless testing support
   - automatic Xvfb integration for Linux environments (requires WebdriverIO 9.19.1+)
@@ -89,7 +90,7 @@ export const config = {
 };
 ```
 
-See the [configuration doc](./docs/configuration/service-configuration.md#appbinarypath) for how to find your `appBinaryPath` value for the different operating systems supported by Electron.
+See the [configuration doc](./docs/configuration.md#appbinarypath) for how to find your `appBinaryPath` value for the different operating systems supported by Electron.
 
 Alternatively, you can point the service at an unpackaged app by providing the path to the `main.js` script. Electron will need to be installed in your `node_modules`. It is recommended to bundle unpackaged apps using a bundler such as Rollup, Parcel, Webpack, etc.
 
@@ -113,16 +114,16 @@ export const config = {
 
 ## Chromedriver Configuration
 
-**If your app uses a version of Electron which is lower than v26 then you will need to [manually configure Chromedriver](./docs/configuration/chromedriver-configuration.md#user-managed).**
+**If your app uses a version of Electron which is lower than v26 then you will need to [manually configure Chromedriver](./docs/configuration.md#user-managed).**
 
 This is because WDIO uses Chrome for Testing to download Chromedriver, which only provides Chromedriver versions of v115 or newer.
 
 ## Documentation
 
-**[Service Configuration](./docs/configuration/service-configuration.md)** \
-**[Chromedriver Configuration](./docs/configuration/chromedriver-configuration.md)** \
-**[Accessing Electron APIs](./docs/electron-apis/accessing-apis.md)** \
-**[Mocking Electron APIs](./docs/electron-apis/mocking-apis.md)** \
+**[Configuration](./docs/configuration.md)** \
+**[API Reference](./docs/api-reference.md)** \
+**[Electron APIs](./docs/electron-apis.md)** \
+**[Deeplink Testing](./docs/deeplink-testing.md)** \
 **[Window Management](./docs/window-management.md)** \
 **[Standalone Mode](./docs/standalone-mode.md)** \
 **[Debugging](./docs/debugging.md)** \

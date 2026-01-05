@@ -6,18 +6,20 @@ import { getStandaloneLogWriter, isStandaloneLogWriterInitialized, StandaloneLog
 describe('logWriter', () => {
   const testLogDir = join(process.cwd(), 'test-logs');
 
-  beforeEach(() => {
-    // Clean up test log directory
+  const cleanupLogDir = () => {
     if (existsSync(testLogDir)) {
-      rmSync(testLogDir, { recursive: true, force: true });
+      // On Windows, file handles may not be immediately released
+      // Retry with delay to avoid ENOTEMPTY errors
+      rmSync(testLogDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
+  };
+
+  beforeEach(() => {
+    cleanupLogDir();
   });
 
   afterEach(() => {
-    // Clean up test log directory
-    if (existsSync(testLogDir)) {
-      rmSync(testLogDir, { recursive: true, force: true });
-    }
+    cleanupLogDir();
   });
 
   describe('StandaloneLogWriter', () => {

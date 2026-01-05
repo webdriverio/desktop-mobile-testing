@@ -94,7 +94,7 @@ describe('ElectronCdpBridge', () => {
 
     it('should throw error when getting contextId with timeout', async () => {
       const cdpBridge = new ElectronCdpBridge({ timeout: 10 });
-      await expect(() => cdpBridge.connect()).rejects.toThrowError('Timeout exceeded to get the ContextId.');
+      await expect(() => cdpBridge.connect()).rejects.toThrowError(/Timeout exceeded to get the ContextId/);
     });
 
     it('should call super.on() with expected arguments', async () => {

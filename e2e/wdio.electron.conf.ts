@@ -128,6 +128,10 @@ switch (envContext.testType) {
       './test/electron/interaction.spec.ts',
       './test/electron/logging.spec.ts',
     ];
+    // Only include deeplink tests in binary mode (protocol handlers require packaged apps)
+    if (!envContext.isNoBinary) {
+      specs.push('./test/electron/deeplink.spec.ts');
+    }
     break;
 }
 
@@ -138,7 +142,7 @@ type ElectronCapability = {
     appEntryPoint?: string;
     appBinaryPath?: string;
     appArgs: string[];
-    apparmorAutoInstall?: string;
+    apparmorAutoInstall?: boolean | 'sudo';
     captureMainProcessLogs?: boolean;
     captureRendererLogs?: boolean;
     mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';

@@ -2,7 +2,7 @@
 
 You can also use the service without the WDIO testrunner, e.g. in a normal Node.js script.
 
-The `startWdioSession` method accepts `ElectronServiceCapabilities`, which are the capabilities specified in a regular [WDIO configuration](./configuration/service-configuration.md).
+The `startWdioSession` method accepts `ElectronServiceCapabilities`, which are the capabilities specified in a regular [WDIO configuration](./configuration.md).
 
 The method creates a new WDIO session using your configuration and returns the WebdriverIO browser object:
 
