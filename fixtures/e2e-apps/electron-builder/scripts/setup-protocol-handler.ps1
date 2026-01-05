@@ -14,10 +14,10 @@ Write-Host "App directory: $AppDir"
 # Look for the executable in the expected Windows unpacked directory
 # electron-builder with "target": "dir" creates dist/win-unpacked/
 $SearchPaths = @(
-    "$AppDir\dist\win-unpacked\electron-builder.exe",
-    "$AppDir\dist\win-ia32-unpacked\electron-builder.exe",
-    "$AppDir\dist\win-x64-unpacked\electron-builder.exe",
-    "$AppDir\dist\win-arm64-unpacked\electron-builder.exe"
+    "$AppDir\dist\win-unpacked\electron-builder-e2e-app.exe",
+    "$AppDir\dist\win-ia32-unpacked\electron-builder-e2e-app.exe",
+    "$AppDir\dist\win-x64-unpacked\electron-builder-e2e-app.exe",
+    "$AppDir\dist\win-arm64-unpacked\electron-builder-e2e-app.exe"
 )
 
 $AppExecutable = $null
@@ -31,11 +31,11 @@ foreach ($path in $SearchPaths) {
 # Fallback: search recursively if not found in expected locations
 if (-not $AppExecutable) {
     Write-Host "Searching recursively for executable..."
-    $AppExecutable = Get-ChildItem -Path "$AppDir\dist" -Filter "electron-builder.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+    $AppExecutable = Get-ChildItem -Path "$AppDir\dist" -Filter "electron-builder-e2e-app.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
 }
 
 if (-not $AppExecutable) {
-    Write-Host "Error: Could not find electron-builder.exe"
+    Write-Host "Error: Could not find electron-builder-e2e-app.exe"
     Write-Host "Searched paths:"
     foreach ($path in $SearchPaths) {
         Write-Host "  - $path"
