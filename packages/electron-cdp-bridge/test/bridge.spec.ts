@@ -6,14 +6,17 @@ import { DevTool } from '../src/devTool.js';
 
 import type { DebuggerList } from '../src/types.js';
 
+// Create a shared mock logger instance that can be accessed in tests
+// Using vi.hoisted to ensure it's available when vi.mock runs (which is hoisted)
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
+  trace: vi.fn(),
+}));
+
 vi.mock('@wdio/native-utils', () => {
-  const mockLogger = {
-    info: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    error: vi.fn(),
-    trace: vi.fn(),
-  };
   return {
     createLogger: vi.fn(() => mockLogger),
   };
@@ -117,6 +120,9 @@ describe('CdpBridge', () => {
     // Reset debugger list
     debuggerList = undefined;
 
+    // Clear mock logger calls
+    vi.clearAllMocks();
+
     vi.mocked(DevTool).mockImplementation(function (this: any) {
       return {
         list: vi.fn().mockResolvedValue(debuggerList),
@@ -146,7 +152,6 @@ describe('CdpBridge', () => {
       const client = new CdpBridge({ waitInterval: 10 });
 
       await expect(client.connect()).resolves.toBeUndefined();
-      const mockLogger = vi.mocked(createLogger)();
       expect(mockLogger.warn).toHaveBeenCalledWith('Connection attempt 1 failed: Dummy Error');
       expect(mockLogger.debug).toHaveBeenCalledWith('Retry 1/3 in 10ms');
       expect(mockLogger.warn).toHaveBeenCalledWith('Connection attempt 2 failed: Dummy Error');
@@ -160,7 +165,6 @@ describe('CdpBridge', () => {
       ];
       const client = new CdpBridge();
       await expect(client.connect()).resolves.toBeUndefined();
-      const mockLogger = vi.mocked(createLogger)();
       expect(mockLogger.warn).toHaveBeenCalledTimes(1);
       expect(mockLogger.warn).toHaveBeenLastCalledWith(ERROR_MESSAGE.DEBUGGER_FOUND_MULTIPLE);
     });
