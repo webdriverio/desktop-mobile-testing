@@ -34,7 +34,7 @@
     "asar": true,
     "appId": "com.electron-builder.demo",
     "copyright": "goosewobbler",
-    "productName": "electron-builder",
+    "productName": "electron-builder-e2e-app",
     "files": ["./dist/*"],
     "protocols": [
       {
@@ -47,7 +47,7 @@
       "identity": null
     },
     "linux": {
-      "executableName": "electron-builder",
+      "executableName": "electron-builder-e2e-app",
       "category": "Utility",
       "target": "dir"
     },
