@@ -17,6 +17,7 @@ import { mock } from './commands/mock.js';
 import { mockAll } from './commands/mockAll.js';
 import { resetAllMocks } from './commands/resetAllMocks.js';
 import { restoreAllMocks } from './commands/restoreAllMocks.js';
+import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
 import { checkInspectFuse } from './fuses.js';
 import { LogCaptureManager, type LogCaptureOptions } from './logCapture.js';
@@ -26,7 +27,7 @@ import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle,
 
 const log = createLogger('electron-service', 'service');
 
-const isInternalCommand = (args: unknown[]) => Boolean((args.at(-1) as ExecuteOpts)?.internal);
+const isInternalCommand = (args: unknown[]) => Boolean((args[args.length - 1] as ExecuteOpts)?.internal);
 
 type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 
@@ -356,35 +357,29 @@ const copyOriginalApi = async (browser: WebdriverIO.Browser) => {
 };
 
 function getElectronAPI(this: ServiceConfig, browser: WebdriverIO.Browser, cdpBridge?: ElectronCdpBridge) {
-  if (!cdpBridge) {
-    const disabledApiFunc = () => {
-      log.warn('CDP bridge is not available, API is disabled');
-      log.warn('This may be due to EnableNodeCliInspectArguments fuse being disabled or other connection issues.');
-      log.warn('To enable the CDP bridge, ensure this fuse is enabled in your test builds.');
-      log.warn('See: https://www.electronjs.org/docs/latest/tutorial/fuses#nodecliinspect');
-      throw new Error('CDP bridge is not available, API is disabled');
-    };
-
-    return {
-      clearAllMocks: disabledApiFunc,
-      execute: disabledApiFunc,
-      isMockFunction: disabledApiFunc,
-      mock: disabledApiFunc,
-      mockAll: disabledApiFunc,
-      resetAllMocks: disabledApiFunc,
-      restoreAllMocks: disabledApiFunc,
-    } as unknown as BrowserExtension['electron'];
-  }
-
-  const api = {
-    clearAllMocks: clearAllMocks.bind(this),
-    execute: (script: string | AbstractFn, ...args: unknown[]) =>
-      execute.apply(this, [browser, cdpBridge, script, ...args]),
-    isMockFunction: isMockFunction.bind(this),
-    mock: mock.bind(this),
-    mockAll: mockAll.bind(this),
-    resetAllMocks: resetAllMocks.bind(this),
-    restoreAllMocks: restoreAllMocks.bind(this),
+  const disabledApiFunc = () => {
+    log.warn('CDP bridge is not available, API is disabled');
+    log.warn('This may be due to EnableNodeCliInspectArguments fuse being disabled or other connection issues.');
+    log.warn('To enable the CDP bridge, ensure this fuse is enabled in your test builds.');
+    log.warn('See: https://www.electronjs.org/docs/latest/tutorial/fuses#nodecliinspect');
+    throw new Error('CDP bridge is not available, API is disabled');
   };
-  return Object.assign({}, api) as unknown as BrowserExtension['electron'];
+
+  // Helper to get the bound implementation or disabled func
+  const getMethod = (impl: (...args: never[]) => unknown, requiresCdp = true) => {
+    return !cdpBridge && requiresCdp ? disabledApiFunc : impl;
+  };
+
+  return {
+    clearAllMocks: getMethod(clearAllMocks.bind(this)),
+    execute: getMethod((script: string | AbstractFn, ...args: unknown[]) =>
+      execute.apply(this, [browser, cdpBridge as ElectronCdpBridge, script, ...args]),
+    ),
+    isMockFunction: getMethod(isMockFunction.bind(this)),
+    mock: getMethod(mock.bind(this)),
+    mockAll: getMethod(mockAll.bind(this)),
+    resetAllMocks: getMethod(resetAllMocks.bind(this)),
+    restoreAllMocks: getMethod(restoreAllMocks.bind(this)),
+    triggerDeeplink: getMethod(triggerDeeplink.bind(this), false), // doesn't require CDP
+  } as unknown as BrowserExtension['electron'];
 }

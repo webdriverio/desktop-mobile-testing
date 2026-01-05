@@ -111,7 +111,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
 
     if (!caps.length) {
       const noElectronCapabilityError = new Error('No Electron browser found in capabilities');
-      log.error(noElectronCapabilityError);
+      log.error(noElectronCapabilityError.message);
       throw noElectronCapabilityError;
     }
 
@@ -202,7 +202,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
               throw e;
             }
           } catch (e) {
-            log.error(e);
+            log.error(String(e));
             throw new SevereServiceError((e as Error).message);
           }
         }
@@ -230,7 +230,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           const invalidBrowserVersionOptsError = new Error(
             'You must install Electron locally, or provide a custom Chromedriver path / browserVersion value for each Electron capability',
           );
-          log.error(invalidBrowserVersionOptsError);
+          log.error(invalidBrowserVersionOptsError.message);
           throw invalidBrowserVersionOptsError;
         }
 

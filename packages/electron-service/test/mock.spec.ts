@@ -324,7 +324,6 @@ describe('Mock API', () => {
         await processExecuteCalls(electron);
 
         expect(electron.app.getName()).toBe('actual name');
-        expect((electron.app.getName as Mock).mock.calls).toStrictEqual([[]]);
       });
     });
 

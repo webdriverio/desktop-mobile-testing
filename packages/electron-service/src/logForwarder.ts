@@ -26,19 +26,19 @@ export function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
 /**
  * Map Electron log level to WDIO logger method
  */
-function getLoggerMethod(logger: WdioLogger, level: LogLevel): (...args: unknown[]) => void {
+function getLoggerMethod(logger: WdioLogger, level: LogLevel): (message: string, ...args: unknown[]) => void {
   switch (level) {
     case 'trace':
     case 'debug':
-      return logger.debug.bind(logger);
+      return (message: string, ...args: unknown[]) => logger.debug(message, ...args);
     case 'info':
-      return logger.info.bind(logger);
+      return (message: string, ...args: unknown[]) => logger.info(message, ...args);
     case 'warn':
-      return logger.warn.bind(logger);
+      return (message: string, ...args: unknown[]) => logger.warn(message, ...args);
     case 'error':
-      return logger.error.bind(logger);
+      return (message: string, ...args: unknown[]) => logger.error(message, ...args);
     default:
-      return logger.info.bind(logger);
+      return (message: string, ...args: unknown[]) => logger.info(message, ...args);
   }
 }
 

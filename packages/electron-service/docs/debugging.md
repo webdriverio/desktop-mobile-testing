@@ -2,7 +2,7 @@
 
 This guide covers the debugging tools and features available in the Electron service to help you gain visibility into your application's behavior during tests.
 
-For configuration reference, see [Service Configuration](./configuration/service-configuration.md). For troubleshooting specific errors, see [Common Issues](./common-issues.md).
+For configuration reference, see [Service Configuration](./configuration.md). For troubleshooting specific errors, see [Common Issues](./common-issues.md).
 
 ## Debug Logging
 

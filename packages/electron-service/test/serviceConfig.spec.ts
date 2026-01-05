@@ -15,6 +15,12 @@ class MockServiceConfig extends ServiceConfig {
   get cdpOptions() {
     return super.cdpOptions;
   }
+  get userDataDir() {
+    return super.userDataDir;
+  }
+  set userDataDir(dir: string | undefined) {
+    super.userDataDir = dir;
+  }
 }
 
 describe('ServiceConfig', () => {
@@ -52,5 +58,110 @@ describe('ServiceConfig', () => {
     const config = new MockServiceConfig({}, {});
     config.browser = browser;
     expect(config.browser).toStrictEqual(browser);
+  });
+
+  describe('userDataDir extraction', () => {
+    it('should extract user data directory from goog:chromeOptions.args', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: ['--disable-gpu', '--user-data-dir=/tmp/test-user-data', '--enable-logging'],
+        },
+      };
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBe('/tmp/test-user-data');
+    });
+
+    it('should handle user data directory with spaces', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: ['--user-data-dir=/path/with spaces/user-data'],
+        },
+      };
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBe('/path/with spaces/user-data');
+    });
+
+    it('should return undefined when user data directory is not set', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: ['--disable-gpu', '--enable-logging'],
+        },
+      };
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBeUndefined();
+    });
+
+    it('should return undefined when goog:chromeOptions is not present', () => {
+      const capabilities = {};
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBeUndefined();
+    });
+
+    it('should return undefined when goog:chromeOptions.args is not an array', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: 'not-an-array',
+        },
+      } as unknown as WebdriverIO.Capabilities;
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBeUndefined();
+    });
+
+    it('should return undefined when goog:chromeOptions.args is missing', () => {
+      const capabilities = {
+        'goog:chromeOptions': {},
+      };
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBeUndefined();
+    });
+
+    it('should handle non-string arguments in args array', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: [123, '--user-data-dir=/tmp/test', null, undefined],
+        },
+      } as unknown as WebdriverIO.Capabilities;
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBe('/tmp/test');
+    });
+
+    it('should use the first --user-data-dir argument when multiple are present', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: ['--user-data-dir=/first/path', '--user-data-dir=/second/path'],
+        },
+      };
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBe('/first/path');
+    });
+  });
+
+  describe('userDataDir getter and setter', () => {
+    it('should allow setting userDataDir manually', () => {
+      const config = new MockServiceConfig({}, {});
+      expect(config.userDataDir).toBeUndefined();
+      config.userDataDir = '/custom/path';
+      expect(config.userDataDir).toBe('/custom/path');
+    });
+
+    it('should allow overriding extracted userDataDir', () => {
+      const capabilities = {
+        'goog:chromeOptions': {
+          args: ['--user-data-dir=/extracted/path'],
+        },
+      };
+      const config = new MockServiceConfig({}, capabilities);
+      expect(config.userDataDir).toBe('/extracted/path');
+      config.userDataDir = '/override/path';
+      expect(config.userDataDir).toBe('/override/path');
+    });
+
+    it('should allow setting userDataDir to undefined', () => {
+      const config = new MockServiceConfig({}, {});
+      config.userDataDir = '/some/path';
+      expect(config.userDataDir).toBe('/some/path');
+      config.userDataDir = undefined;
+      expect(config.userDataDir).toBeUndefined();
+    });
   });
 });
