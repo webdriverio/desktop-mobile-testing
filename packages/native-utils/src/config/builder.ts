@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { BuilderBuildInfo, BuilderConfig } from '@wdio/native-types';
+import { deepmerge as deepMerge } from 'deepmerge-ts';
 import type { NormalizedReadResult } from 'read-package-up';
 import { APP_NAME_DETECTION_ERROR } from '../constants.js';
 import { createLogger } from '../log.js';
@@ -155,35 +156,4 @@ async function resolveExtendsChain(
   // Remove the extends property from the merged result
   const { extends: _, ...currentWithoutExtends } = config;
   return deepMerge(mergedConfig, currentWithoutExtends);
-}
-
-/**
- * Deep merge two objects, with source properties taking precedence
- */
-function deepMerge(target: any, source: any): any {
-  const result = { ...target };
-
-  for (const key of Object.keys(source)) {
-    const sourceValue = source[key];
-    const targetValue = result[key];
-
-    if (sourceValue !== undefined) {
-      if (
-        typeof sourceValue === 'object' &&
-        sourceValue !== null &&
-        !Array.isArray(sourceValue) &&
-        typeof targetValue === 'object' &&
-        targetValue !== null &&
-        !Array.isArray(targetValue)
-      ) {
-        // Recursively merge nested objects
-        result[key] = deepMerge(targetValue, sourceValue) as any;
-      } else {
-        // Primitive values, arrays, or null - source takes precedence
-        result[key] = sourceValue;
-      }
-    }
-  }
-
-  return result;
 }
