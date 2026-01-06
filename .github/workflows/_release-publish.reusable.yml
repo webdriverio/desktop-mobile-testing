@@ -56,7 +56,6 @@ on:
       github_bot_token:
         description: 'GitHub token for authentication'
         required: true
-      # npm_token removed - now using OIDC trusted publishing
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
