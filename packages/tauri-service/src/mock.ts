@@ -81,8 +81,8 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
 
   // Initialize inner (WebView) mock via injection script
   await browserToUse.execute<void, [string]>(async (cmd) => {
-    const { fn } = await import('@vitest/spy');
-    const mockFn = fn();
+    const spy = await import('@vitest/spy');
+    const mockFn = spy.fn();
     mockFn.mockName(`tauri.${cmd}`);
 
     // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
