@@ -163,26 +163,20 @@ export function getPlatformCommand(
 
 /**
  * Executes the deeplink command using child_process.spawn.
- * The process is detached to avoid blocking the test execution.
+ * The process is detached and runs asynchronously in the background.
  *
  * @param command - The command to execute
  * @param args - The command arguments
- * @param timeout - Maximum time to wait for the command (milliseconds)
- * @returns A promise that resolves when the command has been executed
- * @throws Error if the command fails or times out
+ * @returns A promise that resolves when the command has been spawned successfully
+ * @throws Error if the command fails to spawn
  *
  * @example
  * ```ts
- * await executeDeeplinkCommand('open', ['myapp://test'], 5000);
+ * await executeDeeplinkCommand('open', ['myapp://test']);
  * ```
  */
-export async function executeDeeplinkCommand(command: string, args: string[], timeout: number): Promise<void> {
+export async function executeDeeplinkCommand(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Set up timeout
-    const timeoutId = setTimeout(() => {
-      reject(new Error(`Deeplink command timed out after ${timeout}ms`));
-    }, timeout);
-
     try {
       // Spawn the command with detached process
       const childProcess = spawn(command, args, {
@@ -196,18 +190,15 @@ export async function executeDeeplinkCommand(command: string, args: string[], ti
 
       // Handle spawn errors
       childProcess.on('error', (error) => {
-        clearTimeout(timeoutId);
         reject(new Error(`Failed to trigger deeplink: ${error.message}`));
       });
 
       // Resolve immediately after spawning - the process will continue in background
       process.nextTick(() => {
-        clearTimeout(timeoutId);
         log.debug('Deeplink command spawned successfully');
         resolve();
       });
     } catch (error) {
-      clearTimeout(timeoutId);
       reject(new Error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`));
     }
   });
@@ -288,10 +279,9 @@ export async function triggerDeeplink(this: ServiceContext, url: string): Promis
   const { command, args } = getPlatformCommand(finalUrl, platform, appBinaryPath);
   log.debug(`Executing deeplink command: ${command} ${args.join(' ')}`);
 
-  // Execute the command and wait for completion (with timeout to prevent hanging)
-  const timeout = 5000;
+  // Execute the command (fire-and-forget, runs in background)
   try {
-    await executeDeeplinkCommand(command, args, timeout);
+    await executeDeeplinkCommand(command, args);
     log.debug('Deeplink triggered successfully');
   } catch (error) {
     log.error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`);
