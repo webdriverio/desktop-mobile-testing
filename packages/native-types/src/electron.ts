@@ -164,6 +164,13 @@ export interface ElectronServiceOptions {
    * @default false
    */
   apparmorAutoInstall?: boolean | 'sudo';
+  /**
+   * Path to a custom electron-builder configuration file (relative to project root).
+   * Useful when you have multiple configs (e.g., staging, production) that extend
+   * a common base config.
+   * @example 'config/electron-builder-staging.config.js'
+   */
+  electronBuilderConfig?: string;
 }
 
 export type ElectronServiceGlobalOptions = Pick<
@@ -178,6 +185,7 @@ export type ElectronServiceGlobalOptions = Pick<
   | 'logDir'
   | 'appBinaryPath'
   | 'appEntryPoint'
+  | 'electronBuilderConfig'
 > & {
   rootDir?: string;
   /**
@@ -210,6 +218,7 @@ export type ElectronType = typeof Electron;
 export type ElectronInterface = keyof ElectronType;
 
 export type BuilderConfig = {
+  extends?: string | string[] | null;
   productName?: string;
   directories?: { output?: string };
   executableName?: string;

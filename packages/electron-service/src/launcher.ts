@@ -141,6 +141,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           appEntryPoint,
           appArgs = ['--no-sandbox'],
           apparmorAutoInstall: capApparmorAutoInstall,
+          electronBuilderConfig,
         } = Object.assign({}, this.#globalOptions, cap[CUSTOM_CAPABILITY_NAME]);
 
         // Use capability-level apparmorAutoInstall if provided, otherwise keep the existing value
@@ -166,7 +167,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           // Neither provided - use auto-detection
           log.info('No app binary specified, attempting to detect one...');
           try {
-            const appBuildInfo = await getAppBuildInfo(pkg);
+            const appBuildInfo = await getAppBuildInfo(pkg, electronBuilderConfig);
 
             try {
               // Use the detailed binary path function for better error handling
