@@ -224,7 +224,7 @@ describe('executeDeeplinkCommand', () => {
   });
 
   it('should spawn command with correct parameters', async () => {
-    await executeDeeplinkCommand('open', ['myapp://test'], 5000);
+    await executeDeeplinkCommand('open', ['myapp://test']);
 
     expect(mockSpawn).toHaveBeenCalledWith(
       'open',
@@ -237,7 +237,7 @@ describe('executeDeeplinkCommand', () => {
   });
 
   it('should unref the child process', async () => {
-    await executeDeeplinkCommand('open', ['myapp://test'], 5000);
+    await executeDeeplinkCommand('open', ['myapp://test']);
     expect(mockChildProcess.unref).toHaveBeenCalled();
   });
 
@@ -248,7 +248,7 @@ describe('executeDeeplinkCommand', () => {
       configurable: true,
     });
 
-    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test'], 5000);
+    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test']);
 
     expect(mockSpawn).toHaveBeenCalledWith(
       'cmd',
@@ -265,7 +265,7 @@ describe('executeDeeplinkCommand', () => {
   });
 
   it('should resolve promise on successful spawn', async () => {
-    await expect(executeDeeplinkCommand('open', ['myapp://test'], 5000)).resolves.toBeUndefined();
+    await expect(executeDeeplinkCommand('open', ['myapp://test'])).resolves.toBeUndefined();
   });
 
   it('should reject promise on spawn error', async () => {
@@ -275,26 +275,17 @@ describe('executeDeeplinkCommand', () => {
       }
     });
 
-    await expect(executeDeeplinkCommand('invalid-command', ['myapp://test'], 5000)).rejects.toThrow(
+    await expect(executeDeeplinkCommand('invalid-command', ['myapp://test'])).rejects.toThrow(
       'Failed to trigger deeplink: ENOENT',
     );
   });
-
-  it.skip('should reject promise on timeout', async () => {
-    // Mock spawn to never call callbacks
-    mockChildProcess.on.mockImplementation(() => {});
-
-    await expect(executeDeeplinkCommand('open', ['myapp://test'], 100)).rejects.toThrow(
-      'Deeplink command timed out after 100ms',
-    );
-  }, 10000);
 
   it('should handle spawn exceptions', async () => {
     mockSpawn.mockImplementation(() => {
       throw new Error('Spawn failed');
     });
 
-    await expect(executeDeeplinkCommand('open', ['myapp://test'], 5000)).rejects.toThrow(
+    await expect(executeDeeplinkCommand('open', ['myapp://test'])).rejects.toThrow(
       'Failed to trigger deeplink: Spawn failed',
     );
 
@@ -303,27 +294,9 @@ describe('executeDeeplinkCommand', () => {
   });
 
   it('should handle multiple args correctly', async () => {
-    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test'], 5000);
+    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test']);
 
     expect(mockSpawn).toHaveBeenCalledWith('cmd', ['/c', 'start', '""', 'myapp://test'], expect.any(Object));
-  });
-
-  it('should clear timeout on success', async () => {
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-    await executeDeeplinkCommand('open', ['myapp://test'], 5000);
-    expect(clearTimeoutSpy).toHaveBeenCalled();
-  });
-
-  it('should clear timeout on error', async () => {
-    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-    mockChildProcess.on.mockImplementation((event: string, callback: (error: Error) => void) => {
-      if (event === 'error') {
-        process.nextTick(() => callback(new Error('Test error')));
-      }
-    });
-
-    await expect(executeDeeplinkCommand('open', ['myapp://test'], 5000)).rejects.toThrow();
-    expect(clearTimeoutSpy).toHaveBeenCalled();
   });
 });
 
