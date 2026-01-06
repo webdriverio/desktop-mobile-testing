@@ -133,6 +133,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Configure git to use token authentication for pushes
+          git remote set-url origin https://x-access-token:${{ secrets.github_bot_token }}@github.com/webdriverio/desktop-mobile-testing.git
 
       # PHASE 1: Version shared packages (if changed) with their specific bump types
       - name: Version shared packages
