@@ -56,6 +56,7 @@ on:
       github_bot_token:
         description: 'GitHub token for authentication'
         required: true
+      # npm_token removed - now using OIDC trusted publishing
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
@@ -75,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for OIDC trusted publishing
-      contents: read   # Required for repository access
+      contents: write  # Required for pushing commits and tags
     outputs:
       service_release_tag: ${{ steps.collect_tags.outputs.service_release_tag }}
       shared_release_tags: ${{ steps.collect_tags.outputs.shared_release_tags }}
