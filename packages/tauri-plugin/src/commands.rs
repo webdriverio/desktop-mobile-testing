@@ -180,6 +180,22 @@ pub(crate) async fn get_mock<R: Runtime>(
     Ok(store.get_mock(&command).cloned())
 }
 
+/// Get all mocks from the store
+#[command]
+pub(crate) async fn get_all_mocks<R: Runtime>(
+    app: AppHandle<R>,
+) -> Result<std::collections::HashMap<String, MockConfig>> {
+    let mock_store = app
+        .try_state::<Arc<Mutex<MockStore>>>()
+        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
+
+    let store = mock_store
+        .lock()
+        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
+
+    Ok(store.get_all_mocks().clone())
+}
+
 /// Clear all mocks
 #[command]
 pub(crate) async fn clear_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {

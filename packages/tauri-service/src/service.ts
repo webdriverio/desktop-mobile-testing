@@ -1,6 +1,7 @@
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
+import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
@@ -100,6 +101,22 @@ export default class TauriWorkerService {
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
     // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
+
+    // Initialize Tauri mocking system
+    log.info('🔧 Initializing Tauri mocking system...');
+    try {
+      await (browser as WebdriverIO.Browser).execute(async function initMocks() {
+        // @ts-expect-error - injection script will be bundled
+        if (typeof window.initializeTauriMocks === 'function') {
+          // @ts-expect-error - injection script will be bundled
+          await window.initializeTauriMocks();
+        }
+      });
+      log.info('✅ Tauri mocking system initialized');
+    } catch (error) {
+      log.warn('⚠️ Failed to initialize Tauri mocking system:', error);
+      log.warn('   Mocking functionality may not be available');
+    }
   }
 
   async beforeTest(_test: unknown, _context: unknown): Promise<void> {
@@ -136,30 +153,27 @@ export default class TauriWorkerService {
       },
 
       clearAllMocks: async (): Promise<void> => {
-        // TODO: Implement Tauri API mocking
+        return clearAllMocks.call({ browser });
       },
 
-      isMockFunction: (_fn: unknown): boolean => {
-        // TODO: Implement Tauri API mocking
-        return false;
+      isMockFunction: async (command: string): Promise<boolean> => {
+        return isMockFunction.call({ browser }, command);
       },
 
-      mock: async (_apiName: string, _funcName: string): Promise<unknown> => {
-        // TODO: Implement Tauri API mocking
-        return {};
+      mock: async (command: string) => {
+        return mock.call({ browser }, command);
       },
 
-      mockAll: async (_apiName: string): Promise<unknown> => {
-        // TODO: Implement Tauri API mocking
-        return {};
+      mockAll: async (): Promise<void> => {
+        return mockAll.call({ browser });
       },
 
-      resetAllMocks: async (_apiName?: string): Promise<void> => {
-        // TODO: Implement Tauri API mocking
+      resetAllMocks: async (): Promise<void> => {
+        return resetAllMocks.call({ browser });
       },
 
-      restoreAllMocks: async (_apiName?: string): Promise<void> => {
-        // TODO: Implement Tauri API mocking
+      restoreAllMocks: async (): Promise<void> => {
+        return restoreAllMocks.call({ browser });
       },
     };
   }

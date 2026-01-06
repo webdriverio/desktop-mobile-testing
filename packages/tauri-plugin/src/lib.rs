@@ -42,6 +42,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::execute,
             commands::set_mock,
             commands::get_mock,
+            commands::get_all_mocks,
             commands::clear_mocks,
             commands::reset_mocks,
             commands::restore_mocks,

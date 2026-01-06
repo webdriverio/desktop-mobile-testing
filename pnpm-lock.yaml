@@ -938,6 +938,9 @@ importers:
       '@babel/parser':
         specifier: ^7.26.0
         version: 7.28.4
+      '@vitest/spy':
+        specifier: ^4.0.4
+        version: 4.0.16
       '@wdio/globals':
         specifier: catalog:default
         version: 9.17.0(expect-webdriverio@5.4.3)(webdriverio@9.20.0(puppeteer-core@22.15.0))
@@ -965,6 +968,9 @@ importers:
       recast:
         specifier: ^0.23.11
         version: 0.23.11
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
       webdriverio:
         specifier: catalog:default
         version: 9.20.0(puppeteer-core@22.15.0)
@@ -2511,6 +2517,9 @@ packages:
 
   '@vitest/spy@3.2.4':
     resolution: {integrity: sha512-vAfasCOe6AIK70iP5UD11Ac4siNUNJ9i/9PZ3NKx07sG6sUxeag1LWdNrMWeKKYBLlzuK+Gn65Yd5nyL6ds+nw==}
+
+  '@vitest/spy@4.0.16':
+    resolution: {integrity: sha512-4jIOWjKP0ZUaEmJm00E0cOBLU+5WE0BpeNr3XN6TEF05ltro6NJqHWxXD0kA8/Zc8Nh23AT8WQxwNG+WeROupw==}
 
   '@vitest/utils@1.6.1':
     resolution: {integrity: sha512-jOrrUvXM4Av9ZWiG1EajNto0u96kWAhJ1LmPmJhXXQx/32MecEKd10pOLYgS2BQx1TgkGhloPU1ArDW2vvaY6g==}
@@ -6100,6 +6109,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -7963,6 +7973,8 @@ snapshots:
   '@vitest/spy@3.2.4':
     dependencies:
       tinyspy: 4.0.4
+
+  '@vitest/spy@4.0.16': {}
 
   '@vitest/utils@1.6.1':
     dependencies:
