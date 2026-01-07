@@ -1,4 +1,4 @@
-# Contributing to WebdriverIO Cross-Platform Testing Services
+# Contributing to WebdriverIO Desktop & Mobile Testing Services
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
@@ -278,6 +278,16 @@ When contributing to the Electron service:
 - Test on Windows, macOS, and Linux
 - Test with both Electron Forge and Builder
 - Test with ESM and CJS configurations
+
+### Tauri Service
+
+When contributing to the Tauri service:
+
+- Maintain backward compatibility with tauri-driver
+- Test on Windows, macOS, and Linux
+- Test with multiremote configurations
+- Ensure plugin communication works correctly
+- Test with various Tauri configuration patterns
 
 ### Flutter Service
 

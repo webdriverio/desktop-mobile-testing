@@ -1,0 +1,7 @@
+{
+  "name": "builder-extends-single",
+  "version": "1.0.0",
+  "devDependencies": {
+    "electron-builder": "^24.0.0"
+  }
+}

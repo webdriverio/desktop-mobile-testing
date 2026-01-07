@@ -113,6 +113,15 @@ See the [Deeplink Testing guide](./deeplink-testing.md) for complete setup instr
 
 Type: `string`
 
+### `electronBuilderConfig`:
+
+Path to a custom electron-builder configuration file. This is useful when you have multiple configurations (e.g., `electron-builder-staging.config.js`) that extend a common base configuration, and you need to tell the service which one to use for binary path detection.
+
+When this option is provided, the service will load this specific configuration file and resolve any `extends` chain to determine the output settings.
+
+Type: `string`
+Example: `'config/electron-builder-staging.config.js'`
+
 ### `clearMocks`:
 
 Calls .mockClear() on all mocked APIs before each test. This will clear mock history, but not reset its implementation.
@@ -368,6 +377,9 @@ If you want to manually set this value, you can specify the [`appBinaryPath`](#a
 - `package.json` (config values are read from `build`)
 - `electron-builder.{json,json5,yaml,yml,toml,js,ts,mjs,cjs,mts,cts}`
 - `electron-builder.config.{json,json5,yaml,yml,toml,js,ts,mjs,cjs,mts,cts}`
+- Custom config file specified via [`electronBuilderConfig`](#electronbuilderconfig)
+
+**Note:** The service supports the [`extends`](https://www.electron.build/configuration/configuration#extends) option in electron-builder configurations. It will recursively resolve and merge extended configurations to determine the final build settings.
 
 ##### Electron Forge
 

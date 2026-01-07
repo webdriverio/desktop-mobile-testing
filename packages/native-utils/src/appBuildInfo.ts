@@ -17,12 +17,15 @@ const log = createLogger('electron-service', 'config');
  * @param pkg normalized package.json
  * @returns   promise resolving to the app build information
  */
-export async function getAppBuildInfo(pkg: NormalizedReadResult): Promise<AppBuildInfo> {
+export async function getAppBuildInfo(
+  pkg: NormalizedReadResult,
+  electronBuilderConfig?: string,
+): Promise<AppBuildInfo> {
   const forgeDependencyDetected = Object.keys(pkg.packageJson.devDependencies || {}).includes('@electron-forge/cli');
   const builderDependencyDetected = Object.keys(pkg.packageJson.devDependencies || {}).includes('electron-builder');
 
   const forgeConfig = forgeDependencyDetected ? await getForgeConfig(pkg) : undefined;
-  const builderConfig = builderDependencyDetected ? await getBuilderConfig(pkg) : undefined;
+  const builderConfig = builderDependencyDetected ? await getBuilderConfig(pkg, electronBuilderConfig) : undefined;
 
   const isForge = typeof forgeConfig !== 'undefined';
   const isBuilder = typeof builderConfig !== 'undefined';
