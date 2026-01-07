@@ -58,7 +58,7 @@ function getBuilderDistDir(config: BuilderBuildInfo['config'], platform: Support
   const builderOutDirName = config?.directories?.output || 'dist';
   const builderOutDirMap = (arch: BuilderArch) => ({
     darwin: path.join(builderOutDirName, arch === 'x64' ? 'mac' : `mac-${arch}`),
-    linux: path.join(builderOutDirName, 'linux-unpacked'),
+    linux: path.join(builderOutDirName, arch === 'x64' ? 'linux-unpacked' : `linux-${arch}-unpacked`),
     win32: path.join(builderOutDirName, 'win-unpacked'),
   });
   // return [builderOutDirMap[platform]];
@@ -66,6 +66,10 @@ function getBuilderDistDir(config: BuilderBuildInfo['config'], platform: Support
     // macOS output dir depends on the arch used
     // - we check all of the possible dirs
     const archs: BuilderArch[] = ['arm64', 'armv7l', 'ia32', 'universal', 'x64'];
+    return archs.map((arch) => builderOutDirMap(arch)[platform]);
+  } else if (platform === 'linux') {
+    // Linux output dir depends on the arch used (e.g., linux-arm64-unpacked for ARM64)
+    const archs: BuilderArch[] = ['arm64', 'armv7l', 'ia32', 'x64'];
     return archs.map((arch) => builderOutDirMap(arch)[platform]);
   } else {
     // other platforms have a single output dir which is not dependent on the arch
