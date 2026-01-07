@@ -67,12 +67,10 @@ jobs:
         run: |
           echo "Fixing ARM64 package sources for Ubuntu..."
           # Add proper arm64 sources for jammy
-          sudo tee /etc/apt/sources.list.d/arm64-jammy.list >/dev/null << 'EOF'
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy main restricted universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main restricted universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-backports main restricted universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main restricted universe multiverse
-          EOF
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
 
           # Ensure default sources only use amd64
           sudo sed -i -e 's/^deb http/deb [arch=amd64] http/' /etc/apt/sources.list
@@ -87,9 +85,7 @@ jobs:
           echo "Installing Tauri dependencies for Linux..."
           # Only add archive.ubuntu.com for amd64, arm64 sources are handled above
           if [ "$(uname -m)" != "aarch64" ]; then
-            sudo tee -a /etc/apt/sources.list > /dev/null <<EOT
-            deb http://archive.ubuntu.com/ubuntu jammy main universe
-            EOT
+            echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee -a /etc/apt/sources.list > /dev/null
           fi
           sudo apt-get update
           # Install build dependencies only (no runtime libraries needed for compilation)
