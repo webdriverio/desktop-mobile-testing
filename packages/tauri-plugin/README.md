@@ -1,5 +1,10 @@
 # @wdio/tauri-plugin
 
+<a href="https://crates.io/crates/tauri-plugin-wdio" alt="Crates.io Version">
+  <img src="https://img.shields.io/crates/v/tauri-plugin-wdio" /></a>
+
+<br />
+
 A Tauri v2 plugin providing execute and mocking capabilities for WebDriverIO testing. This plugin enables E2E tests to execute JavaScript code in the frontend context with access to Tauri APIs and mock backend commands for isolated testing.
 
 ## Features
