@@ -41,7 +41,7 @@
     "@types/node": "^25.0.3",
     "@wdio/globals": "catalog:default",
     "@wdio/types": "catalog:default",
-    "builder-util": "^26.0.11",
+    "builder-util": "^26.3.4",
     "electron": "catalog:default",
     "read-package-up": "^11.0.0",
     "shx": "^0.4.0",
