@@ -2,6 +2,15 @@
 
 > Specialized WebdriverIO services for testing Electron and Tauri applications
 
+<a href="https://www.npmjs.com/package/@wdio/electron-service" alt="NPM Version">
+  <img src="https://img.shields.io/npm/v/@wdio/electron-service" /></a>
+<a href="https://www.npmjs.com/package/@wdio/electron-service" alt="NPM Downloads">
+  <img src="https://img.shields.io/npm/dw/@wdio/electron-service" /></a>
+<a href="https://www.npmjs.com/package/@wdio/tauri-service" alt="NPM Version">
+  <img src="https://img.shields.io/npm/v/@wdio/tauri-service" /></a>
+<a href="https://www.npmjs.com/package/@wdio/tauri-service" alt="NPM Downloads">
+  <img src="https://img.shields.io/npm/dw/@wdio/tauri-service" /></a>
+
 ## Overview
 
 This monorepo provides specialized WebdriverIO services for testing desktop and mobile applications across modern frameworks. Our services enable comprehensive end-to-end testing with automatic binary management, API mocking, and seamless integration with WebdriverIO's testing ecosystem.

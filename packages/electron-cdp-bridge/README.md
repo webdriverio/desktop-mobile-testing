@@ -1,11 +1,11 @@
 # WDIO Electron CDP Bridge
 
-<div align="center">
+<a href="https://www.npmjs.com/package/@wdio/electron-cdp-bridge" alt="NPM Version">
+  <img src="https://img.shields.io/npm/v/@wdio/electron-cdp-bridge" /></a>
+<a href="https://www.npmjs.com/package/@wdio/electron-cdp-bridge" alt="NPM Downloads">
+  <img src="https://img.shields.io/npm/dw/@wdio/electron-cdp-bridge" /></a>
 
-[![NPM Version](https://img.shields.io/npm/v/@wdio/electron-cdp-bridge)](https://www.npmjs.com/package/@wdio/electron-cdp-bridge)
-[![NPM Downloads](https://img.shields.io/npm/dw/@wdio/electron-cdp-bridge)](https://www.npmjs.com/package/@wdio/electron-cdp-bridge)
-
-</div>
+<br />
 
 A lightweight connector for the Node debugger using the Chrome DevTools Protocol (CDP), designed for the [WebdriverIO Electron Service](https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/electron-service).
 

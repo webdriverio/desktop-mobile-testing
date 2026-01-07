@@ -1,12 +1,5 @@
 # WDIO Electron Package Bundler
 
-<a href="https://www.npmjs.com/package/@wdio/electron-bundler" alt="NPM Version">
-  <img src="https://img.shields.io/npm/v/@wdio/electron-bundler" /></a>
-<a href="https://www.npmjs.com/package/@wdio/electron-bundler" alt="NPM Downloads">
-  <img src="https://img.shields.io/npm/dw/@wdio/electron-bundler" /></a>
-
-<br />
-
 ## Overview
 
 The WDIO Electron Package Bundler provides a set of utilities and plugins for configuring Rollup to build packages in this repository. It simplifies the build process by providing common configurations and specialized plugins for both ESM and CommonJS output formats.

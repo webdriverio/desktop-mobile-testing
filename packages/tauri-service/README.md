@@ -1,5 +1,12 @@
 # @wdio/tauri-service
 
+<a href="https://www.npmjs.com/package/@wdio/tauri-service" alt="NPM Version">
+  <img src="https://img.shields.io/npm/v/@wdio/tauri-service" /></a>
+<a href="https://www.npmjs.com/package/@wdio/tauri-service" alt="NPM Downloads">
+  <img src="https://img.shields.io/npm/dw/@wdio/tauri-service" /></a>
+
+<br />
+
 WebDriverIO service for testing Tauri applications with advanced desktop automation capabilities.
 
 ## Features
