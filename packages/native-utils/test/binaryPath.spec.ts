@@ -314,7 +314,7 @@ describe('getBinaryPath', () => {
     testBuilderBinaryPath({
       platform: 'linux',
       arch: 'arm64',
-      binaryPath: '/path/to/dist/linux-unpacked/my-app',
+      binaryPath: '/path/to/dist/linux-arm64-unpacked/my-app',
       configObj: { productName: 'my-app' },
     });
 
