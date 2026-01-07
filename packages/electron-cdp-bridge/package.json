@@ -41,14 +41,14 @@
   "dependencies": {
     "@wdio/native-utils": "workspace:*",
     "wait-port": "^1.1.0",
-    "ws": "^8.18.3"
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.0.16",
     "cross-env": "^10.1.0",
-    "devtools-protocol": "^0.0.1561482",
+    "devtools-protocol": "^0.0.1565416",
     "get-port": "^7.1.0",
     "nock": "^14.0.10",
     "shx": "^0.4.0",

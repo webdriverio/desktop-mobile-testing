@@ -48,6 +48,6 @@
     "p-limit": "^7.1.1",
     "read-package-up": "^11.0.0",
     "typescript": "^5.9.3",
-    "zod": "^4.2.1"
+    "zod": "^4.3.5"
   }
 }
