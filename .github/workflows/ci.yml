@@ -84,18 +84,25 @@ jobs:
     with:
       os: 'windows-latest'
 
+  build-tauri-package-app-linux-arm:
+    name: Build Tauri Package Test App [Linux-ARM64]
+    needs: [build]
+    uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
+    with:
+      os: 'ubuntu-24.04-arm'
+
   # Run package tests after unit tests to ensure the package is built correctly
   # Split Electron and Tauri tests across separate jobs for better parallelization and clarity
   # Electron apps are built inline on the test runner (faster builds, Turbo caching handles it)
   # Tauri apps are built separately due to longer build times and system dependencies
   # Electron package tests are split by module type (CJS/ESM) for better error isolation
   package-electron-matrix:
-    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.module-type }}
+    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'ubuntu-24.04-arm' && 'Linux-ARM64' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.module-type }}
     needs: [build, lint]
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
+        os: ['ubuntu-latest', 'ubuntu-24.04-arm', 'windows-latest', 'macos-latest', 'macos-15-intel']
         module-type: ['cjs', 'esm']
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -129,6 +136,18 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ${{ needs.build-tauri-package-app-windows.outputs.cache_key }}
+
+  package-tauri-linux-arm:
+    name: Package - Tauri [Linux-ARM64]
+    needs: [build, lint, build-tauri-package-app-linux-arm]
+    uses: ./.github/workflows/_ci-package.reusable.yml
+    with:
+      os: 'ubuntu-24.04-arm'
+      service: 'tauri'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-package-app-linux-arm.outputs.cache_key }}
 
   # Run Tauri package tests across different Linux distributions using Docker
   # Tests cross-distro compatibility, tauri-driver auto-installation, and WebKitWebDriver detection
