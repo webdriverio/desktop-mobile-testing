@@ -97,8 +97,8 @@ jobs:
         if: inputs.service == 'tauri' || inputs.service == 'both'
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-package-app-${{ runner.os }}
-          path: tauri-package-app-${{ runner.os }}
+          name: tauri-package-app-${{ runner.os }}-${{ runner.arch == 'ARM64' && 'ARM64' || 'x64' }}
+          path: tauri-package-app-${{ runner.os }}-${{ runner.arch == 'ARM64' && 'ARM64' || 'x64' }}
           filename: artifact.zip
           cache_key_prefix: tauri-package-app
           exact_cache_key: ${{ inputs.tauri_cache_key || '' }}
