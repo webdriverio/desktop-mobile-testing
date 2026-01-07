@@ -891,6 +891,9 @@ importers:
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
+      deepmerge-ts:
+        specifier: ^7.1.5
+        version: 7.1.5
       esbuild:
         specifier: ^0.27.2
         version: 0.27.2

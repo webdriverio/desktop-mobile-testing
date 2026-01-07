@@ -1,15 +1,19 @@
-# WebdriverIO Cross-Platform Testing Services
+# WebdriverIO Desktop & Mobile Testing Services
 
-> Integration services for cross-platform testing on Electron, Tauri, Flutter, and Neutralino with WebdriverIO
+> Specialized WebdriverIO services for testing Electron and Tauri applications
 
 ## Overview
 
-This monorepo contains WebdriverIO service packages for testing desktop and mobile applications across multiple frameworks:
+This monorepo provides specialized WebdriverIO services for testing desktop and mobile applications across modern frameworks. Our services enable comprehensive end-to-end testing with automatic binary management, API mocking, and seamless integration with WebdriverIO's testing ecosystem.
 
-- **Electron Service** - Test Electron applications with automatic binary detection, CDP bridge for main process access, and comprehensive API mocking
-- **Tauri Service** - Test Tauri applications with official tauri-driver integration and multiremote support
-- **Flutter Service** - Test Flutter apps on iOS, Android, Windows, macOS, and Linux with Appium integration (coming soon)
-- **Neutralino Service** - Test Neutralino.js applications with WebSocket API bridge (coming soon)
+### Current Services
+
+- **Electron Service** - Production-ready testing for Electron applications with automatic binary detection, CDP bridge for main process access, comprehensive API mocking, and window management
+- **Tauri Service** - Full-featured testing for Tauri applications with official tauri-driver integration, multiremote support, and plugin-based architecture
+
+### Future Services
+
+We aim to add Flutter and Neutralino integrations in the near future to expand cross-platform testing capabilities.
 
 ## Quick Start
 
@@ -18,179 +22,187 @@ This monorepo contains WebdriverIO service packages for testing desktop and mobi
 pnpm install
 
 # Build all packages
-pnpm turbo build
+pnpm build
 
 # Run tests
-pnpm turbo test
+pnpm test
 
 # Run linting
-pnpm turbo lint
+pnpm lint
 ```
 
 ## Project Structure
 
 ```
 desktop-mobile-testing/
-├── packages/               # Service packages
-│   ├── electron-service/   # @wdio/electron-service
-│   ├── tauri-service/      # @wdio/tauri-service
-│   ├── electron-cdp-bridge/ # @wdio/electron-cdp-bridge
-│   ├── electron-types/     # @wdio/electron-types
-│   ├── native-utils/       # @wdio/native-utils
-│   └── bundler/            # @wdio/bundler
-├── fixtures/              # Test fixtures and example apps
-│   ├── e2e-apps/         # E2E test applications
-│   └── package-tests/    # Package test applications
-├── e2e/                  # E2E test scenarios
-├── docs/                 # Documentation
-└── scripts/              # Build and utility scripts
+├── packages/                    # Service packages
+│   ├── electron-service/        # Electron service implementation
+│   ├── tauri-service/           # Tauri service implementation
+│   ├── electron-cdp-bridge/     # Chrome DevTools Protocol bridge
+│   ├── native-utils/            # Cross-platform utilities
+│   ├── native-types/            # TypeScript type definitions
+│   ├── bundler/                 # Build tool for packaging
+│   └── tauri-plugin/            # Tauri plugin for backend access
+├── fixtures/                   # Test fixtures and example apps
+│   ├── e2e-apps/               # E2E test applications
+│   ├── package-tests/          # Package integration tests
+│   └── config-formats/         # Configuration format test fixtures
+├── e2e/                        # End-to-end test suites
+│   ├── test/                   # Test specifications
+│   │   ├── electron/           # Electron E2E tests
+│   │   └── tauri/              # Tauri E2E tests
+│   └── scripts/                # Test execution scripts
+├── docs/                       # Documentation
+└── scripts/                    # Build and utility scripts
 ```
 
-## Packages
+## Services
 
 ### Electron Service
 
-Test Electron applications with WebdriverIO.
+Production-ready WebdriverIO service for testing Electron applications with advanced features.
 
 - 📦 **Package**: `@wdio/electron-service`
 - 📖 **Docs**: [packages/electron-service/README.md](packages/electron-service/README.md)
-- ✨ **Features**: Binary detection, CDP bridge, API mocking, window management
+- ✨ **Features**:
+  - Automatic Electron binary detection and management
+  - CDP bridge for main process API access
+  - Comprehensive API mocking and stubbing
+  - Window management and lifecycle control
+  - Deep link testing support
+  - Multi-instance testing capabilities
 
 ### Tauri Service
 
-Test Tauri applications with WebdriverIO.
+Full-featured WebdriverIO service for testing Tauri applications with native integration.
 
 - 📦 **Package**: `@wdio/tauri-service`
 - 📖 **Docs**: [packages/tauri-service/README.md](packages/tauri-service/README.md)
-- ✨ **Features**: tauri-driver integration, multiremote support, binary detection
+- ✨ **Features**:
+  - Official tauri-driver integration
+  - Multiremote testing support
+  - Plugin-based architecture
+  - Automatic binary detection
+  - Advanced execute capabilities
 
-### Shared Utilities
+### Supporting Packages
 
-Common utilities shared across all framework services.
-
-- 📦 **Package**: `@wdio/native-utils`
-- 📖 **Docs**: [packages/@wdio/native-utils/README.md](packages/@wdio/native-utils/README.md)
+- **@wdio/native-utils** - Cross-platform utilities for binary detection and config parsing
+- **@wdio/native-types** - TypeScript type definitions for Electron and Tauri APIs
+- **@wdio/electron-cdp-bridge** - Chrome DevTools Protocol bridge for main process communication
+- **@wdio/bundler** - Build tool for packaging and bundling service packages
+- **@wdio/tauri-plugin** - Tauri plugin providing backend access capabilities for testing
 
 ## Development
 
 ### Requirements
 
 - Node.js 18 LTS or 20 LTS
-- pnpm 10.12+
+- pnpm 10.27.0+
 
 ### Setup
 
 ```bash
-# Install pnpm globally if you don't have it
-npm install -g pnpm
-
 # Install dependencies
 pnpm install
 
 # Build all packages
-pnpm turbo build
+pnpm build
 ```
 
 ### Commands
 
 ```bash
 # Development
-pnpm dev                   # Watch mode for development
 pnpm build                 # Build all packages
+pnpm dev                   # Watch mode for development
+pnpm clean                 # Clean all build artifacts
+
+# Testing
 pnpm test                  # Run all tests
+pnpm test:unit             # Run unit tests only
+pnpm test:integration      # Run integration tests
 pnpm test:coverage         # Run tests with coverage
+pnpm test:package          # Run package integration tests
+pnpm test:package:electron # Test Electron package integration
+pnpm test:package:tauri    # Test Tauri package integration
 
 # Code Quality
-pnpm lint                  # Lint all packages
-pnpm lint:fix              # Lint and auto-fix
+pnpm lint                  # Lint and format check
+pnpm lint:fix              # Auto-fix linting issues
 pnpm format                # Format code with Biome
 pnpm typecheck             # Type check all packages
 
-# Package-specific commands
-pnpm --filter @wdio/native-utils build
-pnpm --filter @wdio/electron-service test
-pnpm --filter @wdio/tauri-service test
-
 # E2E Testing
-pnpm e2e                          # Run all E2E tests
-pnpm e2e:electron-builder          # Run Electron builder tests
-pnpm e2e:electron-forge            # Run Electron forge tests
-pnpm e2e:electron-no-binary        # Run Electron no-binary tests
-pnpm e2e:tauri                     # Run Tauri tests
+pnpm e2e                   # Run all E2E tests
+pnpm e2e:electron-builder  # Electron builder E2E tests
+pnpm e2e:electron-forge    # Electron forge E2E tests
+pnpm e2e:electron-no-binary # Electron no-binary E2E tests
+pnpm e2e:tauri             # Tauri E2E tests
+pnpm e2e:standalone        # Standalone mode tests
+pnpm e2e:multiremote       # Multiremote tests
+
+# Package Management
+pnpm release               # Release packages
+pnpm catalog:update        # Update dependency catalogs
+pnpm backport              # Run backport script
 ```
-
-### Adding a New Package
-
-See [docs/package-structure.md](docs/package-structure.md) for guidelines on creating new packages.
 
 ## Testing
 
-This project maintains 80%+ test coverage across all packages. Tests are organized as:
-
-- **Unit tests**: Fast, isolated tests for individual modules
-- **Integration tests**: Tests for package interactions
-- **E2E tests**: End-to-end tests with real applications
+### Test Commands
 
 ```bash
-# Run all tests
-pnpm test
+# Core Testing
+pnpm test                  # Run all unit and integration tests
+pnpm test:unit             # Unit tests only
+pnpm test:integration      # Integration tests only
+pnpm test:coverage         # Run with coverage reporting
 
-# Run tests for specific package
-pnpm --filter @wdio/electron-service test
-pnpm --filter @wdio/tauri-service test
+# Package Integration Testing
+pnpm test:package          # Test published packages in isolation
+pnpm test:package:electron # Electron package integration tests
+pnpm test:package:tauri    # Tauri package integration tests
 
-# Run with coverage
-pnpm test:coverage
-
-# Run E2E tests
-pnpm e2e                          # All E2E tests
-pnpm e2e:electron-builder          # Electron builder E2E
-pnpm e2e:electron-forge            # Electron forge E2E
-pnpm e2e:tauri                     # Tauri E2E
-
-# Run package tests (isolated test apps)
-pnpm test:package                 # Both Electron and Tauri
-pnpm test:package:electron        # Electron only
-pnpm test:package:tauri           # Tauri only
+# End-to-End Testing
+pnpm e2e                   # All E2E test suites
+pnpm e2e:electron-builder  # Electron builder applications
+pnpm e2e:electron-forge    # Electron forge applications
+pnpm e2e:electron-no-binary # Electron without pre-built binaries
+pnpm e2e:tauri             # Tauri applications
+pnpm e2e:standalone        # Standalone mode testing
+pnpm e2e:multiremote       # Multiremote browser testing
 ```
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Workflow
-
-1. Fork and clone the repository
-2. Create a new branch: `git checkout -b feature/my-feature`
-3. Make your changes
-4. Run tests: `pnpm test`
-5. Run linting: `pnpm lint:fix`
-6. Commit your changes (pre-commit hooks will run automatically)
-7. Push and create a pull request
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## Architecture
 
-This monorepo uses:
+This monorepo is built with modern development tools and practices:
 
-- **pnpm workspaces** - Efficient package management and linking
-- **Turborepo** - Fast, incremental builds with smart caching
-- **TypeScript** - Type-safe development with dual ESM/CJS builds
-- **Vitest** - Fast unit and integration testing
-- **Biome** - Fast formatting and linting
-- **GitHub Actions** - Multi-platform CI/CD
+### Tech Stack
 
-See [docs/architecture.md](docs/architecture.md) for more details (coming soon).
+- **📦 pnpm workspaces** - Efficient monorepo package management
+- **⚡ Turborepo** - Fast, incremental builds with intelligent caching
+- **🔷 TypeScript** - Type-safe development with dual ESM/CJS builds
+- **🧪 Vitest** - Fast unit and integration testing framework
+- **🎨 Biome** - High-performance formatting and linting
+- **🤖 GitHub Actions** - Comprehensive CI/CD with multi-platform testing
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Links
+## Community & Support
 
-- [WebdriverIO](https://webdriver.io)
-- [Documentation](https://webdriver.io/docs/gettingstarted)
-- [WebdriverIO Community](https://github.com/webdriverio-community)
+- [WebdriverIO](https://webdriver.io) - Main WebdriverIO project
+- [WebdriverIO Docs](https://webdriver.io/docs/gettingstarted) - Official documentation
+- [WebdriverIO Community](https://github.com/webdriverio-community) - Community resources
+- [GitHub Issues](https://github.com/webdriverio/desktop-mobile-testing/issues) - Bug reports and feature requests
 
----
+## Related Projects
 
-**Starting commit**: `e728cf1` (chore: add agentos)
+- [wdio-electron-service](https://github.com/webdriverio-community/wdio-electron-service) - Legacy Electron service repo
+- [tauri-driver](https://github.com/elvis-epx/tauri-driver) - Official Tauri WebDriver implementation
