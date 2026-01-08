@@ -206,7 +206,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: package-test-logs-${{ inputs.os }}-${{ inputs.service }}
+          name: package-test-logs-${{ inputs.os }}-${{ inputs.service }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: logs/package-tests/*.log
           retention-days: 90
           if-no-files-found: warn
