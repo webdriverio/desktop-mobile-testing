@@ -353,6 +353,10 @@ type ElectronServiceCustomCapability = {
    * custom capabilities to configure the Electron service
    */
   'wdio:electronServiceOptions'?: ElectronServiceOptions;
+  /**
+   * Chromium version for chromedriver fallback sources (automatically set by service)
+   */
+  'wdio:chromiumVersion'?: string;
 };
 
 type ElectronServiceRequestedStandaloneCapabilities = Capabilities.RequestedStandaloneCapabilities &
