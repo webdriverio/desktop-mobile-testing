@@ -190,14 +190,26 @@ jobs:
                   xvfb-run -a pnpm run test:package:tauri -- --skip-build
                 else
                   pnpm run test:package:tauri -- --skip-build
-                fi
               fi
+            fi
               ;;
             *)
               echo "Invalid service: ${{ inputs.service }}"
               exit 1
               ;;
           esac
+
+      # Upload logs as artifacts for later analysis (same as E2E tests)
+      # This helps debug issues without cluttering the GitHub Actions console
+      - name: 📦 Upload Package Test Logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-test-logs-${{ inputs.os }}-${{ inputs.service }}
+          path: logs/package-tests/*.log
+          retention-days: 90
+          if-no-files-found: warn
 
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment

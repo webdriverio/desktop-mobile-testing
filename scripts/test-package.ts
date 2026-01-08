@@ -433,11 +433,44 @@ async function testExample(
     execCommand('pnpm test', packageDir, `Running tests for ${packageName}`);
 
     log(`✅ ${packageName} tests passed!`);
+
+    // Preserve logs for CI artifact upload before cleanup
+    const logsDir = join(packageDir, 'logs');
+    if (existsSync(logsDir)) {
+      const ciLogsDir = join(rootDir, 'logs', 'package-tests');
+      mkdirSync(ciLogsDir, { recursive: true });
+
+      // Copy logs with package name prefix to avoid conflicts
+      const logFiles = readdirSync(logsDir).filter((f) => f.endsWith('.log'));
+      for (const logFile of logFiles) {
+        const srcPath = join(logsDir, logFile);
+        const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
+        cpSync(srcPath, destPath);
+        log(`📋 Preserved log: ${destPath}`);
+      }
+    }
   } catch (error) {
     console.error(`❌ Error testing ${packageName}:`);
     if (error instanceof Error) {
       console.error(error.message);
     }
+
+    // Preserve logs even on failure for debugging
+    const logsDir = join(packageDir, 'logs');
+    if (existsSync(logsDir)) {
+      const ciLogsDir = join(rootDir, 'logs', 'package-tests');
+      mkdirSync(ciLogsDir, { recursive: true });
+
+      // Copy logs with package name prefix to avoid conflicts
+      const logFiles = readdirSync(logsDir).filter((f) => f.endsWith('.log'));
+      for (const logFile of logFiles) {
+        const srcPath = join(logsDir, logFile);
+        const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
+        cpSync(srcPath, destPath);
+        log(`📋 Preserved failure log: ${destPath}`);
+      }
+    }
+
     throw error;
   } finally {
     // Clean up isolated environment
