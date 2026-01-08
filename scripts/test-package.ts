@@ -206,6 +206,9 @@ async function testExample(
   const tempDir = normalize(join(tmpdir(), `wdio-package-test-${Date.now()}`));
   const packageDir = normalize(join(tempDir, packageName));
 
+  // Define logs directory path for reuse throughout function
+  const logsDir = join(packageDir, 'logs');
+
   try {
     log(`Creating isolated test environment at ${tempDir}`);
     mkdirSync(tempDir, { recursive: true });
@@ -259,6 +262,10 @@ async function testExample(
     // Install local packages
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
+
+    // Ensure logs directory exists for WebdriverIO output
+    mkdirSync(logsDir, { recursive: true });
+    log(`✅ Created logs directory: ${logsDir}`);
 
     // For Tauri apps, ensure the plugin is available as a Rust dependency
     // The plugin is a path dependency (../../../../packages/tauri-plugin from src-tauri/Cargo.toml)
@@ -435,19 +442,28 @@ async function testExample(
     log(`✅ ${packageName} tests passed!`);
 
     // Preserve logs for CI artifact upload before cleanup
-    const logsDir = join(packageDir, 'logs');
+    log(`🔍 Checking for logs in: ${logsDir}`);
     if (existsSync(logsDir)) {
-      const ciLogsDir = join(rootDir, 'logs', 'package-tests');
-      mkdirSync(ciLogsDir, { recursive: true });
+      const allFiles = readdirSync(logsDir);
+      const logFiles = allFiles.filter((f) => f.endsWith('.log'));
+      log(`📋 Found ${logFiles.length} log files: ${logFiles.join(', ')}`);
 
-      // Copy logs with package name prefix to avoid conflicts
-      const logFiles = readdirSync(logsDir).filter((f) => f.endsWith('.log'));
-      for (const logFile of logFiles) {
-        const srcPath = join(logsDir, logFile);
-        const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
-        cpSync(srcPath, destPath);
-        log(`📋 Preserved log: ${destPath}`);
+      if (logFiles.length > 0) {
+        const ciLogsDir = join(rootDir, 'logs', 'package-tests');
+        mkdirSync(ciLogsDir, { recursive: true });
+
+        // Copy logs with package name prefix to avoid conflicts
+        for (const logFile of logFiles) {
+          const srcPath = join(logsDir, logFile);
+          const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
+          cpSync(srcPath, destPath);
+          log(`📋 Preserved log: ${destPath}`);
+        }
+      } else {
+        log(`⚠️  No .log files found in ${logsDir}, found files: ${allFiles.join(', ')}`);
       }
+    } else {
+      log(`⚠️  Logs directory does not exist: ${logsDir}`);
     }
   } catch (error) {
     console.error(`❌ Error testing ${packageName}:`);
@@ -456,19 +472,28 @@ async function testExample(
     }
 
     // Preserve logs even on failure for debugging
-    const logsDir = join(packageDir, 'logs');
+    log(`🔍 Checking for failure logs in: ${logsDir}`);
     if (existsSync(logsDir)) {
-      const ciLogsDir = join(rootDir, 'logs', 'package-tests');
-      mkdirSync(ciLogsDir, { recursive: true });
+      const allFiles = readdirSync(logsDir);
+      const logFiles = allFiles.filter((f) => f.endsWith('.log'));
+      log(`📋 Found ${logFiles.length} failure log files: ${logFiles.join(', ')}`);
 
-      // Copy logs with package name prefix to avoid conflicts
-      const logFiles = readdirSync(logsDir).filter((f) => f.endsWith('.log'));
-      for (const logFile of logFiles) {
-        const srcPath = join(logsDir, logFile);
-        const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
-        cpSync(srcPath, destPath);
-        log(`📋 Preserved failure log: ${destPath}`);
+      if (logFiles.length > 0) {
+        const ciLogsDir = join(rootDir, 'logs', 'package-tests');
+        mkdirSync(ciLogsDir, { recursive: true });
+
+        // Copy logs with package name prefix to avoid conflicts
+        for (const logFile of logFiles) {
+          const srcPath = join(logsDir, logFile);
+          const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
+          cpSync(srcPath, destPath);
+          log(`📋 Preserved failure log: ${destPath}`);
+        }
+      } else {
+        log(`⚠️  No .log files found in ${logsDir}, found files: ${allFiles.join(', ')}`);
       }
+    } else {
+      log(`⚠️  Logs directory does not exist: ${logsDir}`);
     }
 
     throw error;

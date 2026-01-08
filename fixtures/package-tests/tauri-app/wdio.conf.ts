@@ -70,6 +70,11 @@ export const config = {
   hostname: '127.0.0.1',
   port: 4444,
   logLevel: process.env.DEBUG ? 'debug' : 'info',
+  outputDir: './logs',
+  logLevels: {
+    webdriver: 'info',
+    '@wdio/tauri-service': 'info',
+  },
   bail: 0,
   baseUrl: '',
   waitforTimeout: 10000,
