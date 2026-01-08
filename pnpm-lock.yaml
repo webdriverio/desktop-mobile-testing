@@ -2785,7 +2785,7 @@ packages:
     engines: {node: '>=18.20.0'}
 
   '@wdio/utils@file:wdio-utils-9.19.1.tgz':
-    resolution: {integrity: sha512-LsFdFF6Il3XIX1NxGvXs3QrRg5Day0e1qLHb5Ig1GKPSekSCxgrhhKoz/sm6iybG7vmH9bNeWmR/MWc4kNHE4w==, tarball: file:wdio-utils-9.19.1.tgz}
+    resolution: {integrity: sha512-XFtrqvWf6Qp/cfUo00XAUKb3XS9hNWvLFhvc5h48991IiJ1l7Y3cwqRzfpUqGBW9zqbx/zPd6cKHha99N5pSIw==, tarball: file:wdio-utils-9.19.1.tgz}
     version: 9.19.1
     engines: {node: '>=18.20.0'}
 
