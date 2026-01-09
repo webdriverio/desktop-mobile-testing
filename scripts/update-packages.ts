@@ -88,7 +88,8 @@ function updateWdioUtils() {
   runCommand(
     `jq '
     .dependencies["@wdio/logger"] = "^9.18.0" |
-    .dependencies["@wdio/types"] = "9.20.0"
+    .dependencies["@wdio/types"] = "9.20.0" |
+    del(.dependencies["@wdio/chromedriver-downloader"])
   ' "${packageJsonPath}" > "${packageJsonPath}.tmp"`,
     extractDir,
   );

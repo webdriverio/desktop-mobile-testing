@@ -17,6 +17,7 @@ export const config: Options.Testrunner = {
   outputDir: './logs',
   logLevels: {
     webdriver: 'info',
+    '@wdio/utils': 'info',
     '@wdio/electron-service': 'info',
   },
   bail: 0,
