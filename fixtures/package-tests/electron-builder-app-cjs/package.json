@@ -52,6 +52,9 @@
     }
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "esbuild"]
+    "onlyBuiltDependencies": ["electron", "esbuild"],
+    "overrides": {
+      "@wdio/utils": "file:../../../../wdio-utils-9.19.1.tgz"
+    }
   }
 }
