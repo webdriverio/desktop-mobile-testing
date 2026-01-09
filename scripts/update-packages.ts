@@ -65,7 +65,8 @@ function updateWdioUtils() {
   console.log('🔧 Updating @wdio/utils...');
 
   // Build wdio-utils
-  runCommand('pnpm -r --filter=@wdio/compiler run build -p @wdio/utils', WEBDRIVERIO_DIR);
+  console.log('  🔨 Compiling wdio-utils...');
+  runCommand('pnpm exec tsx ./infra/compiler/src/index.ts -p @wdio/utils', WEBDRIVERIO_DIR);
 
   // Package it
   runCommand(`npm pack --pack-destination ${TMP_DIR}`, join(WEBDRIVERIO_DIR, 'packages', 'wdio-utils'));
@@ -112,10 +113,12 @@ function updateWorkspace() {
   console.log('🔧 Updating workspace dependencies...');
 
   // Clear cache and reinstall
+  // Note: Regenerating pnpm-lock.yaml ensures CI cache is busted when tarballs change
   runCommand('pnpm store prune', ROOT_DIR);
   runCommand('rm -f pnpm-lock.yaml', ROOT_DIR);
   runCommand('pnpm install', ROOT_DIR);
 
+  console.log('  ✓ pnpm-lock.yaml regenerated (this will bust CI cache)');
   console.log('✅ Workspace updated\n');
 }
 

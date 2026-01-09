@@ -7,7 +7,7 @@ import type {
 } from '@wdio/native-types';
 import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
 
-const log = createLogger('electron-service', 'launcher');
+const log = createLogger('wdio-electron-service', 'launcher');
 
 import type { Capabilities, Options, Services } from '@wdio/types';
 import getPort from 'get-port';
@@ -226,6 +226,13 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
         const chromedriverOptions = getChromedriverOptions(cap);
         if (!chromiumVersion && Object.keys(chromedriverOptions).length > 0) {
           cap['wdio:chromedriverOptions'] = chromedriverOptions;
+        }
+
+        // Force wdio:chromedriverOptions to be set when we have a chromium version
+        // to ensure webdriverio uses the wdio-utils chromedriver setup path
+        if (chromiumVersion && !cap['wdio:chromedriverOptions']) {
+          cap['wdio:chromedriverOptions'] = {};
+          log.info('Electron service: Forced wdio:chromedriverOptions = {} to enable wdio-utils chromedriver setup');
         }
 
         const browserVersion = chromiumVersion || cap.browserVersion;
