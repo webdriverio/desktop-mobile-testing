@@ -197,9 +197,9 @@ jobs:
                 pnpm run test:package:electron -- --module-type=${{ inputs.module-type }}
                 # Tauri: use --skip-build for pre-built binaries from separate build job
                 if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
-                  xvfb-run -a pnpm run test:package:tauri -- --skip-build
+                  RUST_BACKTRACE=1 xvfb-run -a pnpm run test:package:tauri -- --skip-build
                 else
-                  pnpm run test:package:tauri -- --skip-build
+                  RUST_BACKTRACE=1 pnpm run test:package:tauri -- --skip-build
               fi
             fi
               ;;
