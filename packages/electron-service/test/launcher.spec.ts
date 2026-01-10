@@ -211,6 +211,7 @@ describe('Electron Launch Service', () => {
           },
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '114.0.5735.45',
+          'wdio:electronVersion': '25.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -412,10 +413,12 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-other-test-app/dist/my-other-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {
             appBinaryPath: 'workspace/my-other-test-app/dist/my-other-test-app',
           },
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -438,6 +441,7 @@ describe('Electron Launch Service', () => {
           },
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': undefined,
+          'wdio:electronVersion': 'some-version',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -468,8 +472,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -500,8 +506,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -532,8 +540,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -568,8 +578,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -609,8 +621,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -632,8 +646,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -682,8 +698,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/out/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -737,8 +755,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -769,8 +789,10 @@ describe('Electron Launch Service', () => {
             binary: path.join(getFixtureDir('package-scenarios', 'no-build-tool'), 'node_modules', '.bin', 'electron'),
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -856,6 +878,7 @@ describe('Electron Launch Service', () => {
             args: [],
           },
           'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
           'wdio:electronServiceOptions': {},
         });
@@ -882,7 +905,9 @@ describe('Electron Launch Service', () => {
               windowTypes: ['app', 'webview'],
               args: [],
             },
+            'wdio:chromedriverOptions': {},
             'wdio:chromiumVersion': '116.0.5845.190',
+            'wdio:electronVersion': '26.2.2',
             'wdio:enforceWebDriverClassic': true,
             'wdio:electronServiceOptions': {},
           },
@@ -933,7 +958,9 @@ describe('Electron Launch Service', () => {
                 windowTypes: ['app', 'webview'],
                 args: [],
               },
+              'wdio:chromedriverOptions': {},
               'wdio:chromiumVersion': '128.0.6613.36',
+              'wdio:electronVersion': '32.0.1',
               'wdio:enforceWebDriverClassic': true,
               'wdio:electronServiceOptions': {},
             },
@@ -954,7 +981,9 @@ describe('Electron Launch Service', () => {
                   windowTypes: ['app', 'webview'],
                   args: [],
                 },
+                'wdio:chromedriverOptions': {},
                 'wdio:chromiumVersion': '116.0.5845.190',
+                'wdio:electronVersion': '26.2.2',
                 'wdio:enforceWebDriverClassic': true,
                 'wdio:electronServiceOptions': {},
               },
@@ -1012,7 +1041,9 @@ describe('Electron Launch Service', () => {
                   windowTypes: ['app', 'webview'],
                   args: [],
                 },
+                'wdio:chromedriverOptions': {},
                 'wdio:chromiumVersion': '128.0.6613.36',
+                'wdio:electronVersion': '32.0.1',
                 'wdio:enforceWebDriverClassic': true,
                 'wdio:electronServiceOptions': {},
               },
@@ -1035,7 +1066,9 @@ describe('Electron Launch Service', () => {
                     windowTypes: ['app', 'webview'],
                     args: [],
                   },
+                  'wdio:chromedriverOptions': {},
                   'wdio:chromiumVersion': '116.0.5845.190',
+                  'wdio:electronVersion': '26.2.2',
                   'wdio:enforceWebDriverClassic': true,
                   'wdio:electronServiceOptions': {},
                 },
