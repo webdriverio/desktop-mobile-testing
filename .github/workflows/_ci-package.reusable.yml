@@ -66,17 +66,21 @@ jobs:
         with:
           components: rustfmt
 
-      # Install WebKit WebDriver and runtime X11 dependencies for Linux (required by tauri-driver)
+      # Install WebKit WebDriver and GTK/X11 runtime dependencies for Linux (required by tauri-driver)
       # Note: Build dependencies are handled in the build workflows, we only need runtime libs for testing
-      - name: 🌐 Install WebKit WebDriver and X11 Runtime Dependencies (Linux)
+      - name: 🌐 Install WebKit WebDriver and GTK/X11 Runtime Dependencies (Linux)
         if: (inputs.service == 'tauri' || inputs.service == 'both') && runner.os == 'Linux'
         shell: bash
         run: |
-          echo "Installing WebKit WebDriver and minimal X11 runtime dependencies for Linux..."
+          echo "Installing WebKit WebDriver and GTK/X11 runtime dependencies for Linux..."
           sudo apt-get update
           sudo apt-get install -y \
             webkit2gtk-driver \
             libwebkit2gtk-4.1-0 \
+            libgtk-3-0 \
+            libasound2t64 \
+            libatk-bridge2.0-0 \
+            libcups2 \
             libxcb-shape0 \
             libxcb-xfixes0 \
             xvfb
