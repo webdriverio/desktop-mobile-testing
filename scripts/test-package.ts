@@ -232,6 +232,22 @@ async function testExample(
     };
     const packagesToInstall: string[] = [packages.utilsPath];
 
+    // Add @wdio/utils override if the tarball exists
+    const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.19.1.tgz');
+    if (existsSync(wdioUtilsTarball)) {
+      overrides['@wdio/utils'] = `file:${wdioUtilsTarball}`;
+      packagesToInstall.push(wdioUtilsTarball);
+      log(`  Adding @wdio/utils override: ${wdioUtilsTarball}`);
+    }
+
+    // Add @puppeteer/browsers override if the tarball exists
+    const puppeteerBrowsersTarball = join(rootDir, 'puppeteer-browsers-2.11.0.tgz');
+    if (existsSync(puppeteerBrowsersTarball)) {
+      overrides['@puppeteer/browsers'] = `file:${puppeteerBrowsersTarball}`;
+      packagesToInstall.push(puppeteerBrowsersTarball);
+      log(`  Adding @puppeteer/browsers override: ${puppeteerBrowsersTarball}`);
+    }
+
     if (service === 'electron') {
       if (!packages.electronServicePath || !packages.typesPath || !packages.cdpBridgePath) {
         throw new Error('Electron service packages not available');
