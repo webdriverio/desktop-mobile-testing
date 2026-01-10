@@ -131,6 +131,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
         // Expose the chromium version for WDIO to use during chromedriver download
         // The presence of wdio:electronServiceOptions already indicates electron usage
         (cap as any)['wdio:chromiumVersion'] = chromiumVersion;
+        (cap as any)['wdio:electronVersion'] = electronVersion;
 
         if (Number.parseInt(electronVersion.split('.')[0], 10) < 26 && !cap['wdio:chromedriverOptions']?.binary) {
           const invalidElectronVersionError = new SevereServiceError(
