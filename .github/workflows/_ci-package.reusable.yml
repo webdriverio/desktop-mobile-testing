@@ -165,6 +165,11 @@ jobs:
       # Tauri uses skipBuild to copy pre-built binaries from separate build jobs
       - name: 🧪 Execute Package Tests
         shell: bash
+        env:
+          # Enable Rust backtraces for debugging Tauri/GTK issues
+          RUST_BACKTRACE: '1'
+          # Disable AT-SPI accessibility bus warnings (same as E2E)
+          NO_AT_BRIDGE: '1'
         run: |
           case "${{ inputs.service }}" in
             electron)
@@ -178,9 +183,11 @@ jobs:
                 exit 0
               fi
               echo "Running Tauri package tests (using pre-built binaries from separate build job)"
-              if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
-                echo "Using xvfb-run to provide a DISPLAY on Linux"
-                xvfb-run -a pnpm run test:package:tauri -- --skip-build
+              if [[ "${{ inputs.os }}" == "ubuntu-latest" || "${{ inputs.os }}" == "ubuntu-24.04-arm" ]]; then
+                echo "Using xvfb-run to provide a DISPLAY on Linux (${{ inputs.os }})"
+                # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit (same as E2E)
+                xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
+                  pnpm run test:package:tauri -- --skip-build
               else
                 pnpm run test:package:tauri -- --skip-build
               fi
@@ -196,12 +203,11 @@ jobs:
                 # Electron: build in isolated environments (no --skip-build)
                 pnpm run test:package:electron -- --module-type=${{ inputs.module-type }}
                 # Tauri: use --skip-build for pre-built binaries from separate build job
-                if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
-                  RUST_BACKTRACE=1 xvfb-run -a pnpm run test:package:tauri -- --skip-build
-                else
-                  RUST_BACKTRACE=1 pnpm run test:package:tauri -- --skip-build
+                # Wrap with xvfb-run since tauri-driver runs in launcher (not worker) per wdio.conf.ts comment
+                # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit (same as E2E)
+                xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
+                  pnpm run test:package:tauri -- --skip-build
               fi
-            fi
               ;;
             *)
               echo "Invalid service: ${{ inputs.service }}"
