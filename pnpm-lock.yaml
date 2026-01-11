@@ -2227,7 +2227,7 @@ packages:
     resolution: {integrity: sha512-xm5Ti/Hp3o4xHrsK9Yy3MS6KbDxYbq485hDsFvxqaNA7equHLPdo8H8faTitTeb14QCDfLW4iwCxdVYu5sn6YQ==}
 
   '@puppeteer/browsers@file:puppeteer-browsers-2.11.0.tgz':
-    resolution: {integrity: sha512-rWE6RtQ5AM3DQCUm3wrOZOuod9LSy15k8otOCGLqeeShjoNeh4k54c5ed4uSyqaIVVmKrD12i55hlRyTCkMNAA==, tarball: file:puppeteer-browsers-2.11.0.tgz}
+    resolution: {integrity: sha512-ph8B/U2Ak58Mzl+io20fRzXZ1e4TUcYOdA8neZwSHWQXyFiEO2eoMR+9+37UpIHIiHI6CUoqI2akfZq02xxvRw==, tarball: file:puppeteer-browsers-2.11.0.tgz}
     version: 2.11.0
     engines: {node: '>=18'}
     hasBin: true
@@ -2788,7 +2788,7 @@ packages:
     engines: {node: '>=18.20.0'}
 
   '@wdio/utils@file:wdio-utils-9.19.1.tgz':
-    resolution: {integrity: sha512-fSv9K5R19W5aSRivVo+5l0EeRvFmMy6Sev8UaOIwOR49S2CYaFb/9TM8B27/MufTuvq3bwdtVBE/fKtQnzicPQ==, tarball: file:wdio-utils-9.19.1.tgz}
+    resolution: {integrity: sha512-pq83+bwFeSLoJam+3+BlY2eXc6oK8Lcfwc6fzYzxwrM+Es5GqBZs4lvlXfM/PcV9ERGX5q5i8+YE4gP5cliiuA==, tarball: file:wdio-utils-9.19.1.tgz}
     version: 9.19.1
     engines: {node: '>=18.20.0'}
 
@@ -8519,6 +8519,7 @@ snapshots:
       decamelize: 6.0.1
       deepmerge-ts: 7.1.5
       edgedriver: 6.3.0
+      electron-to-chromium: 1.5.267
       geckodriver: 5.0.0
       get-port: 7.1.0
       import-meta-resolve: 4.2.0
