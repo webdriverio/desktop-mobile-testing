@@ -118,14 +118,14 @@
       </div>
 
       <div class="info-section">
-        <div class="keypress-count" data-testid="keypress-count"></div>
+        <div class="key-input-display" data-testid="key-input-display"></div>
         <div class="click-count">
           Bigger clicked: <span class="bigger">0</span> Smaller clicked: <span class="smaller">0</span>
         </div>
       </div>
 
       <!-- Hidden elements for testing -->
-      <label for="disabled-checkbox" class="hidden">
+      <label for="disabled-checkbox">
         Disabled checkbox
         <input id="disabled-checkbox" type="checkbox" data-testid="disabled-checkbox" disabled />
       </label>
@@ -179,7 +179,7 @@
 
           // Keypress tracking - append characters
           document.addEventListener('keydown', (event) => {
-            const keypressElem = document.querySelector('.keypress-count');
+            const keypressElem = document.querySelector('.key-input-display');
             keypressElem.textContent += String.fromCharCode(event.keyCode);
           });
 

@@ -21,7 +21,7 @@ describe('interaction', () => {
   describe('keyboard input', () => {
     it('should detect keyboard input', async () => {
       const expectedText = 'YO';
-      const elem = browser.$('#keypress-count');
+      const elem = browser.$('[data-testid="key-input-display"]');
       await browser.keys(['y', 'o']);
       await waitTextOfElement(elem, expectedText);
 

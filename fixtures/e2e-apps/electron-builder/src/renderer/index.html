@@ -92,7 +92,7 @@
         margin: 0 5px;
         border: 1px solid rgba(255, 255, 255, 0.3);
       }
-      .none {
+      .hidden {
         display: none;
       }
       .click-counter {
@@ -119,7 +119,7 @@
       </div>
 
       <div class="info-section">
-        <div class="keypress-count" data-testid="keypress-count"></div>
+        <div class="key-input-display" data-testid="key-input-display"></div>
         <div class="click-count">
           Bigger clicked: <span class="bigger">0</span> Smaller clicked: <span class="smaller">0</span>
         </div>
@@ -130,7 +130,7 @@
         Disabled checkbox
         <input id="disabled-checkbox" type="checkbox" data-testid="disabled-checkbox" disabled />
       </label>
-      <textarea class="none" rows="10" cols="80" data-testid="hidden-textarea"></textarea>
+      <textarea class="hidden" rows="10" cols="80" data-testid="hidden-textarea"></textarea>
     </div>
 
     <script>
@@ -185,7 +185,7 @@
 
           // Keypress tracking - append characters
           document.addEventListener('keydown', (event) => {
-            const keypressElem = document.querySelector('.keypress-count');
+            const keypressElem = document.querySelector('.key-input-display');
             keypressElem.textContent += String.fromCharCode(event.keyCode);
           });
 
