@@ -92,7 +92,7 @@
         margin: 0 5px;
         border: 1px solid rgba(255, 255, 255, 0.3);
       }
-      .hidden {
+      .none {
         display: none;
       }
       .click-counter {
@@ -119,22 +119,18 @@
       </div>
 
       <div class="info-section">
-        <div class="status-item">
-          <span>Keypress Count:</span>
-          <span id="keypress-count" data-testid="keypress-count">0</span>
-        </div>
-        <div class="status-item">
-          <span>Click Count:</span>
-          <span id="click-count" class="click-counter">0</span>
+        <div class="keypress-count" data-testid="keypress-count"></div>
+        <div class="click-count" data-testid="click-count">
+          Bigger clicked: <span class="bigger">0</span> Smaller clicked: <span class="smaller">0</span>
         </div>
       </div>
 
-      <!-- Hidden elements for testing -->
-      <label for="disabled-checkbox" class="hidden">
+      <!-- Elements for testing -->
+      <label for="disabled-checkbox">
         Disabled checkbox
         <input id="disabled-checkbox" type="checkbox" data-testid="disabled-checkbox" disabled />
       </label>
-      <textarea class="hidden" rows="10" cols="80" data-testid="hidden-textarea"></textarea>
+      <textarea class="none" rows="10" cols="80" data-testid="hidden-textarea"></textarea>
     </div>
 
     <script>
@@ -144,8 +140,8 @@
       console.error('render error');
 
       // Initialize counters
-      let clickCount = 0;
-      let keypressCount = 0;
+      let biggerCount = 0;
+      let smallerCount = 0;
 
       // Wait for the window.api to be available
       const waitForAPI = () => {
@@ -171,28 +167,26 @@
           await waitForAPI();
 
           document.getElementById('make-bigger').addEventListener('click', () => {
-            clickCount++;
-            document.getElementById('click-count').textContent = clickCount;
+            biggerCount++;
+            document.querySelector('.click-count .bigger').textContent = biggerCount;
             window.api.invoke('increase-window-size');
           });
 
           document.getElementById('make-smaller').addEventListener('click', () => {
-            clickCount++;
-            document.getElementById('click-count').textContent = clickCount;
+            smallerCount++;
+            document.querySelector('.click-count .smaller').textContent = smallerCount;
             window.api.invoke('decrease-window-size');
           });
 
           // Show dialog handler
           document.querySelector('.show-dialog').addEventListener('click', () => {
-            clickCount++;
-            document.getElementById('click-count').textContent = clickCount;
             window.api.invoke('show-open-dialog');
           });
 
-          // Keypress tracking
+          // Keypress tracking - append characters
           document.addEventListener('keydown', (event) => {
-            keypressCount++;
-            document.getElementById('keypress-count').textContent = keypressCount;
+            const keypressElem = document.querySelector('.keypress-count');
+            keypressElem.textContent += String.fromCharCode(event.keyCode);
           });
 
           console.log('Button handlers initialized successfully');
