@@ -239,7 +239,7 @@ importers:
         specifier: catalog:default
         version: 9.23.0(puppeteer-core@24.34.0)
 
-  fixtures/e2e-apps/electron-no-binary:
+  fixtures/e2e-apps/electron-script:
     devDependencies:
       '@types/node':
         specifier: ^25.0.3
