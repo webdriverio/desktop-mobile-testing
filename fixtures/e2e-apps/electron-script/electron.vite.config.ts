@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'electron-vite';
 
 export default defineConfig({
@@ -27,6 +28,10 @@ export default defineConfig({
     build: {
       outDir: 'dist/renderer',
       rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          splash: resolve(__dirname, 'src/renderer/splash.html'),
+        },
         output: {
           format: 'es',
         },

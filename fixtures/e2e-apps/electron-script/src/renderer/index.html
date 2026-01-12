@@ -115,6 +115,7 @@
       <div class="button-grid">
         <button id="make-bigger" data-testid="make-bigger">Make Window Larger</button>
         <button id="make-smaller" data-testid="make-smaller">Make Window Smaller</button>
+        <button type="button" class="show-dialog">show dialog</button>
       </div>
 
       <div class="info-section">
@@ -179,6 +180,13 @@
             clickCount++;
             document.getElementById('click-count').textContent = clickCount;
             window.api.invoke('decrease-window-size');
+          });
+
+          // Show dialog handler
+          document.querySelector('.show-dialog').addEventListener('click', () => {
+            clickCount++;
+            document.getElementById('click-count').textContent = clickCount;
+            window.api.invoke('show-open-dialog');
           });
 
           // Keypress tracking
