@@ -813,6 +813,9 @@ importers:
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
+      '@types/electron-to-chromium':
+        specifier: ^1.5.0
+        version: 1.5.0
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
@@ -2531,6 +2534,9 @@ packages:
 
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
+
+  '@types/electron-to-chromium@1.5.0':
+    resolution: {integrity: sha512-DyruYlDaTi6RhdcarT+ppGNg+n2Jr+hvYLdF/RlJhAspSSFk5ptq+lcHgJZ/eQljH1xwZ5NE103oMJcjbDYnzw==}
 
   '@types/eslint-scope@3.7.7':
     resolution: {integrity: sha512-MzMFlSLBqNF2gcHWO0G1vP/YQyfvrxZ0bF+u7mzUdZ1/xK4A4sru+nraZz5i3iEIk1l1uyicaDVTB4QbbEkAYg==}
@@ -8119,6 +8125,8 @@ snapshots:
       '@types/ms': 2.1.0
 
   '@types/deep-eql@4.0.2': {}
+
+  '@types/electron-to-chromium@1.5.0': {}
 
   '@types/eslint-scope@3.7.7':
     dependencies:
