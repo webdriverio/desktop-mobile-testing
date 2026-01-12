@@ -4,10 +4,11 @@ const isTest = process.env.TEST === 'true';
 const isSplashEnabled = Boolean(process.env.ENABLE_SPLASH_WINDOW);
 
 const appPath = app.getAppPath();
+const isDev = process.env.NODE_ENV === 'development';
 const resourcePaths = {
-  preloadJs: `${appPath}/preload.bundle.cjs`,
-  splashHtml: `${appPath}/splash.html`,
-  indexHtml: `${appPath}/index.html`,
+  preloadJs: isDev ? `${appPath}/dist/preload/index.cjs` : `${appPath}/dist/preload/index.cjs`,
+  splashHtml: isDev ? `${appPath}/src/renderer/splash.html` : `${appPath}/dist/renderer/splash.html`,
+  indexHtml: isDev ? `${appPath}/src/renderer/index.html` : `${appPath}/dist/renderer/index.html`,
 } as const;
 
 let mainWindow: BrowserWindow;

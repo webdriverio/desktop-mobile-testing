@@ -15,11 +15,14 @@ const isSplashEnabled = Boolean(process.env.ENABLE_SPLASH_WINDOW);
 const PROTOCOL = 'testapp';
 
 const appPath = app.getAppPath();
-const appRootPath = `${appPath}/dist`;
+const isDev = process.env.NODE_ENV === 'development';
+const appRootPath = isDev ? appPath : path.join(appPath, '../app.asar.unpacked');
 const resourcePaths = {
-  preloadJs: `${appRootPath}/preload.bundle.cjs`,
-  splashHtml: `${appRootPath}/splash.html`,
-  indexHtml: `${appRootPath}/index.html`,
+  preloadJs: isDev ? path.join(appPath, 'dist/preload/index.cjs') : path.join(appRootPath, 'dist/preload/index.cjs'),
+  splashHtml: isDev
+    ? path.join(appPath, 'src/renderer/splash.html')
+    : path.join(appRootPath, 'dist/renderer/splash.html'),
+  indexHtml: isDev ? path.join(appPath, 'src/renderer/index.html') : path.join(appRootPath, 'dist/renderer/index.html'),
 } as const;
 
 let mainWindow: BrowserWindow;
@@ -162,7 +165,6 @@ app.on('ready', () => {
   });
 
   ipcMain.handle('show-open-dialog', async () => {
-    console.log('🔍 MAIN: IPC show-open-dialog handler called');
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Select txt',
       filters: [
@@ -171,7 +173,7 @@ app.on('ready', () => {
       ],
       properties: ['openFile', 'openDirectory'],
     });
-    console.log('🔍 MAIN: dialog.showOpenDialog completed with result:', result);
+    console.log(result);
     return result;
   });
 
