@@ -253,16 +253,17 @@ jobs:
   # Tauri E2E tests for macOS - skipped with clear messaging
   # macOS is not supported due to WKWebView WebDriver limitations
   e2e-tauri-macos-matrix:
-    name: E2E - Tauri [macOS] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    name: E2E - Tauri [${{ matrix.os == 'macos-latest' && 'macOS-ARM' || 'macOS-Intel' }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [build]
     strategy:
       fail-fast: false
       matrix:
+        os: ['macos-latest', 'macos-15-intel']
         scenario: ['tauri-basic']
         test-type: ['standard', 'multiremote', 'standalone']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
-      os: 'macos-latest'
+      os: ${{ matrix.os }}
       node-version: '20'
       scenario: ${{ matrix.scenario }}
       test-type: ${{ matrix.test-type }}
