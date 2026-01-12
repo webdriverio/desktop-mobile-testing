@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Electron Forge E2E App</title>
+    <title>🔨 Electron Forge E2E Test App</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" />
     <style>
       body {
@@ -115,40 +115,16 @@
       <div class="button-grid">
         <button id="make-bigger" data-testid="make-bigger">Make Window Larger</button>
         <button id="make-smaller" data-testid="make-smaller">Make Window Smaller</button>
-        <button id="show-dialog" data-testid="show-dialog">Show File Dialog</button>
       </div>
 
       <div class="info-section">
-        <h3>Test Status</h3>
-        <div class="status-item">
-          <span>Window Resize Clicks:</span>
-          <span id="resize-count" class="click-counter">0</span>
-        </div>
-        <div class="status-item">
-          <span>Dialog Opens:</span>
-          <span id="dialog-count" class="click-counter">0</span>
-        </div>
         <div class="status-item">
           <span>Keypress Count:</span>
           <span id="keypress-count" data-testid="keypress-count">0</span>
         </div>
-      </div>
-
-      <div class="info-section">
-        <h3>Test Data</h3>
-        <div id="occurrences">
-          <div class="status-item">
-            <span>Occurrences 1:</span>
-            <span>word1 word2</span>
-          </div>
-          <div class="status-item">
-            <span>Occurrences 2:</span>
-            <span>word3 word4</span>
-          </div>
-          <div class="status-item">
-            <span>Occurrences 2 (alt):</span>
-            <span>word5 word6</span>
-          </div>
+        <div class="status-item">
+          <span>Click Count:</span>
+          <span id="click-count" class="click-counter">0</span>
         </div>
       </div>
 
@@ -167,8 +143,7 @@
       console.error('render error');
 
       // Initialize counters
-      let resizeCount = 0;
-      let dialogCount = 0;
+      let clickCount = 0;
       let keypressCount = 0;
 
       // Wait for the window.api to be available
@@ -195,21 +170,15 @@
           await waitForAPI();
 
           document.getElementById('make-bigger').addEventListener('click', () => {
-            resizeCount++;
-            document.getElementById('resize-count').textContent = resizeCount;
+            clickCount++;
+            document.getElementById('click-count').textContent = clickCount;
             window.api.invoke('increase-window-size');
           });
 
           document.getElementById('make-smaller').addEventListener('click', () => {
-            resizeCount++;
-            document.getElementById('resize-count').textContent = resizeCount;
+            clickCount++;
+            document.getElementById('click-count').textContent = clickCount;
             window.api.invoke('decrease-window-size');
-          });
-
-          document.getElementById('show-dialog').addEventListener('click', () => {
-            dialogCount++;
-            document.getElementById('dialog-count').textContent = dialogCount;
-            window.api.invoke('show-open-dialog');
           });
 
           // Keypress tracking

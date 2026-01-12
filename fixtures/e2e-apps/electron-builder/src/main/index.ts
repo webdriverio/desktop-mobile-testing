@@ -1,4 +1,4 @@
-import path from 'node:path';
+import { join, resolve } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 
 // Global storage for received deeplinks (for test verification)
@@ -14,16 +14,7 @@ const isTest = process.env.TEST === 'true';
 const isSplashEnabled = Boolean(process.env.ENABLE_SPLASH_WINDOW);
 const PROTOCOL = 'testapp';
 
-const appPath = app.getAppPath();
-const isDev = process.env.NODE_ENV === 'development';
-const appRootPath = isDev ? appPath : path.join(appPath, '../app.asar.unpacked');
-const resourcePaths = {
-  preloadJs: isDev ? path.join(appPath, 'dist/preload/index.cjs') : path.join(appRootPath, 'dist/preload/index.cjs'),
-  splashHtml: isDev
-    ? path.join(appPath, 'src/renderer/splash.html')
-    : path.join(appRootPath, 'dist/renderer/splash.html'),
-  indexHtml: isDev ? path.join(appPath, 'src/renderer/index.html') : path.join(appRootPath, 'dist/renderer/index.html'),
-} as const;
+const isDev = !!process.env.ELECTRON_RENDERER_URL;
 
 let mainWindow: BrowserWindow;
 let splashWindow: BrowserWindow;
@@ -34,8 +25,9 @@ const createMainWindow = () => {
     y: 35,
     width: 200,
     height: 300,
+    title: 'Electron Builder E2E App',
     webPreferences: {
-      preload: resourcePaths.preloadJs,
+      preload: join(__dirname, '../preload/index.cjs'),
       sandbox: !isTest,
       nodeIntegration: false,
       contextIsolation: true,
@@ -44,10 +36,14 @@ const createMainWindow = () => {
   mainWindow.on('closed', () => {
     mainWindow.destroy();
   });
-  mainWindow.loadFile(resourcePaths.indexHtml);
+
+  if (isDev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+  }
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.title = 'this is the title of the main window';
     // mainWindow.webContents.openDevTools();
   });
 };
@@ -60,13 +56,18 @@ const createSplashWindow = () => {
     height: 200,
     frame: false,
     webPreferences: {
-      preload: resourcePaths.preloadJs,
+      preload: join(__dirname, '../preload/index.cjs'),
       sandbox: !isTest,
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
-  splashWindow.loadFile(resourcePaths.splashHtml);
+
+  if (isDev && process.env.ELECTRON_RENDERER_URL) {
+    splashWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}splash.html`);
+  } else {
+    splashWindow.loadFile(join(__dirname, '../renderer/splash.html'));
+  }
   splashWindow.once('ready-to-show', () => {
     splashWindow.show();
   });
@@ -95,7 +96,7 @@ if (process.platform === 'win32' || process.platform === 'linux') {
 // In development (when using electron directly), we need to specify the path
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [resolve(process.argv[1])]);
   }
 } else {
   // In production (packaged app), just register the protocol

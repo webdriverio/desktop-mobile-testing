@@ -1,15 +1,10 @@
+import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 
 const isTest = process.env.TEST === 'true';
 const isSplashEnabled = Boolean(process.env.ENABLE_SPLASH_WINDOW);
 
-const appPath = app.getAppPath();
-const isDev = process.env.NODE_ENV === 'development';
-const resourcePaths = {
-  preloadJs: isDev ? `${appPath}/dist/preload/index.cjs` : `${appPath}/dist/preload/index.cjs`,
-  splashHtml: isDev ? `${appPath}/src/renderer/splash.html` : `${appPath}/dist/renderer/splash.html`,
-  indexHtml: isDev ? `${appPath}/src/renderer/index.html` : `${appPath}/dist/renderer/index.html`,
-} as const;
+const isDev = !!process.env.ELECTRON_RENDERER_URL;
 
 let mainWindow: BrowserWindow;
 let splashWindow: BrowserWindow;
@@ -20,8 +15,9 @@ const createMainWindow = () => {
     y: 35,
     width: 200,
     height: 300,
+    title: 'Electron Direct E2E App',
     webPreferences: {
-      preload: resourcePaths.preloadJs,
+      preload: join(__dirname, '../preload/index.cjs'),
       sandbox: !isTest,
       nodeIntegration: false,
       contextIsolation: true,
@@ -30,7 +26,11 @@ const createMainWindow = () => {
   mainWindow.on('closed', () => {
     mainWindow.destroy();
   });
-  mainWindow.loadFile(resourcePaths.indexHtml);
+  if (isDev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+  }
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.title = 'this is the title of the main window';
@@ -46,13 +46,18 @@ const createSplashWindow = () => {
     height: 200,
     frame: false,
     webPreferences: {
-      preload: resourcePaths.preloadJs,
+      preload: join(__dirname, '../preload/index.cjs'),
       sandbox: !isTest,
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
-  splashWindow.loadFile(resourcePaths.splashHtml);
+
+  if (isDev && process.env.ELECTRON_RENDERER_URL) {
+    splashWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}splash.html`);
+  } else {
+    splashWindow.loadFile(join(__dirname, '../renderer/splash.html'));
+  }
   splashWindow.once('ready-to-show', () => {
     splashWindow.show();
   });
