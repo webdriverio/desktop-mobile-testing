@@ -198,6 +198,12 @@ This monorepo is built with modern development tools and practices:
 - **🔷 TypeScript** - Type-safe development with dual ESM/CJS builds
 - **🧪 Vitest** - Fast unit and integration testing framework
 - **🎨 Biome** - High-performance formatting and linting
+- **🌐 WebdriverIO** - Next-gen browser and mobile automation framework
+- **🎭 Puppeteer** - Headless Chrome/Node.js API for browser automation
+- **🔧 Chrome DevTools Protocol** - Protocol for browser debugging and automation
+- **⚛️ Electron** - Cross-platform desktop application framework
+- **🦀 Tauri** - Modern desktop application framework
+- **⚛️ electron-vite** - Modern build tool for Electron applications
 - **🤖 GitHub Actions** - Comprehensive CI/CD with multi-platform testing
 
 ## License

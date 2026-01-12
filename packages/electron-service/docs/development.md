@@ -114,6 +114,8 @@ Below are the task graphs for the E2Es:
 
 Note: The E2E runner logs are saved per run in the configured `outputDir` and include service namespaces (e.g., `wdio-electron-service:service`). Enable debug output for all namespaces by setting `DEBUG=wdio-electron-service:*`.
 
+All E2E test applications use [electron-vite](https://electron-vite.org) for modern development and building.
+
 ## Testing - Units
 
 Unit tests (using [Vitest](https://vitest.dev/)) can be run via:
