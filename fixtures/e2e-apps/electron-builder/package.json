@@ -30,6 +30,7 @@
     "appId": "com.electron-builder.demo",
     "copyright": "goosewobbler",
     "productName": "Electron Builder E2E App",
+    "executableName": "electron-builder-e2e-app",
     "directories": {
       "output": "dist-electron"
     },
@@ -43,7 +44,8 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": "dir",
-      "identity": null
+      "identity": null,
+      "executableName": "electron-builder-e2e-app"
     },
     "linux": {
       "executableName": "electron-builder-e2e-app",
