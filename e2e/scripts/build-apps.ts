@@ -79,8 +79,11 @@ export class BuildManager {
     try {
       // Only clean if we don't have valid artifacts (this is a forced rebuild)
       const distPath = join(appPath, 'dist');
-      if (dirExists(distPath)) {
-        console.log(`  Cleaning existing dist directory: ${distPath}`);
+      const outPath = join(appPath, 'out');
+      const distElectronPath = join(appPath, 'dist-electron');
+
+      if (dirExists(distPath) || dirExists(outPath) || dirExists(distElectronPath)) {
+        console.log(`  Cleaning existing build directories...`);
         await this.runCommand('pnpm run clean:dist', appPath);
       }
 
@@ -242,11 +245,12 @@ export class BuildManager {
         return false;
       }
 
-      // Check for essential build artifacts
-      const hasMainJs = distContents.includes('main.js');
+      // Check for essential build artifacts (electron-vite structure)
+      const mainPath = join(distPath, 'main', 'index.js');
+      const hasMainJs = fileExists(mainPath);
 
       if (!hasMainJs) {
-        console.log(`🔍 Debug: Missing main.js in ${distPath}`);
+        console.log(`🔍 Debug: Missing main/index.js in ${distPath}`);
         return false;
       }
 
