@@ -92,7 +92,7 @@
         margin: 0 5px;
         border: 1px solid rgba(255, 255, 255, 0.3);
       }
-      .none {
+      .hidden {
         display: none;
       }
       .click-counter {
@@ -115,22 +115,21 @@
       <div class="button-grid">
         <button id="make-bigger" data-testid="make-bigger">Make Window Larger</button>
         <button id="make-smaller" data-testid="make-smaller">Make Window Smaller</button>
-        <button type="button" class="show-dialog">show dialog</button>
       </div>
 
       <div class="info-section">
         <div class="keypress-count" data-testid="keypress-count"></div>
-        <div class="click-count" data-testid="click-count">
+        <div class="click-count">
           Bigger clicked: <span class="bigger">0</span> Smaller clicked: <span class="smaller">0</span>
         </div>
       </div>
 
-      <!-- Elements for testing -->
-      <label for="disabled-checkbox">
+      <!-- Hidden elements for testing -->
+      <label for="disabled-checkbox" class="hidden">
         Disabled checkbox
         <input id="disabled-checkbox" type="checkbox" data-testid="disabled-checkbox" disabled />
       </label>
-      <textarea class="none" rows="10" cols="80" data-testid="hidden-textarea"></textarea>
+      <textarea class="hidden" rows="10" cols="80" data-testid="hidden-textarea"></textarea>
     </div>
 
     <script>
@@ -176,11 +175,6 @@
             smallerCount++;
             document.querySelector('.click-count .smaller').textContent = smallerCount;
             window.api.invoke('decrease-window-size');
-          });
-
-          // Show dialog handler
-          document.querySelector('.show-dialog').addEventListener('click', () => {
-            window.api.invoke('show-open-dialog');
           });
 
           // Keypress tracking - append characters

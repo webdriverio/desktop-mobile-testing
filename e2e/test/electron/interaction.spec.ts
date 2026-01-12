@@ -21,7 +21,7 @@ describe('interaction', () => {
   describe('keyboard input', () => {
     it('should detect keyboard input', async () => {
       const expectedText = 'YO';
-      const elem = browser.$('.keypress-count');
+      const elem = browser.$('#keypress-count');
       await browser.keys(['y', 'o']);
       await waitTextOfElement(elem, expectedText);
 
@@ -43,7 +43,7 @@ describe('interaction', () => {
         expect(bounds.height).toEqual(300);
         let biggerClickCount = await browser.$('.click-count .bigger').getText();
         expect(biggerClickCount).toEqual('0');
-        const elem = browser.$('.make-bigger');
+        const elem = browser.$('#make-bigger');
         await elem.click();
 
         const biggerClickCountElem = browser.$('.click-count .bigger');
@@ -74,7 +74,7 @@ describe('interaction', () => {
         };
         expect(bounds.width).toEqual(210);
         expect(bounds.height).toEqual(310);
-        const elem = browser.$('.make-smaller');
+        const elem = browser.$('#make-smaller');
         await elem.click();
 
         const smallerClickCountElem = browser.$('.click-count .bigger');
