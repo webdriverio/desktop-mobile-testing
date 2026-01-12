@@ -300,12 +300,12 @@ jobs:
 
       - name: ✅ Verify Universal Binary Contains Both Architectures (Builder)
         run: |
-          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist/mac-universal/electron-builder-e2e-app.app/Contents/MacOS/electron-builder-e2e-app"
+          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist-electron/mac-universal/electron-builder-e2e-app.app/Contents/MacOS/electron-builder-e2e-app"
 
           if [ ! -f "$BINARY_PATH" ]; then
             echo "❌ Binary not found at $BINARY_PATH"
-            echo "Contents of dist/mac-universal:"
-            ls -la fixtures/e2e-apps/electron-builder/dist/mac-universal/ || echo "Directory does not exist"
+            echo "Contents of dist-electron/mac-universal:"
+            ls -la fixtures/e2e-apps/electron-builder/dist-electron/mac-universal/ || echo "Directory does not exist"
             exit 1
           fi
 

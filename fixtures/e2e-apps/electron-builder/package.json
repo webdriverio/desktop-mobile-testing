@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build && electron-builder",
+    "build": "pnpm clean:dist && electron-vite build && electron-builder",
     "build:package": "electron-builder -p never",
     "build:package:mac-universal": "electron-builder -p never -m --universal",
     "build:mac-universal": "electron-vite build && pnpm build:package:mac-universal",
@@ -48,9 +48,10 @@
     "linux": {
       "executableName": "electron-builder-e2e-app",
       "category": "Utility",
-      "target": "AppImage"
+      "target": "dir"
     },
     "win": {
+      "executableName": "electron-builder-e2e-app",
       "target": "dir"
     }
   }

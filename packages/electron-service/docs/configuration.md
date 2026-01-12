@@ -76,7 +76,7 @@ Here are some examples of binary paths using default build configurations for a 
 #### MacOS (Universal)
 
 ```ts
-'/workspace/myApp/dist/mac-universal/myApp.app/Contents/MacOS/myApp'; // Electron Builder
+'/workspace/myApp/dist-electron/mac-universal/myApp.app/Contents/MacOS/myApp'; // Electron Builder
 '/workspace/myApp/out/myApp-darwin-universal/myApp.app/Contents/MacOS/myApp'; // Electron Forge
 ```
 
