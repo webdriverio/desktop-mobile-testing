@@ -22,7 +22,7 @@ These workflows are manually triggered from the GitHub Actions UI:
 Release stable versions of either service.
 
 **Service options:**
-- `electron` - Releases `@wdio/electron-service`, `@wdio/electron-cdp-bridge`, `@wdio/bundler`
+- `electron` - Releases `@wdio/electron-service`, `@wdio/electron-cdp-bridge`
 - `tauri` - Releases `@wdio/tauri-service`, `@wdio/tauri-plugin` (NPM + crates.io)
 
 **Version options:** `patch`, `minor`, `major`
@@ -236,7 +236,6 @@ Publishes the Tauri plugin Rust crate to crates.io.
 Each package maintains its own git tags:
 
 - Service packages: `<service>-service-v<version>` (e.g., `electron-service-v10.1.0`)
-- Other service packages: `<package-name>-v<version>` (e.g., `bundler-v3.2.0`)
 - Shared packages: `native-<type>-v<version>` (e.g., `native-utils-v1.2.0`)
 
 ### Required Secrets
@@ -334,7 +333,6 @@ Dry Run: false
 **Result**:
 - `@wdio/electron-service`: `10.0.0` → `10.0.1`
 - `@wdio/electron-cdp-bridge`: `10.0.0` → `10.0.1` (grouped)
-- `@wdio/bundler`: `3.0.0` → `3.0.1` (grouped)
 - Tag: `electron-service-v10.0.1`
 
 #### Example 2: Minor Release with Shared Package Changes
