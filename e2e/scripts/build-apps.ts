@@ -132,7 +132,7 @@ export class BuildManager {
 
     // Build Electron apps
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-no-binary'];
+    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-script'];
 
     console.log('📦 Building Electron apps...');
     for (const appDir of electronAppDirs) {
@@ -355,7 +355,7 @@ export class BuildManager {
 
     // Clean Electron apps
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-no-binary'];
+    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-script'];
 
     console.log('🧹 Cleaning Electron apps...');
     for (const appDir of electronAppDirs) {
@@ -423,7 +423,7 @@ ENVIRONMENT VARIABLES:
   FORCE_REBUILD=true   Force rebuild (same as --force)
   FORCE_BUILD=true     Force rebuild (alias for FORCE_REBUILD)
   FRAMEWORK=<framework> Target framework (electron, tauri)
-  APP=<app>            Target app (builder, forge, no-binary, basic, advanced)
+  APP=<app>            Target app (builder, forge, script, basic, advanced)
   MODULE_TYPE=<type>   Module type (cjs, esm)
 
 EXAMPLES:

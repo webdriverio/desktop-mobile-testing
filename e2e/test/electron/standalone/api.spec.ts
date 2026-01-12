@@ -16,15 +16,15 @@ const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, { encoding: 'utf
 const pkg = { packageJson, path: packageJsonPath };
 const electronVersion = await getElectronVersion(pkg);
 
-// Detect if running in no-binary mode
+// Detect if running in script mode
 const appDirName = path.basename(appDir);
-const isNoBinary = appDirName.includes('no-binary');
+const isScript = appDirName.includes('script');
 
 // Helper function to get the expected app name
 const getExpectedAppName = (): string => {
-  // In no-binary mode, the app name will always be "Electron"
+  // In script mode, the app name will always be "Electron"
   // In binary mode, use the package name
-  return isNoBinary ? 'Electron' : globalThis.packageJson?.name || packageJson.name;
+  return isScript ? 'Electron' : globalThis.packageJson?.name || packageJson.name;
 };
 
 // Get app name and check against expected value
@@ -37,8 +37,8 @@ if (appName !== expectedAppName) {
 
 // Get app version and check against expected value
 const appVersion = await browser.electron.execute((electron: typeof Electron) => electron.app.getVersion());
-// In binary mode, expect the package.json version; in no-binary mode, expect the Electron version
-const expectedAppVersion = isNoBinary ? electronVersion : packageJson.version;
+// In binary mode, expect the package.json version; in script mode, expect the Electron version
+const expectedAppVersion = isScript ? electronVersion : packageJson.version;
 if (appVersion !== expectedAppVersion) {
   throw new Error(`appVersion test failed: ${appVersion} !== ${expectedAppVersion}`);
 }

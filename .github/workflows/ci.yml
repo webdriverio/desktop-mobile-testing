@@ -186,7 +186,7 @@ jobs:
 
   # E2E test matrix strategy:
   # - Run tests across operating systems and architectures (Linux, Windows, macOS ARM, macOS Intel)
-  # - Test 3 scenarios (builder, forge, no-binary)
+  # - Test 3 scenarios (builder, forge, script)
   # - E2E tests use ESM only (CJS/ESM testing is done in package tests)
   # - Optimize for GitHub Actions concurrency limits
   e2e-matrix:
@@ -198,7 +198,7 @@ jobs:
         # Test across all major operating systems and macOS architectures
         os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
         # Test all application scenarios
-        scenario: ['builder', 'forge', 'no-binary']
+        scenario: ['builder', 'forge', 'script']
     uses: ./.github/workflows/_ci-e2e.reusable.yml
     with:
       os: ${{ matrix.os }}

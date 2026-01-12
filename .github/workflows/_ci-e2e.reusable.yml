@@ -19,7 +19,7 @@ on:
         type: string
         default: 'build'
       scenario:
-        description: 'Test scenario (forge, builder, or no-binary)'
+        description: 'Test scenario (forge, builder, or script)'
         required: true
         type: string
       build_id:
@@ -42,7 +42,7 @@ env:
 jobs:
   # This job runs E2E tests for a specific combination of:
   # - Operating system (Linux, Windows, macOS)
-  # - Test scenario (builder, forge, no-binary)
+  # - Test scenario (builder, forge, script)
   # - E2E tests use ESM only (CJS/ESM testing is done in package tests)
   e2e:
     name: E2E Tests

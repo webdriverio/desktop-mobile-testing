@@ -53,7 +53,7 @@ The testing framework uses environment variables to control test execution:
 
 - **`FRAMEWORK`**: Target framework (`electron` | `tauri`)
 - **`APP`**: Application type
-  - For Electron: `builder` | `forge` | `no-binary`
+  - For Electron: `builder` | `forge` | `script`
   - For Tauri: `basic` | `advanced`
 - **`TEST_TYPE`**: Test execution mode (`standard` | `window` | `multiremote` | `standalone`)
 - **`BINARY`**: Binary mode (`true` | `false`)
@@ -89,7 +89,7 @@ FRAMEWORK=tauri pnpm e2e
 # Electron tests
 pnpm e2e:builder
 pnpm e2e:forge
-pnpm e2e:no-binary
+pnpm e2e:electron-script
 
 # Tauri tests
 pnpm e2e:tauri
@@ -203,7 +203,7 @@ The main configuration file automatically selects the appropriate framework-spec
 #### Electron Configuration (`wdio.electron.conf.ts`)
 - Configures Electron service
 - Handles binary detection for Forge/Builder apps
-- Sets up no-binary mode for development
+- Sets up script mode for development
 - Manages Electron-specific capabilities
 
 #### Tauri Configuration (`wdio.tauri.conf.ts`)
@@ -235,7 +235,7 @@ tsx scripts/build-apps.ts --clean
 #### Electron Apps
 - **Builder apps**: `dist/` directory with packaged binaries
 - **Forge apps**: `out/` directory with packaged binaries
-- **No-binary apps**: `dist/` directory with main.js
+- **Script apps**: `dist/` directory with main.js
 
 #### Tauri Apps
 - **Basic/Advanced apps**: `src-tauri/target/release/` with compiled binaries
@@ -246,7 +246,7 @@ tsx scripts/build-apps.ts --clean
 Located in `../fixtures/e2e-apps/`:
 - `electron-builder`: Electron Builder app (ESM only)
 - `electron-forge`: Electron Forge app (ESM only)
-- `electron-no-binary`: Development mode app (ESM only)
+- `electron-script`: Development mode app (ESM only)
 
 **Note**: E2E tests use ESM-only apps. CJS/ESM variants are tested in package tests.
 

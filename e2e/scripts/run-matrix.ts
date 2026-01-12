@@ -14,7 +14,7 @@ import BuildManager from './build-apps.js';
  */
 interface TestVariant {
   framework: 'electron' | 'tauri';
-  app: 'builder' | 'forge' | 'no-binary' | 'basic';
+  app: 'builder' | 'forge' | 'script' | 'basic';
   testType: 'standard' | 'window' | 'multiremote' | 'standalone';
   binary: boolean;
 }
@@ -23,7 +23,7 @@ interface TestVariant {
  * Get human-readable test name
  */
 function getTestName(variant: TestVariant): string {
-  const parts = [variant.framework, variant.app, variant.testType, variant.binary ? 'binary' : 'no-binary'];
+  const parts = [variant.framework, variant.app, variant.testType, variant.binary ? 'binary' : 'script'];
   return parts.join('-');
 }
 
@@ -39,7 +39,7 @@ function generateTestVariants(): TestVariant[] {
   console.log(`🔍 Debug: FRAMEWORK env var: ${process.env.FRAMEWORK}`);
   console.log(`🔍 Debug: Generated frameworks: ${frameworks.join(', ')}`);
 
-  const electronApps: Array<'builder' | 'forge' | 'no-binary'> = ['builder', 'forge', 'no-binary'];
+  const electronApps: Array<'builder' | 'forge' | 'script'> = ['builder', 'forge', 'script'];
   const tauriApps: Array<'basic'> = ['basic'];
   const testTypes: Array<'standard' | 'window' | 'multiremote' | 'standalone'> = [
     'standard',
@@ -55,9 +55,9 @@ function generateTestVariants(): TestVariant[] {
 
     for (const app of apps) {
       for (const testType of testTypes) {
-        // no-binary app is always non-binary for Electron
+        // script app is always non-binary for Electron
         // Tauri apps are always binary
-        const binary = framework === 'tauri' || app !== 'no-binary';
+        const binary = framework === 'tauri' || app !== 'script';
 
         variants.push({
           framework,
@@ -72,7 +72,7 @@ function generateTestVariants(): TestVariant[] {
   console.log(`🔍 Debug: Generated ${variants.length} variants:`);
   variants.forEach((variant, index) => {
     console.log(
-      `  ${index + 1}. ${variant.framework}-${variant.app}-${variant.testType}-${variant.binary ? 'binary' : 'no-binary'}`,
+      `  ${index + 1}. ${variant.framework}-${variant.app}-${variant.testType}-${variant.binary ? 'binary' : 'script'}`,
     );
   });
 
@@ -500,10 +500,10 @@ USAGE:
 
 FILTERING OPTIONS:
   --framework=<framework>   Run tests for specific framework(s): electron, tauri
-  --app=<app>              Run tests for specific app(s): builder, forge, no-binary, basic, advanced
+  --app=<app>              Run tests for specific app(s): builder, forge, script, basic, advanced
   --module-type=<type>      Run tests for specific module type(s): cjs, esm
   --test-type=<type>       Run tests for specific test type(s): standard, window, multiremote, standalone
-  --binary=<true|false>     Run binary or no-binary tests
+  --binary=<true|false>     Run binary or script tests
   --mac-universal=<true>    Run Mac Universal build tests (Electron builder/forge only)
 
 EXECUTION OPTIONS:

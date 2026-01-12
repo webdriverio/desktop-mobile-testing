@@ -1,5 +1,5 @@
 {
-  "name": "electron-no-binary-e2e-app",
+  "name": "electron-script-e2e-app",
   "version": "0.0.0",
   "main": "dist/main/index.js",
   "private": true,

@@ -4,7 +4,7 @@ packages:
   - e2e
   - fixtures/e2e-apps/electron-builder
   - fixtures/e2e-apps/electron-forge
-  - fixtures/e2e-apps/electron-no-binary
+  - fixtures/e2e-apps/electron-script
   - fixtures/e2e-apps/tauri
   - fixtures/package-tests/electron-builder-app-cjs
   - fixtures/package-tests/electron-builder-app-esm

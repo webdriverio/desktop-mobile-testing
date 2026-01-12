@@ -237,22 +237,22 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
  * This is used consistently across envSchema, build scripts, and test runners.
  *
  * @param framework - 'electron' or 'tauri'
- * @param app - App type: 'builder', 'forge', 'no-binary', or 'basic' (for Tauri)
- * @param isNoBinary - Whether this is a no-binary mode (only used for Electron)
+ * @param app - App type: 'builder', 'forge', 'script', or 'basic' (for Tauri)
+ * @param isScript - Whether this is a script mode (only used for Electron)
  * @returns The computed directory name
  */
 export function getE2EAppDirName(
   framework: 'electron' | 'tauri',
-  app: 'builder' | 'forge' | 'no-binary' | 'basic',
-  isNoBinary: boolean,
+  app: 'builder' | 'forge' | 'script' | 'basic',
+  isScript: boolean,
 ): string {
   if (framework === 'tauri') {
     // Tauri app directory is always 'tauri' regardless of app type
     return 'tauri';
   }
 
-  if (isNoBinary) {
-    return 'electron-no-binary';
+  if (isScript) {
+    return 'electron-script';
   }
 
   return `electron-${app}`;

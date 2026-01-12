@@ -66,10 +66,10 @@ async function getElectronConfigContext(): Promise<ElectronConfigContext> {
   let appEntryPoint: string | undefined;
   let appBinaryPath: string | undefined;
 
-  if (envContext.isNoBinary) {
-    console.log('🔍 Setting up no-binary test with entry point');
+  if (envContext.isScript) {
+    console.log('🔍 Setting up script test with entry point');
 
-    appEntryPoint = join(appPath, 'dist', 'main.js');
+    appEntryPoint = join(appPath, 'dist', 'main', 'index.js');
     console.log(`Using app entry point: ${appEntryPoint}`);
 
     if (!fileExists(appEntryPoint)) {

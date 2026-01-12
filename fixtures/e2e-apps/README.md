@@ -8,7 +8,7 @@ This directory contains E2E test applications for demonstrating and testing the 
 
 - **electron-builder**: Example using Electron Builder for packaging with electron-vite (ESM only)
 - **electron-forge**: Example using Electron Forge for packaging with electron-vite (ESM only)
-- **electron-no-binary**: Example without packaging, direct Electron execution with electron-vite (ESM only)
+- **electron-script**: Example without packaging, direct Electron execution with electron-vite (ESM only)
 
 **Note**: E2E tests use ESM only. All apps now use electron-vite for modern development and building. CJS/ESM module system testing is done in package tests (see `fixtures/package-tests/`).
 
