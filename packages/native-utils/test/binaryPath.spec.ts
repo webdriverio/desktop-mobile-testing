@@ -284,7 +284,10 @@ describe('getBinaryPath', () => {
       platform: 'darwin',
       arch: 'universal',
       binaryPath: '/path/to/dist-electron/mac-universal/my-app.app/Contents/MacOS/my-app',
-      configObj: { productName: 'my-app' },
+      configObj: {
+        productName: 'my-app',
+        directories: { output: 'dist-electron' },
+      },
     });
 
     // Test custom output directory configuration
