@@ -116,7 +116,7 @@ export class BuildManager {
     const appsToBuild: string[] = [];
 
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const appDirName = getE2EAppDirName(envContext.framework, envContext.app, envContext.isNoBinary);
+    const appDirName = getE2EAppDirName(envContext.framework, envContext.app, envContext.isScript);
     appsToBuild.push(join(e2eAppsDir, appDirName));
 
     console.log(`📦 Apps to build: ${appsToBuild.map((p) => p.split('/').pop()).join(', ')}`);

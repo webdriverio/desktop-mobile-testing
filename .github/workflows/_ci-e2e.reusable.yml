@@ -131,8 +131,8 @@ jobs:
               echo "Setting up Windows protocol handler..."
 
               if [ "$APP" == "electron-builder" ]; then
-                echo "Checking if dist directory exists..."
-                ls -la ./fixtures/e2e-apps/$APP/dist/ || echo "dist/ not found"
+                echo "Checking if dist-electron directory exists..."
+                ls -la ./fixtures/e2e-apps/$APP/dist-electron/ || echo "dist-electron/ not found"
               else
                 echo "Checking if out directory exists..."
                 ls -la ./fixtures/e2e-apps/$APP/out/ || echo "out/ not found"
@@ -151,8 +151,8 @@ jobs:
               echo "Setting up Linux protocol handler..."
 
               if [ "$APP" == "electron-builder" ]; then
-                echo "Checking if dist directory exists..."
-                ls -la ./fixtures/e2e-apps/$APP/dist/ || echo "dist/ not found"
+                echo "Checking if dist-electron directory exists..."
+                ls -la ./fixtures/e2e-apps/$APP/dist-electron/ || echo "dist-electron/ not found"
               else
                 echo "Checking if out directory exists..."
                 ls -la ./fixtures/e2e-apps/$APP/out/ || echo "out/ not found"

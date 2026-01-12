@@ -165,8 +165,8 @@ async function runTest(
   try {
     // Determine app directory based on framework
     const fixturesDir = 'e2e-apps';
-    const isNoBinary = !variant.binary;
-    const appDirName = getE2EAppDirName(variant.framework, variant.app, isNoBinary);
+    const isScript = !variant.binary;
+    const appDirName = getE2EAppDirName(variant.framework, variant.app, isScript);
 
     const appPath = join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
 
