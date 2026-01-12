@@ -186,7 +186,7 @@ jobs:
 
   # E2E test matrix strategy:
   # - Run tests across operating systems and architectures (Linux, Windows, macOS ARM, macOS Intel)
-  # - Test 3 scenarios (builder, forge, no-binary)
+  # - Test 3 scenarios (builder, forge, script)
   # - E2E tests use ESM only (CJS/ESM testing is done in package tests)
   # - Optimize for GitHub Actions concurrency limits
   e2e-matrix:
@@ -198,7 +198,7 @@ jobs:
         # Test across all major operating systems and macOS architectures
         os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
         # Test all application scenarios
-        scenario: ['builder', 'forge', 'no-binary']
+        scenario: ['builder', 'forge', 'script']
     uses: ./.github/workflows/_ci-e2e.reusable.yml
     with:
       os: ${{ matrix.os }}
@@ -253,16 +253,17 @@ jobs:
   # Tauri E2E tests for macOS - skipped with clear messaging
   # macOS is not supported due to WKWebView WebDriver limitations
   e2e-tauri-macos-matrix:
-    name: E2E - Tauri [macOS] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    name: E2E - Tauri [${{ matrix.os == 'macos-latest' && 'macOS-ARM' || 'macOS-Intel' }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [build]
     strategy:
       fail-fast: false
       matrix:
+        os: ['macos-latest', 'macos-15-intel']
         scenario: ['tauri-basic']
         test-type: ['standard', 'multiremote', 'standalone']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
-      os: 'macos-latest'
+      os: ${{ matrix.os }}
       node-version: '20'
       scenario: ${{ matrix.scenario }}
       test-type: ${{ matrix.test-type }}
@@ -300,12 +301,12 @@ jobs:
 
       - name: ✅ Verify Universal Binary Contains Both Architectures (Builder)
         run: |
-          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist/mac-universal/electron-builder-e2e-app.app/Contents/MacOS/electron-builder-e2e-app"
+          BINARY_PATH="fixtures/e2e-apps/electron-builder/dist-electron/mac-universal/electron-builder-e2e-app.app/Contents/MacOS/electron-builder-e2e-app"
 
           if [ ! -f "$BINARY_PATH" ]; then
             echo "❌ Binary not found at $BINARY_PATH"
-            echo "Contents of dist/mac-universal:"
-            ls -la fixtures/e2e-apps/electron-builder/dist/mac-universal/ || echo "Directory does not exist"
+            echo "Contents of dist-electron/mac-universal:"
+            ls -la fixtures/e2e-apps/electron-builder/dist-electron/mac-universal/ || echo "Directory does not exist"
             exit 1
           fi
 

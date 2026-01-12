@@ -1,27 +1,25 @@
 {
-  "name": "electron-no-binary-e2e-app",
+  "name": "electron-script-e2e-app",
   "version": "0.0.0",
-  "main": "dist/main.js",
-  "module": "dist/main.bundle.js",
+  "main": "dist/main/index.js",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && rollup -c rollup.config.js && pnpx shx cp dist/main.bundle.js dist/main.js && pnpx shx cp ./src/index.html ./dist && pnpx shx cp ./src/splash.html ./dist",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron .",
     "clean": "pnpm clean:dist && pnpm dlx shx rm -rf ./node_modules ./wdio-logs",
     "clean:dist": "pnpm dlx shx rm -rf ./dist && pnpm dlx shx mkdir -p ./dist"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^29.0.0",
-    "@rollup/plugin-node-resolve": "^16.0.2",
-    "@rollup/plugin-typescript": "^12.3.0",
     "@types/node": "^25.0.3",
     "@wdio/cli": "catalog:default",
     "@wdio/globals": "catalog:default",
     "@wdio/local-runner": "catalog:default",
     "@wdio/mocha-framework": "catalog:default",
     "electron": "catalog:default",
-    "rollup": "^4.55.1",
-    "tsx": "^4.21.0",
+    "electron-vite": "^5.0.0",
     "typescript": "^5.9.3",
     "webdriverio": "catalog:default"
   }

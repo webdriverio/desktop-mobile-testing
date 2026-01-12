@@ -66,10 +66,10 @@ async function getElectronConfigContext(): Promise<ElectronConfigContext> {
   let appEntryPoint: string | undefined;
   let appBinaryPath: string | undefined;
 
-  if (envContext.isNoBinary) {
-    console.log('🔍 Setting up no-binary test with entry point');
+  if (envContext.isScript) {
+    console.log('🔍 Setting up script test with entry point');
 
-    appEntryPoint = join(appPath, 'dist', 'main.js');
+    appEntryPoint = join(appPath, 'dist', 'main', 'index.js');
     console.log(`Using app entry point: ${appEntryPoint}`);
 
     if (!fileExists(appEntryPoint)) {
@@ -129,7 +129,7 @@ switch (envContext.testType) {
       './test/electron/logging.spec.ts',
     ];
     // Only include deeplink tests in binary mode (protocol handlers require packaged apps)
-    if (!envContext.isNoBinary) {
+    if (!envContext.isScript) {
       specs.push('./test/electron/deeplink.spec.ts');
     }
     break;
@@ -170,7 +170,7 @@ if (envContext.isMultiremote) {
       capabilities: {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
-          ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
+          ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=A'],
           apparmorAutoInstall: 'sudo',
           captureMainProcessLogs: true,
@@ -184,7 +184,7 @@ if (envContext.isMultiremote) {
       capabilities: {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
-          ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
+          ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=B'],
           apparmorAutoInstall: 'sudo',
           captureMainProcessLogs: true,
@@ -201,7 +201,7 @@ if (envContext.isMultiremote) {
     {
       browserName: 'electron',
       'wdio:electronServiceOptions': {
-        ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
+        ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
         appArgs: ['foo', 'bar=baz'],
         apparmorAutoInstall: 'sudo',
         captureMainProcessLogs: true,

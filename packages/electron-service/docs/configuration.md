@@ -62,41 +62,41 @@ Here are some examples of binary paths using default build configurations for a 
 #### MacOS (Arm)
 
 ```ts
-'/workspace/myApp/dist/mac-arm64/myApp.app/Contents/MacOS/myApp'; // Electron Builder
+'/workspace/myApp/dist-electron/mac-arm64/myApp.app/Contents/MacOS/myApp'; // Electron Builder
 '/workspace/myApp/out/myApp-darwin-arm64/myApp.app/Contents/MacOS/myApp'; // Electron Forge
 ```
 
 #### MacOS (Intel)
 
 ```ts
-'/workspace/myApp/dist/mac-x64/myApp.app/Contents/MacOS/myApp'; // Electron Builder
+'/workspace/myApp/dist-electron/mac-x64/myApp.app/Contents/MacOS/myApp'; // Electron Builder
 '/workspace/myApp/out/myApp-darwin-x64/myApp.app/Contents/MacOS/myApp'; // Electron Forge
 ```
 
 #### MacOS (Universal)
 
 ```ts
-'/workspace/myApp/dist/mac-universal/myApp.app/Contents/MacOS/myApp'; // Electron Builder
+'/workspace/myApp/dist-electron/mac-universal/myApp.app/Contents/MacOS/myApp'; // Electron Builder
 '/workspace/myApp/out/myApp-darwin-universal/myApp.app/Contents/MacOS/myApp'; // Electron Forge
 ```
 
 #### Linux
 
 ```ts
-'/workspace/myApp/dist/linux-unpacked/myApp'; // Electron Builder
+'/workspace/myApp/dist-electron/linux-unpacked/myApp'; // Electron Builder
 '/workspace/myApp/out/myApp-linux-x64/myApp'; // Electron Forge
 ```
 
 #### Windows
 
 ```ts
-'C:\\workspace\\myApp\\dist\\win-unpacked\\myApp.exe'; // Electron Builder
+'C:\\workspace\\myApp\\dist-electron\\win-unpacked\\myApp.exe'; // Electron Builder
 'C:\\workspace\\myApp\\out\\myApp-win32-x64\\myApp.exe'; // Electron Forge
 ```
 
 Note:
 
-- The above examples are just to illustrate the format of your app binary path - the actual binary path of your app depends on your configuration.
+- The above examples assume electron-builder's `"directories": { "output": "dist-electron" }` config (default is `"dist"`). Your actual binary path depends on your electron-builder configuration.
 - Electron Forge uses a standardised output directory which can be represented as `out/{appName}-{OS}-{arch}`
 
 Type: `string`

@@ -2,7 +2,7 @@ import type { Mock } from '@vitest/spy';
 import { browser } from '@wdio/electron-service';
 import { $, expect } from '@wdio/globals';
 
-// Check if we're running in no-binary mode
+// Check if we're running in script mode
 const isBinary = process.env.BINARY !== 'false';
 
 // Helper function to get the expected app name from globalThis.packageJson
@@ -11,7 +11,7 @@ const getExpectedAppName = (): string => {
   if (isBinary && globalThis.packageJson?.name) {
     return globalThis.packageJson.name;
   }
-  // In no-binary mode, the app name will always be "Electron"
+  // In script mode, the app name will always be "Electron"
   return 'Electron';
 };
 

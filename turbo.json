@@ -69,8 +69,8 @@
     "@repo/e2e#test:e2e:electron-forge": {
       "dependsOn": ["electron-forge-e2e-app#build"]
     },
-    "@repo/e2e#test:e2e:electron-no-binary": {
-      "dependsOn": ["electron-no-binary-e2e-app#build"]
+    "@repo/e2e#test:e2e:electron-script": {
+      "dependsOn": ["electron-script-e2e-app#build"]
     },
     "@repo/e2e#test:e2e-mac-universal:electron-builder": {
       "dependsOn": ["electron-builder-e2e-app#build:mac-universal"]
@@ -125,7 +125,7 @@
       "dependsOn": ["^build"],
       "outputs": ["out/**"]
     },
-    "electron-no-binary-e2e-app#build": {
+    "electron-script-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
