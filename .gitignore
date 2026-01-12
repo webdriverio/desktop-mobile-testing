@@ -39,6 +39,7 @@ jspm_packages/
 # Build outputs
 dist
 dist-js
+dist-electron
 out
 build
 

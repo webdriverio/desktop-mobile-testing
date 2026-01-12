@@ -8,11 +8,11 @@ const getExpectedAppName = (): string => {
   if (process.env.BINARY !== 'false' && globalThis.packageJson?.name) {
     return globalThis.packageJson.name;
   }
-  // In no-binary mode, the app name will always be "Electron"
+  // In script mode, the app name will always be "Electron"
   return 'Electron';
 };
 
-// Check if we're running in no-binary mode
+// Check if we're running in script mode
 const isBinary = process.env.BINARY !== 'false';
 
 describe('Electron APIs using Multiremote', () => {
@@ -26,7 +26,7 @@ describe('Electron APIs using Multiremote', () => {
       expect(appName[1]).toBe(expectedName);
       expect(appName[0]).toBe(appName[1]); // Both instances should have the same name
     } else {
-      // In no-binary mode, the name will always be "Electron"
+      // In script mode, the name will always be "Electron"
       expect(appName).toStrictEqual(['Electron', 'Electron']);
     }
 
@@ -37,7 +37,7 @@ describe('Electron APIs using Multiremote', () => {
       expect(appVersion[0]).toBe(appVersion[1]); // Both instances should have the same version
       expect(appVersion[0]).toMatch(/^\d+\.\d+\.\d+/); // Should be a semantic version
     } else {
-      // In no-binary mode, the app version should match the Electron version
+      // In script mode, the app version should match the Electron version
       const electronVersion = await browser.electron.execute((_electron: typeof Electron) => process.versions.electron);
       expect(appVersion).toStrictEqual([electronVersion[0], electronVersion[0]]);
     }

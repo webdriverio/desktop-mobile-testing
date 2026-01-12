@@ -14,11 +14,11 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     echo "Platform: Linux"
 
     # Look for the executable in the expected Linux unpacked directory
-    # electron-builder with "target": "dir" creates dist/linux-unpacked/
+    # electron-builder with "target": "dir" creates dist-electron/linux-unpacked/
     SEARCH_PATHS=(
-        "$APP_DIR/dist/linux-unpacked/electron-builder-e2e-app"
-        "$APP_DIR/dist/linux-arm64-unpacked/electron-builder-e2e-app"
-        "$APP_DIR/dist/linux-x64-unpacked/electron-builder-e2e-app"
+        "$APP_DIR/dist-electron/linux-unpacked/electron-builder-e2e-app"
+        "$APP_DIR/dist-electron/linux-arm64-unpacked/electron-builder-e2e-app"
+        "$APP_DIR/dist-electron/linux-x64-unpacked/electron-builder-e2e-app"
     )
 
     APP_EXECUTABLE=""
@@ -32,7 +32,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Fallback: search recursively if not found in expected locations
     if [ -z "$APP_EXECUTABLE" ]; then
         echo "Searching recursively for executable..."
-        APP_EXECUTABLE=$(find "$APP_DIR/dist" -name "electron-builder-e2e-app" -type f -executable 2>/dev/null | head -n 1)
+        APP_EXECUTABLE=$(find "$APP_DIR/dist-electron" -name "electron-builder-e2e-app" -type f -executable 2>/dev/null | head -n 1)
     fi
 
     if [ -z "$APP_EXECUTABLE" ]; then
@@ -42,7 +42,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
             echo "  - $path"
         done
         echo "Directory contents:"
-        ls -la "$APP_DIR/dist/" || true
+        ls -la "$APP_DIR/dist-electron/" || true
         exit 1
     fi
 

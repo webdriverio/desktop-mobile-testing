@@ -79,8 +79,11 @@ export class BuildManager {
     try {
       // Only clean if we don't have valid artifacts (this is a forced rebuild)
       const distPath = join(appPath, 'dist');
-      if (dirExists(distPath)) {
-        console.log(`  Cleaning existing dist directory: ${distPath}`);
+      const outPath = join(appPath, 'out');
+      const distElectronPath = join(appPath, 'dist-electron');
+
+      if (dirExists(distPath) || dirExists(outPath) || dirExists(distElectronPath)) {
+        console.log(`  Cleaning existing build directories...`);
         await this.runCommand('pnpm run clean:dist', appPath);
       }
 
@@ -113,7 +116,7 @@ export class BuildManager {
     const appsToBuild: string[] = [];
 
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const appDirName = getE2EAppDirName(envContext.framework, envContext.app, envContext.isNoBinary);
+    const appDirName = getE2EAppDirName(envContext.framework, envContext.app, envContext.isScript);
     appsToBuild.push(join(e2eAppsDir, appDirName));
 
     console.log(`📦 Apps to build: ${appsToBuild.map((p) => p.split('/').pop()).join(', ')}`);
@@ -132,7 +135,7 @@ export class BuildManager {
 
     // Build Electron apps
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-no-binary'];
+    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-script'];
 
     console.log('📦 Building Electron apps...');
     for (const appDir of electronAppDirs) {
@@ -242,11 +245,12 @@ export class BuildManager {
         return false;
       }
 
-      // Check for essential build artifacts
-      const hasMainJs = distContents.includes('main.js');
+      // Check for essential build artifacts (electron-vite structure)
+      const mainPath = join(distPath, 'main', 'index.js');
+      const hasMainJs = fileExists(mainPath);
 
       if (!hasMainJs) {
-        console.log(`🔍 Debug: Missing main.js in ${distPath}`);
+        console.log(`🔍 Debug: Missing main/index.js in ${distPath}`);
         return false;
       }
 
@@ -355,7 +359,7 @@ export class BuildManager {
 
     // Clean Electron apps
     const e2eAppsDir = join(process.cwd(), '..', 'fixtures', 'e2e-apps');
-    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-no-binary'];
+    const electronAppDirs = ['electron-builder', 'electron-forge', 'electron-script'];
 
     console.log('🧹 Cleaning Electron apps...');
     for (const appDir of electronAppDirs) {
@@ -423,7 +427,7 @@ ENVIRONMENT VARIABLES:
   FORCE_REBUILD=true   Force rebuild (same as --force)
   FORCE_BUILD=true     Force rebuild (alias for FORCE_REBUILD)
   FRAMEWORK=<framework> Target framework (electron, tauri)
-  APP=<app>            Target app (builder, forge, no-binary, basic, advanced)
+  APP=<app>            Target app (builder, forge, script, basic, advanced)
   MODULE_TYPE=<type>   Module type (cjs, esm)
 
 EXAMPLES:

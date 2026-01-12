@@ -21,12 +21,17 @@ describe('application window tests', () => {
       const browserB = multi.getInstance('browserB');
       await (await browserA.$('.switch-main-window')).click();
       await (await browserB.$('.switch-main-window')).click();
-      await expect(browserA).toHaveTitle('Test');
-      await expect(browserB).toHaveTitle('Test');
+      // Verify the app switched to main window with an Electron E2E test app title
+      const titleA = await browserA.getTitle();
+      const titleB = await browserB.getTitle();
+      expect(titleA).toMatch(/Electron.*E2E Test App/);
+      expect(titleB).toMatch(/Electron.*E2E Test App/);
     } else {
       const elem = await browser.$('.switch-main-window');
       await elem.click();
-      await expect(browser).toHaveTitle('Test');
+      // Verify the app switched to main window with an Electron E2E test app title
+      const title = await browser.getTitle();
+      expect(title).toMatch(/Electron.*E2E Test App/);
     }
   });
 });

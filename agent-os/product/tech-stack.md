@@ -50,7 +50,7 @@ Technical stack choices for the WebdriverIO Cross-Platform Testing Services mono
 ### E2E Testing
 - **E2E Framework:** WebdriverIO (self-testing via example applications)
 - **Example Apps:** Example applications using Electron Forge, Electron Builder, and unpackaged configurations
-- **Test Coverage:** CJS/ESM, Forge/Builder, binary/no-binary, multiremote, standalone mode scenarios
+- **Test Coverage:** CJS/ESM, Forge/Builder, binary/script, multiremote, standalone mode scenarios
 - **CI Matrix:** Cross-platform testing on Windows, macOS, Linux (including Mac Universal builds)
 
 ## Code Quality and Linting

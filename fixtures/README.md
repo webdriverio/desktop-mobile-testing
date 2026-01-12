@@ -39,7 +39,7 @@ Complete Electron applications for end-to-end testing:
 
 - **Builder-based**: `builder-cjs/`, `builder-esm/`
 - **Forge-based**: `forge-cjs/`, `forge-esm/`
-- **No-binary**: `no-binary-cjs/`, `no-binary-esm/`
+- **Script-based**: `script-cjs/`, `script-esm/`
 
 ## Usage in Tests
 

@@ -1,23 +1,20 @@
 {
   "name": "electron-builder-e2e-app",
   "version": "0.0.0",
-  "main": "dist/main.js",
-  "module": "dist/main.js",
+  "main": "dist/main/index.js",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm build:bundle && pnpm build:package",
-    "build:bundle": "tsc",
-    "build:package": "cp ./src/*.html ./dist && electron-builder -p never",
-    "build:package:mac-universal": "cp ./src/*.html ./dist && electron-builder -p never -m --universal",
-    "build:mac-universal": "pnpm build:bundle && pnpm build:package:mac-universal",
+    "dev": "electron-vite dev",
+    "build": "pnpm clean:dist && electron-vite build && electron-builder",
+    "build:package": "electron-builder -p never",
+    "build:package:mac-universal": "electron-builder -p never -m --universal",
+    "build:mac-universal": "electron-vite build && pnpm build:package:mac-universal",
+    "preview": "electron-vite preview",
     "clean": "pnpm clean:dist && pnpm dlx shx rm -rf ./node_modules pnpm-lock.yaml ./wdio-logs",
-    "clean:dist": "pnpm dlx shx rm -rf ./dist && pnpm dlx shx mkdir -p ./dist"
+    "clean:dist": "pnpm dlx shx rm -rf ./dist ./dist-electron && pnpm dlx shx mkdir -p ./dist"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^29.0.0",
-    "@rollup/plugin-node-resolve": "^16.0.2",
-    "@rollup/plugin-typescript": "^12.3.0",
     "@types/node": "^25.0.3",
     "@wdio/cli": "catalog:default",
     "@wdio/globals": "catalog:default",
@@ -25,17 +22,19 @@
     "@wdio/mocha-framework": "catalog:default",
     "electron": "catalog:default",
     "electron-builder": "^26.4.0",
-    "rollup": "^4.55.1",
-    "tsx": "^4.21.0",
+    "electron-vite": "^5.0.0",
     "typescript": "^5.9.3",
     "webdriverio": "catalog:default"
   },
   "build": {
-    "asar": true,
     "appId": "com.electron-builder.demo",
     "copyright": "goosewobbler",
-    "productName": "electron-builder-e2e-app",
-    "files": ["./dist/*"],
+    "productName": "Electron Builder E2E App",
+    "executableName": "electron-builder-e2e-app",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": ["dist/**/*", "package.json"],
     "protocols": [
       {
         "name": "testapp",
@@ -43,8 +42,10 @@
       }
     ],
     "mac": {
+      "category": "public.app-category.utilities",
       "target": "dir",
-      "identity": null
+      "identity": null,
+      "executableName": "electron-builder-e2e-app"
     },
     "linux": {
       "executableName": "electron-builder-e2e-app",
@@ -52,6 +53,7 @@
       "target": "dir"
     },
     "win": {
+      "executableName": "electron-builder-e2e-app",
       "target": "dir"
     }
   }

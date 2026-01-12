@@ -146,7 +146,7 @@ pnpm typecheck             # Type check all packages
 pnpm e2e                   # Run all E2E tests
 pnpm e2e:electron-builder  # Electron builder E2E tests
 pnpm e2e:electron-forge    # Electron forge E2E tests
-pnpm e2e:electron-no-binary # Electron no-binary E2E tests
+pnpm e2e:electron-script   # Electron script E2E tests
 pnpm e2e:tauri             # Tauri E2E tests
 pnpm e2e:standalone        # Standalone mode tests
 pnpm e2e:multiremote       # Multiremote tests
@@ -177,7 +177,7 @@ pnpm test:package:tauri    # Tauri package integration tests
 pnpm e2e                   # All E2E test suites
 pnpm e2e:electron-builder  # Electron builder applications
 pnpm e2e:electron-forge    # Electron forge applications
-pnpm e2e:electron-no-binary # Electron without pre-built binaries
+pnpm e2e:electron-script   # Electron without pre-built binaries
 pnpm e2e:tauri             # Tauri applications
 pnpm e2e:standalone        # Standalone mode testing
 pnpm e2e:multiremote       # Multiremote browser testing
@@ -198,6 +198,12 @@ This monorepo is built with modern development tools and practices:
 - **🔷 TypeScript** - Type-safe development with dual ESM/CJS builds
 - **🧪 Vitest** - Fast unit and integration testing framework
 - **🎨 Biome** - High-performance formatting and linting
+- **🌐 WebdriverIO** - Next-gen browser and mobile automation framework
+- **🎭 Puppeteer** - Headless Chrome/Node.js API for browser automation
+- **🔧 Chrome DevTools Protocol** - Protocol for browser debugging and automation
+- **⚛️ Electron** - Cross-platform desktop application framework
+- **🦀 Tauri** - Modern desktop application framework
+- **⚛️ electron-vite** - Modern build tool for Electron applications
 - **🤖 GitHub Actions** - Comprehensive CI/CD with multi-platform testing
 
 ## License

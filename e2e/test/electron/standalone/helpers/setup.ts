@@ -50,15 +50,15 @@ export async function setupStandaloneTest(options: StandaloneTestOptions = {}): 
     throw new Error(`Electron app directory not found: ${appDir}`);
   }
 
-  // Determine if this is a no-binary app (has dist/main.js instead of a built binary)
+  // Determine if this is a script app (has dist/main/index.js instead of a built binary)
   const appDirName = path.basename(appDir);
-  const isNoBinary = appDirName.includes('no-binary');
-  const entryPoint = path.join(appDir, 'dist', 'main.js');
+  const isScript = appDirName.includes('script');
+  const entryPoint = path.join(appDir, 'dist', 'main', 'index.js');
 
   let sessionOptions: StandaloneCapability;
 
-  if (isNoBinary && fs.existsSync(entryPoint)) {
-    // No-binary mode: use entry point
+  if (isScript && fs.existsSync(entryPoint)) {
+    // Script mode: use entry point
     sessionOptions = {
       browserName: 'electron',
       'wdio:electronServiceOptions': {

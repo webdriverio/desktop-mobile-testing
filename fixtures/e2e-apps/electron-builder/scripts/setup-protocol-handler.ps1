@@ -12,12 +12,12 @@ $AppDir = Split-Path -Parent $ScriptDir
 Write-Host "App directory: $AppDir"
 
 # Look for the executable in the expected Windows unpacked directory
-# electron-builder with "target": "dir" creates dist/win-unpacked/
+# electron-builder with "target": "dir" creates dist-electron/win-unpacked/
 $SearchPaths = @(
-    "$AppDir\dist\win-unpacked\electron-builder-e2e-app.exe",
-    "$AppDir\dist\win-ia32-unpacked\electron-builder-e2e-app.exe",
-    "$AppDir\dist\win-x64-unpacked\electron-builder-e2e-app.exe",
-    "$AppDir\dist\win-arm64-unpacked\electron-builder-e2e-app.exe"
+    "$AppDir\dist-electron\win-unpacked\electron-builder-e2e-app.exe",
+    "$AppDir\dist-electron\win-ia32-unpacked\electron-builder-e2e-app.exe",
+    "$AppDir\dist-electron\win-x64-unpacked\electron-builder-e2e-app.exe",
+    "$AppDir\dist-electron\win-arm64-unpacked\electron-builder-e2e-app.exe"
 )
 
 $AppExecutable = $null
@@ -31,7 +31,7 @@ foreach ($path in $SearchPaths) {
 # Fallback: search recursively if not found in expected locations
 if (-not $AppExecutable) {
     Write-Host "Searching recursively for executable..."
-    $AppExecutable = Get-ChildItem -Path "$AppDir\dist" -Filter "electron-builder-e2e-app.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+    $AppExecutable = Get-ChildItem -Path "$AppDir\dist-electron" -Filter "electron-builder-e2e-app.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
 }
 
 if (-not $AppExecutable) {
@@ -41,7 +41,7 @@ if (-not $AppExecutable) {
         Write-Host "  - $path"
     }
     Write-Host "Directory contents:"
-    Get-ChildItem -Path "$AppDir\dist" -ErrorAction SilentlyContinue | Format-Table -AutoSize
+    Get-ChildItem -Path "$AppDir\dist-electron" -ErrorAction SilentlyContinue | Format-Table -AutoSize
     exit 1
 }
 

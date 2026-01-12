@@ -3,7 +3,9 @@ import { expect } from '@wdio/globals';
 
 describe('application', () => {
   it('should launch the application', async () => {
-    await expect(browser).toHaveTitle('Test');
+    // Verify the app launched with an Electron E2E test app title
+    const title = await browser.getTitle();
+    expect(title).toMatch(/Electron.*E2E Test App/);
   });
 
   it('should pass args through to the launched application', async () => {
