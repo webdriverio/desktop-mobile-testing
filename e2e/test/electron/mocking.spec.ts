@@ -770,6 +770,7 @@ describe('Electron Mocking', () => {
           it('should return the results of the mock execution', async () => {
             const mockGetName = await browser.electron.mock('app', 'getName');
 
+            // Note: Using mockImplementation instead of mockReturnValueOnce as the latter does not work here
             await mockGetName.mockImplementation(() => 'result');
 
             await expect(browser.electron.execute((electron) => electron.app.getName())).resolves.toBe('result');
@@ -1252,6 +1253,30 @@ describe('Electron Mocking', () => {
             });
 
             expect(mockTray.setTitle.mock.results).toStrictEqual([{ type: 'return', value: 'success' }]);
+          });
+        });
+
+        describe('getMockName', () => {
+          it('should retrieve the class mock name', async () => {
+            const mockTray = await browser.electron.mock('Tray');
+
+            expect(mockTray.getMockName()).toBe('electron.Tray');
+          });
+
+          it('should allow setting a custom constructor mock name', async () => {
+            const mockTray = await browser.electron.mock('Tray');
+
+            // The constructor mock should be renameable
+            mockTray.__constructor.mockName('custom tray constructor');
+            expect(mockTray.__constructor.getMockName()).toBe('custom tray constructor');
+          });
+
+          it('should provide mock names for instance methods', async () => {
+            const mockTray = await browser.electron.mock('Tray');
+
+            // Instance methods should have proper mock names
+            expect(mockTray.setTitle.getMockName()).toBe('electron.Tray.setTitle');
+            expect(mockTray.setToolTip.getMockName()).toBe('electron.Tray.setToolTip');
           });
         });
       });
