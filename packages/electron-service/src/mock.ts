@@ -2,6 +2,7 @@ import { type Mock, fn as vitestFn } from '@vitest/spy';
 import type {
   AbstractFn,
   ElectronApiFn,
+  ElectronClassMock,
   ElectronInterface,
   ElectronMock,
   ElectronType,
@@ -382,16 +383,6 @@ export async function createMock(apiName: string, funcName: string, browserConte
 
   // Return the wrapper instead of the original mock
   return wrapperMock;
-}
-
-/**
- * Type for class mock - an object with all instance methods as ElectronMock
- * and a __constructor mock for tracking instantiation calls.
- */
-export interface ElectronClassMock {
-  __constructor: ElectronMock;
-  mockRestore: () => Promise<void>;
-  [methodName: string]: ElectronMock | (() => Promise<void>);
 }
 
 /**

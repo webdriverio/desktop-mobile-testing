@@ -1,6 +1,6 @@
-import type { ElectronMock } from '@wdio/native-types';
+import type { ElectronClassMock, ElectronMock as ElectronMockFunction } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
-import { createClassMock, createMock, type ElectronClassMock } from '../mock.js';
+import { createClassMock, createMock } from '../mock.js';
 import mockStore from '../mockStore.js';
 
 const log = createLogger('electron-service', 'mock');
@@ -28,7 +28,7 @@ export async function mock(
   this: ElectronServiceContext,
   apiName: string,
   funcName?: string,
-): Promise<ElectronMock | ElectronClassMock> {
+): Promise<ElectronMockFunction | ElectronClassMock> {
   const mockTarget = funcName ? `${apiName}.${funcName}` : apiName;
   log.debug(`[${mockTarget}] mock command called`);
 
