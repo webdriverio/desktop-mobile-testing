@@ -39,6 +39,7 @@ This document provides a complete reference for all `browser.electron.*` methods
 - [Electron Class Mock](#electron-class-mock)
   - [`__constructor`](#__constructor)
   - [`[methodName]`](#methodname)
+  - [`getMockName()`](#getmockname)
   - [`mockRestore()`](#mockrestore)
 
 ---
@@ -1122,6 +1123,29 @@ expect(mockTray.setToolTip).toHaveBeenCalledWith('Click for menu');
 ```
 
 ### Class Mock Methods
+
+#### `getMockName()`
+
+Returns the assigned name of the class mock. Defaults to `electron.<className>`.
+
+**Signature:**
+```ts
+getMockName(): string
+```
+
+**Returns:**
+
+`string` - The mock name
+
+**Example:**
+
+```ts
+const mockTray = await browser.electron.mock('Tray');
+
+expect(mockTray.getMockName()).toBe('electron.Tray');
+```
+
+---
 
 #### `mockRestore()`
 
