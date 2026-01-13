@@ -1,4 +1,4 @@
-import type { ElectronClassMock, ElectronMock as ElectronMockFunction } from '@wdio/native-types';
+import type { ElectronMock } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { createClassMock, createMock } from '../mock.js';
 import mockStore from '../mockStore.js';
@@ -24,11 +24,7 @@ interface ElectronServiceContext {
  * const mockTray = await browser.electron.mock('Tray');
  * expect(mockTray.setImage).toHaveBeenCalled();
  */
-export async function mock(
-  this: ElectronServiceContext,
-  apiName: string,
-  funcName?: string,
-): Promise<ElectronMockFunction | ElectronClassMock> {
+export async function mock(this: ElectronServiceContext, apiName: string, funcName?: string): Promise<ElectronMock> {
   const mockTarget = funcName ? `${apiName}.${funcName}` : apiName;
   log.debug(`[${mockTarget}] mock command called`);
 
