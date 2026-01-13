@@ -30,7 +30,7 @@ export interface ElectronServiceAPI {
     apiName: Interface,
     funcName?: string,
     returnValue?: unknown,
-  ) => Promise<ElectronMock>;
+  ) => Promise<ElectronMock | ElectronClassMock>;
   /**
    * Mock all functions from an Electron API.
    *
@@ -341,6 +341,17 @@ export interface ElectronMockInstance extends Omit<Mock, MockOverride> {
   update(): Promise<ElectronMock>;
   mock: ElectronMockContext;
   __isElectronMock: boolean;
+}
+
+/**
+ * Type for class mock - an object with all instance methods as ElectronMock
+ * and a __constructor mock for tracking instantiation calls.
+ */
+export interface ElectronClassMock {
+  __constructor: ElectronMock;
+  mockRestore: () => Promise<void>;
+  getMockName: () => string;
+  [methodName: string]: ElectronMock | (() => Promise<void>) | (() => string);
 }
 
 export interface ElectronMock<TArgs extends unknown[] = unknown[], TReturns = unknown> extends ElectronMockInstance {

@@ -20,7 +20,7 @@ export async function mockAll(this: ElectronServiceContext, apiName: string) {
   });
 
   for (const funcName in mockedApis) {
-    mockedApis[funcName] = await mock.call(this, apiName, funcName);
+    mockedApis[funcName] = (await mock.call(this, apiName, funcName)) as ElectronMock;
   }
 
   return mockedApis;

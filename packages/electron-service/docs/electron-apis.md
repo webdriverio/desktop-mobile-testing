@@ -78,6 +78,38 @@ await showOpenDialog.mockReturnValue('I opened a dialog!');
 await showMessageBox.mockReturnValue('I opened a message box!');
 ```
 
+### Mocking Electron Classes
+
+For Electron classes like `Tray`, `BrowserWindow`, `Menu`, etc., you can mock the entire class and all its instance methods:
+
+```ts
+// Mock the Tray class
+const mockTray = await browser.electron.mock('Tray');
+
+// Mock instance methods
+await mockTray.setTitle.mockReturnValue(undefined);
+await mockTray.setToolTip.mockReturnValue(undefined);
+
+// Track constructor calls
+const tray = await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
+expect(mockTray.__constructor).toHaveBeenCalledWith('/path/to/icon.png');
+
+// Test instance method calls
+await browser.electron.execute((electron) => {
+  const tray = new electron.Tray('/path/to/icon.png');
+  tray.setTitle('My App');
+  tray.setToolTip('Click for menu');
+});
+
+expect(mockTray.setTitle).toHaveBeenCalledWith('My App');
+expect(mockTray.setToolTip).toHaveBeenCalledWith('Click for menu');
+```
+
+Class mocks provide:
+- **`__constructor`**: An ElectronMock object that tracks calls to the class constructor
+- **Instance methods**: All class instance methods are available as mock objects
+- **`mockRestore()`**: Method to restore the original class
+
 ### Setting Return Values
 
 Mock objects provide methods to control what the mocked function returns:
@@ -191,3 +223,4 @@ For complete API documentation including all parameters, return types, and mock 
 - [API Reference - Mocking Methods](./api-reference.md#mocking-methods)
 - [API Reference - Mock Object Methods](./api-reference.md#mock-object-methods)
 - [API Reference - Mock Object Properties](./api-reference.md#mock-object-properties)
+- [API Reference - Electron Class Mock](./api-reference.md#electron-class-mock)
