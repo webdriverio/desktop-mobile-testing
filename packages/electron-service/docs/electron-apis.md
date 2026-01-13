@@ -106,7 +106,7 @@ expect(mockTray.setToolTip).toHaveBeenCalledWith('Click for menu');
 ```
 
 Class mocks provide:
-- **`__constructor`**: An ElectronMock object that tracks calls to the class constructor
+- **`__constructor`**: An ElectronFunctionMock object that tracks calls to the class constructor
 - **Instance methods**: All class instance methods are available as mock objects
 - **`mockRestore()`**: Method to restore the original class
 
