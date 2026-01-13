@@ -175,7 +175,7 @@ When called with only an API name (no function name), mocks an entire Electron c
 **Signature:**
 ```ts
 // Mock a specific function
-browser.electron.mock(apiName: string, funcName: string): Promise<MockObject>
+browser.electron.mock(apiName: string, funcName: string): Promise<ElectronMock>
 
 // Mock an entire class
 browser.electron.mock(className: string): Promise<ElectronClassMock>
@@ -190,7 +190,7 @@ browser.electron.mock(className: string): Promise<ElectronClassMock>
 
 **Returns:**
 
-`Promise<MockObject | ElectronClassMock>` - A mock object with methods for controlling and inspecting the mock, or an Electron class mock object for class mocking
+`Promise<ElectronMock>` - An Electron mock object (function mock or class mock) with methods for controlling and inspecting the mock
 
 **Example:**
 
@@ -235,7 +235,7 @@ Mocks all functions on an Electron API module simultaneously. Returns an object 
 
 **Signature:**
 ```ts
-browser.electron.mockAll(apiName: string): Promise<Record<string, MockObject>>
+browser.electron.mockAll(apiName: string): Promise<Record<string, ElectronMock>>
 ```
 
 **Parameters:**
@@ -246,7 +246,7 @@ browser.electron.mockAll(apiName: string): Promise<Record<string, MockObject>>
 
 **Returns:**
 
-`Promise<Record<string, MockObject>>` - Object with function names as keys and mock objects as values
+`Promise<Record<string, ElectronMock>>` - Object with function names as keys and mock objects as values
 
 **Example:**
 
@@ -383,7 +383,7 @@ Checks if a given parameter is an Electron mock function. If using TypeScript, n
 
 **Signature:**
 ```ts
-browser.electron.isMockFunction(fn: any): fn is MockObject
+browser.electron.isMockFunction(fn: any): fn is ElectronMock
 ```
 
 **Parameters:**
@@ -417,7 +417,7 @@ Accepts a function that will be used as the implementation of the mock.
 
 **Signature:**
 ```ts
-mockImplementation(fn: (...args: any[]) => any): Promise<MockObject>
+mockImplementation(fn: (...args: any[]) => any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -891,7 +891,7 @@ Assigns a name to the mock. The name can be retrieved via [`getMockName()`](#get
 
 **Signature:**
 ```ts
-mockName(name: string): MockObject
+mockName(name: string): ElectronFunctionMock
 ```
 
 **Parameters:**
@@ -902,7 +902,7 @@ mockName(name: string): MockObject
 
 **Returns:**
 
-`MockObject` - Returns the mock object for chaining
+`ElectronFunctionMock` - Returns the mock object for chaining
 
 **Example:**
 
@@ -1068,11 +1068,11 @@ Electron class mocks are returned when calling `browser.electron.mock()` with on
 
 #### `__constructor`
 
-An [ElectronMock](#mock-object-methods) object that tracks calls to the class constructor.
+An [ElectronFunctionMock](#mock-object-methods) object that tracks calls to the class constructor.
 
 **Type:**
 ```ts
-ElectronMock
+ElectronFunctionMock
 ```
 
 **Example:**
@@ -1095,11 +1095,11 @@ expect(mockTray.__constructor.mock.calls).toStrictEqual([
 
 #### `[methodName]`
 
-All instance methods of the class are available as [ElectronMock](#mock-object-methods) objects.
+All instance methods of the class are available as [ElectronFunctionMock](#mock-object-methods) objects.
 
 **Type:**
 ```ts
-ElectronMock
+ElectronFunctionMock
 ```
 
 **Example:**
