@@ -1,16 +1,8 @@
 import type { Mock } from '@vitest/spy';
 import { browser } from '@wdio/electron-service';
 import { $, expect } from '@wdio/globals';
-import type { ElectronMock } from '@wdio/native-types';
 
-// Type for class mock - matches the interface in electron-service/src/mock.ts
-interface ElectronClassMock {
-  __constructor: ElectronMock;
-  mockRestore: () => Promise<void>;
-  [methodName: string]: ElectronMock | (() => Promise<void>);
-}
-
-// Check if we're running in no-binary mode
+// Check if we're running in script mode
 const isBinary = process.env.BINARY !== 'false';
 
 // Helper function to get the expected app name from globalThis.packageJson
@@ -19,7 +11,7 @@ const getExpectedAppName = (): string => {
   if (isBinary && globalThis.packageJson?.name) {
     return globalThis.packageJson.name;
   }
-  // In no-binary mode, the app name will always be "Electron"
+  // In script mode, the app name will always be "Electron"
   return 'Electron';
 };
 
@@ -892,116 +884,358 @@ describe('Electron Mocking', () => {
   });
 
   describe('Class Mocking', () => {
-    describe('mock (single argument for class)', () => {
-      it('should mock an Electron class and track constructor calls', async () => {
-        const mockTray = (await browser.electron.mock('Tray')) as unknown as ElectronClassMock;
+    describe('mock (class)', () => {
+      it('should create a class mock with constructor tracking', async () => {
+        const mockTray = await browser.electron.mock('Tray');
 
-        // Create a Tray instance in the Electron main process
-        await browser.electron.execute(async (electron) => {
-          // Need to provide a valid path or NativeImage for Tray constructor
-          const { nativeImage } = electron;
-          const emptyIcon = nativeImage.createEmpty();
-          new electron.Tray(emptyIcon);
-        });
-
-        // Update the constructor mock to sync calls from main process
-        await mockTray.__constructor.update();
+        // Track constructor calls
+        await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
 
         expect(mockTray.__constructor).toHaveBeenCalledTimes(1);
+        expect(mockTray.__constructor).toHaveBeenCalledWith('/path/to/icon.png');
       });
 
-      it('should track constructor arguments', async () => {
-        const mockTray = (await browser.electron.mock('Tray')) as unknown as ElectronClassMock;
+      it('should mock instance methods on classes', async () => {
+        const mockTray = await browser.electron.mock('Tray');
 
-        // Create a Tray instance with arguments
-        await browser.electron.execute(async (electron) => {
-          const { nativeImage } = electron;
-          const emptyIcon = nativeImage.createEmpty();
-          new electron.Tray(emptyIcon);
+        // Mock instance methods
+        await mockTray.setTitle.mockReturnValue(undefined);
+        await mockTray.setToolTip.mockReturnValue(undefined);
+
+        // Test instance method calls
+        await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          tray.setTitle('My App');
+          tray.setToolTip('Click for menu');
         });
 
-        await mockTray.__constructor.update();
-
-        // The constructor was called with a NativeImage argument
-        expect(mockTray.__constructor.mock.calls.length).toBe(1);
-        expect(mockTray.__constructor.mock.calls[0].length).toBe(1);
+        expect(mockTray.setTitle).toHaveBeenCalledWith('My App');
+        expect(mockTray.setToolTip).toHaveBeenCalledWith('Click for menu');
       });
 
-      it('should provide mocked instance methods', async () => {
-        const mockTray = (await browser.electron.mock('Tray')) as unknown as ElectronClassMock;
+      it('should track multiple constructor calls', async () => {
+        const mockTray = await browser.electron.mock('Tray');
 
-        // Verify that instance methods are available as electron mocks
-        expect(browser.electron.isMockFunction(mockTray.setImage)).toBe(true);
-        expect(browser.electron.isMockFunction(mockTray.setToolTip)).toBe(true);
-        expect(browser.electron.isMockFunction(mockTray.destroy)).toBe(true);
-      });
-
-      it('should track method calls on mocked class instances', async () => {
-        const mockTray = (await browser.electron.mock('Tray')) as unknown as ElectronClassMock;
-
-        // Create a Tray and call methods on it
-        await browser.electron.execute(async (electron) => {
-          const { nativeImage } = electron;
-          const emptyIcon = nativeImage.createEmpty();
-          const tray = new electron.Tray(emptyIcon);
-          tray.setToolTip('Test tooltip');
+        await browser.electron.execute((electron) => {
+          new electron.Tray('/path/to/icon1.png');
+          new electron.Tray('/path/to/icon2.png', { title: 'Test' });
         });
 
-        // Update the setToolTip mock to sync calls
-        await (mockTray.setToolTip as ElectronMock).update();
-
-        expect(mockTray.setToolTip).toHaveBeenCalledTimes(1);
-        expect(mockTray.setToolTip).toHaveBeenCalledWith('Test tooltip');
+        expect(mockTray.__constructor).toHaveBeenCalledTimes(2);
+        expect(mockTray.__constructor.mock.calls).toStrictEqual([
+          ['/path/to/icon1.png'],
+          ['/path/to/icon2.png', { title: 'Test' }],
+        ]);
       });
 
-      it('should allow mocking method return values', async () => {
-        const mockTray = (await browser.electron.mock('Tray')) as unknown as ElectronClassMock;
+      it('should allow chaining instance method mocks', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+        await mockTray.setTitle.mockReturnThis();
 
-        // Mock the getTitle method to return a specific value
-        await (mockTray.getTitle as ElectronMock).mockReturnValue('Mocked Title');
-
-        // Create a Tray and get its title
-        const title = await browser.electron.execute(async (electron) => {
-          const { nativeImage } = electron;
-          const emptyIcon = nativeImage.createEmpty();
-          const tray = new electron.Tray(emptyIcon);
-          return tray.getTitle();
+        await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          tray.setTitle('App').setToolTip('Menu'); // Should work if chaining works
         });
 
-        expect(title).toBe('Mocked Title');
+        expect(mockTray.setToolTip).toHaveBeenCalledWith('Menu');
       });
+    });
 
-      it('should restore original class with mockRestore', async () => {
-        const mockTray = (await browser.electron.mock('Tray')) as unknown as ElectronClassMock;
+    describe('Class Mock Methods', () => {
+      describe('mockRestore', () => {
+        it('should restore the original class implementation', async () => {
+          // Get original Tray constructor for comparison
+          const originalTray = await browser.electron.execute((electron) => electron.Tray);
 
-        // Verify the class is mocked
-        await browser.electron.execute(async (electron) => {
-          const { nativeImage } = electron;
-          const emptyIcon = nativeImage.createEmpty();
-          new electron.Tray(emptyIcon);
+          const mockTray = await browser.electron.mock('Tray');
+
+          // Mock some behavior
+          await mockTray.setTitle.mockReturnValue('mocked');
+
+          // Verify mock is active
+          const mockResult = await browser.electron.execute((electron) => {
+            const tray = new electron.Tray('/path/to/icon.png');
+            return tray.setTitle('test');
+          });
+          expect(mockResult).toBe('mocked');
+
+          // Restore original class
+          await mockTray.mockRestore();
+
+          // Verify original class is restored
+          const restoredTray = await browser.electron.execute((electron) => electron.Tray);
+          expect(restoredTray).toBe(originalTray);
+
+          // Constructor tracking should be gone
+          await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
+          expect(mockTray.__constructor.mock.calls).toStrictEqual([]);
+        });
+      });
+    });
+
+    describe('Class Mock Integration', () => {
+      it('should work with clearAllMocks', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+
+        // Create instance and call methods
+        await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          tray.setTitle('My App');
         });
 
-        await mockTray.__constructor.update();
         expect(mockTray.__constructor).toHaveBeenCalledTimes(1);
+        expect(mockTray.setTitle).toHaveBeenCalledTimes(1);
 
-        // Restore the original class
-        await mockTray.mockRestore();
+        // Clear all mocks
+        await browser.electron.clearAllMocks();
 
-        // Create another Tray with the restored class (should work normally)
-        const result = await browser.electron.execute(async (electron) => {
-          try {
-            const { nativeImage } = electron;
-            const emptyIcon = nativeImage.createEmpty();
-            const tray = new electron.Tray(emptyIcon);
-            // Clean up
-            tray.destroy();
-            return 'success';
-          } catch (e) {
-            return `error: ${e}`;
-          }
+        expect(mockTray.__constructor.mock.calls).toStrictEqual([]);
+        expect(mockTray.setTitle.mock.calls).toStrictEqual([]);
+      });
+
+      it('should work with resetAllMocks', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+
+        // Set up mock implementations
+        await mockTray.setTitle.mockReturnValue('mocked title');
+
+        // Create instance and call methods
+        await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          tray.setTitle('My App');
         });
 
-        expect(result).toBe('success');
+        expect(mockTray.__constructor).toHaveBeenCalledTimes(1);
+        expect(mockTray.setTitle).toHaveBeenCalledTimes(1);
+
+        // Reset all mocks
+        await browser.electron.resetAllMocks();
+
+        // Implementations should be reset but history should be cleared
+        expect(mockTray.__constructor.mock.calls).toStrictEqual([]);
+        expect(mockTray.setTitle.mock.calls).toStrictEqual([]);
+
+        // After reset, methods should return undefined
+        const result = await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          return tray.setTitle('test');
+        });
+        expect(result).toBeUndefined();
+      });
+
+      it('should work with restoreAllMocks', async () => {
+        const originalTray = await browser.electron.execute((electron) => electron.Tray);
+
+        const mockTray = await browser.electron.mock('Tray');
+        await mockTray.setTitle.mockReturnValue('mocked');
+
+        // Verify mock is active
+        const mockResult = await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          return tray.setTitle('test');
+        });
+        expect(mockResult).toBe('mocked');
+
+        // Restore all mocks
+        await browser.electron.restoreAllMocks();
+
+        // Verify original class is restored
+        const restoredTray = await browser.electron.execute((electron) => electron.Tray);
+        expect(restoredTray).toBe(originalTray);
+      });
+    });
+
+    describe('Class Mock Object Properties', () => {
+      describe('__constructor properties', () => {
+        it('should track constructor calls in mock.calls', async () => {
+          const mockTray = await browser.electron.mock('Tray');
+
+          await browser.electron.execute((electron) => {
+            new electron.Tray('/path/to/icon1.png');
+            new electron.Tray('/path/to/icon2.png', { title: 'Test' });
+          });
+
+          expect(mockTray.__constructor.mock.calls).toStrictEqual([
+            ['/path/to/icon1.png'],
+            ['/path/to/icon2.png', { title: 'Test' }],
+          ]);
+        });
+
+        it('should track constructor lastCall', async () => {
+          const mockTray = await browser.electron.mock('Tray');
+
+          await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
+          expect(mockTray.__constructor.mock.lastCall).toStrictEqual(['/path/to/icon.png']);
+
+          await browser.electron.execute((electron) => new electron.Tray('/path/to/other.png'));
+          expect(mockTray.__constructor.mock.lastCall).toStrictEqual(['/path/to/other.png']);
+        });
+
+        it('should track constructor invocation order', async () => {
+          const mockTray = await browser.electron.mock('Tray');
+          const mockDialog = await browser.electron.mock('dialog', 'showOpenDialog');
+
+          await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
+          await browser.electron.execute((electron) => electron.dialog.showOpenDialog());
+          await browser.electron.execute((electron) => new electron.Tray('/path/to/other.png'));
+
+          const constructorOrder = mockTray.__constructor.mock.invocationCallOrder;
+          const dialogOrder = mockDialog.mock.invocationCallOrder;
+
+          expect(constructorOrder.length).toBe(2);
+          expect(dialogOrder.length).toBe(1);
+          expect(constructorOrder[0]).toBeLessThan(dialogOrder[0]);
+          expect(constructorOrder[1]).toBeGreaterThan(dialogOrder[0]);
+        });
+      });
+
+      describe('instance method properties', () => {
+        it('should track instance method calls', async () => {
+          const mockTray = await browser.electron.mock('Tray');
+
+          await browser.electron.execute((electron) => {
+            const tray1 = new electron.Tray('/path/to/icon1.png');
+            const tray2 = new electron.Tray('/path/to/icon2.png');
+
+            tray1.setTitle('App 1');
+            tray2.setTitle('App 2');
+            tray1.setToolTip('Menu 1');
+          });
+
+          expect(mockTray.setTitle.mock.calls).toStrictEqual([['App 1'], ['App 2']]);
+          expect(mockTray.setToolTip.mock.calls).toStrictEqual([['Menu 1']]);
+        });
+
+        it('should track instance method lastCall', async () => {
+          const mockTray = await browser.electron.mock('Tray');
+
+          await browser.electron.execute((electron) => {
+            const tray = new electron.Tray('/path/to/icon.png');
+            tray.setTitle('First');
+            tray.setTitle('Last');
+          });
+
+          expect(mockTray.setTitle.mock.lastCall).toStrictEqual(['Last']);
+        });
+
+        it('should track instance method results', async () => {
+          const mockTray = await browser.electron.mock('Tray');
+          await mockTray.setTitle.mockReturnValue('success');
+
+          await browser.electron.execute((electron) => {
+            const tray = new electron.Tray('/path/to/icon.png');
+            tray.setTitle('Test');
+          });
+
+          expect(mockTray.setTitle.mock.results).toStrictEqual([{ type: 'return', value: 'success' }]);
+        });
+      });
+    });
+
+    describe('Class Mock Advanced Features', () => {
+      it('should support mockImplementation for instance methods', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+
+        await mockTray.setTitle.mockImplementation((title) => `Mocked: ${title}`);
+
+        const result = await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          return tray.setTitle('My App');
+        });
+
+        expect(result).toBe('Mocked: My App');
+        expect(mockTray.setTitle).toHaveBeenCalledWith('My App');
+      });
+
+      it('should support mockImplementationOnce for constructors', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+
+        // Mock constructor to throw on first call
+        await mockTray.__constructor.mockImplementationOnce(() => {
+          throw new Error('Constructor failed');
+        });
+
+        // First instantiation should fail
+        await expect(browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'))).rejects.toThrow(
+          'Constructor failed',
+        );
+
+        // Second instantiation should succeed (falls back to default)
+        await expect(
+          browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png')),
+        ).resolves.not.toThrow();
+
+        expect(mockTray.__constructor).toHaveBeenCalledTimes(2);
+      });
+
+      it('should support withImplementation for temporary overrides', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+
+        await mockTray.setTitle.mockReturnValue('default');
+
+        const result = await mockTray.setTitle.withImplementation(
+          () => 'temporary',
+          (electron) => {
+            const tray = new electron.Tray('/path/to/icon.png');
+            return tray.setTitle('test');
+          },
+        );
+
+        expect(result).toBe('temporary');
+
+        // After withImplementation, should return to default
+        const normalResult = await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          return tray.setTitle('test');
+        });
+        expect(normalResult).toBe('default');
+      });
+
+      it('should support async instance methods', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+
+        await mockTray.getBounds.mockResolvedValue({ x: 100, y: 200, width: 300, height: 400 });
+
+        const bounds = await browser.electron.execute(async (electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          return await tray.getBounds();
+        });
+
+        expect(bounds).toStrictEqual({ x: 100, y: 200, width: 300, height: 400 });
+        expect(mockTray.getBounds).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('Multiple Class Types', () => {
+      it('should support different Electron classes', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+        const mockWindow = await browser.electron.mock('BrowserWindow');
+
+        await browser.electron.execute((electron) => {
+          new electron.Tray('/path/to/icon.png');
+          new electron.BrowserWindow({ width: 800, height: 600 });
+        });
+
+        expect(mockTray.__constructor).toHaveBeenCalledTimes(1);
+        expect(mockWindow.__constructor).toHaveBeenCalledTimes(1);
+        expect(mockTray.__constructor).toHaveBeenCalledWith('/path/to/icon.png');
+        expect(mockWindow.__constructor).toHaveBeenCalledWith({ width: 800, height: 600 });
+      });
+
+      it('should isolate mocks between different classes', async () => {
+        const mockTray = await browser.electron.mock('Tray');
+        const mockWindow = await browser.electron.mock('BrowserWindow');
+
+        await mockTray.setTitle.mockReturnValue('tray title');
+        await mockWindow.setTitle.mockReturnValue('window title');
+
+        const results = await browser.electron.execute((electron) => {
+          const tray = new electron.Tray('/path/to/icon.png');
+          const win = new electron.BrowserWindow({ width: 800, height: 600 });
+          return [tray.setTitle('tray'), win.setTitle('window')];
+        });
+
+        expect(results).toStrictEqual(['tray title', 'window title']);
       });
     });
   });
