@@ -503,7 +503,7 @@ export async function createClassMock(
     await browserToUse.electron.execute<void, [string, ExecuteOpts]>(
       (electron, className) => {
         const originalApi = globalThis.originalApi as Record<string, unknown>;
-        if (originalApi && originalApi[className]) {
+        if (originalApi?.[className]) {
           Reflect.set(electron, className, originalApi[className]);
         }
       },
@@ -511,6 +511,9 @@ export async function createClassMock(
       { internal: true },
     );
   };
+
+  // Add getMockName method for consistency with ElectronMock
+  (stubInstance as any).getMockName = () => `electron.${className}`;
 
   log.debug(`[${className}] Class mock created successfully`);
 
