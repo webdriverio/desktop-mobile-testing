@@ -1,6 +1,4 @@
-import type { ElectronClassMock, ElectronMock as ElectronMockFunction } from '@wdio/native-types';
-
-type ElectronMock = ElectronMockFunction | ElectronClassMock;
+import type { ElectronMock } from '@wdio/native-types';
 
 export class ElectronServiceMockStore {
   #mockFns: Map<string, ElectronMock>;

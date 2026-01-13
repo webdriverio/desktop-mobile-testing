@@ -30,7 +30,7 @@ export interface ElectronServiceAPI {
     apiName: Interface,
     funcName?: string,
     returnValue?: unknown,
-  ) => Promise<ElectronMock | ElectronClassMock>;
+  ) => Promise<ElectronMock>;
   /**
    * Mock all functions from an Electron API.
    *
@@ -319,45 +319,49 @@ interface ElectronMockContext extends MockContext {
 }
 
 export interface ElectronMockInstance extends Omit<Mock, MockOverride> {
-  mockImplementation(fn: AbstractFn): Promise<ElectronMock>;
-  mockImplementationOnce(fn: AbstractFn): Promise<ElectronMock>;
-  mockReturnValue(obj: unknown): Promise<ElectronMock>;
-  mockReturnValueOnce(obj: unknown): Promise<ElectronMock>;
-  mockResolvedValue(obj: unknown): Promise<ElectronMock>;
-  mockResolvedValueOnce(obj: unknown): Promise<ElectronMock>;
-  mockRejectedValue(obj: unknown): Promise<ElectronMock>;
-  mockRejectedValueOnce(obj: unknown): Promise<ElectronMock>;
-  mockClear(): Promise<ElectronMock>;
-  mockReset(): Promise<ElectronMock>;
-  mockRestore(): Promise<ElectronMock>;
+  mockImplementation(fn: AbstractFn): Promise<ElectronFunctionMock>;
+  mockImplementationOnce(fn: AbstractFn): Promise<ElectronFunctionMock>;
+  mockReturnValue(obj: unknown): Promise<ElectronFunctionMock>;
+  mockReturnValueOnce(obj: unknown): Promise<ElectronFunctionMock>;
+  mockResolvedValue(obj: unknown): Promise<ElectronFunctionMock>;
+  mockResolvedValueOnce(obj: unknown): Promise<ElectronFunctionMock>;
+  mockRejectedValue(obj: unknown): Promise<ElectronFunctionMock>;
+  mockRejectedValueOnce(obj: unknown): Promise<ElectronFunctionMock>;
+  mockClear(): Promise<ElectronFunctionMock>;
+  mockReset(): Promise<ElectronFunctionMock>;
+  mockRestore(): Promise<ElectronFunctionMock>;
   mockReturnThis(): Promise<unknown>;
   withImplementation<ReturnValue, InnerArguments extends unknown[]>(
     implFn: AbstractFn,
     callbackFn: (electron: typeof Electron, ...innerArgs: InnerArguments) => ReturnValue,
   ): Promise<unknown>;
-  mockName(name: string): ElectronMock;
+  mockName(name: string): ElectronFunctionMock;
   getMockName(): string;
   getMockImplementation(): AbstractFn;
-  update(): Promise<ElectronMock>;
+  update(): Promise<ElectronFunctionMock>;
   mock: ElectronMockContext;
   __isElectronMock: boolean;
 }
 
 /**
- * Type for class mock - an object with all instance methods as ElectronMock
+ * Type for class mock - an object with all instance methods as ElectronFunctionMock
  * and a __constructor mock for tracking instantiation calls.
  */
 export interface ElectronClassMock {
-  __constructor: ElectronMock;
+  __constructor: ElectronFunctionMock;
   mockRestore: () => Promise<void>;
   getMockName: () => string;
-  [methodName: string]: ElectronMock | (() => Promise<void>) | (() => string);
+  [methodName: string]: ElectronFunctionMock | (() => Promise<void>) | (() => string);
 }
 
-export interface ElectronMock<TArgs extends unknown[] = unknown[], TReturns = unknown> extends ElectronMockInstance {
+export interface ElectronFunctionMock<TArgs extends unknown[] = unknown[], TReturns = unknown>
+  extends ElectronMockInstance {
   new (...args: TArgs): TReturns;
   (...args: TArgs): TReturns;
 }
+
+// Union type for any Electron mock (function or class)
+export type ElectronMock = ElectronFunctionMock | ElectronClassMock;
 
 type ElectronServiceCustomCapability = {
   /**

@@ -3,8 +3,8 @@ import type {
   AbstractFn,
   ElectronApiFn,
   ElectronClassMock,
+  ElectronFunctionMock,
   ElectronInterface,
-  ElectronMock,
   ElectronType,
   ExecuteOpts,
 } from '@wdio/native-types';
@@ -31,7 +31,11 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
   );
 }
 
-export async function createMock(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
+export async function createMock(
+  apiName: string,
+  funcName: string,
+  browserContext?: WebdriverIO.Browser,
+): Promise<ElectronFunctionMock> {
   log.debug(`[${apiName}.${funcName}] createMock called - starting mock creation`);
   const outerMock = vitestFn();
   const outerMockImplementation = outerMock.mockImplementation;
@@ -41,7 +45,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
 
   outerMock.mockName(`electron.${apiName}.${funcName}`);
 
-  const mock = outerMock as unknown as ElectronMock;
+  const mock = outerMock as unknown as ElectronFunctionMock;
 
   mock.__isElectronMock = true;
 
@@ -59,7 +63,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
   const wrapperMock = ((...args: unknown[]) => {
     // Delegate to the original mock function
     return (mock as (...args: unknown[]) => unknown)(...args);
-  }) as ElectronMock;
+  }) as ElectronFunctionMock;
 
   // Copy all properties and methods from the original mock to the wrapper
   Object.setPrototypeOf(wrapperMock, Object.getPrototypeOf(mock));
@@ -117,7 +121,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
       (electron, apiName, funcName) => {
         const mockObj = electron[apiName as keyof typeof electron][
           funcName as keyof ElectronType[ElectronInterface]
-        ] as ElectronMock;
+        ] as ElectronFunctionMock;
         return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
       },
       apiName,
@@ -387,7 +391,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
 
 /**
  * Creates a mock for an Electron class (e.g. Tray, BrowserWindow).
- * Returns a stub instance with all methods as ElectronMock objects.
+ * Returns a stub instance with all methods as ElectronFunctionMock objects.
  */
 export async function createClassMock(
   className: string,
@@ -418,17 +422,17 @@ export async function createClassMock(
 
   log.debug(`[${className}] Found ${methodNames.length} methods: ${methodNames.join(', ')}`);
 
-  // Create stub instance with all methods as ElectronMock
-  const stubInstance: Record<string, ElectronMock | (() => Promise<void>)> = {};
+  // Create stub instance with all methods as ElectronFunctionMock
+  const stubInstance: Record<string, ElectronFunctionMock | (() => Promise<void>)> = {};
   for (const methodName of methodNames) {
     log.debug(`[${className}] Creating mock for method: ${methodName}`);
     stubInstance[methodName] = await createMock(className, methodName, browserToUse);
   }
 
   // Create constructor mock for tracking instantiation calls
-  const constructorMock = vitestFn() as unknown as ElectronMock;
+  const constructorMock = vitestFn() as unknown as ElectronFunctionMock;
   constructorMock.mockName(`electron.${className}.__constructor`);
-  (constructorMock as ElectronMock).__isElectronMock = true;
+  (constructorMock as ElectronFunctionMock).__isElectronMock = true;
 
   // Store original mock state for updates
   const constructorOriginalMock = (constructorMock as unknown as Mock).mock;
@@ -463,11 +467,11 @@ export async function createClassMock(
   );
 
   // Add update method to constructor mock to sync call tracking
-  (constructorMock as ElectronMock).update = async () => {
+  (constructorMock as ElectronFunctionMock).update = async () => {
     log.debug(`[${className}.__constructor] Starting mock update`);
     const calls = await browserToUse.electron.execute<unknown[][], [string, ExecuteOpts]>(
       (electron, className) => {
-        const mockObj = electron[className as keyof typeof electron] as unknown as ElectronMock;
+        const mockObj = electron[className as keyof typeof electron] as unknown as ElectronFunctionMock;
         return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
       },
       className,

@@ -14,6 +14,7 @@ export type {
   ElectronApiFn,
   ElectronBrowserExtension,
   ElectronClassMock,
+  ElectronFunctionMock,
   ElectronInterface,
   ElectronMock,
   ElectronMockInstance,
