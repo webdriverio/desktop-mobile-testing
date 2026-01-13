@@ -36,6 +36,10 @@ This document provides a complete reference for all `browser.electron.*` methods
   - [`mock.lastCall`](#mocklastcall)
   - [`mock.results`](#mockresults)
   - [`mock.invocationCallOrder`](#mockinvocationcallorder)
+- [Electron Class Mock](#electron-class-mock)
+  - [`__constructor`](#__constructor)
+  - [`[methodName]`](#methodname)
+  - [`mockRestore()`](#mockrestore)
 
 ---
 
@@ -165,21 +169,27 @@ it('should handle deeplinks', async () => {
 
 Mocks an Electron API function when provided with an API name and function name. Returns a [mock object](#mock-object-methods).
 
+When called with only an API name (no function name), mocks an entire Electron class (e.g., `'Tray'`, `'BrowserWindow'`). Returns an [Electron class mock object](#electron-class-mock).
+
 **Signature:**
 ```ts
+// Mock a specific function
 browser.electron.mock(apiName: string, funcName: string): Promise<MockObject>
+
+// Mock an entire class
+browser.electron.mock(className: string): Promise<ElectronClassMock>
 ```
 
 **Parameters:**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `apiName` | `string` | The Electron API module name (e.g., `'dialog'`, `'app'`, `'clipboard'`) |
-| `funcName` | `string` | The function name to mock (e.g., `'showOpenDialog'`, `'getName'`) |
+| `apiName` | `string` | The Electron API module name (e.g., `'dialog'`, `'app'`, `'clipboard'`) or class name (e.g., `'Tray'`, `'BrowserWindow'`) |
+| `funcName` | `string` | **Optional.** The function name to mock (e.g., `'showOpenDialog'`, `'getName'`). If omitted, mocks the entire class. |
 
 **Returns:**
 
-`Promise<MockObject>` - A mock object with methods for controlling and inspecting the mock
+`Promise<MockObject | ElectronClassMock>` - A mock object with methods for controlling and inspecting the mock, or an Electron class mock object for class mocking
 
 **Example:**
 
@@ -196,6 +206,21 @@ expect(mockedShowOpenDialog).toHaveBeenCalledTimes(1);
 expect(mockedShowOpenDialog).toHaveBeenCalledWith({
   properties: ['openFile', 'openDirectory'],
 });
+
+// Class mocking
+const mockTray = await browser.electron.mock('Tray');
+await mockTray.setTitle.mockReturnValue(undefined);
+
+// Track constructor calls
+const tray = await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
+expect(mockTray.__constructor).toHaveBeenCalledWith('/path/to/icon.png');
+
+// Mock instance methods
+await browser.electron.execute((electron) => {
+  const tray = new electron.Tray('/path/to/icon.png');
+  tray.setTitle('My App');
+});
+expect(mockTray.setTitle).toHaveBeenCalledWith('My App');
 ```
 
 **See Also:**
@@ -1030,4 +1055,99 @@ await browser.electron.execute((electron) => electron.app.getName());
 
 expect(mockGetName.mock.invocationCallOrder).toStrictEqual([1, 3]);
 expect(mockGetVersion.mock.invocationCallOrder).toStrictEqual([2]);
+```
+
+---
+
+## Electron Class Mock
+
+Electron class mocks are returned when calling `browser.electron.mock()` with only a class name (no function name). They provide mocking capabilities for Electron classes like `Tray`, `BrowserWindow`, `Menu`, etc.
+
+### Class Mock Properties
+
+#### `__constructor`
+
+An [ElectronMock](#mock-object-methods) object that tracks calls to the class constructor.
+
+**Type:**
+```ts
+ElectronMock
+```
+
+**Example:**
+
+```ts
+const mockTray = await browser.electron.mock('Tray');
+
+// Track constructor calls
+await browser.electron.execute((electron) => {
+  new electron.Tray('/path/to/icon.png');
+  new electron.Tray('/path/to/other-icon.png');
+});
+
+expect(mockTray.__constructor).toHaveBeenCalledTimes(2);
+expect(mockTray.__constructor.mock.calls).toStrictEqual([
+  ['/path/to/icon.png'],
+  ['/path/to/other-icon.png'],
+]);
+```
+
+#### `[methodName]`
+
+All instance methods of the class are available as [ElectronMock](#mock-object-methods) objects.
+
+**Type:**
+```ts
+ElectronMock
+```
+
+**Example:**
+
+```ts
+const mockTray = await browser.electron.mock('Tray');
+
+// Mock instance methods
+await mockTray.setTitle.mockReturnValue(undefined);
+await mockTray.setToolTip.mockReturnValue(undefined);
+
+// Use in tests
+await browser.electron.execute((electron) => {
+  const tray = new electron.Tray('/path/to/icon.png');
+  tray.setTitle('My App');
+  tray.setToolTip('Click for menu');
+});
+
+expect(mockTray.setTitle).toHaveBeenCalledWith('My App');
+expect(mockTray.setToolTip).toHaveBeenCalledWith('Click for menu');
+```
+
+### Class Mock Methods
+
+#### `mockRestore()`
+
+Restores the original Electron class, removing all mocks.
+
+**Signature:**
+```ts
+mockRestore(): Promise<void>
+```
+
+**Returns:**
+
+`Promise<void>`
+
+**Example:**
+
+```ts
+const mockTray = await browser.electron.mock('Tray');
+
+// Mock some behavior
+await mockTray.setTitle.mockReturnValue(undefined);
+
+// Restore original class
+await mockTray.mockRestore();
+
+// Original Tray class is now available
+const tray = await browser.electron.execute((electron) => new electron.Tray('/path/to/icon.png'));
+expect(tray).toBeDefined();
 ```
