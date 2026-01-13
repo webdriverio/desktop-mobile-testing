@@ -1,4 +1,6 @@
-import type { ElectronMock } from '@wdio/native-types';
+import type { ElectronClassMock, ElectronMock as ElectronMockFunction } from '@wdio/native-types';
+
+type ElectronMock = ElectronMockFunction | ElectronClassMock;
 
 export class ElectronServiceMockStore {
   #mockFns: Map<string, ElectronMock>;
@@ -8,11 +10,12 @@ export class ElectronServiceMockStore {
   }
 
   setMock(mock: ElectronMock): ElectronMock {
-    this.#mockFns.set(mock.getMockName(), mock);
+    const mockName = mock.getMockName();
+    this.#mockFns.set(mockName, mock);
     return mock;
   }
 
-  getMock(mockId: string) {
+  getMock(mockId: string): ElectronMock {
     const mock = this.#mockFns.get(mockId);
     if (!mock) {
       throw new Error(`No mock registered for "${mockId}"`);

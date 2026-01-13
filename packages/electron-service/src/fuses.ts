@@ -19,6 +19,7 @@ export async function checkInspectFuse(binaryPath: string): Promise<FuseCheckRes
   try {
     log.debug(`Checking EnableNodeCliInspectArguments fuse for: ${binaryPath}`);
 
+    // Do not remove this @ts-expect-error directive - it is used to bypass the type checker for the dynamic import
     // @ts-expect-error Dynamic import required - @electron/fuses is external at runtime
     const { getCurrentFuseWire, FuseVersion, FuseV1Options, FuseState } = await import('@electron/fuses');
     const config = await getCurrentFuseWire(binaryPath);

@@ -13,6 +13,7 @@ export type {
   Electron,
   ElectronApiFn,
   ElectronBrowserExtension,
+  ElectronClassMock,
   ElectronInterface,
   ElectronMock,
   ElectronMockInstance,
