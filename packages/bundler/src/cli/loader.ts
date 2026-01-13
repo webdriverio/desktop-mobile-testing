@@ -214,7 +214,8 @@ const serialize = (obj) => {
   return obj;
 };
 
-const serializedConfig = serialize(config);
+const actualConfig = config.default || config;
+const serializedConfig = serialize(actualConfig);
 writeFileSync('${tempJsonPath.replace(/\\/g, '\\\\')}', JSON.stringify(serializedConfig, null, 2));
       `;
 
