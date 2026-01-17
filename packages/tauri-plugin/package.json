@@ -24,7 +24,8 @@
   "license": "MIT",
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-log": "^2.7.1"
+    "@tauri-apps/plugin-log": "^2.7.1",
+    "@vitest/spy": "^4.0.17"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

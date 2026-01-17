@@ -234,10 +234,9 @@ export const config = {
   runner: 'local',
   specs,
   exclude: [],
-  // For standalone tests, ensure only 1 spec runs at a time since they manage their own sessions
-  // and share the same tauri-driver port (4444)
-  maxInstances: envContext.testType === 'standalone' ? 1 : 1,
-  maxInstancesPerCapability: envContext.testType === 'standalone' ? 1 : undefined,
+  // Tauri-driver only supports one session at a time, so limit to 1 instance
+  maxInstances: 1,
+  maxInstancesPerCapability: 1,
   capabilities,
   // Connect to tauri-driver instead of spawning a browser driver
   ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),

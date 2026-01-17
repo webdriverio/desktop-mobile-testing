@@ -59,12 +59,6 @@ export async function mockAll(this: TauriServiceContext): Promise<void> {
     throw new Error('mockAll requires a valid browser context');
   }
 
-  // Clear all mocks in the Rust plugin
-  await (browserContext as WebdriverIO.Browser).tauri.execute<void, []>(async (invoke) => {
-    // @ts-expect-error - invoke is available in execute context
-    await invoke('plugin:wdio|clear_mocks');
-  });
-
   // Clear all mocks in the injection script
   await (browserContext as WebdriverIO.Browser).execute<void, []>(() => {
     // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
@@ -95,12 +89,6 @@ export async function resetAllMocks(this: TauriServiceContext): Promise<void> {
   if (!browserContext || browserContext.isMultiremote) {
     throw new Error('resetAllMocks requires a valid browser context');
   }
-
-  // Reset all mocks in the Rust plugin
-  await (browserContext as WebdriverIO.Browser).tauri.execute<void, []>(async (invoke) => {
-    // @ts-expect-error - invoke is available in execute context
-    await invoke('plugin:wdio|reset_mocks');
-  });
 
   // Reset all mocks in the injection script
   await (browserContext as WebdriverIO.Browser).execute<void, []>(() => {
@@ -133,12 +121,6 @@ export async function restoreAllMocks(this: TauriServiceContext): Promise<void> 
   if (!browserContext || browserContext.isMultiremote) {
     throw new Error('restoreAllMocks requires a valid browser context');
   }
-
-  // Restore all mocks in the Rust plugin
-  await (browserContext as WebdriverIO.Browser).tauri.execute<void, []>(async (invoke) => {
-    // @ts-expect-error - invoke is available in execute context
-    await invoke('plugin:wdio|restore_mocks');
-  });
 
   // Restore all mocks in the injection script
   await (browserContext as WebdriverIO.Browser).execute<void, []>(() => {

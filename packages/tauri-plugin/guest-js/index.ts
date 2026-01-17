@@ -4,6 +4,7 @@
  */
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
+import * as vitestSpy from '@vitest/spy';
 
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
@@ -56,6 +57,8 @@ declare global {
       restoreMocks: () => Promise<void>;
       waitForInit: () => Promise<void>;
     };
+    __vitest_spy__?: typeof vitestSpy;
+    __wdio_mocks__?: Record<string, unknown>;
   }
 }
 
@@ -250,59 +253,129 @@ function setupConsoleForwarding(): void {
     trace: console.trace,
   };
 
-  // Forward console.log to trace level
-  console.log = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.log(...args);
-    forwardToTauri('trace', message).catch(() => {
-      // Ignore errors
-    });
+  // Try to forward console methods (may fail on WebKit where console properties are readonly)
+  try {
+    // Forward console.log to trace level
+    console.log = (...args: unknown[]) => {
+      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+      originalConsole.log(...args);
+      forwardToTauri('trace', message).catch(() => {
+        // Ignore errors
+      });
+    };
+
+    // Forward console.debug
+    console.debug = (...args: unknown[]) => {
+      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+      originalConsole.debug(...args);
+      forwardToTauri('debug', message).catch(() => {
+        // Ignore errors
+      });
+    };
+
+    // Forward console.info
+    console.info = (...args: unknown[]) => {
+      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+      originalConsole.info(...args);
+      forwardToTauri('info', message).catch(() => {
+        // Ignore errors
+      });
+    };
+
+    // Forward console.warn
+    console.warn = (...args: unknown[]) => {
+      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+      originalConsole.warn(...args);
+      forwardToTauri('warn', message).catch(() => {
+        // Ignore errors
+      });
+    };
+
+    // Forward console.error
+    console.error = (...args: unknown[]) => {
+      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+      originalConsole.error(...args);
+      forwardToTauri('error', message).catch(() => {
+        // Ignore errors
+      });
+    };
+
+    // Forward console.trace
+    console.trace = (...args: unknown[]) => {
+      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+      originalConsole.trace(...args);
+      forwardToTauri('trace', message).catch(() => {
+        // Ignore errors
+      });
+    };
+  } catch (_error) {
+    // Console properties are readonly (e.g., on WebKit), skip console forwarding
+    // Console logs will still work but won't be forwarded to Tauri log plugin
+  }
+}
+
+/**
+ * Setup invoke interception for mocking
+ * This wraps window.__TAURI__.core.invoke to check for mocks before calling the real implementation
+ * Retries until window.__TAURI__.core.invoke is available (with timeout)
+ */
+function setupInvokeInterception(): void {
+  if (typeof window === 'undefined') {
+    console.warn('[WDIO Tauri Plugin] Cannot setup invoke interception - window not available');
+    return;
+  }
+
+  let attempts = 0;
+  const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max
+  const retryInterval = 100; // ms
+
+  const trySetup = () => {
+    attempts++;
+
+    if (!window.__TAURI__?.core?.invoke) {
+      if (attempts < maxAttempts) {
+        console.log(
+          `[WDIO Tauri Plugin] Waiting for window.__TAURI__.core.invoke (attempt ${attempts}/${maxAttempts})`,
+        );
+        setTimeout(trySetup, retryInterval);
+        return;
+      } else {
+        console.warn(
+          '[WDIO Tauri Plugin] Timeout waiting for window.__TAURI__.core.invoke - invoke interception not set up',
+        );
+        return;
+      }
+    }
+
+    // Store the original invoke function with proper binding
+    const originalInvoke = window.__TAURI__.core.invoke.bind(window.__TAURI__.core);
+
+    // Wrap invoke to check for mocks
+    window.__TAURI__.core.invoke = async (cmd: string, args?: InvokeArgs): Promise<unknown> => {
+      // Check if there's a mock for this command
+      const mockFn = window.__wdio_mocks__?.[cmd];
+
+      if (mockFn && typeof mockFn === 'function') {
+        console.log(`[WDIO Tauri Plugin] Intercepted invoke for '${cmd}' - using mock`);
+        try {
+          // Call the mock function with the args (pass undefined for no args, or the actual args)
+          // Tauri commands can be called as invoke(cmd) or invoke(cmd, args)
+          const result = await mockFn(args);
+          return result;
+        } catch (error) {
+          console.error(`[WDIO Tauri Plugin] Mock error for '${cmd}':`, error);
+          throw error;
+        }
+      }
+
+      // No mock found, call the original invoke
+      return originalInvoke(cmd, args);
+    };
+
+    console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete');
   };
 
-  // Forward console.debug
-  console.debug = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.debug(...args);
-    forwardToTauri('debug', message).catch(() => {
-      // Ignore errors
-    });
-  };
-
-  // Forward console.info
-  console.info = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.info(...args);
-    forwardToTauri('info', message).catch(() => {
-      // Ignore errors
-    });
-  };
-
-  // Forward console.warn
-  console.warn = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.warn(...args);
-    forwardToTauri('warn', message).catch(() => {
-      // Ignore errors
-    });
-  };
-
-  // Forward console.error
-  console.error = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.error(...args);
-    forwardToTauri('error', message).catch(() => {
-      // Ignore errors
-    });
-  };
-
-  // Forward console.trace
-  console.trace = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.trace(...args);
-    forwardToTauri('trace', message).catch(() => {
-      // Ignore errors
-    });
-  };
+  trySetup();
 }
 
 /**
@@ -327,6 +400,10 @@ export async function init(): Promise<void> {
     `[WDIO Tauri Plugin] window.__TAURI__?.core?.invoke available: ${typeof window.__TAURI__?.core?.invoke !== 'undefined'}`,
   );
   messages.push(`[WDIO Tauri Plugin] window.__TAURI__?.log available: ${typeof window.__TAURI__?.log !== 'undefined'}`);
+
+  // Expose vitest spy on window for mocking support
+  window.__vitest_spy__ = vitestSpy;
+  messages.push('[WDIO Tauri Plugin] Exposed @vitest/spy on window.__vitest_spy__');
 
   // Expose wdioTauri on window object for backward compatibility
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
@@ -356,6 +433,10 @@ export async function init(): Promise<void> {
   console.log('[WDIO Tauri Plugin] Setting up manual console forwarding for WebDriver compatibility');
   setupConsoleForwarding();
   console.log('[WDIO Tauri Plugin] ✅ Console forwarding initialized');
+
+  // Setup invoke interception for mocking support
+  console.log('[WDIO Tauri Plugin] Setting up invoke interception for mocking...');
+  setupInvokeInterception();
 
   // Log all accumulated messages now that forwarding is active
   for (const msg of messages) {

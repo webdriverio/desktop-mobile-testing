@@ -557,5 +557,78 @@ describe('Tauri Mocking', () => {
         expect(mockReadClipboard.mock.invocationCallOrder).toStrictEqual([]);
       });
     });
+
+    describe('update() synchronization', () => {
+      it('should synchronize mock calls after update', async () => {
+        const mockReadClipboard = await browser.tauri.mock('read_clipboard');
+
+        await browser.tauri.execute(async ({ core }) => {
+          await core.invoke('read_clipboard');
+          await core.invoke('read_clipboard');
+        });
+
+        // Before update, calls should be empty
+        expect(mockReadClipboard.calls).toStrictEqual([]);
+
+        await mockReadClipboard.update();
+
+        // After update, calls should be synchronized
+        expect(mockReadClipboard.calls).toHaveLength(2);
+        expect(mockReadClipboard.mock.calls).toHaveLength(2);
+      });
+
+      it('should synchronize mock results after update', async () => {
+        const mockReadClipboard = await browser.tauri.mock('read_clipboard');
+        await mockReadClipboard.mockReturnValue('mocked result');
+
+        await browser.tauri.execute(async ({ core }) => {
+          await core.invoke('read_clipboard');
+        });
+
+        await mockReadClipboard.update();
+
+        expect(mockReadClipboard.results).toHaveLength(1);
+        expect(mockReadClipboard.results[0]).toEqual({
+          type: 'return',
+          value: 'mocked result',
+        });
+      });
+
+      it('should synchronize lastCall after update', async () => {
+        const mockWriteClipboard = await browser.tauri.mock('write_clipboard');
+
+        await browser.tauri.execute(async ({ core }) => {
+          await core.invoke('write_clipboard', { content: 'test' });
+        });
+
+        await mockWriteClipboard.update();
+
+        expect(mockWriteClipboard.lastCall).toEqual([{ content: 'test' }]);
+      });
+    });
+
+    describe('mock state persistence', () => {
+      it('should maintain mock implementation across invocations', async () => {
+        const mockReadClipboard = await browser.tauri.mock('read_clipboard');
+        await mockReadClipboard.mockReturnValue('persistent result');
+
+        // First call
+        const result1 = await browser.tauri.execute(async ({ core }) => {
+          return await core.invoke('read_clipboard');
+        });
+
+        await mockReadClipboard.update();
+        expect(result1).toBe('persistent result');
+
+        // Second call should return same result
+        const result2 = await browser.tauri.execute(async ({ core }) => {
+          return await core.invoke('read_clipboard');
+        });
+
+        await mockReadClipboard.update();
+        expect(result2).toBe('persistent result');
+        expect(mockReadClipboard.calls).toHaveLength(2);
+      });
+    });
   });
 });

@@ -1,10 +1,8 @@
-use tauri::{AppHandle, WebviewWindow, command, Runtime, Manager, Listener};
-use std::sync::{Arc, Mutex};
+use tauri::{WebviewWindow, command, Runtime, Manager, Listener};
 use serde_json::Value as JsonValue;
 
-use crate::models::{ExecuteRequest, MockConfig};
+use crate::models::ExecuteRequest;
 use crate::Result;
-use crate::mock_store::MockStore;
 
 /// Execute JavaScript code in the frontend context
 #[command]
@@ -12,8 +10,23 @@ pub(crate) async fn execute<R: Runtime>(
     window: WebviewWindow<R>,
     request: ExecuteRequest,
 ) -> Result<JsonValue> {
-    log::info!("[WDIO Plugin] Execute request - script: {}", request.script);
-    log::info!("[WDIO Plugin] Execute request - args: {:?}", request.args);
+    log::error!("[WDIO Plugin] ========== EXECUTE COMMAND CALLED ==========");
+    log::error!("[WDIO Plugin] Execute request - script length: {} chars", request.script.len());
+    log::error!("[WDIO Plugin] Execute request - script preview: {}", &request.script[..std::cmp::min(200, request.script.len())]);
+    log::error!("[WDIO Plugin] Execute request - args count: {}", request.args.len());
+
+    // Mock store disabled for JavaScript-only mocking
+    // let app = window.app_handle();
+    // if let Some(mock_store) = app.try_state::<Arc<Mutex<MockStore>>>() {
+    //     if let Ok(store) = mock_store.lock() {
+    //         let all_mocks = store.get_all_mocks();
+    //         log::info!("[WDIO Plugin] Current mock store contains {} mocks: {:?}", all_mocks.len(), all_mocks.keys().collect::<Vec<_>>());
+    //     } else {
+    //         log::warn!("[WDIO Plugin] Could not lock mock store to check mocks");
+    //     }
+    // } else {
+    //     log::warn!("[WDIO Plugin] Mock store not found in app state during execute");
+    // }
 
     // Build the script with args injected
     // The script should be a function that receives args, or a standalone script
@@ -29,7 +42,7 @@ pub(crate) async fn execute<R: Runtime>(
         request.script
     };
 
-    log::info!("[WDIO Plugin] Prepared script: {}", script);
+    log::error!("[WDIO Plugin] Prepared script length: {} chars", script.len());
 
     // Use WebviewWindow::eval() to execute JavaScript in the frontend context
     // This gives the code access to window.__TAURI__ APIs
@@ -52,8 +65,10 @@ pub(crate) async fn execute<R: Runtime>(
     let result_tx = tx.clone();
     let error_tx = tx;
     
+    log::error!("[WDIO Plugin] Setting up event listener for: {}", event_id);
     let listener_id = app_handle.listen(&event_id, move |event| {
-        log::info!("[WDIO Plugin] Received event payload: {}", event.payload());
+        log::error!("[WDIO Plugin] ========== EVENT RECEIVED ==========");
+        log::error!("[WDIO Plugin] Received event payload: {}", event.payload());
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
             log::info!("[WDIO Plugin] Parsed payload: {:?}", payload);
             if let Some(result) = payload.get("result") {
@@ -96,150 +111,138 @@ pub(crate) async fn execute<R: Runtime>(
     // Events can be emitted using window.__TAURI__.event.emit() when withGlobalTauri is enabled
     let script_with_return = format!(
         r#"
+        console.log('[WDIO Plugin] SCRIPT EVAL STARTED');
+        window.onerror = function(msg, url, line, col, error) {{
+            console.error('[WDIO Plugin] Global error:', msg, 'at', url, line, col, error);
+        }};
         (async () => {{
             try {{
+                console.log('[WDIO Plugin] Starting JavaScript execution');
+                console.log('[WDIO Plugin] window available:', typeof window);
+                console.log('[WDIO Plugin] window.__TAURI__ available:', typeof window.__TAURI__);
+                console.log('[WDIO Plugin] window.__TAURI__?.core available:', typeof window.__TAURI__?.core);
+                console.log('[WDIO Plugin] window.__TAURI__?.event available:', typeof window.__TAURI__?.event);
+
+                console.log('[WDIO Plugin] About to execute script');
                 const result = await ({});
+                console.log('[WDIO Plugin] Script executed successfully, result:', result);
                 const jsonResult = JSON.stringify(result);
-                // Use Tauri event API to send result back to Rust
-                if (window.__TAURI__?.event?.emit) {{
-                    window.__TAURI__.event.emit('{}', {{ result: jsonResult }});
+                console.log('[WDIO Plugin] JSON serialization successful:', jsonResult);
+
+                // Test event emission APIs
+                console.log('[WDIO Plugin] Testing event emission APIs...');
+                let eventEmitted = false;
+
+                if (window.__TAURI__?.core?.emit) {{
+                    console.log('[WDIO Plugin] Attempting window.__TAURI__.core.emit');
+                    try {{
+                        window.__TAURI__.core.emit('{}', {{ result: jsonResult }});
+                        console.log('[WDIO Plugin] window.__TAURI__.core.emit succeeded');
+                        eventEmitted = true;
+                    }} catch (emitError) {{
+                        console.error('[WDIO Plugin] window.__TAURI__.core.emit failed:', emitError);
+                    }}
+                }}
+
+                if (!eventEmitted && window.__TAURI__?.event?.emit) {{
+                    console.log('[WDIO Plugin] Attempting window.__TAURI__.event.emit');
+                    try {{
+                        window.__TAURI__.event.emit('{}', {{ result: jsonResult }});
+                        console.log('[WDIO Plugin] window.__TAURI__.event.emit succeeded');
+                        eventEmitted = true;
+                    }} catch (emitError) {{
+                        console.error('[WDIO Plugin] window.__TAURI__.event.emit failed:', emitError);
+                    }}
+                }}
+
+                if (!eventEmitted) {{
+                    console.log('[WDIO Plugin] Attempting fallback @tauri-apps/api/event');
+                    try {{
+                        const {{ emit }} = await import('@tauri-apps/api/event');
+                        console.log('[WDIO Plugin] Imported @tauri-apps/api/event successfully');
+                        await emit('{}', {{ result: jsonResult }});
+                        console.log('[WDIO Plugin] @tauri-apps/api/event emit succeeded');
+                        eventEmitted = true;
+                    }} catch (emitError) {{
+                        console.error('[WDIO Plugin] @tauri-apps/api/event failed:', emitError);
+                    }}
+                }}
+
+                if (eventEmitted) {{
+                    console.log('[WDIO Plugin] Event emitted successfully');
                 }} else {{
-                    // Fallback: try importing from @tauri-apps/api/event
-                    const {{ emit }} = await import('@tauri-apps/api/event');
-                    emit('{}', {{ result: jsonResult }});
+                    console.error('[WDIO Plugin] All event emission methods failed!');
+                    throw new Error('All event emission methods failed');
                 }}
             }} catch (error) {{
+                console.error('[WDIO Plugin] Script execution error:', error);
+                console.error('[WDIO Plugin] Error stack:', error.stack);
                 const errorMsg = error.message || String(error);
-                if (window.__TAURI__?.event?.emit) {{
-                    window.__TAURI__.event.emit('{}', {{ error: errorMsg }});
-                }} else {{
-                    const {{ emit }} = await import('@tauri-apps/api/event');
-                    emit('{}', {{ error: errorMsg }});
+
+                // Try to emit error event
+                let errorEmitted = false;
+                if (window.__TAURI__?.core?.emit) {{
+                    try {{
+                        window.__TAURI__.core.emit('{}', {{ error: errorMsg }});
+                        errorEmitted = true;
+                    }} catch (e) {{
+                        console.error('[WDIO Plugin] Error emission failed:', e);
+                    }}
+                }}
+                if (!errorEmitted && window.__TAURI__?.event?.emit) {{
+                    try {{
+                        window.__TAURI__.event.emit('{}', {{ error: errorMsg }});
+                        errorEmitted = true;
+                    }} catch (e) {{
+                        console.error('[WDIO Plugin] Error emission failed:', e);
+                    }}
+                }}
+                if (!errorEmitted) {{
+                    try {{
+                        const {{ emit }} = await import('@tauri-apps/api/event');
+                        await emit('{}', {{ error: errorMsg }});
+                        errorEmitted = true;
+                    }} catch (e) {{
+                        console.error('[WDIO Plugin] Error emission failed:', e);
+                    }}
                 }}
             }}
-        }})()
+        }})().catch(function(e) {{
+            console.error('[WDIO Plugin] Unhandled Promise rejection:', e);
+        }});
         "#,
-        script, event_id, event_id, event_id, event_id
+        script, event_id, event_id, event_id, event_id, event_id, event_id
     );
 
     // Execute the script
-    window
-        .eval(&script_with_return)
-        .map_err(|e| crate::Error::ExecuteError(e.to_string()))?;
+    log::error!("[WDIO Plugin] About to call window.eval() with {} chars", script_with_return.len());
+    let eval_result = window.eval(&script_with_return);
+    match &eval_result {
+        Ok(_) => log::error!("[WDIO Plugin] window.eval() returned Ok"),
+        Err(e) => log::error!("[WDIO Plugin] window.eval() returned Err: {}", e),
+    }
+    eval_result.map_err(|e| crate::Error::ExecuteError(e.to_string()))?;
 
     // Wait for result with timeout
+    log::error!("[WDIO Plugin] Waiting for event result (30s timeout)...");
     match rx.recv_timeout(Duration::from_secs(30)) {
         Ok(Ok(result)) => {
+            log::error!("[WDIO Plugin] ========== SUCCESS ==========");
+            log::error!("[WDIO Plugin] Got result: {:?}", result);
             app_handle.unlisten(listener_id);
             Ok(result)
         }
         Ok(Err(e)) => {
+            log::error!("[WDIO Plugin] ========== ERROR FROM JS ==========");
+            log::error!("[WDIO Plugin] Got error: {:?}", e);
             app_handle.unlisten(listener_id);
             Err(e)
         }
         Err(_) => {
+            log::error!("[WDIO Plugin] ========== TIMEOUT ==========");
+            log::error!("[WDIO Plugin] No event received within 30 seconds!");
             app_handle.unlisten(listener_id);
             Err(crate::Error::ExecuteError("Timeout waiting for execute result".to_string()))
         }
     }
 }
-
-/// Set a mock for a Tauri command
-#[command]
-pub(crate) async fn set_mock<R: Runtime>(
-    app: AppHandle<R>,
-    command: String,
-    config: MockConfig,
-) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    store.set_mock(command, config);
-    Ok(())
-}
-
-/// Get a mock configuration for a command
-#[command]
-pub(crate) async fn get_mock<R: Runtime>(
-    app: AppHandle<R>,
-    command: String,
-) -> Result<Option<MockConfig>> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    Ok(store.get_mock(&command).cloned())
-}
-
-/// Get all mocks from the store
-#[command]
-pub(crate) async fn get_all_mocks<R: Runtime>(
-    app: AppHandle<R>,
-) -> Result<std::collections::HashMap<String, MockConfig>> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    Ok(store.get_all_mocks().clone())
-}
-
-/// Clear all mocks
-#[command]
-pub(crate) async fn clear_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    store.clear_mocks();
-    Ok(())
-}
-
-/// Reset all mocks (clear and remove original handlers)
-#[command]
-pub(crate) async fn reset_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    store.reset_mocks();
-    Ok(())
-}
-
-/// Restore all mocks (remove mocks and restore original handlers)
-#[command]
-pub(crate) async fn restore_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    // For now, same as reset - restore functionality will be enhanced when we implement
-    // original handler storage
-    store.reset_mocks();
-    Ok(())
-}
-

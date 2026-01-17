@@ -13,8 +13,10 @@
       "!**/out",
       // ignore turbo files
       "!.turbo",
-      // ignore tauri plugin build files
-      "!**/tauri-plugin/target"
+      // ignore tauri build files
+      "!**/tauri-plugin/target",
+      "!**/src-tauri/target",
+      "!**/src-tauri/target/**/.fingerprint/**/*.json"
     ]
   },
   "formatter": {

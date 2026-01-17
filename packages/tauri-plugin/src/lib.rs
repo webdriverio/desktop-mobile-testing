@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+// use std::sync::{Arc, Mutex}; // Disabled for JavaScript-only mocking
 use tauri::{
     plugin::{Builder, TauriPlugin},
     Manager, Runtime,
@@ -14,7 +14,7 @@ mod mobile;
 mod commands;
 mod error;
 mod models;
-mod mock_store;
+// mod mock_store; // Disabled for JavaScript-only mocking
 
 pub use error::{Error, Result};
 
@@ -40,12 +40,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wdio")
         .invoke_handler(tauri::generate_handler![
             commands::execute,
-            commands::set_mock,
-            commands::get_mock,
-            commands::get_all_mocks,
-            commands::clear_mocks,
-            commands::reset_mocks,
-            commands::restore_mocks,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]
@@ -53,9 +47,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(desktop)]
             let wdio = desktop::init(app, api)?;
 
-            // Initialize mock store
-            let mock_store = Arc::new(Mutex::new(mock_store::MockStore::new()));
-            app.manage(mock_store);
+            // Mock store disabled for JavaScript-only mocking
+            // let mock_store = Arc::new(Mutex::new(mock_store::MockStore::new()));
+            // app.manage(mock_store);
             app.manage(wdio);
 
             Ok(())

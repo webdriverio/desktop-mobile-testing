@@ -1,6 +1,7 @@
 import { fn as vitestFn } from '@vitest/spy';
 import type { AbstractFn, TauriMock } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
+import { execute as tauriExecute } from './commands/execute.js';
 
 const log = createLogger('tauri-service', 'mock');
 
@@ -8,22 +9,17 @@ async function restoreTauriCommand(command: string, browserContext?: WebdriverIO
   const browserToUse = browserContext || browser;
 
   // Call the injection script's restore function
-  await browserToUse.execute<void, [string]>((cmd) => {
-    // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-    if (window.__wdio_mocks__ && window.__wdio_mocks__[cmd]) {
+  await tauriExecute<void, [string]>(
+    browserToUse,
+    (tauri, cmd) => {
       // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      delete window.__wdio_mocks__[cmd];
-    }
-  }, command);
-
-  // Also clear from Rust plugin store
-  await browserToUse.tauri.execute<void, [string]>(async (invoke, cmd) => {
-    // @ts-expect-error - invoke is available in execute context
-    await invoke('plugin:wdio|set_mock', {
-      command: cmd,
-      config: { command: cmd, return_value: null, implementation: null },
-    });
-  }, command);
+      if (window.__wdio_mocks__ && window.__wdio_mocks__[cmd]) {
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        delete window.__wdio_mocks__[cmd];
+      }
+    },
+    command,
+  );
 }
 
 export async function createMock(command: string, browserContext?: WebdriverIO.Browser): Promise<TauriMock> {
@@ -74,58 +70,118 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     },
   });
 
+  // Also expose mock properties directly on the wrapper for convenience
+  // These will be updated by the update() method
+  Object.defineProperty(wrapperMock, 'calls', {
+    get() {
+      return originalMock.calls;
+    },
+  });
+
+  Object.defineProperty(wrapperMock, 'results', {
+    get() {
+      return originalMock.results;
+    },
+  });
+
+  Object.defineProperty(wrapperMock, 'invocationCallOrder', {
+    get() {
+      return originalMock.invocationCallOrder;
+    },
+  });
+
+  Object.defineProperty(wrapperMock, 'lastCall', {
+    get() {
+      return originalMock.lastCall;
+    },
+  });
+
   // Use provided browser context or fallback to global browser
   const browserToUse: WebdriverIO.Browser = (browserContext || browser) as WebdriverIO.Browser;
 
   log.debug(`[${command}] Using browser context:`, typeof browserToUse, browserToUse?.constructor?.name);
 
   // Initialize inner (WebView) mock via injection script
-  await browserToUse.execute<void, [string]>(async (cmd) => {
-    const spy = await import('@vitest/spy');
-    const mockFn = spy.fn();
-    mockFn.mockName(`tauri.${cmd}`);
+  log.debug(`[${command}] Setting up JavaScript mock`);
+  await tauriExecute<void, [string]>(
+    browserToUse,
+    (tauri, cmd) => {
+      console.log(`[WDIO Service] Setting up mock for command: ${cmd}`);
+      // @ts-expect-error - window.__vitest_spy__ is exposed by the app
+      const spy = window.__vitest_spy__;
+      if (!spy || !spy.fn) {
+        console.error('[WDIO Service] Vitest spy not available');
+        throw new Error(
+          'Vitest spy not available. Make sure @vitest/spy is imported and exposed as window.__vitest_spy__ in your app.',
+        );
+      }
 
-    // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-    if (!window.__wdio_mocks__) {
+      console.log('[WDIO Service] Creating mock function');
+      const mockFn = spy.fn();
+      mockFn.mockName(`tauri.${cmd}`);
+
       // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      window.__wdio_mocks__ = {};
-    }
-    // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-    window.__wdio_mocks__[cmd] = mockFn;
-  }, command);
+      if (!window.__wdio_mocks__) {
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        window.__wdio_mocks__ = {};
+      }
+      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+      window.__wdio_mocks__[cmd] = mockFn;
+      console.log(`[WDIO Service] Mock set up for command: ${cmd}`);
+    },
+    command,
+  );
+  log.debug(`[${command}] JavaScript mock setup complete`);
 
   mock.update = async () => {
     log.debug(`[${command}] Starting mock update`);
-    // Synchronize inner and outer mocks
-    const calls = (await browserToUse.execute((cmd: string) => {
-      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      const mockObj = window.__wdio_mocks__?.[cmd];
-      return mockObj?.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock.calls)) : [];
-    }, command)) as unknown as unknown[][];
+    // Get mock state directly from JavaScript mock
+    const mockState = await tauriExecute<
+      {
+        calls: unknown[][];
+        results: unknown[];
+        invocationCallOrder: number[];
+        lastCall?: unknown;
+      } | null,
+      [string]
+    >(
+      browserToUse,
+      (tauri, cmd: string) => {
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        const mockObj = window.__wdio_mocks__?.[cmd];
+        if (!mockObj?.mock) return null;
 
-    log.debug(
-      `[${command}] Retrieved ${calls.length} calls from inner mock, outer mock has ${originalMock.calls.length} calls`,
+        return {
+          calls: JSON.parse(JSON.stringify(mockObj.mock.calls || [])),
+          results: JSON.parse(JSON.stringify(mockObj.mock.results || [])),
+          invocationCallOrder: JSON.parse(JSON.stringify(mockObj.mock.invocationCallOrder || [])),
+          lastCall: mockObj.mock.lastCall ? JSON.parse(JSON.stringify(mockObj.mock.lastCall)) : undefined,
+        };
+      },
+      command,
     );
 
-    // Re-apply calls from the WebView mock to the outer one
-    if (originalMock.calls.length < calls.length) {
-      log.debug(`[${command}] Applying ${calls.length - originalMock.calls.length} new calls to outer mock`);
-      calls.forEach((call: unknown[], index: number) => {
-        if (!originalMock.calls[index]) {
-          log.debug(`[${command}] Applying call ${index}:`, call);
-          mock?.apply(mock, call);
-        }
-      });
+    if (mockState) {
+      log.debug(
+        `[${command}] Updating mock state: ${mockState.calls.length} calls, ${mockState.results.length} results`,
+      );
+
+      // Copy state directly to the outer mock
+      (originalMock as any).calls = mockState.calls;
+      (originalMock as any).results = mockState.results;
+      (originalMock as any).invocationCallOrder = mockState.invocationCallOrder;
+      (originalMock as any).lastCall = mockState.lastCall;
     } else {
-      log.debug(`[${command}] No new calls to synchronize`);
+      log.debug(`[${command}] No mock state to update`);
     }
 
     return mock;
   };
 
   mock.mockImplementation = async (implFn: AbstractFn) => {
-    await browserToUse.execute<void, [string, string]>(
-      (cmd, mockImplementationStr) => {
+    await tauriExecute<void, [string, string]>(
+      browserToUse,
+      (tauri, cmd, mockImplementationStr) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -137,27 +193,15 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       implFn.toString(),
     );
 
-    // Update Rust plugin store
-    await browserToUse.tauri.execute<void, [string, string]>(
-      async (invoke, cmd, implementation) => {
-        // @ts-expect-error - invoke is available in execute context
-        await invoke('plugin:wdio|set_mock', {
-          command: cmd,
-          config: { command: cmd, implementation },
-        });
-      },
-      command,
-      implFn.toString(),
-    );
-
     outerMockImplementation(implFn);
 
     return mock;
   };
 
   mock.mockImplementationOnce = async (implFn: AbstractFn) => {
-    await browserToUse.execute<void, [string, string]>(
-      (cmd, mockImplementationStr) => {
+    await tauriExecute<void, [string, string]>(
+      browserToUse,
+      (tauri, cmd, mockImplementationStr) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -174,8 +218,9 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockReturnValue = async (value: unknown) => {
-    await browserToUse.execute<void, [string, unknown]>(
-      (cmd, returnValue) => {
+    await tauriExecute<void, [string, unknown]>(
+      browserToUse,
+      (tauri, cmd, returnValue) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -186,25 +231,13 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       value,
     );
 
-    // Update Rust plugin store
-    await browserToUse.tauri.execute<void, [string, unknown]>(
-      async (invoke, cmd, returnValue) => {
-        // @ts-expect-error - invoke is available in execute context
-        await invoke('plugin:wdio|set_mock', {
-          command,
-          config: { cmd, return_value: returnValue },
-        });
-      },
-      command,
-      value,
-    );
-
     return mock;
   };
 
   mock.mockReturnValueOnce = async (value: unknown) => {
-    await browserToUse.execute<void, [string, unknown]>(
-      (cmd, returnValue) => {
+    await tauriExecute<void, [string, unknown]>(
+      browserToUse,
+      (tauri, cmd, returnValue) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -219,8 +252,9 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockResolvedValue = async (value: unknown) => {
-    await browserToUse.execute<void, [string, unknown]>(
-      (cmd, resolvedValue) => {
+    await tauriExecute<void, [string, unknown]>(
+      browserToUse,
+      (tauri, cmd, resolvedValue) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -231,25 +265,13 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       value,
     );
 
-    // Update Rust plugin store
-    await browserToUse.tauri.execute<void, [string, unknown]>(
-      async (invoke, cmd, resolvedValue) => {
-        // @ts-expect-error - invoke is available in execute context
-        await invoke('plugin:wdio|set_mock', {
-          command,
-          config: { cmd, return_value: resolvedValue },
-        });
-      },
-      command,
-      value,
-    );
-
     return mock;
   };
 
   mock.mockResolvedValueOnce = async (value: unknown) => {
-    await browserToUse.execute<void, [string, unknown]>(
-      (cmd, resolvedValue) => {
+    await tauriExecute<void, [string, unknown]>(
+      browserToUse,
+      (tauri, cmd, resolvedValue) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -264,8 +286,9 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockRejectedValue = async (value: unknown) => {
-    await browserToUse.execute<void, [string, unknown]>(
-      (cmd, rejectedValue) => {
+    await tauriExecute<void, [string, unknown]>(
+      browserToUse,
+      (tauri, cmd, rejectedValue) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -280,8 +303,9 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockRejectedValueOnce = async (value: unknown) => {
-    await browserToUse.execute<void, [string, unknown]>(
-      (cmd, rejectedValue) => {
+    await tauriExecute<void, [string, unknown]>(
+      browserToUse,
+      (tauri, cmd, rejectedValue) => {
         // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
@@ -297,13 +321,17 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
 
   mock.mockClear = async () => {
     // Clear mock history
-    await browserToUse.execute<void, [string]>((cmd) => {
-      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      const mockObj = window.__wdio_mocks__?.[cmd];
-      if (mockObj) {
-        mockObj.mockClear();
-      }
-    }, command);
+    await tauriExecute<void, [string]>(
+      browserToUse,
+      (tauri, cmd) => {
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        const mockObj = window.__wdio_mocks__?.[cmd];
+        if (mockObj) {
+          mockObj.mockClear();
+        }
+      },
+      command,
+    );
     outerMockClear();
 
     return mock;
@@ -311,13 +339,17 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
 
   mock.mockReset = async () => {
     // Reset inner implementation to an empty function and clear mock history
-    await browserToUse.execute<void, [string]>((cmd) => {
-      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      const mockObj = window.__wdio_mocks__?.[cmd];
-      if (mockObj) {
-        mockObj.mockReset();
-      }
-    }, command);
+    await tauriExecute<void, [string]>(
+      browserToUse,
+      (tauri, cmd) => {
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        const mockObj = window.__wdio_mocks__?.[cmd];
+        if (mockObj) {
+          mockObj.mockReset();
+        }
+      },
+      command,
+    );
     outerMockReset();
 
     // Vitest mockReset doesn't clear mock history so we need to explicitly clear both mocks
@@ -338,18 +370,23 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockReturnThis = async () => {
-    return await browserToUse.execute<void, [string]>((cmd) => {
-      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      const mockObj = window.__wdio_mocks__?.[cmd];
-      if (mockObj) {
-        mockObj.mockReturnThis();
-      }
-    }, command);
+    return await tauriExecute<void, [string]>(
+      browserToUse,
+      (tauri, cmd) => {
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        const mockObj = window.__wdio_mocks__?.[cmd];
+        if (mockObj) {
+          mockObj.mockReturnThis();
+        }
+      },
+      command,
+    );
   };
 
   mock.withImplementation = async (implFn, callbackFn) => {
-    return await browserToUse.execute<unknown, [string, string, string]>(
-      async (cmd, implFnStr, callbackFnStr) => {
+    return await tauriExecute<unknown, [string, string, string]>(
+      browserToUse,
+      async (tauri, cmd, implFnStr, callbackFnStr) => {
         const callback = new Function(`return ${callbackFnStr}`)();
         const impl = new Function(`return ${implFnStr}`)();
         let result: unknown | Promise<unknown>;
@@ -358,8 +395,8 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
         const mockObj = window.__wdio_mocks__?.[cmd];
         if (mockObj) {
           mockObj.withImplementation(impl, () => {
-            // @ts-expect-error - window.__TAURI__ is available
-            result = callback(window.__TAURI__);
+            // Use the tauri parameter passed in
+            result = callback(tauri);
           });
         }
 
