@@ -10,6 +10,8 @@ const log = createLogger('tauri-service', 'service');
  * Tauri worker service
  */
 export default class TauriWorkerService {
+  private browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
+
   constructor(_options: TauriServiceOptions, _capabilities: TauriCapabilities) {
     log.debug('TauriWorkerService initialized');
   }
@@ -23,6 +25,7 @@ export default class TauriWorkerService {
     browser: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser,
   ): Promise<void> {
     log.debug('Initializing Tauri worker service');
+    this.browser = browser;
 
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
@@ -136,26 +139,26 @@ export default class TauriWorkerService {
    * This is critical for retry functionality - without explicit session deletion,
    * retries fail with "invalid session id" errors
    */
-  async afterSession(
-    _config: unknown,
-    _capabilities: TauriCapabilities,
-    _specs: string[],
-    browser: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser,
-  ): Promise<void> {
+  async afterSession(_config: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     log.debug('Cleaning up session...');
+
+    if (!this.browser) {
+      log.warn('No browser instance available for session cleanup');
+      return;
+    }
 
     try {
       // Delete WebDriver session explicitly for clean retry handling
-      if (browser && !browser.isMultiremote) {
-        const stdBrowser = browser as WebdriverIO.Browser;
+      if (!this.browser.isMultiremote) {
+        const stdBrowser = this.browser as WebdriverIO.Browser;
         if (stdBrowser.sessionId) {
           log.debug(`Deleting session: ${stdBrowser.sessionId}`);
           await stdBrowser.deleteSession();
           log.debug('Session deleted successfully');
         }
-      } else if (browser && browser.isMultiremote) {
+      } else {
         // Handle multiremote cleanup
-        const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
+        const mrBrowser = this.browser as WebdriverIO.MultiRemoteBrowser;
         for (const instanceName of mrBrowser.instances) {
           try {
             const instance = mrBrowser.getInstance(instanceName);
