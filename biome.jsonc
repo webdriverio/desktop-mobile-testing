@@ -10,6 +10,7 @@
       "!**/coverage",
       // ignore electron build files
       "!**/dist",
+      "!**/dist-js",
       "!**/out",
       // ignore turbo files
       "!.turbo",
