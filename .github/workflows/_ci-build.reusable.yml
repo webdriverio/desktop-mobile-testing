@@ -69,7 +69,7 @@ jobs:
 
       # Upload build artifacts, but only from Linux
       # This is because Linux builds are most consistent and used by all other jobs
-      # The artifacts include all dist/ and cjs/ directories from all packages
+      # The artifacts include all dist/ and dist-js/ directories from all packages
       # Using GitHub Actions cache with ~90 day retention (vs. 1 day for regular artifacts)
       - name: 📦 Upload Package Build Artifacts
         id: upload-archive
@@ -78,6 +78,6 @@ jobs:
         with:
           name: wdio-electron-service
           output: wdio-electron-service-build/artifact.zip
-          paths: packages/*/dist
+          paths: packages/*/dist packages/*/dist-js
           cache_key_prefix: wdio-electron-build
           retention_days: '90'
