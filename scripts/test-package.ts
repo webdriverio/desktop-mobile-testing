@@ -203,7 +203,8 @@ async function testExample(
   }
 
   // Create isolated test environment to avoid pnpm hoisting issues
-  const tempDir = normalize(join(tmpdir(), `wdio-package-test-${Date.now()}`));
+  const testId = Date.now();
+  const tempDir = normalize(join(tmpdir(), `wdio-package-test-${testId}`));
   const packageDir = normalize(join(tempDir, packageName));
 
   try {
@@ -226,7 +227,7 @@ async function testExample(
     // Build overrides and packages to install based on service type
     const overrides: Record<string, string> = {
       '@wdio/native-utils': `file:${packages.utilsPath}`,
-      'expect-webdriverio': '5.6.1',
+      'expect-webdriverio': '5.6.1', // Pin version to satisfy peer dependency from @wdio/runner
     };
     const packagesToInstall: string[] = [packages.utilsPath];
 
@@ -272,7 +273,7 @@ async function testExample(
       const cargoTomlPath = join(packageDir, 'src-tauri', 'Cargo.toml');
 
       if (existsSync(cargoTomlPath)) {
-        const cargoToml = readFileSync(cargoTomlPath, 'utf-8');
+        let cargoToml = readFileSync(cargoTomlPath, 'utf-8');
         // Check if plugin is referenced as a path dependency
         if (cargoToml.includes('tauri-plugin-wdio') && cargoToml.includes('path =')) {
           // Copy plugin source to make it accessible from isolated environment
@@ -290,6 +291,20 @@ async function testExample(
             } else {
               log(`⚠️  Plugin permissions directory not found at ${permissionsDir}`);
             }
+
+            // Update Cargo.toml path to point to the correct location in isolated environment
+            // From tempDir/tauri-app/src-tauri, ../../packages/tauri-plugin points to tempDir/packages/tauri-plugin
+            // Original path: ../../../../packages/tauri-plugin (for monorepo)
+            // Isolated path: Use absolute path to avoid Cargo path resolution issues
+            const oldPathPattern =
+              /(tauri-plugin-wdio\s*=\s*\{\s*path\s*=\s*)"\.\.\/\.\.\/\.\.\/\.\.\/packages\/tauri-plugin"(\s*\})/;
+            if (oldPathPattern.test(cargoToml)) {
+              // Use absolute path to ensure Cargo can find it
+              const absolutePluginPath = normalize(pluginDestDir);
+              cargoToml = cargoToml.replace(oldPathPattern, `$1"${absolutePluginPath}"$2`);
+              writeFileSync(cargoTomlPath, cargoToml);
+              log(`✅ Updated Cargo.toml path dependency to absolute path: ${absolutePluginPath}`);
+            }
           } else {
             log(`⚠️  Plugin source not found at ${pluginSourceDir}`);
           }
@@ -298,12 +313,35 @@ async function testExample(
     }
 
     // Handle pre-built binaries for Tauri (skipBuild only applies to Tauri)
-    // Electron apps are always built in isolated environments (like electron-service repo)
-    if (skipBuild && service === 'tauri') {
-      // Tauri apps: need to build plugin JS and web frontend even with pre-built binary
-      if (packageJson.scripts?.['build:js']) {
-        execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+    // For Tauri apps: always copy the plugin JavaScript to the isolated environment
+    // This is needed for the app's build:web script to find the plugin
+    if (service === 'tauri') {
+      const pluginSourceDir = join(rootDir, 'packages', 'tauri-plugin');
+      const pluginDistJsDir = join(pluginSourceDir, 'dist-js');
+
+      // The built plugin should already exist from the main pnpm build step
+      // Copy the built plugin JS to the location expected by build:web script
+      // The build:web script looks for ../../../packages/tauri-plugin/dist-js/index.js
+      // From packageDir, that would be: tempDir/packages/tauri-plugin/dist-js/index.js
+      const pluginDestParentDir = join(tempDir, 'packages', 'tauri-plugin');
+      const pluginDestJsDir = join(pluginDestParentDir, 'dist-js');
+      if (existsSync(pluginDistJsDir)) {
+        log(`Copying plugin JavaScript to isolated environment...`);
+        // Ensure parent directory exists
+        mkdirSync(pluginDestParentDir, { recursive: true });
+        // Remove existing dist-js if it exists to avoid nested copies
+        if (existsSync(pluginDestJsDir)) {
+          rmSync(pluginDestJsDir, { recursive: true, force: true });
+        }
+        // Copy dist-js directory to the correct location
+        cpSync(pluginDistJsDir, pluginDestJsDir, { recursive: true });
+        log(`✅ Plugin JavaScript copied successfully`);
+      } else {
+        throw new Error(`Plugin JavaScript build not found at ${pluginDistJsDir}`);
       }
+
+      // Run the build:web script which will copy the plugin JS into dist/plugins
+      // The script (scripts/build-web.ts) handles both monorepo and isolated paths
       if (packageJson.scripts?.['build:web']) {
         execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
       }
@@ -441,6 +479,19 @@ async function testExample(
     }
     throw error;
   } finally {
+    // Copy logs back to source directory for debugging
+    const logsSourceDir = join(packageDir, 'logs');
+    if (existsSync(logsSourceDir)) {
+      const logsDestDir = join(packagePath, `logs-${testId}`);
+      try {
+        mkdirSync(dirname(logsDestDir), { recursive: true });
+        cpSync(logsSourceDir, logsDestDir, { recursive: true });
+        log(`📋 Copied logs to ${logsDestDir}`);
+      } catch (logError) {
+        console.error(`⚠️  Failed to copy logs: ${logError instanceof Error ? logError.message : String(logError)}`);
+      }
+    }
+
     // Clean up isolated environment
     if (existsSync(tempDir)) {
       log(`Cleaning up isolated test environment`);

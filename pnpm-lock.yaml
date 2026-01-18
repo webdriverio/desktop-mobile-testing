@@ -295,7 +295,7 @@ importers:
         specifier: ^2.0.0
         version: 2.4.4
       '@tauri-apps/plugin-log':
-        specifier: ^2.7.1
+        specifier: 2.7.1
         version: 2.7.1
       '@wdio/tauri-plugin':
         specifier: workspace:*
@@ -611,7 +611,7 @@ importers:
         specifier: ^2.0.0
         version: 2.4.4
       '@tauri-apps/plugin-log':
-        specifier: ^2.7.1
+        specifier: 2.7.1
         version: 2.7.1
     devDependencies:
       '@tauri-apps/cli':
@@ -932,6 +932,9 @@ importers:
         specifier: ^4.0.17
         version: 4.0.17
     devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.11
       typescript:
         specifier: ^5.0.0
         version: 5.9.3

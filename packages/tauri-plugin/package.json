@@ -17,7 +17,7 @@
   },
   "files": ["README.md", "dist-js"],
   "scripts": {
-    "build:js": "tsc guest-js/index.ts --outDir dist-js --module ESNext --moduleResolution bundler --target ESNext --declaration --esModuleInterop --skipLibCheck"
+    "build:js": "tsx scripts/build-guest-js.ts"
   },
   "keywords": ["tauri", "webdriverio", "testing", "automation"],
   "author": "WebDriverIO Community",
@@ -28,6 +28,7 @@
     "@vitest/spy": "^4.0.17"
   },
   "devDependencies": {
+    "esbuild": "^0.25.11",
     "typescript": "^5.0.0"
   }
 }
