@@ -127,8 +127,52 @@ export default class TauriWorkerService {
     // Post-test logic if needed
   }
 
-  async after(): Promise<void> {
+  async after(_results: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     // Cleanup if needed
+  }
+
+  /**
+   * Clean up session after tests complete
+   * This is critical for retry functionality - without explicit session deletion,
+   * retries fail with "invalid session id" errors
+   */
+  async afterSession(
+    _config: unknown,
+    _capabilities: TauriCapabilities,
+    _specs: string[],
+    browser: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser,
+  ): Promise<void> {
+    log.debug('Cleaning up session...');
+
+    try {
+      // Delete WebDriver session explicitly for clean retry handling
+      if (browser && !browser.isMultiremote) {
+        const stdBrowser = browser as WebdriverIO.Browser;
+        if (stdBrowser.sessionId) {
+          log.debug(`Deleting session: ${stdBrowser.sessionId}`);
+          await stdBrowser.deleteSession();
+          log.debug('Session deleted successfully');
+        }
+      } else if (browser && browser.isMultiremote) {
+        // Handle multiremote cleanup
+        const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
+        for (const instanceName of mrBrowser.instances) {
+          try {
+            const instance = mrBrowser.getInstance(instanceName);
+            if (instance.sessionId) {
+              log.debug(`Deleting session for instance ${instanceName}: ${instance.sessionId}`);
+              await instance.deleteSession();
+              log.debug(`Session deleted for instance ${instanceName}`);
+            }
+          } catch (error) {
+            log.warn(`Failed to delete session for instance ${instanceName}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      log.warn('Failed to delete session:', error);
+      // Don't throw - allow cleanup to continue
+    }
   }
 
   /**

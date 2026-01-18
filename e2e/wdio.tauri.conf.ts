@@ -234,9 +234,9 @@ export const config = {
   runner: 'local',
   specs,
   exclude: [],
-  // Tauri-driver only supports one session at a time, so limit to 1 instance
-  maxInstances: 1,
-  maxInstancesPerCapability: 1,
+  // Auto-detection: maxInstances > 1 enables per-worker drivers for parallel execution
+  // Each worker gets its own tauri-driver process on a unique port
+  maxInstances: envContext.isMultiremote ? 1 : 3, // Allow 3 parallel workers in standard mode
   capabilities,
   // Connect to tauri-driver instead of spawning a browser driver
   ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
