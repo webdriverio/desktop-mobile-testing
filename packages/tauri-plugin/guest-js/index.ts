@@ -50,11 +50,6 @@ declare global {
     };
     wdioTauri?: {
       execute: (script: string, args?: unknown[]) => Promise<unknown>;
-      setMock: (command: string, config: unknown) => Promise<void>;
-      getMock: (command: string) => Promise<unknown | null>;
-      clearMocks: () => Promise<void>;
-      resetMocks: () => Promise<void>;
-      restoreMocks: () => Promise<void>;
       waitForInit: () => Promise<void>;
     };
     __vitest_spy__?: typeof vitestSpy;
@@ -109,72 +104,9 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
   }
 }
 
-/**
- * Set a mock for a Tauri command
- * @param command - Command name to mock
- * @param config - Mock configuration
- */
-export async function setMock(command: string, config: unknown): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|set-mock', {
-      command,
-      config,
-    } as InvokeArgs);
-  } catch (error) {
-    throw new Error(`Failed to set mock for ${command}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Get mock configuration for a command
- * @param command - Command name
- * @returns Mock configuration or null
- */
-export async function getMock(command: string): Promise<unknown | null> {
-  try {
-    const invoke = await getInvoke();
-    return await invoke('plugin:wdio|get-mock', { command } as InvokeArgs);
-  } catch (error) {
-    throw new Error(`Failed to get mock for ${command}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Clear all mocks
- */
-export async function clearMocks(): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|clear-mocks');
-  } catch (error) {
-    throw new Error(`Failed to clear mocks: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Reset all mocks
- */
-export async function resetMocks(): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|reset-mocks');
-  } catch (error) {
-    throw new Error(`Failed to reset mocks: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Restore all mocks
- */
-export async function restoreMocks(): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|restore-mocks');
-  } catch (error) {
-    throw new Error(`Failed to restore mocks: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
+// NOTE: Mock commands (setMock, getMock, clearMocks, resetMocks, restoreMocks) removed.
+// Mocking is now JavaScript-only via window.__wdio_mocks__ and invoke interception.
+// No backend Rust commands are needed for mocking - it's all handled in the frontend.
 
 /**
  * Get the console forwarding setup code as a string
@@ -212,12 +144,36 @@ export function getConsoleForwardingCode(): string {
         }
       }
 
-      // Wrap console methods
-      console.log = function() { forward('trace', arguments); };
-      console.debug = function() { forward('debug', arguments); };
-      console.info = function() { forward('info', arguments); };
-      console.warn = function() { forward('warn', arguments); };
-      console.error = function() { forward('error', arguments); };
+      // Wrap console methods using Object.defineProperty (works on WebKit)
+      try {
+        Object.defineProperty(console, 'log', {
+          value: function() { forward('trace', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'debug', {
+          value: function() { forward('debug', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'info', {
+          value: function() { forward('info', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'warn', {
+          value: function() { forward('warn', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'error', {
+          value: function() { forward('error', arguments); },
+          writable: true,
+          configurable: true
+        });
+      } catch (err) {
+        // If Object.defineProperty fails, console forwarding won't work
+      }
     })();
   `;
 }
@@ -253,63 +209,87 @@ function setupConsoleForwarding(): void {
     trace: console.trace,
   };
 
-  // Try to forward console methods (may fail on WebKit where console properties are readonly)
+  // Use Object.defineProperty to override console methods (works on WebKit)
   try {
     // Forward console.log to trace level
-    console.log = (...args: unknown[]) => {
-      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-      originalConsole.log(...args);
-      forwardToTauri('trace', message).catch(() => {
-        // Ignore errors
-      });
-    };
+    Object.defineProperty(console, 'log', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.log(...args);
+        forwardToTauri('trace', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
 
     // Forward console.debug
-    console.debug = (...args: unknown[]) => {
-      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-      originalConsole.debug(...args);
-      forwardToTauri('debug', message).catch(() => {
-        // Ignore errors
-      });
-    };
+    Object.defineProperty(console, 'debug', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.debug(...args);
+        forwardToTauri('debug', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
 
     // Forward console.info
-    console.info = (...args: unknown[]) => {
-      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-      originalConsole.info(...args);
-      forwardToTauri('info', message).catch(() => {
-        // Ignore errors
-      });
-    };
+    Object.defineProperty(console, 'info', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.info(...args);
+        forwardToTauri('info', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
 
     // Forward console.warn
-    console.warn = (...args: unknown[]) => {
-      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-      originalConsole.warn(...args);
-      forwardToTauri('warn', message).catch(() => {
-        // Ignore errors
-      });
-    };
+    Object.defineProperty(console, 'warn', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.warn(...args);
+        forwardToTauri('warn', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
 
     // Forward console.error
-    console.error = (...args: unknown[]) => {
-      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-      originalConsole.error(...args);
-      forwardToTauri('error', message).catch(() => {
-        // Ignore errors
-      });
-    };
+    Object.defineProperty(console, 'error', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.error(...args);
+        forwardToTauri('error', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
 
     // Forward console.trace
-    console.trace = (...args: unknown[]) => {
-      const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-      originalConsole.trace(...args);
-      forwardToTauri('trace', message).catch(() => {
-        // Ignore errors
-      });
-    };
+    Object.defineProperty(console, 'trace', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.trace(...args);
+        forwardToTauri('trace', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
   } catch (_error) {
-    // Console properties are readonly (e.g., on WebKit), skip console forwarding
+    // If Object.defineProperty fails, console forwarding won't work
     // Console logs will still work but won't be forwarded to Tauri log plugin
   }
 }
@@ -332,34 +312,39 @@ function setupInvokeInterception(): void {
   const trySetup = () => {
     attempts++;
 
-    if (!window.__TAURI__?.core?.invoke) {
+    // Check if window.__TAURI__.core is available and is an object
+    const core = window.__TAURI__?.core;
+    if (!core || typeof core !== 'object') {
       if (attempts < maxAttempts) {
-        console.log(
-          `[WDIO Tauri Plugin] Waiting for window.__TAURI__.core.invoke (attempt ${attempts}/${maxAttempts})`,
-        );
+        console.log(`[WDIO Tauri Plugin] Waiting for window.__TAURI__.core (attempt ${attempts}/${maxAttempts})`);
         setTimeout(trySetup, retryInterval);
         return;
       } else {
-        console.warn(
-          '[WDIO Tauri Plugin] Timeout waiting for window.__TAURI__.core.invoke - invoke interception not set up',
-        );
+        console.warn('[WDIO Tauri Plugin] Timeout waiting for window.__TAURI__.core - invoke interception not set up');
         return;
       }
     }
 
-    // Store the original invoke function with proper binding
-    const originalInvoke = window.__TAURI__.core.invoke.bind(window.__TAURI__.core);
+    // Check if we already have an invoke interceptor set up
+    if ((core as { _wdioInvokeInterceptor?: boolean })._wdioInvokeInterceptor) {
+      console.log('[WDIO Tauri Plugin] Invoke interception already set up');
+      return;
+    }
 
-    // Wrap invoke to check for mocks
-    window.__TAURI__.core.invoke = async (cmd: string, args?: InvokeArgs): Promise<unknown> => {
+    // Get the original invoke function if it exists
+    const originalInvoke =
+      typeof (core as { invoke?: unknown }).invoke === 'function'
+        ? (core as { invoke: (...args: unknown[]) => Promise<unknown> }).invoke.bind(core)
+        : null;
+
+    // Create a wrapped invoke function
+    const wrappedInvoke = async (cmd: string, args?: InvokeArgs): Promise<unknown> => {
       // Check if there's a mock for this command
       const mockFn = window.__wdio_mocks__?.[cmd];
 
       if (mockFn && typeof mockFn === 'function') {
         console.log(`[WDIO Tauri Plugin] Intercepted invoke for '${cmd}' - using mock`);
         try {
-          // Call the mock function with the args (pass undefined for no args, or the actual args)
-          // Tauri commands can be called as invoke(cmd) or invoke(cmd, args)
           const result = await mockFn(args);
           return result;
         } catch (error) {
@@ -368,11 +353,32 @@ function setupInvokeInterception(): void {
         }
       }
 
-      // No mock found, call the original invoke
-      return originalInvoke(cmd, args);
+      // No mock found, call the original invoke if available
+      if (originalInvoke) {
+        return originalInvoke(cmd, args);
+      }
+
+      // No original invoke, try to get it dynamically
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        return invoke(cmd, args);
+      } catch (_error) {
+        throw new Error(`Tauri API not available for command: ${cmd}`);
+      }
     };
 
-    console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete');
+    // Use Object.defineProperty with a getter to ensure interception persists
+    try {
+      Object.defineProperty(core, 'invoke', {
+        value: wrappedInvoke,
+        writable: true,
+        configurable: true,
+      });
+      (core as { _wdioInvokeInterceptor?: boolean })._wdioInvokeInterceptor = true;
+      console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete');
+    } catch (_error) {
+      console.error('[WDIO Tauri Plugin] Failed to set up invoke interception:', _error);
+    }
   };
 
   trySetup();
@@ -408,13 +414,9 @@ export async function init(): Promise<void> {
   // Expose wdioTauri on window object for backward compatibility
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
   // The API functions will check for __TAURI__ when they're called
+  // Mock commands are not exposed here - mocking is handled via window.__wdio_mocks__
   window.wdioTauri = {
     execute,
-    setMock,
-    getMock,
-    clearMocks,
-    resetMocks,
-    restoreMocks,
     waitForInit,
   };
 
@@ -462,8 +464,13 @@ if (typeof window !== 'undefined') {
   for (const msg of initMessages) {
     console.log(msg);
   }
-  // Start initialization immediately, store the promise
-  initPromise = init();
+  if (typeof document !== 'undefined' && document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initPromise = init();
+    });
+  } else {
+    initPromise = init();
+  }
 } else {
   initMessages.push('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
   for (const msg of initMessages) {

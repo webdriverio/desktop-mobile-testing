@@ -55,6 +55,9 @@ export interface TauriMockInstance extends Omit<Mock, MockOverride> {
   update(): Promise<TauriMock>;
   __isTauriMock: boolean;
   mock: TauriMockContext;
+  results: MockResult[];
+  invocationCallOrder: number[];
+  lastCall?: unknown;
 }
 
 /**

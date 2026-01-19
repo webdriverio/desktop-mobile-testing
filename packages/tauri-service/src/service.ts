@@ -303,12 +303,37 @@ export default class TauriWorkerService {
             }
           }
 
-          // Wrap console methods
-          console.log = function() { forward(LogLevel.Trace, arguments); };
-          console.debug = function() { forward(LogLevel.Debug, arguments); };
-          console.info = function() { forward(LogLevel.Info, arguments); };
-          console.warn = function() { forward(LogLevel.Warn, arguments); };
-          console.error = function() { forward(LogLevel.Error, arguments); };
+          // Wrap console methods using Object.defineProperty (works on WebKit)
+          try {
+            Object.defineProperty(console, 'log', {
+              value: function() { forward(LogLevel.Trace, arguments); },
+              writable: true,
+              configurable: true
+            });
+            Object.defineProperty(console, 'debug', {
+              value: function() { forward(LogLevel.Debug, arguments); },
+              writable: true,
+              configurable: true
+            });
+            Object.defineProperty(console, 'info', {
+              value: function() { forward(LogLevel.Info, arguments); },
+              writable: true,
+              configurable: true
+            });
+            Object.defineProperty(console, 'warn', {
+              value: function() { forward(LogLevel.Warn, arguments); },
+              writable: true,
+              configurable: true
+            });
+            Object.defineProperty(console, 'error', {
+              value: function() { forward(LogLevel.Error, arguments); },
+              writable: true,
+              configurable: true
+            });
+          } catch (err) {
+            // If Object.defineProperty fails, console forwarding won't work
+            originalConsole.warn('[WDIO Console Forwarding] Failed to override console methods:', err);
+          }
         })();
 
         // Now execute the test script with wrapped console
