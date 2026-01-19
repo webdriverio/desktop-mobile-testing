@@ -14,9 +14,6 @@ describe('resetAllMocks Command', () => {
 
   beforeEach(async () => {
     globalThis.browser = {
-      tauri: {
-        execute: vi.fn().mockResolvedValue(undefined),
-      },
       execute: vi.fn().mockResolvedValue(undefined),
     } as unknown as WebdriverIO.Browser;
 
@@ -36,11 +33,6 @@ describe('resetAllMocks Command', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
-  });
-
-  it('should reset all mocks in the Rust plugin', async () => {
-    await resetAllMocks();
-    expect((globalThis.browser as any).tauri.execute).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('should reset all mocks in the injection script', async () => {

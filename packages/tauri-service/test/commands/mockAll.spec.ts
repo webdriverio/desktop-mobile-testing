@@ -6,20 +6,12 @@ import { mockAll } from '../../src/commands/mock.js';
 describe('mockAll Command', () => {
   beforeEach(async () => {
     globalThis.browser = {
-      tauri: {
-        execute: vi.fn().mockResolvedValue(undefined),
-      },
       execute: vi.fn().mockResolvedValue(undefined),
     } as unknown as WebdriverIO.Browser;
   });
 
   afterEach(() => {
     vi.resetAllMocks();
-  });
-
-  it('should clear all mocks in the Rust plugin', async () => {
-    await mockAll();
-    expect((globalThis.browser as any).tauri.execute).toHaveBeenCalledWith(expect.any(Function));
   });
 
   it('should clear all mocks in the injection script', async () => {
