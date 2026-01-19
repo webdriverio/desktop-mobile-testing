@@ -106,3 +106,39 @@ pub(crate) async fn execute<R: Runtime>(
         }
     }
 }
+
+/// Log a message from the frontend - tauri-service adds [Tauri:Frontend] prefix
+#[command]
+pub(crate) fn log_frontend<R: Runtime>(
+    _window: WebviewWindow<R>,
+    level: String,
+    message: String,
+) -> Result<()> {
+    match level.as_str() {
+        "trace" => log::trace!(target: "frontend", "{}", message),
+        "debug" => log::debug!(target: "frontend", "{}", message),
+        "info" => log::info!(target: "frontend", "{}", message),
+        "warn" => log::warn!(target: "frontend", "{}", message),
+        "error" => log::error!(target: "frontend", "{}", message),
+        _ => return Err(crate::Error::ExecuteError(format!("Unknown log level: {}", level))),
+    }
+    Ok(())
+}
+
+/// Log a message from the backend - tauri-service adds [Tauri:Backend] prefix
+#[command]
+pub(crate) fn log_backend<R: Runtime>(
+    _window: WebviewWindow<R>,
+    level: String,
+    message: String,
+) -> Result<()> {
+    match level.as_str() {
+        "trace" => log::trace!("[BACKEND:TRACE] {}", message),
+        "debug" => log::debug!("[BACKEND:DEBUG] {}", message),
+        "info" => log::info!("[BACKEND:INFO] {}", message),
+        "warn" => log::warn!("[BACKEND:WARN] {}", message),
+        "error" => log::error!("[BACKEND:ERROR] {}", message),
+        _ => return Err(crate::Error::ExecuteError(format!("Unknown log level: {}", level))),
+    }
+    Ok(())
+}

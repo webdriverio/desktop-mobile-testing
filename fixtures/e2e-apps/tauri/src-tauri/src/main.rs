@@ -183,6 +183,7 @@ async fn write_clipboard(content: String) -> Result<(), String> {
 /// Generate test logs at various levels for E2E testing
 #[tauri::command]
 fn generate_test_logs() -> Result<String, String> {
+    // Use log::info!() - the log plugin outputs to stdout, which tauri-driver captures
     log::trace!("[Test] This is a TRACE level log");
     log::debug!("[Test] This is a DEBUG level log");
     log::info!("[Test] This is an INFO level log");
@@ -191,7 +192,7 @@ fn generate_test_logs() -> Result<String, String> {
     Ok("Logs generated".to_string())
 }
 
-/// Custom frontend logging command that uses target="frontend" instead of "webview"
+/// Custom frontend logging command that uses target="frontend" for detection
 #[tauri::command]
 fn log_frontend(level: String, message: String) -> Result<(), String> {
     match level.as_str() {
@@ -209,14 +210,27 @@ fn main() {
     // Log application startup at various levels
     log::info!("[App] Tauri application starting");
     log::debug!("[App] Debug: Application initialization");
+
+    // Get log level from environment variable, default to Info for testing
+    let log_level = std::env::var("TAURI_LOG_LEVEL")
+        .unwrap_or_else(|_| "info".to_string());
+    let level_filter = match log_level.to_lowercase().as_str() {
+        "trace" => log::LevelFilter::Trace,
+        "debug" => log::LevelFilter::Debug,
+        "info" => log::LevelFilter::Info,
+        "warn" => log::LevelFilter::Warn,
+        "error" => log::LevelFilter::Error,
+        "off" => log::LevelFilter::Off,
+        _ => log::LevelFilter::Info,
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_wdio::init())
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Trace)  // Enable all log levels
+                .level(level_filter)
                 .targets([
-                    // DIAGNOSTIC TEST: Only Stdout target to see if webview logs appear
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                 ])
                 .build(),

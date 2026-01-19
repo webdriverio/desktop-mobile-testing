@@ -247,7 +247,7 @@ export default class TauriWorkerService {
       const wrappedScript = `
         // Setup console forwarding first
         (function() {
-          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.core) {
+          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.log) {
             return;
           }
 
@@ -269,7 +269,7 @@ export default class TauriWorkerService {
             Error: 5
           };
 
-          // Helper to forward to Tauri log plugin using invoke
+          // Helper to forward to Tauri log plugin
           function forward(level, args) {
             const message = Array.from(args).map(function(arg) {
               return typeof arg === 'string' ? arg : JSON.stringify(arg);
@@ -284,20 +284,15 @@ export default class TauriWorkerService {
               originalConsole[method](message);
             }
 
-            // Forward to custom frontend logging command with target="frontend"
-            // Using custom command instead of plugin:log|log to avoid target="webview" filtering issues
-            if (window.__TAURI__.core.invoke) {
-              // Map LogLevel enum to string
-              const levelStr = level === LogLevel.Trace ? 'trace' :
-                              level === LogLevel.Debug ? 'debug' :
-                              level === LogLevel.Info ? 'info' :
-                              level === LogLevel.Warn ? 'warn' : 'error';
+            // Forward to Tauri log plugin - the log plugin will output with target="frontend"
+            // Map LogLevel enum to string
+            const levelStr = level === LogLevel.Trace ? 'trace' :
+                            level === LogLevel.Debug ? 'debug' :
+                            level === LogLevel.Info ? 'info' :
+                            level === LogLevel.Warn ? 'warn' : 'error';
 
-              window.__TAURI__.core.invoke('log_frontend', {
-                level: levelStr,
-                message: message
-              }).catch(function(err) {
-                // Log error to original console for debugging
+            if (window.__TAURI__.log[levelStr]) {
+              window.__TAURI__.log[levelStr](message).catch(function(err) {
                 originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
               });
             }

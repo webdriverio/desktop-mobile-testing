@@ -1,4 +1,7 @@
+import { createLogger } from '@wdio/native-utils';
 import type { LogLevel } from './logForwarder.js';
+
+const log = createLogger('tauri-service', 'service');
 
 export interface ParsedLog {
   level: LogLevel;
@@ -30,13 +33,13 @@ const TAURI_DRIVER_PATTERNS = [
 ];
 
 /**
- * Patterns that indicate frontend console logs (forwarded via custom log_frontend command)
+ * Patterns that indicate frontend console logs (forwarded via log_frontend command)
  * These logs come through stdout but originate from the frontend.
  *
  * Frontend logs use target="frontend" and appear in the format:
  * [timestamp][time][frontend][LEVEL] message
  *
- * We identify frontend logs by checking for the [frontend] target or frontend-specific patterns.
+ * We identify frontend logs by checking for the [frontend] target.
  */
 const FRONTEND_LOG_PATTERNS = [
   // Logs with target="frontend" from our custom log_frontend command
@@ -64,6 +67,11 @@ function isTauriDriverLog(line: string): boolean {
  * Check if a log line is from the frontend (console logs forwarded via attachConsole)
  */
 function isFrontendLog(line: string): boolean {
+  // Check for explicit [Tauri:Frontend] prefix
+  if (/\[Tauri:Frontend\]/i.test(line)) {
+    return true;
+  }
+  // Check for [FRONTEND:LEVEL] markers
   return FRONTEND_LOG_PATTERNS.some((pattern) => pattern.test(line));
 }
 
@@ -80,18 +88,21 @@ function extractLogLevel(line: string): LogLevel | undefined {
 }
 
 /**
- * Clean up log message by removing timestamps and brackets
+ * Clean up log message by removing timestamps
+ * Preserve [Tauri:Backend]/[Tauri:Frontend] prefixes and log level brackets
  */
 function cleanLogMessage(line: string): string {
-  // Remove common timestamp patterns: [2024-01-01T12:00:00Z] or [12:00:00]
-  let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\d]*[Z]?\]/g, '');
-  // Remove brackets around log levels: [INFO] or [ERROR]
-  cleaned = cleaned.replace(
-    /\[(ERROR|WARN|INFO|DEBUG|TRACE|Error|Warn|Info|Debug|Trace|error|warn|info|debug|trace)\]/gi,
-    '',
-  );
-  // Remove leading/trailing whitespace and colons
-  cleaned = cleaned.trim().replace(/^:\s*/, '').trim();
+  // If line has Tauri prefix or [frontend] target, preserve it entirely
+  if (/\[Tauri:(Backend|Frontend)\]/.test(line) || /\[frontend\]/.test(line)) {
+    return line;
+  }
+
+  // Remove timestamp patterns like [2026-01-19][15:09:22]
+  let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}\]\[\d{2}:\d{2}:\d{2}\]/g, '');
+  // Remove app name pattern like [tauri_e2e_app]
+  cleaned = cleaned.replace(/\]\[tauri_[a-zA-Z0-9_]+\]/g, ']');
+  // Remove leading/trailing whitespace
+  cleaned = cleaned.trim();
   return cleaned;
 }
 
@@ -149,6 +160,16 @@ export function parseLogLines(lines: string): ParsedLog[] {
     if (parsedLog) {
       parsed.push(parsedLog);
     }
+  }
+
+  if (parsed.length > 0) {
+    log.debug(`[LOG-PARSER] Parsed ${parsed.length} log entries from ${logLines.length} lines`);
+    log.debug(
+      `[LOG-PARSER] Sample: ${parsed
+        .slice(0, 3)
+        .map((p) => p.source + ':' + p.level + ':' + p.message.substring(0, 30))
+        .join(', ')}`,
+    );
   }
 
   return parsed;

@@ -40,6 +40,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("wdio")
         .invoke_handler(tauri::generate_handler![
             commands::execute,
+            commands::log_frontend,
         ])
         .setup(|app, api| {
             #[cfg(mobile)]

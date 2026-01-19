@@ -129,7 +129,8 @@ export function getConsoleForwardingCode(): string {
         error: console.error.bind(console),
       };
 
-      // Helper to forward to Tauri
+      // Helper to forward to Tauri log plugin
+      // The log plugin outputs to stdout with target="frontend"
       function forward(level, args) {
         const message = Array.from(args).map(arg =>
           typeof arg === 'string' ? arg : JSON.stringify(arg)
@@ -139,7 +140,7 @@ export function getConsoleForwardingCode(): string {
         originalConsole[level === 'trace' ? 'log' : level](message);
 
         // Forward to Tauri log plugin
-        if (window.__TAURI__?.log?.[level]) {
+        if (window.__TAURI__.log[level]) {
           window.__TAURI__.log[level](message).catch(() => {});
         }
       }
@@ -188,9 +189,9 @@ function setupConsoleForwarding(): void {
   }
 
   // Helper function to safely forward to Tauri log plugin
+  // Uses window.__TAURI__.log directly - the log plugin outputs to stdout with target="frontend"
   async function forwardToTauri(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string): Promise<void> {
     try {
-      // Check if Tauri log plugin is available
       if (window.__TAURI__?.log?.[level]) {
         await window.__TAURI__.log[level](message);
       }
