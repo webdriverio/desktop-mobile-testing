@@ -1,4 +1,4 @@
-use tauri::{WebviewWindow, command, Runtime, Manager, Listener};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
@@ -22,11 +22,9 @@ pub(crate) async fn execute<R: Runtime>(
 
     let (tx, rx) = mpsc::channel();
 
-    // Generate a unique event ID using UUID
     let event_id = format!("wdio-execute-{}", Uuid::new_v4().to_string());
     log::trace!("Generated event_id: {}", event_id);
 
-    // Set up event listener FIRST to avoid race condition
     let result_tx = tx.clone();
     let error_tx = tx;
     let listener_id = app_handle.listen(&event_id, move |event| {
@@ -35,11 +33,9 @@ pub(crate) async fn execute<R: Runtime>(
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
             if let Some(success) = payload.get("success").and_then(|s| s.as_bool()) {
                 if success {
-                    // Success: extract value directly (no double serialization)
                     let value: JsonValue = payload.get("value").unwrap_or(&JsonValue::Null).clone();
                     let _ = result_tx.send(Ok(value));
                 } else {
-                    // Error: extract error message
                     let error_msg = payload.get("error")
                         .and_then(|e| e.as_str())
                         .unwrap_or("Unknown error")
@@ -50,7 +46,6 @@ pub(crate) async fn execute<R: Runtime>(
         }
     });
 
-    // Build the script with args injected
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
@@ -59,10 +54,9 @@ pub(crate) async fn execute<R: Runtime>(
         request.script.clone()
     };
 
-    // Simplified JS wrapper using ONE emit method (window.__TAURI__.event.emit)
     let script_with_return = format!(
         r#"
-        (async () => {{
+        (async () {{
             try {{
                 const result = await ({0});
                 await window.__TAURI__.event.emit('{1}', {{ success: true, value: result }});
@@ -74,12 +68,10 @@ pub(crate) async fn execute<R: Runtime>(
         script, event_id
     );
 
-    // Execute the script
     log::trace!("Executing script via window.eval()");
     window.eval(&script_with_return)
         .map_err(|e| crate::Error::ExecuteError(format!("Failed to eval script: {}", e)))?;
 
-    // Wait for result with 5s timeout
     log::trace!("Waiting for execute result (5s timeout)");
 
     match rx.recv_timeout(Duration::from_secs(5)) {
@@ -125,20 +117,24 @@ pub(crate) fn log_frontend<R: Runtime>(
     Ok(())
 }
 
-/// Log a message from the backend - tauri-service adds [Tauri:Backend] prefix
+/// Generate test logs - emits events that frontend listens for and logs to console
+/// This bypasses tauri-driver's stdout limitation by routing through frontend console
 #[command]
-pub(crate) fn log_backend<R: Runtime>(
-    _window: WebviewWindow<R>,
-    level: String,
-    message: String,
-) -> Result<()> {
-    match level.as_str() {
-        "trace" => log::trace!("[BACKEND:TRACE] {}", message),
-        "debug" => log::debug!("[BACKEND:DEBUG] {}", message),
-        "info" => log::info!("[BACKEND:INFO] {}", message),
-        "warn" => log::warn!("[BACKEND:WARN] {}", message),
-        "error" => log::error!("[BACKEND:ERROR] {}", message),
-        _ => return Err(crate::Error::ExecuteError(format!("Unknown log level: {}", level))),
+pub(crate) fn generate_test_logs<R: Runtime>(app: tauri::AppHandle<R>) -> Result<()> {
+    let logs = [
+        ("TRACE", "[Test] This is a TRACE level log"),
+        ("DEBUG", "[Test] This is a DEBUG level log"),
+        ("INFO", "[Test] This is an INFO level log"),
+        ("WARN", "[Test] This is a WARN level log"),
+        ("ERROR", "[Test] This is an ERROR level log"),
+    ];
+
+    for (_level, message) in logs {
+        let log_line = format!("[Tauri:Backend] {}", message);
+        if let Err(e) = app.emit("backend-log", &log_line) {
+            log::warn!("Failed to emit backend log event: {}", e);
+        }
     }
+
     Ok(())
 }

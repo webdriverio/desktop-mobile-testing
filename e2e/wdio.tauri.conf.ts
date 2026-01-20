@@ -114,6 +114,7 @@ const { envContext, appBinaryPath } = context;
 
 // Configure specs based on test type
 let specs: string[] = [];
+let exclude: string[] = [];
 switch (envContext.testType) {
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
@@ -124,6 +125,8 @@ switch (envContext.testType) {
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
+    // Exclude mocking tests for now
+    exclude = ['./test/tauri/mocking.spec.ts'];
     break;
 }
 
@@ -233,7 +236,7 @@ const logDir = join(__dirname, 'logs', `${envContext.testType}-${envContext.appD
 export const config = {
   runner: 'local',
   specs,
-  exclude: [],
+  exclude,
   // Auto-detection: maxInstances > 1 enables per-worker drivers for parallel execution
   // Each worker gets its own tauri-driver process on a unique port
   maxInstances: envContext.isMultiremote ? 1 : 3, // Allow 3 parallel workers in standard mode

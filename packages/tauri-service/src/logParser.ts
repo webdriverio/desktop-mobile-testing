@@ -89,18 +89,25 @@ function extractLogLevel(line: string): LogLevel | undefined {
 
 /**
  * Clean up log message by removing timestamps
- * Preserve [Tauri:Backend]/[Tauri:Frontend] prefixes and log level brackets
+ * Handles both tauri-plugin-log format: [timestamp][time][appname][LEVEL] message
+ * And simple_logger format: 2026-01-20T15:41:50.030Z INFO  [tauri_e2e_app] message
  */
 function cleanLogMessage(line: string): string {
   // If line has Tauri prefix or [frontend] target, preserve it entirely
-  if (/\[Tauri:(Backend|Frontend)\]/.test(line) || /\[frontend\]/.test(line)) {
+  if (/\[Tauri:(Backend|Frontend)\]/.test(line) || /\[frontend\]/i.test(line)) {
     return line;
   }
 
-  // Remove timestamp patterns like [2026-01-19][15:09:22]
+  // Remove tauri-plugin-log timestamp patterns like [2026-01-19][15:09:22]
   let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}\]\[\d{2}:\d{2}:\d{2}\]/g, '');
-  // Remove app name pattern like [tauri_e2e_app]
+  // Remove app name pattern like [tauri_e2e_app] from tauri-plugin-log
   cleaned = cleaned.replace(/\]\[tauri_[a-zA-Z0-9_]+\]/g, ']');
+
+  // Remove simple_logger format: 2026-01-20T15:41:50.030Z
+  cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s*/g, '');
+  // Remove app name pattern like [tauri_e2e_app] from simple_logger (without leading ])
+  cleaned = cleaned.replace(/\[[a-zA-Z0-9_-]+\]\s*/g, '');
+
   // Remove leading/trailing whitespace
   cleaned = cleaned.trim();
   return cleaned;

@@ -47,10 +47,15 @@ declare global {
         warn?: (message: string) => Promise<void>;
         error?: (message: string) => Promise<void>;
       };
+      event?: {
+        listen?: (event: string, callback: (event: { payload: unknown }) => void) => Promise<() => void>;
+        emit?: (event: string, payload: unknown) => Promise<void>;
+      };
     };
     wdioTauri?: {
       execute: (script: string, args?: unknown[]) => Promise<unknown>;
       waitForInit: () => Promise<void>;
+      cleanupBackendLogListener?: () => void;
     };
     __vitest_spy__?: typeof vitestSpy;
     __wdio_mocks__?: Record<string, unknown>;
@@ -386,6 +391,49 @@ function setupInvokeInterception(): void {
 }
 
 /**
+ * Setup event listener for backend logs
+ * Backend emits 'backend-log' events that we forward to console for WebDriver capture
+ * This bypasses tauri-driver's stdout limitation by routing through frontend console
+ */
+function setupBackendLogListener(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  // Import listen dynamically - Tauri core/event might not be available immediately
+  // when running in test context where window.__TAURI__ is set up asynchronously
+  const setupListener = async () => {
+    try {
+      // Dynamically import the event module
+      const { listen } = await import('@tauri-apps/api/event');
+
+      // Listen for backend log events and forward to console
+      // This makes backend logs appear in WDIO logs in real-time
+      const removeListener = await listen('backend-log', (event) => {
+        const logMessage = event.payload as string;
+        // Log to console - WebDriver captures this and writes to WDIO logs
+        console.info(logMessage);
+      });
+
+      console.log('[WDIO Tauri Plugin] Backend log listener registered successfully');
+
+      // Store the cleanup function if needed
+      if (!window.wdioTauri) {
+        window.wdioTauri = {} as Window['wdioTauri'];
+      }
+      window.wdioTauri!.cleanupBackendLogListener = () => {
+        removeListener();
+        console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
+      };
+    } catch (error) {
+      console.log(`[WDIO Tauri Plugin] Failed to setup backend log listener: ${error}`);
+    }
+  };
+
+  setupListener();
+}
+
+/**
  * Initialize the plugin frontend API
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
@@ -416,13 +464,16 @@ export async function init(): Promise<void> {
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
   // The API functions will check for __TAURI__ when they're called
   // Mock commands are not exposed here - mocking is handled via window.__wdio_mocks__
-  window.wdioTauri = {
-    execute,
-    waitForInit,
-  };
+  if (!window.wdioTauri) {
+    window.wdioTauri = {} as Window['wdioTauri'];
+  }
+  window.wdioTauri!.execute = execute;
+  window.wdioTauri!.waitForInit = waitForInit;
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
-  messages.push(`[WDIO Tauri Plugin] window.wdioTauri.execute: ${typeof window.wdioTauri.execute}`);
+  messages.push(
+    `[WDIO Tauri Plugin] window.wdioTauri.execute: ${window.wdioTauri?.execute ? 'function' : 'undefined'}`,
+  );
 
   // Log all messages (console.log is synchronous, will work immediately)
   for (const msg of messages) {
@@ -436,6 +487,12 @@ export async function init(): Promise<void> {
   console.log('[WDIO Tauri Plugin] Setting up manual console forwarding for WebDriver compatibility');
   setupConsoleForwarding();
   console.log('[WDIO Tauri Plugin] ✅ Console forwarding initialized');
+
+  // Setup event listener for backend logs
+  // Backend emits 'backend-log' events that we forward to console for WebDriver capture
+  console.log('[WDIO Tauri Plugin] Setting up backend log event listener...');
+  setupBackendLogListener();
+  console.log('[WDIO Tauri Plugin] ✅ Backend log listener initialized');
 
   // Setup invoke interception for mocking support
   console.log('[WDIO Tauri Plugin] Setting up invoke interception for mocking...');

@@ -103,8 +103,6 @@ async fn close_window(window: Window) -> Result<(), String> {
 
 #[tauri::command]
 async fn take_screenshot(_options: Option<ScreenshotOptions>) -> Result<String, String> {
-    // For now, return a placeholder base64 string
-    // In a real implementation, you would use a screenshot library
     Ok("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==".to_string())
 }
 
@@ -132,9 +130,6 @@ async fn get_current_dir() -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-// Test functions removed - skipping parameter tests for now
-
-
 #[tauri::command]
 async fn get_platform_info() -> Result<PlatformInfo, String> {
     let mut sys = System::new_all();
@@ -143,9 +138,8 @@ async fn get_platform_info() -> Result<PlatformInfo, String> {
     let total_memory = sys.total_memory();
     let free_memory = sys.free_memory();
 
-    // Simplified disk info - just return placeholder values for now
-    let total_disk = 1000000000u64; // 1GB placeholder
-    let free_disk = 500000000u64;   // 500MB placeholder
+    let total_disk = 1000000000u64;
+    let free_disk = 500000000u64;
 
     Ok(PlatformInfo {
         os: System::name().unwrap_or_else(|| "Unknown".to_string()),
@@ -180,61 +174,9 @@ async fn write_clipboard(content: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Generate test logs at various levels for E2E testing
-#[tauri::command]
-fn generate_test_logs() -> Result<String, String> {
-    // Use log::info!() - the log plugin outputs to stdout, which tauri-driver captures
-    log::trace!("[Test] This is a TRACE level log");
-    log::debug!("[Test] This is a DEBUG level log");
-    log::info!("[Test] This is an INFO level log");
-    log::warn!("[Test] This is a WARN level log");
-    log::error!("[Test] This is an ERROR level log");
-    Ok("Logs generated".to_string())
-}
-
-/// Custom frontend logging command that uses target="frontend" for detection
-#[tauri::command]
-fn log_frontend(level: String, message: String) -> Result<(), String> {
-    match level.as_str() {
-        "trace" => log::trace!(target: "frontend", "{}", message),
-        "debug" => log::debug!(target: "frontend", "{}", message),
-        "info" => log::info!(target: "frontend", "{}", message),
-        "warn" => log::warn!(target: "frontend", "{}", message),
-        "error" => log::error!(target: "frontend", "{}", message),
-        _ => return Err(format!("Unknown log level: {}", level)),
-    }
-    Ok(())
-}
-
 fn main() {
-    // Log application startup at various levels
-    log::info!("[App] Tauri application starting");
-    log::debug!("[App] Debug: Application initialization");
-
-    // Get log level from environment variable, default to Info for testing
-    let log_level = std::env::var("TAURI_LOG_LEVEL")
-        .unwrap_or_else(|_| "info".to_string());
-    let level_filter = match log_level.to_lowercase().as_str() {
-        "trace" => log::LevelFilter::Trace,
-        "debug" => log::LevelFilter::Debug,
-        "info" => log::LevelFilter::Info,
-        "warn" => log::LevelFilter::Warn,
-        "error" => log::LevelFilter::Error,
-        "off" => log::LevelFilter::Off,
-        _ => log::LevelFilter::Info,
-    };
-
     tauri::Builder::default()
-        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_wdio::init())
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .level(level_filter)
-                .targets([
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-                ])
-                .build(),
-        )
         .invoke_handler(tauri::generate_handler![
             get_window_bounds,
             set_window_bounds,
@@ -250,8 +192,6 @@ fn main() {
             get_platform_info,
             read_clipboard,
             write_clipboard,
-            generate_test_logs,
-            log_frontend
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

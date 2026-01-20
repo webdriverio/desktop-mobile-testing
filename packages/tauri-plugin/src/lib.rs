@@ -1,60 +1,85 @@
-// use std::sync::{Arc, Mutex}; // Disabled for JavaScript-only mocking
+use std::sync::Mutex;
 use tauri::{
-    plugin::{Builder, TauriPlugin},
-    Manager, Runtime,
+    plugin::{self, TauriPlugin},
+    Manager, Runtime, Emitter,
 };
 
 pub use models::*;
 
-#[cfg(desktop)]
 mod desktop;
-#[cfg(mobile)]
-mod mobile;
-
 mod commands;
 mod error;
 mod models;
-// mod mock_store; // Disabled for JavaScript-only mocking
 
 pub use error::{Error, Result};
 
-#[cfg(desktop)]
 use desktop::Wdio;
-#[cfg(mobile)]
-use mobile::Wdio;
 
-/// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the wdio APIs.
-pub trait WdioExt<R: Runtime> {
-    fn wdio(&self) -> &Wdio<R>;
+struct AppHandleHolder {
+    handle: Mutex<Option<Box<dyn std::any::Any + Send + Sync>>>,
 }
 
-impl<R: Runtime, T: Manager<R>> crate::WdioExt<R> for T {
-    fn wdio(&self) -> &Wdio<R> {
-        self.state::<Wdio<R>>().inner()
+static APP_HANDLE: AppHandleHolder = AppHandleHolder {
+    handle: Mutex::new(None),
+};
+
+pub fn set_app_handle<R: Runtime>(app: tauri::AppHandle<R>) {
+    let mut guard = APP_HANDLE.handle.lock().unwrap();
+    *guard = Some(Box::new(app));
+}
+
+struct WdioLogLogger;
+
+impl log::Log for WdioLogLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
     }
-}
 
+    fn log(&self, record: &log::Record) {
+        let line = format!("[Tauri:Backend] {}: {}", record.level(), record.args());
+
+        let guard = APP_HANDLE.handle.lock().unwrap();
+        if let Some(app_any) = &*guard {
+            if let Some(app) = app_any.downcast_ref::<tauri::AppHandle>() {
+                let _ = app.emit("backend-log", &line);
+            }
+        }
+    }
+
+    fn flush(&self) {}
+}
 
 /// Creates the Wdio plugin with default options.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
-    Builder::new("wdio")
+    plugin::Builder::new("wdio")
         .invoke_handler(tauri::generate_handler![
             commands::execute,
             commands::log_frontend,
+            commands::generate_test_logs,
         ])
-        .setup(|app, api| {
-            #[cfg(mobile)]
-            let wdio = mobile::init(app, api)?;
-            #[cfg(desktop)]
-            let wdio = desktop::init(app, api)?;
+        .setup(|app_handle, _api| {
+            set_app_handle(app_handle.clone());
 
-            // Mock store disabled for JavaScript-only mocking
-            // let mock_store = Arc::new(Mutex::new(mock_store::MockStore::new()));
-            // app.manage(mock_store);
-            app.manage(wdio);
+            let logger = Box::new(WdioLogLogger);
+            let _ = log::set_boxed_logger(logger);
+
+            #[cfg(desktop)]
+            let wdio = desktop::init(app_handle, _api)?;
+
+            app_handle.manage(wdio);
 
             Ok(())
         })
         .build()
 }
 
+/// Extension trait for accessing wdio APIs
+pub trait WdioExt<R: Runtime> {
+    fn wdio(&self) -> &Wdio<R>;
+}
+
+impl<R: Runtime, T: Manager<R>> WdioExt<R> for T {
+    fn wdio(&self) -> &Wdio<R> {
+        self.state::<Wdio<R>>().inner()
+    }
+}
