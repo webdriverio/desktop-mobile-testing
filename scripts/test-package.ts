@@ -227,7 +227,6 @@ async function testExample(
     // Build overrides and packages to install based on service type
     const overrides: Record<string, string> = {
       '@wdio/native-utils': `file:${packages.utilsPath}`,
-      'expect-webdriverio': '5.6.1', // Pin version to satisfy peer dependency from @wdio/runner
     };
     const packagesToInstall: string[] = [packages.utilsPath];
 
