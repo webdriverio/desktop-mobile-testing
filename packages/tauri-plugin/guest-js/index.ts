@@ -462,13 +462,20 @@ function setupBackendLogListener(): void {
 
         console.info('[WDIO][Frontend] Backend log listener registered successfully');
 
-        if (!window.wdioTauri) {
-          window.wdioTauri = {} as Window['wdioTauri'];
+        const tauri = window.wdioTauri;
+        if (tauri) {
+          tauri.cleanupBackendLogListener = () => {
+            removeListener();
+            console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
+          };
+        } else {
+          window.wdioTauri = {
+            cleanupBackendLogListener: () => {
+              removeListener();
+              console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
+            },
+          } as Window['wdioTauri'];
         }
-        window.wdioTauri!.cleanupBackendLogListener = () => {
-          removeListener();
-          console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
-        };
       } catch (error) {
         console.log(`[WDIO Tauri Plugin] Failed to setup backend log listener: ${error}`);
       }
@@ -507,11 +514,10 @@ export async function init(): Promise<void> {
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
   // The API functions will check for __TAURI__ when they're called
   // Mock commands are not exposed here - mocking is handled via window.__wdio_mocks__
-  if (!window.wdioTauri) {
-    window.wdioTauri = {} as Window['wdioTauri'];
-  }
-  window.wdioTauri!.execute = execute;
-  window.wdioTauri!.waitForInit = waitForInit;
+  (window as unknown as { wdioTauri: Window['wdioTauri'] }).wdioTauri = {
+    execute,
+    waitForInit,
+  };
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
   messages.push(

@@ -317,7 +317,7 @@ function displayFullOutput(): void {
     return;
   }
 
-  console.log('\n' + '='.repeat(80));
+  console.log(`\n${'='.repeat(80)}`);
   console.log('📋 FULL TEST OUTPUT');
   console.log('='.repeat(80));
 
@@ -336,7 +336,7 @@ function displayFullOutput(): void {
     }
   }
 
-  console.log('\n' + '='.repeat(80));
+  console.log(`\n${'='.repeat(80)}`);
 }
 
 /**

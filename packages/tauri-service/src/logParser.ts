@@ -174,7 +174,7 @@ export function parseLogLines(lines: string): ParsedLog[] {
     log.debug(
       `[LOG-PARSER] Sample: ${parsed
         .slice(0, 3)
-        .map((p) => p.source + ':' + p.level + ':' + p.message.substring(0, 30))
+        .map((p) => `${p.source}:${p.level}:${p.message.substring(0, 30)}`)
         .join(', ')}`,
     );
   }
