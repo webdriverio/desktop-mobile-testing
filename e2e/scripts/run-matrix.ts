@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { loadavg } from 'node:os';
 import { join } from 'node:path';
 import pLimit from 'p-limit';
@@ -200,6 +200,15 @@ async function runTest(
 
     console.log(`  Environment: ${JSON.stringify(testEnv, null, 2)}`);
 
+    // Create log directory for this test
+    const logDir = join(process.cwd(), 'logs', `${envContext.testType}-${appDirName}`);
+    const outputLogPath = join(logDir, 'wdio-output.log');
+
+    // Ensure log directory exists
+    if (!existsSync(logDir)) {
+      mkdirSync(logDir, { recursive: true });
+    }
+
     let result: { code: number; stdout: string; stderr: string };
 
     // Standalone tests run directly with tsx, not through WDIO test runner
@@ -254,6 +263,11 @@ async function runTest(
 
     const duration = Date.now() - startTime;
 
+    // Save output to wdio-output.log
+    const fullOutput = `=== STDOUT ===\n${result.stdout}\n=== STDERR ===\n${result.stderr}`;
+    writeFileSync(outputLogPath, fullOutput, 'utf8');
+    console.log(`📝 Output saved to: ${outputLogPath}`);
+
     if (result.code === 0) {
       console.log(`✅ Test passed: ${testName} (${formatDuration(duration)})`);
       return {
@@ -284,6 +298,45 @@ async function runTest(
       error: errorMessage,
     };
   }
+}
+
+/**
+ * Display full test output at the end of the run
+ * Reads wdio-output.log from each test's log directory and displays it
+ */
+function displayFullOutput(): void {
+  const logsDir = join(process.cwd(), 'logs');
+
+  if (!existsSync(logsDir)) {
+    return;
+  }
+
+  const dirs = readdirSync(logsDir, { withFileTypes: true }).filter((dirent) => dirent.isDirectory());
+
+  if (dirs.length === 0) {
+    return;
+  }
+
+  console.log('\n' + '='.repeat(80));
+  console.log('📋 FULL TEST OUTPUT');
+  console.log('='.repeat(80));
+
+  for (const dir of dirs) {
+    const logDir = join(logsDir, dir.name);
+    const outputLogPath = join(logDir, 'wdio-output.log');
+
+    if (existsSync(outputLogPath)) {
+      console.log(`\n--- ${dir.name}/wdio-output.log ---`);
+      const content = readFileSync(outputLogPath, 'utf8');
+      if (content.trim()) {
+        console.log(content);
+      } else {
+        console.log('(empty)');
+      }
+    }
+  }
+
+  console.log('\n' + '='.repeat(80));
 }
 
 /**
@@ -565,6 +618,9 @@ async function main(): Promise<void> {
 
   // Run tests
   await runTests();
+
+  // Display full test output at the end
+  displayFullOutput();
 }
 
 // Run the tests
