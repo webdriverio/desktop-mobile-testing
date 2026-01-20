@@ -47,27 +47,20 @@ function getLoggerMethod(logger: WdioLogger, level: LogLevel): (...args: unknown
 /**
  * Format log message with context
  */
-function formatLogMessage(source: 'backend' | 'frontend', message: string, instanceId?: string): string {
+function formatLogMessage(source: 'backend' | 'frontend', message: string): string {
   const sourceLabel = source === 'frontend' ? 'Frontend' : 'Backend';
-  const prefix = instanceId ? `[Tauri:${sourceLabel}:${instanceId}]` : `[Tauri:${sourceLabel}]`;
-  return `${prefix} ${message}`;
+  return `[Tauri:${sourceLabel}] ${message}`;
 }
 
 /**
  * Forward a log message to WDIO logger or standalone file writer
  */
-export function forwardLog(
-  source: 'backend' | 'frontend',
-  level: LogLevel,
-  message: string,
-  minLevel: LogLevel,
-  instanceId?: string,
-): void {
+export function forwardLog(source: 'backend' | 'frontend', level: LogLevel, message: string, minLevel: LogLevel): void {
   if (!shouldLog(level, minLevel)) {
     return;
   }
 
-  const formattedMessage = formatLogMessage(source, message, instanceId);
+  const formattedMessage = formatLogMessage(source, message);
 
   log.debug(`[LOG-FORWARDER] source=${source}, level=${level}, message=${message.substring(0, 50)}...`);
 

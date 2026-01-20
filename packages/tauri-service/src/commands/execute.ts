@@ -64,19 +64,67 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
   const scriptString = typeof script === 'function' ? script.toString() : script;
 
-  // Execute via plugin's execute command
+  // Execute via plugin's execute command with better error handling
   // The plugin will inject the Tauri APIs object as the first argument
   const result = await browser.execute(
-    function executeWithinTauri(script: string, ...args) {
-      // @ts-expect-error - Plugin API injected at runtime
-      return window.wdioTauri.execute(script, args);
+    async function executeWithinTauri(script: string, ...args) {
+      // @ts-expect-error - Running in browser context
+      if (typeof window === 'undefined') {
+        return JSON.stringify({ __wdio_error__: 'window is undefined' });
+      }
+      // @ts-expect-error - Running in browser context
+      if (typeof window.wdioTauri === 'undefined') {
+        return JSON.stringify({ __wdio_error__: 'window.wdioTauri is undefined' });
+      }
+      // @ts-expect-error - Running in browser context
+      if (typeof window.wdioTauri.execute !== 'function') {
+        // @ts-expect-error - Running in browser context
+        return JSON.stringify({ __wdio_error__: `window.wdioTauri.execute is ${typeof window.wdioTauri.execute}` });
+      }
+      try {
+        // @ts-expect-error - Running in browser context
+        const execResult = window.wdioTauri.execute(script, args);
+        // Handle Promise results - await them in browser context
+        if (execResult && typeof execResult.then === 'function') {
+          try {
+            const awaited = await execResult;
+            return JSON.stringify({ __wdio_value__: awaited });
+          } catch (promiseError) {
+            return JSON.stringify({
+              __wdio_error__: `Promise error: ${promiseError instanceof Error ? promiseError.message : String(promiseError)}`,
+            });
+          }
+        }
+        return JSON.stringify({ __wdio_value__: execResult });
+      } catch (error) {
+        return JSON.stringify({
+          __wdio_error__: `Execute call error: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
     },
     scriptString,
     ...args,
   );
 
-  log.debug(`Execute result:`, result);
+  // Extract result or error from wrapped response
+  try {
+    if (result && typeof result === 'string') {
+      const parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
+      if (parsed.__wdio_error__) {
+        throw new Error(parsed.__wdio_error__);
+      }
+      if (parsed.__wdio_value__ !== undefined) {
+        log.debug(`Execute result:`, parsed.__wdio_value__);
+        return parsed.__wdio_value__ as ReturnValue;
+      }
+    }
+  } catch (parseError) {
+    throw new Error(
+      `Failed to parse execute result: ${parseError instanceof Error ? parseError.message : String(parseError)}, raw result: ${result}`,
+    );
+  }
 
+  log.debug(`Execute result:`, result);
   return (result as ReturnValue) ?? undefined;
 }
 

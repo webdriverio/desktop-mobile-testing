@@ -4,7 +4,7 @@
  */
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
-import * as vitestSpy from '@vitest/spy';
+import type * as vitestSpy from '@vitest/spy';
 
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
@@ -88,6 +88,21 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
       (async () => {
         const __wdio_tauri = window.__TAURI__;
         const __wdio_args = ${argsJson};
+
+        // Wait for window.__TAURI__.core.invoke to be available
+        // This handles the race condition where window.eval() runs before dynamic imports complete
+        if (!__wdio_tauri?.core?.invoke) {
+          // Wait up to 5 seconds for core.invoke to be set up
+          const startTime = Date.now();
+          const timeout = 5000;
+          while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          if (!__wdio_tauri?.core?.invoke) {
+            throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
+          }
+        }
+
         // Execute the script as a function with tauri as first arg, then spread additional args
         // Await the result in case it's a Promise (most Tauri commands return Promises)
         return await (${script})(__wdio_tauri, ...__wdio_args);
@@ -97,13 +112,20 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
     // Call the plugin command to execute the wrapped script
     // Tauri v2 plugin commands use format: plugin:plugin-name|command-name
     const invoke = await getInvoke();
-    const result = await invoke('plugin:wdio|execute', {
-      request: {
-        script: wrappedScript,
-        args: [],
-      },
-    } as InvokeArgs);
-    return result;
+    console.debug('[WDIO Plugin] Calling invoke with command: plugin:wdio|execute');
+    try {
+      const result = await invoke('plugin:wdio|execute', {
+        request: {
+          script: wrappedScript,
+          args: [],
+        },
+      } as InvokeArgs);
+      console.debug('[WDIO Plugin] Invoke result:', result);
+      return result;
+    } catch (error) {
+      console.error('[WDIO Plugin] Invoke error:', error);
+      throw new Error(`Failed to execute script: ${error instanceof Error ? error.message : String(error)}`);
+    }
   } catch (error) {
     throw new Error(`Failed to execute script: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -397,40 +419,65 @@ function setupInvokeInterception(): void {
  */
 function setupBackendLogListener(): void {
   if (typeof window === 'undefined') {
+    console.info('[WDIO][Frontend] setupBackendLogListener: window is undefined, skipping');
     return;
   }
 
-  // Import listen dynamically - Tauri core/event might not be available immediately
-  // when running in test context where window.__TAURI__ is set up asynchronously
-  const setupListener = async () => {
-    try {
-      // Dynamically import the event module
-      const { listen } = await import('@tauri-apps/api/event');
+  console.info('[WDIO][Frontend] Installing backend-log listener');
 
-      // Listen for backend log events and forward to console
-      // This makes backend logs appear in WDIO logs in real-time
-      const removeListener = await listen('backend-log', (event) => {
-        const logMessage = event.payload as string;
-        // Log to console - WebDriver captures this and writes to WDIO logs
-        console.info(logMessage);
-      });
+  const maxAttempts = 100;
+  const retryInterval = 50;
+  let attempts = 0;
 
-      console.log('[WDIO Tauri Plugin] Backend log listener registered successfully');
+  const trySetup = () => {
+    attempts++;
 
-      // Store the cleanup function if needed
-      if (!window.wdioTauri) {
-        window.wdioTauri = {} as Window['wdioTauri'];
-      }
-      window.wdioTauri!.cleanupBackendLogListener = () => {
-        removeListener();
-        console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
-      };
-    } catch (error) {
-      console.log(`[WDIO Tauri Plugin] Failed to setup backend log listener: ${error}`);
+    if (attempts % 10 === 1) {
+      console.info(`[WDIO][Frontend] Waiting for Tauri (attempt ${attempts}/${maxAttempts})`);
     }
+
+    if (attempts >= maxAttempts) {
+      console.warn('[WDIO][Frontend] Timeout waiting for Tauri - backend log listener not set up');
+      return;
+    }
+
+    if (typeof window.__TAURI__ === 'undefined' || typeof window.__TAURI__.event === 'undefined') {
+      setTimeout(trySetup, retryInterval);
+      return;
+    }
+
+    console.info('[WDIO][Frontend] Tauri ready - setting up backend-log listener');
+
+    const setupListener = async () => {
+      try {
+        console.info('[WDIO][Frontend] Importing @tauri-apps/api/event');
+        const { listen } = await import('@tauri-apps/api/event');
+        console.info('[WDIO][Frontend] Event module imported successfully');
+
+        const removeListener = await listen('backend-log', (event) => {
+          console.info('[WDIO][Frontend] backend-log received:', event.payload);
+          const logMessage = event.payload as string;
+          console.info(logMessage);
+        });
+
+        console.info('[WDIO][Frontend] Backend log listener registered successfully');
+
+        if (!window.wdioTauri) {
+          window.wdioTauri = {} as Window['wdioTauri'];
+        }
+        window.wdioTauri!.cleanupBackendLogListener = () => {
+          removeListener();
+          console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
+        };
+      } catch (error) {
+        console.log(`[WDIO Tauri Plugin] Failed to setup backend log listener: ${error}`);
+      }
+    };
+
+    setupListener();
   };
 
-  setupListener();
+  trySetup();
 }
 
 /**
@@ -455,10 +502,6 @@ export async function init(): Promise<void> {
     `[WDIO Tauri Plugin] window.__TAURI__?.core?.invoke available: ${typeof window.__TAURI__?.core?.invoke !== 'undefined'}`,
   );
   messages.push(`[WDIO Tauri Plugin] window.__TAURI__?.log available: ${typeof window.__TAURI__?.log !== 'undefined'}`);
-
-  // Expose vitest spy on window for mocking support
-  window.__vitest_spy__ = vitestSpy;
-  messages.push('[WDIO Tauri Plugin] Exposed @vitest/spy on window.__vitest_spy__');
 
   // Expose wdioTauri on window object for backward compatibility
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
@@ -509,18 +552,28 @@ export async function init(): Promise<void> {
 }
 
 // Auto-initialize when imported
-// Note: We can't await at module level, but we start the initialization immediately
+// NOTE: We can't await at module level, but we start the initialization immediately
 // and expose a promise that can be awaited by consumers if needed
 const initMessages: string[] = [];
-initMessages.push('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
-initMessages.push(`[WDIO Tauri Plugin] typeof window at module level: ${typeof window}`);
+initMessages.push('[WDIO][CRITICAL] Plugin module loaded - this message must appear in logs');
+initMessages.push(`[WDIO][CRITICAL] typeof window at module level: ${typeof window}`);
+
+// Add visible marker to DOM
+if (typeof document !== 'undefined' && document.body) {
+  const marker = document.createElement('div');
+  marker.id = 'wdio-plugin-loaded';
+  marker.style.cssText =
+    'position:fixed;top:0;left:0;background:red;color:white;padding:10px;z-index:999999;font-size:20px;';
+  marker.textContent = '[WDIO][CRITICAL] Plugin JS loaded!';
+  document.body.appendChild(marker);
+}
 
 let initPromise: Promise<void> | null = null;
 
 if (typeof window !== 'undefined') {
-  initMessages.push('[WDIO Tauri Plugin] Auto-initializing...');
+  initMessages.push('[WDIO][CRITICAL] Auto-initializing plugin...');
   for (const msg of initMessages) {
-    console.log(msg);
+    console.error(msg);
   }
   if (typeof document !== 'undefined' && document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -530,9 +583,9 @@ if (typeof window !== 'undefined') {
     initPromise = init();
   }
 } else {
-  initMessages.push('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
+  initMessages.push('[WDIO][CRITICAL] Window not available at module level, skipping auto-init');
   for (const msg of initMessages) {
-    console.log(msg);
+    console.error(msg);
   }
 }
 

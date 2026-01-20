@@ -1,4 +1,4 @@
-use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
+use tauri::{command, Manager, Runtime, WebviewWindow, Emitter, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
@@ -6,6 +6,8 @@ use crate::models::ExecuteRequest;
 use crate::Result;
 
 /// Execute JavaScript code in the frontend context
+/// This command is called via invoke from the frontend plugin
+/// It extracts the script from the request, evaluates it, and returns the result via events
 #[command]
 pub(crate) async fn execute<R: Runtime>(
     window: WebviewWindow<R>,
@@ -22,13 +24,16 @@ pub(crate) async fn execute<R: Runtime>(
 
     let (tx, rx) = mpsc::channel();
 
-    let event_id = format!("wdio-execute-{}", Uuid::new_v4().to_string());
-    log::trace!("Generated event_id: {}", event_id);
+    // Generate unique event ID for this execution
+    let event_id = format!("wdio-result-{}", Uuid::new_v4().to_string());
+    log::trace!("Generated event_id for result: {}", event_id);
 
     let result_tx = tx.clone();
     let error_tx = tx;
+
+    // Listen for the result event from the frontend
     let listener_id = app_handle.listen(&event_id, move |event| {
-        log::trace!("Received event payload: {}", event.payload());
+        log::trace!("Received result event payload: {}", event.payload());
 
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
             if let Some(success) = payload.get("success").and_then(|s| s.as_bool()) {
@@ -46,6 +51,7 @@ pub(crate) async fn execute<R: Runtime>(
         }
     });
 
+    // Build the script with args if provided
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
@@ -54,27 +60,69 @@ pub(crate) async fn execute<R: Runtime>(
         request.script.clone()
     };
 
-    let script_with_return = format!(
+    // Wrap the script to:
+    // 1. Wait for window.__TAURI__.core.invoke to be available (handles race condition)
+    // 2. Execute the user's script
+    // 3. Emit the result via a Tauri event (using window.__TAURI__.event if available)
+    let script_with_result = format!(
         r#"
-        (async () {{
+        (async () => {{
             try {{
-                const result = await ({0});
-                await window.__TAURI__.event.emit('{1}', {{ success: true, value: result }});
+                // Wait for window.__TAURI__.core.invoke to be available
+                const maxWait = 5000;
+                const startTime = Date.now();
+                while (!window.__TAURI__?.core?.invoke && (Date.now() - startTime) < maxWait) {{
+                    await new Promise(r => setTimeout(r, 10));
+                }}
+                if (!window.__TAURI__?.core?.invoke) {{
+                    throw new Error('window.__TAURI__.core.invoke not available after timeout');
+                }}
+
+                // Execute the user's script
+                const result = await ({});
+
+                // Emit the result via event - prefer window.__TAURI__.event if available
+                const emit = window.__TAURI__?.event?.emit;
+                if (emit) {{
+                    await emit('{}', {{ success: true, value: result }});
+                }} else {{
+                    // Fallback to dynamic import
+                    const {{ emit }} = await import('@tauri-apps/api/event');
+                    await emit('{}', {{ success: true, value: result }});
+                }}
             }} catch (error) {{
-                await window.__TAURI__.event.emit('{1}', {{ success: false, error: error.message }});
+                // Emit error via event
+                try {{
+                    const emit = window.__TAURI__?.event?.emit;
+                    if (emit) {{
+                        await emit('{}', {{ success: false, error: error.message || String(error) }});
+                    }} else {{
+                        const {{ emit }} = await import('@tauri-apps/api/event');
+                        await emit('{}', {{ success: false, error: error.message || String(error) }});
+                    }}
+                }} catch (emitError) {{
+                    // If emit also fails, log to console as last resort
+                    console.error('[WDIO Execute] Failed to emit result:', emitError);
+                }}
             }}
         }})();
         "#,
-        script, event_id
+        script, event_id, event_id, event_id, event_id
     );
 
     log::trace!("Executing script via window.eval()");
-    window.eval(&script_with_return)
-        .map_err(|e| crate::Error::ExecuteError(format!("Failed to eval script: {}", e)))?;
 
-    log::trace!("Waiting for execute result (5s timeout)");
+    // Evaluate the script
+    if let Err(e) = window.eval(&script_with_result) {
+        log::error!("Failed to eval script: {}", e);
+        app_handle.unlisten(listener_id);
+        return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
+    }
 
-    match rx.recv_timeout(Duration::from_secs(5)) {
+    log::trace!("Waiting for execute result (10s timeout)");
+
+    // Wait for the result event with 10s timeout
+    match rx.recv_timeout(Duration::from_secs(10)) {
         Ok(Ok(result)) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
@@ -87,12 +135,11 @@ pub(crate) async fn execute<R: Runtime>(
             Err(e)
         }
         Err(_) => {
-            log::error!("Timeout waiting for execute result after 5s. Event ID: {}. Window: {}. \
-                This usually means the Tauri event system is not working. \
-                Check that withGlobalTauri: true in tauri.conf.json", event_id, window_label);
+            log::error!("Timeout waiting for execute result after 10s. Event ID: {}. Window: {}",
+                event_id, window_label);
             app_handle.unlisten(listener_id);
             Err(crate::Error::ExecuteError(format!(
-                "Script execution timed out after 5s. Event ID: {}. Window: {}",
+                "Script execution timed out after 10s. Event ID: {}. Window: {}",
                 event_id, window_label
             )))
         }
@@ -120,7 +167,7 @@ pub(crate) fn log_frontend<R: Runtime>(
 /// Generate test logs - emits events that frontend listens for and logs to console
 /// This bypasses tauri-driver's stdout limitation by routing through frontend console
 #[command]
-pub(crate) fn generate_test_logs<R: Runtime>(app: tauri::AppHandle<R>) -> Result<()> {
+pub(crate) fn generate_test_logs<R: Runtime>(app: tauri::AppHandle<R>) -> Result<bool> {
     let logs = [
         ("TRACE", "[Test] This is a TRACE level log"),
         ("DEBUG", "[Test] This is a DEBUG level log"),
@@ -131,10 +178,8 @@ pub(crate) fn generate_test_logs<R: Runtime>(app: tauri::AppHandle<R>) -> Result
 
     for (_level, message) in logs {
         let log_line = format!("[Tauri:Backend] {}", message);
-        if let Err(e) = app.emit("backend-log", &log_line) {
-            log::warn!("Failed to emit backend log event: {}", e);
-        }
+        let _ = app.emit("backend-log", &log_line);
     }
 
-    Ok(())
+    Ok(true)
 }

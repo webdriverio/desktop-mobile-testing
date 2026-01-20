@@ -3,7 +3,7 @@
 // E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{PhysicalPosition, PhysicalSize, Window};
+use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter};
 use serde::{Serialize, Deserialize};
 use sysinfo::System;
 use clipboard::{ClipboardProvider, ClipboardContext};
@@ -174,6 +174,26 @@ async fn write_clipboard(content: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
+    let logs = [
+        ("TRACE", "This is a TRACE level log"),
+        ("DEBUG", "This is a DEBUG level log"),
+        ("INFO", "This is an INFO level log"),
+        ("WARN", "This is a WARN level log"),
+        ("ERROR", "This is an ERROR level log"),
+    ];
+
+    for (level, message) in logs {
+        // Emit to the main webview window (for frontend listener)
+        let _ = app.emit("backend-log", &format!("[{}] {}", level, message));
+        // Also print to stderr which tauri-driver captures
+        eprintln!("[{}] {}", level, message);
+    }
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init())
@@ -192,6 +212,7 @@ fn main() {
             get_platform_info,
             read_clipboard,
             write_clipboard,
+            generate_test_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

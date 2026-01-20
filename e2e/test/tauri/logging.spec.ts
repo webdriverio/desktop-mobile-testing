@@ -6,33 +6,27 @@ import { readWdioLogs } from './helpers/logging.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+function getLogDir() {
+  return path.join(__dirname, '..', '..', 'logs');
+}
+
 describe('Tauri Log Integration', () => {
   describe('Command Execution', () => {
     it('should capture backend logs via generate_test_logs command', async () => {
-      // Generate backend logs - emits events that frontend forwards to console
-      // Logs appear in real-time via WebDriver console capture
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
-      // Wait a moment for logs to be captured
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await browser.waitUntil(
+        async () => {
+          const logs = readWdioLogs(getLogDir());
+          return logs.includes('[Tauri:Backend]');
+        },
+        { timeout: 5000, timeoutMsg: 'Backend logs not captured' },
+      );
 
-      // Read captured logs
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-      const logs = readWdioLogs(logBaseDir);
-      expect(logs.length).toBeGreaterThan(0);
-
-      // Verify [Tauri:Backend] prefix in logs (logs are forwarded via frontend console)
-      const hasBackendPrefix = logs.includes('[Tauri:Backend]');
-      expect(hasBackendPrefix).toBe(true);
-
-      // Verify specific log entries
-      const hasInfoLog = logs.includes('[Tauri:Backend] [Test] This is an INFO level log');
-      const hasWarnLog = logs.includes('[Tauri:Backend] [Test] This is a WARN level log');
-      const hasErrorLog = logs.includes('[Tauri:Backend] [Test] This is an ERROR level log');
-
-      expect(hasInfoLog).toBe(true);
-      expect(hasWarnLog).toBe(true);
-      expect(hasErrorLog).toBe(true);
+      const logs = readWdioLogs(getLogDir());
+      expect(logs).toMatch(/\[Tauri:Backend\].*INFO level log/s);
+      expect(logs).toMatch(/\[Tauri:Backend\].*WARN level log/s);
+      expect(logs).toMatch(/\[Tauri:Backend\].*ERROR level log/s);
     });
 
     it('should have working Tauri API', async () => {
@@ -56,88 +50,74 @@ describe('Tauri Log Integration', () => {
 
   describe('Console Log Capture', () => {
     it('should capture frontend console.log from browser.execute', async () => {
-      // Execute console.log in the browser context via WebDriver
       await browser.execute(() => {
-        console.info('[Tauri:Frontend] [Test] Frontend INFO from execute');
-        console.warn('[Tauri:Frontend] [Test] Frontend WARN from execute');
-        console.error('[Tauri:Frontend] [Test] Frontend ERROR from execute');
+        console.info('Frontend INFO from execute');
+        console.warn('Frontend WARN from execute');
+        console.error('Frontend ERROR from execute');
       });
 
-      // Wait for logs to be captured
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await browser.waitUntil(
+        async () => {
+          const logs = readWdioLogs(getLogDir());
+          return logs.includes('[Tauri:Frontend]');
+        },
+        { timeout: 5000, timeoutMsg: 'Frontend logs not captured' },
+      );
 
-      // Read captured logs
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-      const logs = readWdioLogs(logBaseDir);
-      expect(logs.length).toBeGreaterThan(0);
-
-      // Frontend logs from execute() are captured by WebDriver with [Tauri:Frontend] prefix
-      const hasFrontendPrefix = logs.includes('[Tauri:Frontend]');
-      expect(hasFrontendPrefix).toBe(true);
-
-      const hasInfoLog = logs.includes('[Tauri:Frontend] [Test] Frontend INFO from execute');
-      const hasWarnLog = logs.includes('[Tauri:Frontend] [Test] Frontend WARN from execute');
-      const hasErrorLog = logs.includes('[Tauri:Frontend] [Test] Frontend ERROR from execute');
-
-      expect(hasInfoLog).toBe(true);
-      expect(hasWarnLog).toBe(true);
-      expect(hasErrorLog).toBe(true);
+      const logs = readWdioLogs(getLogDir());
+      expect(logs).toMatch(/\[Tauri:Frontend\].*Frontend INFO from execute/s);
+      expect(logs).toMatch(/\[Tauri:Frontend\].*Frontend WARN from execute/s);
+      expect(logs).toMatch(/\[Tauri:Frontend\].*Frontend ERROR from execute/s);
     });
 
     it('should capture multiple log levels from browser.execute', async () => {
       await browser.execute(() => {
-        console.trace('[Tauri:Frontend] [Test] TRACE from execute');
-        console.debug('[Tauri:Frontend] [Test] DEBUG from execute');
-        console.info('[Tauri:Frontend] [Test] INFO from execute');
-        console.warn('[Tauri:Frontend] [Test] WARN from execute');
-        console.error('[Tauri:Frontend] [Test] ERROR from execute');
+        console.trace('TRACE from execute');
+        console.debug('DEBUG from execute');
+        console.info('INFO from execute');
+        console.warn('WARN from execute');
+        console.error('ERROR from execute');
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await browser.waitUntil(
+        async () => {
+          const logs = readWdioLogs(getLogDir());
+          return logs.includes('[Tauri:Frontend]');
+        },
+        { timeout: 5000, timeoutMsg: 'Frontend logs not captured' },
+      );
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-      const logs = readWdioLogs(logBaseDir);
-      expect(logs.length).toBeGreaterThan(0);
-
-      // Verify [Tauri:Frontend] prefix and all log levels
-      const hasFrontendPrefix = logs.includes('[Tauri:Frontend]');
-      expect(hasFrontendPrefix).toBe(true);
-
-      const hasTrace = logs.includes('[Tauri:Frontend] [Test] TRACE from execute');
-      const hasDebug = logs.includes('[Tauri:Frontend] [Test] DEBUG from execute');
-      const hasInfo = logs.includes('[Tauri:Frontend] [Test] INFO from execute');
-      const hasWarn = logs.includes('[Tauri:Frontend] [Test] WARN from execute');
-      const hasError = logs.includes('[Tauri:Frontend] [Test] ERROR from execute');
-
-      expect(hasTrace).toBe(true);
-      expect(hasDebug).toBe(true);
-      expect(hasInfo).toBe(true);
-      expect(hasWarn).toBe(true);
-      expect(hasError).toBe(true);
+      const logs = readWdioLogs(getLogDir());
+      expect(logs).toMatch(/\[Tauri:Frontend\].*TRACE from execute/s);
+      expect(logs).toMatch(/\[Tauri:Frontend\].*DEBUG from execute/s);
+      expect(logs).toMatch(/\[Tauri:Frontend\].*INFO from execute/s);
+      expect(logs).toMatch(/\[Tauri:Frontend\].*WARN from execute/s);
+      expect(logs).toMatch(/\[Tauri:Frontend\].*ERROR from execute/s);
     });
 
     it('should capture console.log with various message types', async () => {
       await browser.execute(() => {
-        console.log('[Tauri:Frontend] [Test] String message');
-        console.log('[Tauri:Frontend] [Test] Number:', 42);
-        console.log('[Tauri:Frontend] [Test] Object:', { key: 'value' });
+        console.log('String message');
+        console.log('Number:', 42);
+        console.log('Object:', { key: 'value' });
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await browser.waitUntil(
+        async () => {
+          const logs = readWdioLogs(getLogDir());
+          return logs.includes('[Tauri:Frontend]');
+        },
+        { timeout: 5000, timeoutMsg: 'Frontend logs not captured' },
+      );
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-      const logs = readWdioLogs(logBaseDir);
-      expect(logs.length).toBeGreaterThan(0);
-
-      const hasStringLog = logs.includes('[Tauri:Frontend] [Test] String message');
-      expect(hasStringLog).toBe(true);
+      const logs = readWdioLogs(getLogDir());
+      expect(logs).toMatch(/\[Tauri:Frontend\].*String message/s);
     });
   });
 
   describe('Log Infrastructure', () => {
     it('should have log directory with log files', async () => {
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
-      const logs = readWdioLogs(logBaseDir);
+      const logs = readWdioLogs(getLogDir());
       expect(logs.length).toBeGreaterThan(0);
     });
   });

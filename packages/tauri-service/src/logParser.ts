@@ -105,7 +105,7 @@ function cleanLogMessage(line: string): string {
 
   // Remove simple_logger format: 2026-01-20T15:41:50.030Z
   cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s*/g, '');
-  // Remove app name pattern like [tauri_e2e_app] from simple_logger (without leading ])
+  // Remove app name pattern like [tauri_e2e_app] from simple_logger
   cleaned = cleaned.replace(/\[[a-zA-Z0-9_-]+\]\s*/g, '');
 
   // Remove leading/trailing whitespace

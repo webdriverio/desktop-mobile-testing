@@ -36,12 +36,18 @@ impl log::Log for WdioLogLogger {
     }
 
     fn log(&self, record: &log::Record) {
-        let line = format!("[Tauri:Backend] {}: {}", record.level(), record.args());
+        let line = format!("{}: {}", record.level(), record.args());
 
         let guard = APP_HANDLE.handle.lock().unwrap();
         if let Some(app_any) = &*guard {
             if let Some(app) = app_any.downcast_ref::<tauri::AppHandle>() {
-                let _ = app.emit("backend-log", &line);
+                // Emit to the main window explicitly
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("backend-log", &line);
+                } else {
+                    // Fallback to app-level emit
+                    let _ = app.emit("backend-log", &line);
+                }
             }
         }
     }
