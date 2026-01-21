@@ -30,6 +30,8 @@ pub fn set_app_handle<R: Runtime>(app: tauri::AppHandle<R>) {
 
 struct WdioUnifiedLogger;
 
+static LOGGER_INIT: Mutex<bool> = Mutex::new(false);
+
 impl log::Log for WdioUnifiedLogger {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
@@ -47,7 +49,6 @@ fn setup_frontend_log_listener<R: Runtime>(app: &tauri::AppHandle<R>) {
     let listener_id = app.listen("frontend-log", move |event| {
         eprintln!("[Tauri:Frontend] {}", event.payload());
     });
-    // Store listener_id to prevent it from being dropped (we want it for the lifetime of the app)
     let _ = listener_id;
 }
 
@@ -58,8 +59,18 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .setup(|app_handle, _api| {
             set_app_handle(app_handle.clone());
 
-            let logger = Box::new(WdioUnifiedLogger);
-            let _ = log::set_boxed_logger(logger);
+            // Only set up our global logger if no logger is already configured
+            // This prevents conflicts with tauri_plugin_log or other loggers
+            let mut initialized = LOGGER_INIT.lock().unwrap();
+            if !*initialized {
+                let logger = Box::new(WdioUnifiedLogger);
+                if let Err(e) = log::set_boxed_logger(logger) {
+                    eprintln!("[WDIO] Failed to set global logger (may be already set by another plugin): {}", e);
+                } else {
+                    *initialized = true;
+                }
+            }
+            drop(initialized);
 
             // Setup frontend log listener
             setup_frontend_log_listener(&app_handle);
