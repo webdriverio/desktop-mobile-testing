@@ -8,6 +8,7 @@ export interface ParsedLog {
   message: string;
   raw: string;
   source?: 'backend' | 'frontend';
+  prefixedMessage?: string;
 }
 
 /**
@@ -33,46 +34,31 @@ const TAURI_DRIVER_PATTERNS = [
 ];
 
 /**
- * Patterns that indicate frontend console logs (forwarded via log_frontend command)
- * These logs come through stdout but originate from the frontend.
- *
- * Frontend logs use target="frontend" and appear in the format:
- * [timestamp][time][frontend][LEVEL] message
- *
- * We identify frontend logs by checking for the [frontend] target.
+ * Extract prefix and source from a log line
+ * Returns the prefix (e.g., [Tauri:Backend]) and source type
  */
-const FRONTEND_LOG_PATTERNS = [
-  // Logs with target="frontend" from our custom log_frontend command
-  /\[frontend\]/i,
-  // Console log patterns from our test code - must contain "Frontend" keyword
-  /\[Test\].*(Frontend|frontend)/i,
-  // Frontend-specific patterns that wouldn't appear in Rust
-  /console\.(log|info|warn|error|debug|trace)/i,
-  // App initialization logs from HTML
-  /\[App\]/i,
-  // Window/DOM related logs
-  /window\.|document\.|typeof window/i,
-  // Frontend-specific error patterns
-  /Uncaught|ReferenceError|TypeError.*window/i,
-];
+function extractPrefixAndSource(line: string): { prefix: string | null; source: 'frontend' | 'backend' } {
+  // Check for explicit Tauri prefixes (highest priority)
+  if (/\[Tauri:Backend\]/i.test(line)) {
+    return { prefix: '[Tauri:Backend]', source: 'backend' };
+  }
+  if (/\[Tauri:Frontend\]/i.test(line)) {
+    return { prefix: '[Tauri:Frontend]', source: 'frontend' };
+  }
+  // Check for [frontend] target from Tauri log plugin
+  if (/\[frontend\]/i.test(line)) {
+    return { prefix: '[frontend]', source: 'frontend' };
+  }
+
+  // backend logs get their prefix added in logForwarder.ts via formatLogMessage()
+  return { prefix: null, source: 'backend' };
+}
 
 /**
  * Check if a log line is from tauri-driver (should be filtered out)
  */
 function isTauriDriverLog(line: string): boolean {
   return TAURI_DRIVER_PATTERNS.some((pattern) => pattern.test(line));
-}
-
-/**
- * Check if a log line is from the frontend (console logs forwarded via attachConsole)
- */
-function isFrontendLog(line: string): boolean {
-  // Check for explicit [Tauri:Frontend] prefix
-  if (/\[Tauri:Frontend\]/i.test(line)) {
-    return true;
-  }
-  // Check for [FRONTEND:LEVEL] markers
-  return FRONTEND_LOG_PATTERNS.some((pattern) => pattern.test(line));
 }
 
 /**
@@ -88,29 +74,23 @@ function extractLogLevel(line: string): LogLevel | undefined {
 }
 
 /**
- * Clean up log message by removing timestamps
- * Handles both tauri-plugin-log format: [timestamp][time][appname][LEVEL] message
- * And simple_logger format: 2026-01-20T15:41:50.030Z INFO  [tauri_e2e_app] message
+ * Clean up log message by removing timestamps and app names
+ * If line already has a prefix, we preserve it and just trim
  */
-function cleanLogMessage(line: string): string {
-  // If line has Tauri prefix or [frontend] target, preserve it entirely
-  if (/\[Tauri:(Backend|Frontend)\]/.test(line) || /\[frontend\]/i.test(line)) {
-    return line;
+function cleanLogMessage(line: string, hasPrefix: boolean): string {
+  if (hasPrefix) {
+    return line.trim();
   }
 
-  // Remove tauri-plugin-log timestamp patterns like [2026-01-19][15:09:22]
+  // Remove tauri-plugin-log format: [2026-01-19][15:09:22][appname][LEVEL]
   let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}\]\[\d{2}:\d{2}:\d{2}\]/g, '');
-  // Remove app name pattern like [tauri_e2e_app] from tauri-plugin-log
   cleaned = cleaned.replace(/\]\[tauri_[a-zA-Z0-9_]+\]/g, ']');
 
-  // Remove simple_logger format: 2026-01-20T15:41:50.030Z
+  // Remove simple_logger format: 2026-01-20T15:41:50.030Z INFO [appname]
   cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s*/g, '');
-  // Remove app name pattern like [tauri_e2e_app] from simple_logger
   cleaned = cleaned.replace(/\[[a-zA-Z0-9_-]+\]\s*/g, '');
 
-  // Remove leading/trailing whitespace
-  cleaned = cleaned.trim();
-  return cleaned;
+  return cleaned.trim();
 }
 
 /**
@@ -129,29 +109,32 @@ export function parseLogLine(line: string): ParsedLog | undefined {
     return undefined;
   }
 
+  // Extract prefix and source before cleaning
+  const { prefix, source } = extractPrefixAndSource(trimmedLine);
+
   // Try to extract log level
   const level = extractLogLevel(trimmedLine);
 
   // If no level found, default to 'info' for Tauri app logs
-  // (tauri-driver logs should have been filtered out already)
   const logLevel: LogLevel = level ?? 'info';
 
-  // Clean up the message
-  const message = cleanLogMessage(trimmedLine);
+  // Clean up the message (pass hasPrefix to preserve prefix if present)
+  const message = cleanLogMessage(trimmedLine, prefix !== null);
 
   // If message is empty after cleaning, skip it
   if (!message) {
     return undefined;
   }
 
-  // Determine if this is a frontend log (console logs forwarded via attachConsole)
-  const source = isFrontendLog(trimmedLine) ? 'frontend' : 'backend';
+  // Build prefixed message if we have a prefix
+  const prefixedMessage = prefix ? `${prefix} ${message}` : undefined;
 
   return {
     level: logLevel,
     message,
     raw: trimmedLine,
     source,
+    prefixedMessage,
   };
 }
 

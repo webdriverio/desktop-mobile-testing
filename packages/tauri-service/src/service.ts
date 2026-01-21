@@ -275,24 +275,28 @@ export default class TauriWorkerService {
               return typeof arg === 'string' ? arg : JSON.stringify(arg);
             }).join(' ');
 
-            // Call original console method
-            const method = level === LogLevel.Trace ? 'log' :
-                          level === LogLevel.Debug ? 'debug' :
-                          level === LogLevel.Info ? 'info' :
-                          level === LogLevel.Warn ? 'warn' : 'error';
-            if (originalConsole[method]) {
-              originalConsole[method](message);
+            // Add [Tauri:Frontend] prefix for WebDriver log capture
+            const prefixedMessage = \`[Tauri:Frontend] \${message}\`;
+
+            // Map log level to method name
+            const methodMap = {
+              [LogLevel.Trace]: 'trace',
+              [LogLevel.Debug]: 'debug',
+              [LogLevel.Info]: 'info',
+              [LogLevel.Warn]: 'warn',
+              [LogLevel.Error]: 'error',
+            };
+            const method = methodMap[level] || 'log';
+
+            // Call original console method with prefix
+            const originalMethod = originalConsole[method];
+            if (originalMethod) {
+              originalMethod.call(console, prefixedMessage);
             }
 
-            // Forward to Tauri log plugin - the log plugin will output with target="frontend"
-            // Map LogLevel enum to string
-            const levelStr = level === LogLevel.Trace ? 'trace' :
-                            level === LogLevel.Debug ? 'debug' :
-                            level === LogLevel.Info ? 'info' :
-                            level === LogLevel.Warn ? 'warn' : 'error';
-
-            if (window.__TAURI__.log[levelStr]) {
-              window.__TAURI__.log[levelStr](message).catch(function(err) {
+            // Forward to Tauri log plugin
+            if (window.__TAURI__.log?.[method]) {
+              window.__TAURI__.log[method](prefixedMessage).catch(function(err) {
                 originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
               });
             }

@@ -33,7 +33,7 @@ export class StandaloneLogWriter {
   /**
    * Write log message to file
    */
-  write(message: string): void {
+  write(message: string, prefixedMessage?: string): void {
     if (!this.logStream) {
       // If not initialized, write to stdout instead
       console.log(message);
@@ -41,7 +41,9 @@ export class StandaloneLogWriter {
     }
 
     const timestamp = new Date().toISOString();
-    const formattedMessage = `${timestamp} INFO tauri-service:service: ${message}\n`;
+    // Use prefixedMessage if available, otherwise use regular message
+    const logMessage = prefixedMessage || message;
+    const formattedMessage = `${timestamp} INFO tauri-service:service: ${logMessage}\n`;
     this.logStream.write(formattedMessage);
   }
 

@@ -514,10 +514,12 @@ export async function init(): Promise<void> {
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
   // The API functions will check for __TAURI__ when they're called
   // Mock commands are not exposed here - mocking is handled via window.__wdio_mocks__
-  (window as unknown as { wdioTauri: Window['wdioTauri'] }).wdioTauri = {
-    execute,
-    waitForInit,
-  };
+  if (!window.wdioTauri) {
+    window.wdioTauri = {} as Window['wdioTauri'];
+  }
+  const wdioTauriObj = window.wdioTauri as Window['wdioTauri'] & { execute: unknown; waitForInit: unknown };
+  wdioTauriObj.execute = execute;
+  wdioTauriObj.waitForInit = waitForInit;
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
   messages.push(

@@ -55,12 +55,18 @@ function formatLogMessage(source: 'backend' | 'frontend', message: string): stri
 /**
  * Forward a log message to WDIO logger or standalone file writer
  */
-export function forwardLog(source: 'backend' | 'frontend', level: LogLevel, message: string, minLevel: LogLevel): void {
+export function forwardLog(
+  source: 'backend' | 'frontend',
+  level: LogLevel,
+  message: string,
+  minLevel: LogLevel,
+  prefixedMessage?: string,
+): void {
   if (!shouldLog(level, minLevel)) {
     return;
   }
 
-  const formattedMessage = formatLogMessage(source, message);
+  const formattedMessage = prefixedMessage || formatLogMessage(source, message);
 
   log.debug(`[LOG-FORWARDER] source=${source}, level=${level}, message=${message.substring(0, 50)}...`);
 
