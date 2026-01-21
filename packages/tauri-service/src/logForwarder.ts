@@ -1,8 +1,6 @@
 import { createLogger } from '@wdio/native-utils';
 import { getStandaloneLogWriter, isStandaloneLogWriterInitialized } from './logWriter.js';
 
-const log = createLogger('tauri-service', 'service');
-
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
 type WdioLogger = ReturnType<typeof createLogger>;
@@ -47,8 +45,21 @@ function getLoggerMethod(logger: WdioLogger, level: LogLevel): (...args: unknown
 /**
  * Format log message with context
  * For multiremote, includes instance ID in the prefix (e.g., [Tauri:Backend:browserA])
+ * Only adds prefix if message doesn't already have one
  */
 function formatLogMessage(source: 'backend' | 'frontend', message: string, instanceId?: string): string {
+  // Check if message already has [Tauri:Frontend] or [Tauri:Backend] prefix
+  const hasTauriPrefix = /^\[Tauri:(Backend|Frontend)\]/i.test(message);
+  if (hasTauriPrefix) {
+    // Message already has prefix, just add instance ID if needed
+    if (instanceId) {
+      // Transform [Tauri:Backend] to [Tauri:Backend:instanceId]
+      return message.replace(/(\[Tauri:(Backend|Frontend)\])/i, `$1:${instanceId}`);
+    }
+    return message;
+  }
+
+  // Add new prefix
   const sourceLabel = source === 'frontend' ? 'Frontend' : 'Backend';
   const instanceLabel = instanceId ? `:${instanceId}` : '';
   return `[Tauri:${sourceLabel}${instanceLabel}] ${message}`;
@@ -105,16 +116,8 @@ export function forwardLog(
     : undefined;
   const formattedMessage = transformedPrefixed || formatLogMessage(source, message, instanceId);
 
-  // Debug logging - use console.log to ensure it appears in output
-  const isInitialized = isStandaloneLogWriterInitialized();
-  console.log(
-    `[FORWARDER] source=${source}, level=${level}, isStandaloneInit=${isInitialized}, message=${message.substring(0, 80)}`,
-  );
-  log.info(
-    `[LOG-FORWARDER] source=${source}, level=${level}, instanceId=${instanceId ?? 'none'}, isStandaloneInit=${isInitialized}, message=${message.substring(0, 50)}...`,
-  );
-
   // Check if we're in standalone mode (log writer initialized)
+  const isInitialized = isStandaloneLogWriterInitialized();
   if (isInitialized) {
     const writer = getStandaloneLogWriter();
     writer.write(formattedMessage);

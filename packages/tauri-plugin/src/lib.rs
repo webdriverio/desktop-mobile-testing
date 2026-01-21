@@ -45,9 +45,10 @@ impl log::Log for WdioUnifiedLogger {
 }
 
 /// Listen for frontend-log events and output to stderr
+/// Outputs raw messages - TypeScript parseLogLine() will detect and add [Tauri:Frontend] prefix
 fn setup_frontend_log_listener<R: Runtime>(app: &tauri::AppHandle<R>) {
     let listener_id = app.listen("frontend-log", move |event| {
-        eprintln!("[Tauri:Frontend] {}", event.payload());
+        eprintln!("{}", event.payload());
     });
     let _ = listener_id;
 }

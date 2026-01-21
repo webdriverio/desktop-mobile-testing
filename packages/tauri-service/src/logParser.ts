@@ -37,7 +37,7 @@ const TAURI_DRIVER_PATTERNS = [
  * Extract prefix and source from a log line
  * Returns the prefix (e.g., [Tauri:Backend]) and source type
  */
-function extractPrefixAndSource(line: string): { prefix: string | null; source: 'frontend' | 'backend' } {
+function extractPrefixAndSource(line: string): { prefix: string | null; source: 'backend' | 'frontend' } {
   // Check for explicit Tauri prefixes (highest priority)
   if (/\[Tauri:Backend\]/i.test(line)) {
     return { prefix: '[Tauri:Backend]', source: 'backend' };
@@ -48,6 +48,13 @@ function extractPrefixAndSource(line: string): { prefix: string | null; source: 
   // Check for [frontend] target from Tauri log plugin
   if (/\[frontend\]/i.test(line)) {
     return { prefix: '[frontend]', source: 'frontend' };
+  }
+
+  // Check for raw frontend log from Rust listener
+  // Format: "message" (JSON-quoted string without [Tauri:Frontend] prefix)
+  // These come from eprintln!("{}") where {} is the event payload (JSON-serialized string)
+  if (/^".*"$/.test(line.trim())) {
+    return { prefix: '[Tauri:Frontend]', source: 'frontend' };
   }
 
   // backend logs get their prefix added in logForwarder.ts via formatLogMessage()
@@ -109,6 +116,13 @@ export function parseLogLine(line: string): ParsedLog | undefined {
     return undefined;
   }
 
+  // Filter out lines that already have [Tauri:Frontend] prefix
+  // These come from browser console logs captured by tauri-driver
+  // We only want raw logs from Rust listener (without prefix)
+  if (/\[Tauri:Frontend\]/.test(trimmedLine)) {
+    return undefined;
+  }
+
   // Extract prefix and source before cleaning
   const { prefix, source } = extractPrefixAndSource(trimmedLine);
 
@@ -118,20 +132,34 @@ export function parseLogLine(line: string): ParsedLog | undefined {
   // If no level found, default to 'info' for Tauri app logs
   const logLevel: LogLevel = level ?? 'info';
 
-  // Clean up the message (pass hasPrefix to preserve prefix if present)
-  const message = cleanLogMessage(trimmedLine, prefix !== null);
+  // Clean up the message
+  // If line has a prefix, strip it first - we'll add it back via prefixedMessage
+  const hasPrefix = prefix !== null;
+  let cleanedMessage = hasPrefix
+    ? trimmedLine.replace(/^\[Tauri:(Backend|Frontend)\]\s*/i, '')
+    : cleanLogMessage(trimmedLine, hasPrefix);
+
+  // For raw frontend logs (JSON-quoted strings from Rust listener),
+  // strip the surrounding quotes
+  // Format: [Tauri:Frontend] "message" or just "message" (raw from Rust)
+  if (source === 'frontend') {
+    const trimmed = cleanedMessage.trim();
+    if (/^".*"$/.test(trimmed)) {
+      cleanedMessage = trimmed.slice(1, -1);
+    }
+  }
 
   // If message is empty after cleaning, skip it
-  if (!message) {
+  if (!cleanedMessage) {
     return undefined;
   }
 
   // Build prefixed message if we have a prefix
-  const prefixedMessage = prefix ? `${prefix} ${message}` : undefined;
+  const prefixedMessage = prefix ? `${prefix} ${cleanedMessage}` : undefined;
 
   return {
     level: logLevel,
-    message,
+    message: cleanedMessage,
     raw: trimmedLine,
     source,
     prefixedMessage,
