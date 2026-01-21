@@ -1,4 +1,4 @@
-use tauri::{command, Manager, Runtime, WebviewWindow, Emitter, Listener};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
@@ -144,37 +144,4 @@ pub(crate) async fn execute<R: Runtime>(
             )))
         }
     }
-}
-
-/// Log a message from the frontend - writes directly to stderr using raw file descriptor
-/// This bypasses Tauri IPC's stdout/stderr handling which doesn't work for IPC-invoked commands
-#[command]
-pub(crate) fn log_frontend<R: Runtime>(
-    _app: tauri::AppHandle<R>,
-    _level: String,
-    message: String,
-) -> Result<()> {
-    use std::io::Write;
-    let _ = std::io::stderr().write_all(format!("[Tauri:Frontend] {}\n", message).as_bytes());
-    Ok(())
-}
-
-/// Generate test logs - emits events that frontend listens for and logs to console
-/// This bypasses tauri-driver's stdout limitation by routing through frontend console
-#[command]
-pub(crate) fn generate_test_logs<R: Runtime>(app: tauri::AppHandle<R>) -> Result<bool> {
-    let logs = [
-        ("TRACE", "[Test] This is a TRACE level log"),
-        ("DEBUG", "[Test] This is a DEBUG level log"),
-        ("INFO", "[Test] This is an INFO level log"),
-        ("WARN", "[Test] This is a WARN level log"),
-        ("ERROR", "[Test] This is an ERROR level log"),
-    ];
-
-    for (_level, message) in logs {
-        let log_line = format!("[Tauri:Backend] {}", message);
-        let _ = app.emit("backend-log", &log_line);
-    }
-
-    Ok(true)
 }

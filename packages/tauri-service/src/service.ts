@@ -294,6 +294,13 @@ export default class TauriWorkerService {
             if (originalMethod) {
               originalMethod.call(console, prefixedMessage);
             }
+
+            // Emit event for Rust listener → stderr capture
+            // This enables frontend log capture in standalone mode
+            // Note: Rust listener adds [Tauri:Frontend] prefix, so we send raw message
+            if (window.__TAURI__?.event?.emit) {
+              window.__TAURI__.event.emit('frontend-log', message);
+            }
           }
 
           // Wrap console methods using Object.defineProperty (works on WebKit)

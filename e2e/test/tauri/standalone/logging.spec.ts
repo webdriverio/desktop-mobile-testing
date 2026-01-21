@@ -88,11 +88,8 @@ try {
   console.log('✅ Backend logs test passed');
 
   // Test 2: Capture frontend logs in standalone session
-  // Test 2: Frontend logs - NOTE: Frontend log capture has a known limitation
-  // in standalone mode where Tauri commands invoked via browser IPC don't have
-  // their stderr captured by tauri-driver. This is a Tauri limitation, not a bug.
-  // For now, we verify that the wrapped console methods are called correctly.
-  console.log('Test 2: Frontend logs (limited capture in standalone mode)...');
+  // Frontend logs are captured via the event bridge: console → frontend-log event → Rust → stderr
+  console.log('Test 2: Frontend logs...');
   await browser.execute(() => {
     console.info('[Test] Standalone frontend INFO log');
     console.warn('[Test] Standalone frontend WARN log');
@@ -100,10 +97,12 @@ try {
   });
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
-  // For now, we just verify the test runs without errors
-  // The wrapped console methods are called correctly (logs go to browser console)
-  // but tauri-driver doesn't capture them in standalone mode
-  console.log('✅ Frontend logs test passed (wrapped methods called)');
+  // Verify frontend logs were captured with correct prefix
+  const logs2 = readWdioLogs(logDir);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend INFO/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend WARN/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend ERROR/i);
+  console.log('✅ Frontend logs test passed');
 
   // Test 3: Log level filtering - Using backend logs for verification
   console.log('Test 3: Backend log level filtering...');

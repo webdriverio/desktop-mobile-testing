@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use tauri::{
     plugin::{self, TauriPlugin},
-    Manager, Runtime, Emitter,
+    Manager, Runtime, Listener,
 };
 
 pub use models::*;
@@ -28,50 +28,41 @@ pub fn set_app_handle<R: Runtime>(app: tauri::AppHandle<R>) {
     *guard = Some(Box::new(app));
 }
 
-struct WdioLogLogger;
+struct WdioUnifiedLogger;
 
-impl log::Log for WdioLogLogger {
+impl log::Log for WdioUnifiedLogger {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }
 
     fn log(&self, record: &log::Record) {
-        let line = format!("{}: {}", record.level(), record.args());
-
-        // Also output to stderr so tauri-driver can capture logs
-        // This is necessary for log capture to work
-        eprintln!("{}", line);
-
-        let guard = APP_HANDLE.handle.lock().unwrap();
-        if let Some(app_any) = &*guard {
-            if let Some(app) = app_any.downcast_ref::<tauri::AppHandle>() {
-                // Emit to the main window explicitly
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.emit("backend-log", &line);
-                } else {
-                    // Fallback to app-level emit
-                    let _ = app.emit("backend-log", &line);
-                }
-            }
-        }
+        eprintln!("[Tauri:Backend] {}: {}", record.level(), record.args());
     }
 
     fn flush(&self) {}
 }
 
+/// Listen for frontend-log events and output to stderr
+fn setup_frontend_log_listener<R: Runtime>(app: &tauri::AppHandle<R>) {
+    let listener_id = app.listen("frontend-log", move |event| {
+        eprintln!("[Tauri:Frontend] {}", event.payload());
+    });
+    // Store listener_id to prevent it from being dropped (we want it for the lifetime of the app)
+    let _ = listener_id;
+}
+
 /// Creates the Wdio plugin with default options.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     plugin::Builder::new("wdio")
-        .invoke_handler(tauri::generate_handler![
-            commands::execute,
-            commands::log_frontend,
-            commands::generate_test_logs,
-        ])
+        .invoke_handler(tauri::generate_handler![commands::execute])
         .setup(|app_handle, _api| {
             set_app_handle(app_handle.clone());
 
-            let logger = Box::new(WdioLogLogger);
+            let logger = Box::new(WdioUnifiedLogger);
             let _ = log::set_boxed_logger(logger);
+
+            // Setup frontend log listener
+            setup_frontend_log_listener(&app_handle);
 
             #[cfg(desktop)]
             let wdio = desktop::init(app_handle, _api)?;
