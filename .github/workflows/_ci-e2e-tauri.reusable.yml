@@ -161,38 +161,25 @@ jobs:
           echo "✅ Found target directories:"
           echo "$TARGET_DIRS"
 
-          # Verify binaries exist in release subdirectories
+          # Verify binaries exist
           BINARY_COUNT=0
           for target_dir in $TARGET_DIRS; do
-            # Find all release directories under this target
-            RELEASE_DIRS=$(find "$target_dir" -name "release" -type d 2>/dev/null || true)
-            
-            for release_dir in $RELEASE_DIRS; do
-              if [ "${{ runner.os }}" = "Windows" ]; then
-                # Check for .exe files in release directory
-                if compgen -G "$release_dir/*.exe" > /dev/null; then
-                  BINARY_COUNT=$((BINARY_COUNT + 1))
-                  echo "  ✅ Found Windows binary in $release_dir/"
-                  ls -la "$release_dir/"*.exe 2>/dev/null || true
-                fi
-              else
-                # Check for executable files on Linux/Mac
-                if find "$release_dir" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
-                  BINARY_COUNT=$((BINARY_COUNT + 1))
-                  echo "  ✅ Found binary in $release_dir/"
-                fi
+            if [ "${{ runner.os }}" = "Windows" ]; then
+              if [ -f "$target_dir/release/*.exe" ] || compgen -G "$target_dir/release/*.exe" > /dev/null; then
+                BINARY_COUNT=$((BINARY_COUNT + 1))
+                echo "  ✅ Found Windows binary in $target_dir/release/"
               fi
-            done
+            else
+              # Check for executable files on Linux/Mac
+              if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
+                BINARY_COUNT=$((BINARY_COUNT + 1))
+                echo "  ✅ Found binary in $target_dir/release/"
+              fi
+            fi
           done
 
           if [ "$BINARY_COUNT" -eq 0 ]; then
             echo "::error::No binaries found in target directories!"
-            echo "Searched in:"
-            for target_dir in $TARGET_DIRS; do
-              find "$target_dir" -name "release" -type d 2>/dev/null | while read -r d; do
-                echo "  - $d"
-              done
-            done
             exit 1
           fi
 

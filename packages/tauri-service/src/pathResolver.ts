@@ -128,29 +128,7 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
     // Tauri v2 has productName and version at root level
     const productName = config.productName || config.package?.productName || 'tauri-app';
     const version = config.version || config.package?.version || '1.0.0';
-
-    // Determine target directory based on platform
-    // On Windows (or cross-compiling), target includes the target triple
-    // e.g., target/x86_64-pc-windows-msvc/release
-    const baseTargetDir = join(appPath, 'src-tauri', 'target');
-    let targetDir: string;
-
-    if (existsSync(join(baseTargetDir, 'release'))) {
-      // Linux/Mac or native build
-      targetDir = join(baseTargetDir, 'release');
-    } else {
-      // Windows or cross-compiled - find the target triple directory
-      const targetTriples = readdirSync(baseTargetDir).filter(
-        (d) => d !== 'release' && !d.startsWith('.') && !d.endsWith('.lock'),
-      );
-      if (targetTriples.length > 0) {
-        // Use the first target triple's release directory
-        targetDir = join(baseTargetDir, targetTriples[0], 'release');
-      } else {
-        // Fallback to release directory
-        targetDir = join(baseTargetDir, 'release');
-      }
-    }
+    const targetDir = join(appPath, 'src-tauri', 'target', 'release');
 
     // Debug logging to help diagnose the issue
     log.debug(`Tauri config debug - appPath: ${appPath}`);
@@ -158,7 +136,6 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
     log.debug(`Tauri config debug - config.productName: ${config.productName}`);
     log.debug(`Tauri config debug - config.package?.productName: ${config.package?.productName}`);
     log.debug(`Tauri config debug - resolved productName: ${productName}`);
-    log.debug(`Tauri config debug - targetDir: ${targetDir}`);
 
     return {
       name: productName,
