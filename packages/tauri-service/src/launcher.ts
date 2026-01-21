@@ -735,22 +735,7 @@ export default class TauriLaunchService {
     // Send SIGTERM for graceful shutdown
     proc.kill('SIGTERM');
 
-    // Wait for process to exit
-    const stopTimeout = process.env.CI ? 10000 : 5000;
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(() => {
-        if (!proc.killed) {
-          log.warn(`tauri-driver for worker ${workerId} did not stop gracefully, force killing`);
-          proc.kill('SIGKILL');
-        }
-        resolve();
-      }, stopTimeout);
-
-      proc.once('exit', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    });
+    await this.waitForProcessExit(proc);
 
     // Wait additional time for port release
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -764,6 +749,14 @@ export default class TauriLaunchService {
    */
   async onComplete(_exitCode: number, _config: Options.Testrunner, _capabilities: TauriCapabilities[]): Promise<void> {
     log.debug('Completing Tauri service...');
+
+    // Close log writer if initialized
+    try {
+      const { closeStandaloneLogWriter } = await import('./logWriter.js');
+      closeStandaloneLogWriter();
+    } catch {
+      // Log writer may not have been initialized
+    }
 
     // Stop tauri-driver
     await this.stopTauriDriver();
@@ -1098,7 +1091,7 @@ export default class TauriLaunchService {
   }
 
   /**
-   * Stop tauri-driver process
+   * Stop tauri-driver process with proper cleanup
    */
   private async stopTauriDriver(): Promise<void> {
     // Stop per-worker drivers if present
@@ -1135,28 +1128,47 @@ export default class TauriLaunchService {
       log.debug('Stopping tauri-driver...');
       this.tauriDriverProcess.kill('SIGTERM');
 
-      // Wait for process to exit, with force-kill fallback
-      // Use longer timeout on CI where processes can take longer to clean up
-      const stopTimeout = process.env.CI ? 10000 : 5000;
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
-          this.tauriDriverProcess?.kill('SIGKILL');
-          // Give SIGKILL a moment to take effect
-          setTimeout(resolve, 2000);
-        }, stopTimeout);
-
-        this.tauriDriverProcess?.on('exit', () => {
-          log.debug('tauri-driver process exited');
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
+      await this.waitForProcessExit(this.tauriDriverProcess);
 
       // Additional delay to ensure port is fully released
       // This is especially important on slower CI runners
       await new Promise<void>((resolve) => setTimeout(resolve, 500));
     }
+  }
+
+  /**
+   * Wait for a process to exit, with graceful shutdown and force-kill fallback
+   */
+  private async waitForProcessExit(proc: ChildProcess): Promise<void> {
+    const stopTimeout = process.env.CI ? 10000 : 5000;
+
+    let shutdownTimeout: ReturnType<typeof setTimeout> | null = null;
+    let killTimeout: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = () => {
+      if (shutdownTimeout) clearTimeout(shutdownTimeout);
+      if (killTimeout) clearTimeout(killTimeout);
+    };
+
+    return new Promise<void>((resolve) => {
+      const onExit = () => {
+        cleanup();
+        log.debug('tauri-driver process exited');
+        resolve();
+      };
+
+      proc.once('exit', onExit);
+
+      shutdownTimeout = setTimeout(() => {
+        log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
+        proc.kill('SIGKILL');
+
+        killTimeout = setTimeout(() => {
+          log.warn('tauri-driver force kill timeout, giving up');
+          cleanup();
+          resolve();
+        }, 2000);
+      }, stopTimeout);
+    });
   }
 
   /**

@@ -57,10 +57,58 @@ declare global {
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
+      cleanupInvokeInterception?: () => void;
+      cleanupLogListeners: () => void;
+      cleanupAll: () => void;
     };
     __vitest_spy__?: typeof vitestSpy;
     __wdio_mocks__?: Record<string, unknown>;
   }
+}
+
+/**
+ * Cleanup registry to manage timers and event listeners
+ * Prevents memory leaks from retry loops and orphaned listeners
+ */
+class CleanupRegistry {
+  private timers = new Set<number>();
+  private listeners = new Set<() => void>();
+
+  addTimer(id: number): void {
+    this.timers.add(id);
+  }
+
+  clearTimers(): void {
+    this.timers.forEach((id) => {
+      clearTimeout(id);
+    });
+    this.timers.clear();
+  }
+
+  addListener(fn: () => void): void {
+    this.listeners.add(fn);
+  }
+
+  cleanup(): void {
+    this.clearTimers();
+    this.listeners.forEach((fn) => {
+      try {
+        fn();
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+    this.listeners.clear();
+  }
+}
+
+export const cleanupRegistry = new CleanupRegistry();
+
+// Add page unload handler to cleanup automatically
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    cleanupRegistry.cleanup();
+  });
 }
 
 /**
@@ -346,7 +394,8 @@ function setupInvokeInterception(): void {
     if (!core || typeof core !== 'object') {
       if (attempts < maxAttempts) {
         console.log(`[WDIO Tauri Plugin] Waiting for window.__TAURI__.core (attempt ${attempts}/${maxAttempts})`);
-        setTimeout(trySetup, retryInterval);
+        const timerId = window.setTimeout(trySetup, retryInterval);
+        cleanupRegistry.addTimer(timerId);
         return;
       } else {
         console.warn('[WDIO Tauri Plugin] Timeout waiting for window.__TAURI__.core - invoke interception not set up');
@@ -429,6 +478,7 @@ function setupBackendLogListener(): void {
   const maxAttempts = 100;
   const retryInterval = 50;
   let attempts = 0;
+  let removeListenerRef: (() => void) | null = null;
 
   const trySetup = () => {
     attempts++;
@@ -443,7 +493,8 @@ function setupBackendLogListener(): void {
     }
 
     if (typeof window.__TAURI__ === 'undefined' || typeof window.__TAURI__.event === 'undefined') {
-      setTimeout(trySetup, retryInterval);
+      const timerId = window.setTimeout(trySetup, retryInterval);
+      cleanupRegistry.addTimer(timerId);
       return;
     }
 
@@ -461,22 +512,22 @@ function setupBackendLogListener(): void {
           console.info(logMessage);
         });
 
+        removeListenerRef = removeListener;
+        cleanupRegistry.addListener(removeListener);
+
         console.info('[WDIO][Frontend] Backend log listener registered successfully');
 
-        const tauri = window.wdioTauri;
-        if (tauri) {
-          tauri.cleanupBackendLogListener = () => {
-            removeListener();
-            console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
-          };
-        } else {
-          window.wdioTauri = {
-            cleanupBackendLogListener: () => {
-              removeListener();
-              console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
-            },
-          } as Window['wdioTauri'];
+        if (!window.wdioTauri) {
+          window.wdioTauri = {} as Window['wdioTauri'];
         }
+        const wdioTauri = window.wdioTauri!;
+        wdioTauri.cleanupBackendLogListener = () => {
+          if (removeListenerRef) {
+            removeListenerRef();
+            removeListenerRef = null;
+          }
+          console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
+        };
       } catch (error) {
         console.log(`[WDIO Tauri Plugin] Failed to setup backend log listener: ${error}`);
       }
@@ -504,6 +555,7 @@ function setupFrontendLogListener(): void {
   const maxAttempts = 100;
   const retryInterval = 50;
   let attempts = 0;
+  let removeListenerRef: (() => void) | null = null;
 
   const trySetup = () => {
     attempts++;
@@ -518,7 +570,8 @@ function setupFrontendLogListener(): void {
     }
 
     if (typeof window.__TAURI__ === 'undefined' || typeof window.__TAURI__.event === 'undefined') {
-      setTimeout(trySetup, retryInterval);
+      const timerId = window.setTimeout(trySetup, retryInterval);
+      cleanupRegistry.addTimer(timerId);
       return;
     }
 
@@ -533,22 +586,22 @@ function setupFrontendLogListener(): void {
           console.info(logMessage);
         });
 
+        removeListenerRef = removeListener;
+        cleanupRegistry.addListener(removeListener);
+
         console.info('[WDIO][Frontend] Frontend log listener registered successfully');
 
-        const tauri = window.wdioTauri;
-        if (tauri) {
-          tauri.cleanupFrontendLogListener = () => {
-            removeListener();
-            console.log('[WDIO Tauri Plugin] Frontend log listener cleaned up');
-          };
-        } else {
-          window.wdioTauri = {
-            cleanupFrontendLogListener: () => {
-              removeListener();
-              console.log('[WDIO Tauri Plugin] Frontend log listener cleaned up');
-            },
-          } as Window['wdioTauri'];
+        if (!window.wdioTauri) {
+          window.wdioTauri = {} as Window['wdioTauri'];
         }
+        const wdioTauri = window.wdioTauri!;
+        wdioTauri.cleanupFrontendLogListener = () => {
+          if (removeListenerRef) {
+            removeListenerRef();
+            removeListenerRef = null;
+          }
+          console.log('[WDIO Tauri Plugin] Frontend log listener cleaned up');
+        };
       } catch (error) {
         console.log(`[WDIO Tauri Plugin] Failed to setup frontend log listener: ${error}`);
       }
@@ -565,6 +618,11 @@ function setupFrontendLogListener(): void {
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
 export async function init(): Promise<void> {
+  if (isInitialized) {
+    console.log('[WDIO Tauri Plugin] Already initialized, skipping');
+    return;
+  }
+
   const messages: string[] = [];
   messages.push('[WDIO Tauri Plugin] Initializing...');
   messages.push(`[WDIO Tauri Plugin] typeof window: ${typeof window}`);
@@ -593,6 +651,18 @@ export async function init(): Promise<void> {
   const wdioTauriObj = window.wdioTauri as Window['wdioTauri'] & { execute: unknown; waitForInit: unknown };
   wdioTauriObj.execute = execute;
   wdioTauriObj.waitForInit = waitForInit;
+
+  // Add cleanup functions
+  wdioTauriObj.cleanupLogListeners = () => cleanupRegistry.cleanup();
+  wdioTauriObj.cleanupInvokeInterception = () => {
+    cleanupRegistry.clearTimers();
+  };
+  wdioTauriObj.cleanupAll = () => {
+    wdioTauriObj.cleanupBackendLogListener?.();
+    wdioTauriObj.cleanupFrontendLogListener?.();
+    wdioTauriObj.cleanupInvokeInterception?.();
+    cleanupRegistry.cleanup();
+  };
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
   messages.push(
@@ -636,6 +706,8 @@ export async function init(): Promise<void> {
   // Test that console forwarding works
   console.info('[WDIO Tauri Plugin] TEST: This is a test INFO log after setupConsoleForwarding()');
   console.warn('[WDIO Tauri Plugin] TEST: This is a test WARN log after setupConsoleForwarding()');
+
+  isInitialized = true;
 }
 
 // Auto-initialize when imported
@@ -656,6 +728,7 @@ if (typeof document !== 'undefined' && document.body) {
 }
 
 let initPromise: Promise<void> | null = null;
+let isInitialized = false;
 
 if (typeof window !== 'undefined') {
   initMessages.push('[WDIO][CRITICAL] Auto-initializing plugin...');
@@ -664,10 +737,14 @@ if (typeof window !== 'undefined') {
   }
   if (typeof document !== 'undefined' && document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      initPromise = init();
+      if (!isInitialized) {
+        initPromise = init();
+      }
     });
   } else {
-    initPromise = init();
+    if (!isInitialized) {
+      initPromise = init();
+    }
   }
 } else {
   initMessages.push('[WDIO][CRITICAL] Window not available at module level, skipping auto-init');

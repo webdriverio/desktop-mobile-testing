@@ -169,7 +169,11 @@ export function parseLogLine(line: string): ParsedLog | undefined {
 /**
  * Parse multiple log lines (handles multi-line logs)
  */
+let parseCallCount = 0;
+
 export function parseLogLines(lines: string): ParsedLog[] {
+  parseCallCount++;
+
   const parsed: ParsedLog[] = [];
   const logLines = lines.split('\n');
 
@@ -180,8 +184,11 @@ export function parseLogLines(lines: string): ParsedLog[] {
     }
   }
 
-  if (parsed.length > 0) {
-    log.debug(`[LOG-PARSER] Parsed ${parsed.length} log entries from ${logLines.length} lines`);
+  // Only log debug output every 10th call to reduce overhead
+  if (parsed.length > 0 && parseCallCount % 10 === 0) {
+    log.debug(
+      `[LOG-PARSER] Parsed ${parsed.length} log entries from ${logLines.length} lines (sample #${parseCallCount})`,
+    );
     log.debug(
       `[LOG-PARSER] Sample: ${parsed
         .slice(0, 3)

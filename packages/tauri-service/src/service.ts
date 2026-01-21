@@ -6,6 +6,8 @@ import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
 
+const EXECUTE_PATCHED = Symbol('wdio-tauri-execute-patched');
+
 /**
  * Tauri worker service
  */
@@ -230,6 +232,11 @@ export default class TauriWorkerService {
    * This ensures console logs from browser.execute() contexts are captured
    */
   private patchBrowserExecute(browser: WebdriverIO.Browser): void {
+    if ((browser as any)[EXECUTE_PATCHED]) {
+      log.debug('browser.execute already patched, skipping');
+      return;
+    }
+
     // Store the original execute method
     const originalExecute = browser.execute.bind(browser);
 
@@ -351,6 +358,7 @@ export default class TauriWorkerService {
       configurable: true,
     });
 
-    log.debug('Patched browser.execute() to auto-inject console forwarding');
+    (browser as any)[EXECUTE_PATCHED] = true;
+    log.debug('browser.execute() patched with console forwarding');
   }
 }
