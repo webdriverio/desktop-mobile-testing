@@ -239,7 +239,7 @@ export const config = {
   exclude,
   // Auto-detection: maxInstances > 1 enables per-worker drivers for parallel execution
   // Each worker gets its own tauri-driver process on a unique port
-  maxInstances: envContext.isMultiremote ? 1 : 3, // Allow 3 parallel workers in standard mode
+  maxInstances: envContext.isMultiremote ? 1 : 5, // Allow 5 parallel workers in standard mode
   capabilities,
   // Connect to tauri-driver instead of spawning a browser driver
   ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
