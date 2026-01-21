@@ -38,6 +38,10 @@ impl log::Log for WdioLogLogger {
     fn log(&self, record: &log::Record) {
         let line = format!("{}: {}", record.level(), record.args());
 
+        // Also output to stderr so tauri-driver can capture logs
+        // This is necessary for log capture to work
+        eprintln!("{}", line);
+
         let guard = APP_HANDLE.handle.lock().unwrap();
         if let Some(app_any) = &*guard {
             if let Some(app) = app_any.downcast_ref::<tauri::AppHandle>() {

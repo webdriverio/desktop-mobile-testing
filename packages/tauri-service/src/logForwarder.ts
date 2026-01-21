@@ -105,12 +105,17 @@ export function forwardLog(
     : undefined;
   const formattedMessage = transformedPrefixed || formatLogMessage(source, message, instanceId);
 
-  log.debug(
-    `[LOG-FORWARDER] source=${source}, level=${level}, instanceId=${instanceId ?? 'none'}, message=${message.substring(0, 50)}...`,
+  // Debug logging - use console.log to ensure it appears in output
+  const isInitialized = isStandaloneLogWriterInitialized();
+  console.log(
+    `[FORWARDER] source=${source}, level=${level}, isStandaloneInit=${isInitialized}, message=${message.substring(0, 80)}`,
+  );
+  log.info(
+    `[LOG-FORWARDER] source=${source}, level=${level}, instanceId=${instanceId ?? 'none'}, isStandaloneInit=${isInitialized}, message=${message.substring(0, 50)}...`,
   );
 
   // Check if we're in standalone mode (log writer initialized)
-  if (isStandaloneLogWriterInitialized()) {
+  if (isInitialized) {
     const writer = getStandaloneLogWriter();
     writer.write(formattedMessage);
   } else {

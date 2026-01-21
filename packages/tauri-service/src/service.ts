@@ -288,17 +288,11 @@ export default class TauriWorkerService {
             };
             const method = methodMap[level] || 'log';
 
-            // Call original console method with prefix
+            // Call original console method with prefix - this outputs to browser console
+            // which tauri-driver captures via WebDriver protocol
             const originalMethod = originalConsole[method];
             if (originalMethod) {
               originalMethod.call(console, prefixedMessage);
-            }
-
-            // Forward to Tauri log plugin
-            if (window.__TAURI__.log?.[method]) {
-              window.__TAURI__.log[method](prefixedMessage).catch(function(err) {
-                originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
-              });
             }
           }
 

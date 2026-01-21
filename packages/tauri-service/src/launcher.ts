@@ -573,8 +573,16 @@ export default class TauriLaunchService {
     env: NodeJS.ProcessEnv,
     options?: TauriServiceOptions,
   ): Promise<void> {
+    console.log(`[CONSOLE-DEBUG] startTauriDriverForWorker called for worker-${workerId}`);
     // Ensure driver is available
     const workerOptions = options ?? mergeOptions(this.options, undefined);
+    console.log(
+      `[CONSOLE-DEBUG] Worker options: captureFrontendLogs=${workerOptions.captureFrontendLogs}, captureBackendLogs=${workerOptions.captureBackendLogs}`,
+    );
+    log.debug(`[worker-${workerId}] Worker options: ${JSON.stringify(workerOptions, null, 2)}`);
+    log.debug(
+      `[worker-${workerId}] captureFrontendLogs: ${workerOptions.captureFrontendLogs}, captureBackendLogs: ${workerOptions.captureBackendLogs}`,
+    );
     const driverResult = await ensureTauriDriver(workerOptions);
     if (!driverResult.success) {
       throw new Error(driverResult.error || 'Failed to find tauri-driver');
@@ -606,7 +614,10 @@ export default class TauriLaunchService {
 
       proc.stdout?.on('data', (data: Buffer) => {
         const output = data.toString();
-        log.debug(`[worker-${workerId}] stdout: ${output.trim()}`);
+        // Log all stdout for debugging
+        log.info(
+          `[STDOUT] worker-${workerId} received ${output.length} chars, content preview: ${output.substring(0, 200)}`,
+        );
         if (output.includes('tauri-driver started') || output.includes('listening on')) {
           log.info(`✅ tauri-driver [worker-${workerId}] started successfully on port ${port}`);
           resolve();
@@ -614,6 +625,7 @@ export default class TauriLaunchService {
 
         // Parse and forward logs if enabled
         const parsedLogs = parseLogLines(output);
+        log.info(`[STDOUT] worker-${workerId} parsed ${parsedLogs.length} log lines`);
         for (const parsedLog of parsedLogs) {
           // Forward backend logs
           if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
@@ -634,7 +646,11 @@ export default class TauriLaunchService {
 
         // Parse and forward logs from stderr if enabled
         const parsedLogs = parseLogLines(output);
+        log.debug(`[worker-${workerId}] Parsed ${parsedLogs.length} log lines from stderr`);
         for (const parsedLog of parsedLogs) {
+          log.debug(
+            `[worker-${workerId}] Log: source=${parsedLog.source}, level=${parsedLog.level}, message=${parsedLog.message.substring(0, 100)}`,
+          );
           // Forward backend logs
           if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
@@ -762,6 +778,10 @@ export default class TauriLaunchService {
     // Get options for driver management
     const firstCap = capabilities?.[0];
     const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
+    log.debug(`Single driver mode options: ${JSON.stringify(options, null, 2)}`);
+    log.debug(
+      `Single driver mode: captureFrontendLogs=${options.captureFrontendLogs}, captureBackendLogs=${options.captureBackendLogs}`,
+    );
 
     // Ensure driver is available
     const driverResult = await ensureTauriDriver(options);

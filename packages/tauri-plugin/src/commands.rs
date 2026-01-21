@@ -146,21 +146,16 @@ pub(crate) async fn execute<R: Runtime>(
     }
 }
 
-/// Log a message from the frontend - tauri-service adds [Tauri:Frontend] prefix
+/// Log a message from the frontend - writes directly to stderr using raw file descriptor
+/// This bypasses Tauri IPC's stdout/stderr handling which doesn't work for IPC-invoked commands
 #[command]
 pub(crate) fn log_frontend<R: Runtime>(
-    _window: WebviewWindow<R>,
-    level: String,
+    _app: tauri::AppHandle<R>,
+    _level: String,
     message: String,
 ) -> Result<()> {
-    match level.as_str() {
-        "trace" => log::trace!(target: "frontend", "{}", message),
-        "debug" => log::debug!(target: "frontend", "{}", message),
-        "info" => log::info!(target: "frontend", "{}", message),
-        "warn" => log::warn!(target: "frontend", "{}", message),
-        "error" => log::error!(target: "frontend", "{}", message),
-        _ => return Err(crate::Error::ExecuteError(format!("Unknown log level: {}", level))),
-    }
+    use std::io::Write;
+    let _ = std::io::stderr().write_all(format!("[Tauri:Frontend] {}\n", message).as_bytes());
     Ok(())
 }
 
