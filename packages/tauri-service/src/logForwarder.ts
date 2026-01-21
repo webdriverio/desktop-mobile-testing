@@ -46,14 +46,46 @@ function getLoggerMethod(logger: WdioLogger, level: LogLevel): (...args: unknown
 
 /**
  * Format log message with context
+ * For multiremote, includes instance ID in the prefix (e.g., [Tauri:Backend:browserA])
  */
-function formatLogMessage(source: 'backend' | 'frontend', message: string): string {
+function formatLogMessage(source: 'backend' | 'frontend', message: string, instanceId?: string): string {
   const sourceLabel = source === 'frontend' ? 'Frontend' : 'Backend';
-  return `[Tauri:${sourceLabel}] ${message}`;
+  const instanceLabel = instanceId ? `:${instanceId}` : '';
+  return `[Tauri:${sourceLabel}${instanceLabel}] ${message}`;
+}
+
+/**
+ * Transform prefixed message to include instance ID
+ * Converts [Tauri:Backend] to [Tauri:Backend:browserA] for multiremote
+ */
+function transformPrefixedMessage(
+  prefixedMessage: string,
+  source: 'backend' | 'frontend',
+  instanceId?: string,
+): string {
+  if (!instanceId) {
+    return prefixedMessage;
+  }
+
+  const sourceLabel = source === 'frontend' ? 'Frontend' : 'Backend';
+  const oldPrefix = `[Tauri:${sourceLabel}]`;
+  const newPrefix = `[Tauri:${sourceLabel}:${instanceId}]`;
+
+  if (prefixedMessage.startsWith(oldPrefix)) {
+    return prefixedMessage.replace(oldPrefix, newPrefix);
+  }
+
+  return prefixedMessage;
 }
 
 /**
  * Forward a log message to WDIO logger or standalone file writer
+ * @param source - Log source (backend or frontend)
+ * @param level - Log level
+ * @param message - Log message
+ * @param minLevel - Minimum log level to capture
+ * @param prefixedMessage - Optional pre-formatted message (takes precedence)
+ * @param instanceId - Optional instance ID for multiremote (e.g., 'browserA')
  */
 export function forwardLog(
   source: 'backend' | 'frontend',
@@ -61,14 +93,21 @@ export function forwardLog(
   message: string,
   minLevel: LogLevel,
   prefixedMessage?: string,
+  instanceId?: string,
 ): void {
   if (!shouldLog(level, minLevel)) {
     return;
   }
 
-  const formattedMessage = prefixedMessage || formatLogMessage(source, message);
+  // Transform prefixedMessage to include instance ID if provided
+  const transformedPrefixed = prefixedMessage
+    ? transformPrefixedMessage(prefixedMessage, source, instanceId)
+    : undefined;
+  const formattedMessage = transformedPrefixed || formatLogMessage(source, message, instanceId);
 
-  log.debug(`[LOG-FORWARDER] source=${source}, level=${level}, message=${message.substring(0, 50)}...`);
+  log.debug(
+    `[LOG-FORWARDER] source=${source}, level=${level}, instanceId=${instanceId ?? 'none'}, message=${message.substring(0, 50)}...`,
+  );
 
   // Check if we're in standalone mode (log writer initialized)
   if (isStandaloneLogWriterInitialized()) {

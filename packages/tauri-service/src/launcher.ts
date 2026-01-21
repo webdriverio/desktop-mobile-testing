@@ -937,12 +937,12 @@ export default class TauriLaunchService {
           // Forward backend logs
           if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
           // Forward frontend logs (from attachConsole)
           if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
         }
       });
@@ -957,12 +957,12 @@ export default class TauriLaunchService {
           // Forward backend logs
           if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
           // Forward frontend logs (from attachConsole)
           if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
         }
       });
