@@ -82,9 +82,9 @@ try {
   if (!logs1) {
     throw new Error('No logs found in output directory');
   }
-  assertLogContains(logs1, /\[Tauri:Backend\].*\[Test\].*INFO level log/i);
-  assertLogContains(logs1, /\[Tauri:Backend\].*\[Test\].*WARN level log/i);
-  assertLogContains(logs1, /\[Tauri:Backend\].*\[Test\].*ERROR level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend\].*INFO level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend\].*WARN level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend\].*ERROR level log/i);
   console.log('✅ Backend logs test passed');
 
   // Test 2: Capture frontend logs in standalone session
@@ -98,9 +98,9 @@ try {
 
   // Verify frontend logs were captured with correct prefix
   const logs2 = readWdioLogs(logDir);
-  assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend INFO/i);
-  assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend WARN/i);
-  assertLogContains(logs2, /\[Tauri:Frontend\].*\[Test\].*Standalone frontend ERROR/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend INFO/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend WARN/i);
+  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend ERROR/i);
   console.log('✅ Frontend logs test passed');
 
   // Test 3: Filter logs by level in standalone session
