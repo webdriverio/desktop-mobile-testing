@@ -43,6 +43,10 @@ type TauriCapability = {
   'wdio:tauriServiceOptions': {
     appBinaryPath: string;
     appArgs: string[];
+    captureBackendLogs?: boolean;
+    captureFrontendLogs?: boolean;
+    backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+    frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   };
 };
 
@@ -55,6 +59,11 @@ const capabilities: TauriCapability[] = [
     'wdio:tauriServiceOptions': {
       appBinaryPath: appBinaryPath,
       appArgs: [],
+      // Enable log capture for debugging
+      captureBackendLogs: true,
+      captureFrontendLogs: true,
+      backendLogLevel: 'debug',
+      frontendLogLevel: 'debug',
     },
   },
 ];
@@ -70,7 +79,6 @@ export const config = {
   hostname: '127.0.0.1',
   port: 4444,
   logLevel: process.env.DEBUG ? 'debug' : 'info',
-  outputDir: './logs',
   logLevels: {
     webdriver: 'info',
     '@wdio/tauri-service': 'info',
@@ -83,6 +91,8 @@ export const config = {
   // Don't use autoXvfb - tauri-driver runs in launcher (not worker) and needs display
   // The entire test command must be wrapped with xvfb-run in CI
   autoXvfb: false,
+  // Output directory for logs
+  outputDir: path.join(__dirname, 'logs'),
   services: [
     [
       '@wdio/tauri-service',

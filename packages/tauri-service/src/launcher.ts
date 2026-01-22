@@ -15,13 +15,15 @@ const log = createLogger('tauri-service', 'launcher');
 let specReporterPatched = false;
 
 /**
- * Generate unique data directory for multiremote instance
+ * Generate unique data directory for multiremote instance or worker
  */
 function generateDataDirectory(instanceId: string): string {
   const baseTempDir = tmpdir();
-  const dataDir = join(baseTempDir, `tauri-multiremote-${instanceId}`);
+  // Support both multiremote instances and worker IDs
+  const prefix = instanceId.startsWith('worker-') ? 'tauri' : 'tauri-multiremote';
+  const dataDir = join(baseTempDir, `${prefix}-${instanceId}`);
 
-  log.debug(`Generated data directory for instance ${instanceId}: ${dataDir}`);
+  log.debug(`Generated data directory for ${instanceId}: ${dataDir}`);
   return dataDir;
 }
 
@@ -53,6 +55,16 @@ export default class TauriLaunchService {
   private appBinaryPath?: string;
   private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
   private instanceOptions: Map<string, TauriServiceOptions> = new Map();
+  private perWorkerMode: boolean = false;
+  private perWorkerDrivers: Map<
+    string,
+    {
+      proc: ChildProcess;
+      port: number;
+      nativePort: number;
+      dataDir: string;
+    }
+  > = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -151,8 +163,19 @@ export default class TauriLaunchService {
       }
     }
 
+    // Auto-detect per-worker mode based on maxInstances
+    // When maxInstances > 1, enable per-worker spawning for parallelism
+    // When maxInstances === 1, use single shared driver for optimal performance
+    const maxInstances = _config.maxInstances || 100; // WDIO default is 100
+    const isMultiremote = !Array.isArray(capabilities);
+    this.perWorkerMode = maxInstances > 1 && !isMultiremote;
+
+    log.info(
+      `Per-worker mode: ${this.perWorkerMode ? 'enabled' : 'disabled'} (maxInstances=${maxInstances}, multiremote=${isMultiremote})`,
+    );
+
     // Multiremote: spawn a dedicated tauri-driver per instance on unique ports
-    if (!Array.isArray(capabilities)) {
+    if (isMultiremote) {
       const capEntries = Object.entries(capabilities);
       log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);
 
@@ -218,24 +241,30 @@ export default class TauriLaunchService {
         await this.startTauriDriverForInstance(instanceId, instancePort, instanceNativePort, env, instanceOptions);
       }
     } else {
-      // Standard session: single shared tauri-driver as before
-      // Set up isolation is not necessary; app may use default data dir
-      const port = this.options.tauriDriverPort || 4444;
-      const hostname = '127.0.0.1';
+      // Standard session: single shared tauri-driver or per-worker drivers
+      if (this.perWorkerMode) {
+        // Per-worker mode: drivers will be spawned in onWorkerStart()
+        log.info('Per-worker mode enabled - drivers will be spawned per worker in onWorkerStart()');
+      } else {
+        // Single driver mode: spawn one shared driver
+        log.info('Single driver mode - spawning shared tauri-driver');
+        const port = this.options.tauriDriverPort || 4444;
+        const hostname = '127.0.0.1';
 
-      await this.startTauriDriver(capsList);
+        await this.startTauriDriver(capsList);
 
-      // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
-      // This is necessary for standalone mode where capabilities are passed directly to remote()
-      for (const cap of capsList) {
-        (cap as { port?: number; hostname?: string }).port = port;
-        (cap as { port?: number; hostname?: string }).hostname = hostname;
-        log.debug(
-          `Set tauri-driver connection on capabilities: ${hostname}:${port}, ` +
-            `browserName=${(cap as { browserName?: string }).browserName}, ` +
-            `port=${(cap as { port?: number }).port}, ` +
-            `hostname=${(cap as { hostname?: string }).hostname}`,
-        );
+        // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
+        // This is necessary for standalone mode where capabilities are passed directly to remote()
+        for (const cap of capsList) {
+          (cap as { port?: number; hostname?: string }).port = port;
+          (cap as { port?: number; hostname?: string }).hostname = hostname;
+          log.debug(
+            `Set tauri-driver connection on capabilities: ${hostname}:${port}, ` +
+              `browserName=${(cap as { browserName?: string }).browserName}, ` +
+              `port=${(cap as { port?: number }).port}, ` +
+              `hostname=${(cap as { hostname?: string }).hostname}`,
+          );
+        }
       }
     }
 
@@ -339,6 +368,36 @@ export default class TauriLaunchService {
     // The single tauri-driver process will handle multiple sessions
     if (instanceId) {
       log.debug(`Multiremote instance ${instanceId} - data directory isolation already configured`);
+    }
+
+    // Per-worker mode: spawn dedicated driver for this worker
+    if (this.perWorkerMode && !instanceId) {
+      log.info(`Per-worker mode: spawning tauri-driver for worker ${cid}`);
+
+      // Allocate ports for this worker
+      const { port, nativePort } = await this.allocateWorkerPorts(cid);
+
+      // Generate isolated data directory
+      const dataDir = generateDataDirectory(`worker-${cid}`);
+
+      // Set up environment variables for data directory isolation
+      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+      const env = { ...process.env, [envVarName]: dataDir };
+
+      // Merge options (global + capability-specific)
+      const workerOptions = mergeOptions(this.options, firstCap['wdio:tauriServiceOptions']);
+
+      // Spawn tauri-driver for this worker
+      await this.startTauriDriverForWorker(cid, port, nativePort, env, workerOptions);
+
+      // Update capabilities with allocated port so WDIO connects to correct port
+      // This is critical - the worker needs to know which port to connect to
+      const hostname = '127.0.0.1';
+      for (const cap of capsList) {
+        (cap as { port?: number; hostname?: string }).port = port;
+        (cap as { port?: number; hostname?: string }).hostname = hostname;
+        log.debug(`Updated worker ${cid} capabilities: ${hostname}:${port}`);
+      }
     }
 
     // Run environment diagnostics
@@ -470,11 +529,219 @@ export default class TauriLaunchService {
   }
 
   /**
+   * Allocate ports for a worker
+   */
+  private async allocateWorkerPorts(workerId: string): Promise<{ port: number; nativePort: number }> {
+    const basePort = this.options.tauriDriverPort || 4444;
+    const baseNativePort = 4445;
+
+    // Get list of already allocated ports to exclude
+    const usedPorts = new Set<number>();
+    for (const [, info] of this.perWorkerDrivers) {
+      usedPorts.add(info.port);
+      usedPorts.add(info.nativePort);
+    }
+
+    // Allocate main port (use basePort + number of existing workers as starting point)
+    const preferredPort = basePort + this.perWorkerDrivers.size;
+    const port = await getPort({
+      port: preferredPort,
+      host: '127.0.0.1',
+      exclude: Array.from(usedPorts),
+    });
+    usedPorts.add(port);
+
+    // Allocate native port
+    const preferredNativePort = baseNativePort + this.perWorkerDrivers.size;
+    const nativePort = await getPort({
+      port: preferredNativePort,
+      host: '127.0.0.1',
+      exclude: Array.from(usedPorts),
+    });
+
+    log.info(`Allocated ports for worker ${workerId}: main=${port}, native=${nativePort}`);
+    return { port, nativePort };
+  }
+
+  /**
+   * Start tauri-driver for a specific worker
+   */
+  private async startTauriDriverForWorker(
+    workerId: string,
+    port: number,
+    nativePort: number,
+    env: NodeJS.ProcessEnv,
+    options?: TauriServiceOptions,
+  ): Promise<void> {
+    console.log(`[CONSOLE-DEBUG] startTauriDriverForWorker called for worker-${workerId}`);
+    // Ensure driver is available
+    const workerOptions = options ?? mergeOptions(this.options, undefined);
+    console.log(
+      `[CONSOLE-DEBUG] Worker options: captureFrontendLogs=${workerOptions.captureFrontendLogs}, captureBackendLogs=${workerOptions.captureBackendLogs}`,
+    );
+    log.debug(`[worker-${workerId}] Worker options: ${JSON.stringify(workerOptions, null, 2)}`);
+    log.debug(
+      `[worker-${workerId}] captureFrontendLogs: ${workerOptions.captureFrontendLogs}, captureBackendLogs: ${workerOptions.captureBackendLogs}`,
+    );
+    const driverResult = await ensureTauriDriver(workerOptions);
+    if (!driverResult.success) {
+      throw new Error(driverResult.error || 'Failed to find tauri-driver');
+    }
+
+    const tauriDriverPath = driverResult.path;
+
+    log.info(`Starting tauri-driver [worker-${workerId}] on port ${port} (native port: ${nativePort})`);
+    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
+
+    const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
+    if (nativeDriverPath) {
+      args.push('--native-driver', nativeDriverPath);
+      log.debug(`[worker-${workerId}] Using native driver: ${nativeDriverPath}`);
+    }
+
+    // Extract data directory from env for storage
+    const dataDir = env.XDG_DATA_HOME || env.TAURI_DATA_DIR || '';
+
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(tauriDriverPath, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false,
+        env,
+      });
+
+      log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
+      this.perWorkerDrivers.set(workerId, { proc, port, nativePort, dataDir });
+
+      proc.stdout?.on('data', (data: Buffer) => {
+        const output = data.toString();
+        // Log all stdout for debugging
+        log.info(
+          `[STDOUT] worker-${workerId} received ${output.length} chars, content preview: ${output.substring(0, 200)}`,
+        );
+        if (output.includes('tauri-driver started') || output.includes('listening on')) {
+          log.info(`✅ tauri-driver [worker-${workerId}] started successfully on port ${port}`);
+          resolve();
+        }
+
+        // Parse and forward logs if enabled
+        const parsedLogs = parseLogLines(output);
+        log.info(`[STDOUT] worker-${workerId} parsed ${parsedLogs.length} log lines`);
+        for (const parsedLog of parsedLogs) {
+          // Forward backend logs
+          if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
+            const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+          }
+          // Forward frontend logs (from attachConsole)
+          if (workerOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
+            const minLevel = (workerOptions.frontendLogLevel ?? 'info') as LogLevel;
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+          }
+        }
+      });
+
+      proc.stderr?.on('data', (data: Buffer) => {
+        const output = data.toString();
+        log.error(`[worker-${workerId}] stderr: ${output.trim()}`);
+
+        // Parse and forward logs from stderr if enabled
+        const parsedLogs = parseLogLines(output);
+        log.debug(`[worker-${workerId}] Parsed ${parsedLogs.length} log lines from stderr`);
+        for (const parsedLog of parsedLogs) {
+          log.debug(
+            `[worker-${workerId}] Log: source=${parsedLog.source}, level=${parsedLog.level}, message=${parsedLog.message.substring(0, 100)}`,
+          );
+          // Forward backend logs
+          if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
+            const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+          }
+          // Forward frontend logs (from attachConsole)
+          if (workerOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
+            const minLevel = (workerOptions.frontendLogLevel ?? 'info') as LogLevel;
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
+          }
+        }
+      });
+
+      proc.on('error', (error: Error) => {
+        log.error(`❌ Failed to start tauri-driver [worker-${workerId}]: ${error.message}`);
+        reject(error);
+      });
+
+      proc.on('exit', (code: number | null, signal: string | null) => {
+        if (code !== null && code !== 0) {
+          log.error(`❌ tauri-driver [worker-${workerId}] exited with code ${code}, signal: ${signal}`);
+        } else {
+          log.debug(`[worker-${workerId}] Process exited (code: ${code}, signal: ${signal})`);
+        }
+      });
+
+      setTimeout(() => {
+        if (!proc.killed) {
+          log.warn(`⚠️  tauri-driver [worker-${workerId}] startup timeout, assuming ready`);
+          resolve();
+        }
+      }, 30000);
+    });
+
+    // Wait for driver to be ready
+    log.debug(`[worker-${workerId}] Waiting for TCP port ${port} to open...`);
+    await this.waitForPortOpen('127.0.0.1', port, 30000);
+    log.debug(`[worker-${workerId}] Waiting for HTTP endpoint to be ready...`);
+    await this.waitForHttpReady('127.0.0.1', port, 10000);
+
+    // Verify process is still alive
+    const procInfo = this.perWorkerDrivers.get(workerId);
+    if (procInfo?.proc.killed) {
+      throw new Error(`tauri-driver [worker-${workerId}] process died during startup`);
+    }
+    log.info(`[worker-${workerId}] Driver ready on port ${port} (native port: ${nativePort})`);
+  }
+
+  /**
    * End worker session
    */
   async onWorkerEnd(cid: string): Promise<void> {
     log.debug(`Ending Tauri worker session: ${cid}`);
-    // Cleanup handled in onComplete
+
+    // Per-worker mode: clean up this worker's driver
+    if (this.perWorkerMode) {
+      await this.stopTauriDriverForWorker(cid);
+    }
+    // In single driver mode, cleanup is handled in onComplete
+  }
+
+  /**
+   * Stop tauri-driver for a specific worker
+   */
+  private async stopTauriDriverForWorker(workerId: string): Promise<void> {
+    const driverInfo = this.perWorkerDrivers.get(workerId);
+    if (!driverInfo) {
+      log.debug(`No driver found for worker ${workerId}`);
+      return;
+    }
+
+    const { proc, port } = driverInfo;
+
+    if (proc.killed) {
+      log.debug(`Driver for worker ${workerId} already stopped`);
+      this.perWorkerDrivers.delete(workerId);
+      return;
+    }
+
+    log.info(`Stopping tauri-driver for worker ${workerId} (port: ${port})`);
+
+    // Send SIGTERM for graceful shutdown
+    proc.kill('SIGTERM');
+
+    await this.waitForProcessExit(proc);
+
+    // Wait additional time for port release
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    this.perWorkerDrivers.delete(workerId);
+    log.debug(`Driver for worker ${workerId} stopped and cleaned up`);
   }
 
   /**
@@ -482,6 +749,14 @@ export default class TauriLaunchService {
    */
   async onComplete(_exitCode: number, _config: Options.Testrunner, _capabilities: TauriCapabilities[]): Promise<void> {
     log.debug('Completing Tauri service...');
+
+    // Close log writer if initialized
+    try {
+      const { closeStandaloneLogWriter } = await import('./logWriter.js');
+      closeStandaloneLogWriter();
+    } catch {
+      // Log writer may not have been initialized
+    }
 
     // Stop tauri-driver
     await this.stopTauriDriver();
@@ -496,6 +771,10 @@ export default class TauriLaunchService {
     // Get options for driver management
     const firstCap = capabilities?.[0];
     const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
+    log.debug(`Single driver mode options: ${JSON.stringify(options, null, 2)}`);
+    log.debug(
+      `Single driver mode: captureFrontendLogs=${options.captureFrontendLogs}, captureBackendLogs=${options.captureBackendLogs}`,
+    );
 
     // Ensure driver is available
     const driverResult = await ensureTauriDriver(options);
@@ -556,12 +835,12 @@ export default class TauriLaunchService {
           // Forward backend logs
           if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel);
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
           }
           // Forward frontend logs (from attachConsole)
           if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel);
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
             frontendCount += 1;
           }
         }
@@ -581,12 +860,12 @@ export default class TauriLaunchService {
           // Forward backend logs
           if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel);
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
           }
           // Forward frontend logs (from attachConsole)
           if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel);
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
             frontendCount += 1;
           }
         }
@@ -671,12 +950,12 @@ export default class TauriLaunchService {
           // Forward backend logs
           if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
           // Forward frontend logs (from attachConsole)
           if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
         }
       });
@@ -691,12 +970,12 @@ export default class TauriLaunchService {
           // Forward backend logs
           if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
             const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
           // Forward frontend logs (from attachConsole)
           if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
             const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, instanceId);
+            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
           }
         }
       });
@@ -812,10 +1091,25 @@ export default class TauriLaunchService {
   }
 
   /**
-   * Stop tauri-driver process
+   * Stop tauri-driver process with proper cleanup
    */
   private async stopTauriDriver(): Promise<void> {
-    // Stop per-instance drivers if present
+    // Stop per-worker drivers if present
+    if (this.perWorkerDrivers.size > 0) {
+      log.info(`Stopping ${this.perWorkerDrivers.size} per-worker driver(s)...`);
+      for (const [workerId, { proc }] of this.perWorkerDrivers.entries()) {
+        if (!proc.killed) {
+          log.debug(`Stopping tauri-driver [worker-${workerId}]...`);
+          proc.kill('SIGTERM');
+        }
+      }
+
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+      this.perWorkerDrivers.clear();
+      return;
+    }
+
+    // Stop per-instance drivers if present (multiremote)
     if (this.tauriDriverProcesses.size > 0) {
       for (const [instanceId, { proc }] of this.tauriDriverProcesses.entries()) {
         if (!proc.killed) {
@@ -834,28 +1128,47 @@ export default class TauriLaunchService {
       log.debug('Stopping tauri-driver...');
       this.tauriDriverProcess.kill('SIGTERM');
 
-      // Wait for process to exit, with force-kill fallback
-      // Use longer timeout on CI where processes can take longer to clean up
-      const stopTimeout = process.env.CI ? 10000 : 5000;
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
-          this.tauriDriverProcess?.kill('SIGKILL');
-          // Give SIGKILL a moment to take effect
-          setTimeout(resolve, 2000);
-        }, stopTimeout);
-
-        this.tauriDriverProcess?.on('exit', () => {
-          log.debug('tauri-driver process exited');
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
+      await this.waitForProcessExit(this.tauriDriverProcess);
 
       // Additional delay to ensure port is fully released
       // This is especially important on slower CI runners
       await new Promise<void>((resolve) => setTimeout(resolve, 500));
     }
+  }
+
+  /**
+   * Wait for a process to exit, with graceful shutdown and force-kill fallback
+   */
+  private async waitForProcessExit(proc: ChildProcess): Promise<void> {
+    const stopTimeout = process.env.CI ? 10000 : 5000;
+
+    let shutdownTimeout: ReturnType<typeof setTimeout> | null = null;
+    let killTimeout: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = () => {
+      if (shutdownTimeout) clearTimeout(shutdownTimeout);
+      if (killTimeout) clearTimeout(killTimeout);
+    };
+
+    return new Promise<void>((resolve) => {
+      const onExit = () => {
+        cleanup();
+        log.debug('tauri-driver process exited');
+        resolve();
+      };
+
+      proc.once('exit', onExit);
+
+      shutdownTimeout = setTimeout(() => {
+        log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
+        proc.kill('SIGKILL');
+
+        killTimeout = setTimeout(() => {
+          log.warn('tauri-driver force kill timeout, giving up');
+          cleanup();
+          resolve();
+        }, 2000);
+      }, stopTimeout);
+    });
   }
 
   /**

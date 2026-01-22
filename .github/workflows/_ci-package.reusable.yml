@@ -153,8 +153,11 @@ jobs:
             fi
           fi
 
-          # Pack Tauri service if needed
+          # Pack Tauri service and plugin if needed
           if [ "${{ inputs.service }}" == "tauri" ] || [ "${{ inputs.service }}" == "both" ]; then
+            if [ -d "packages/tauri-plugin/dist-js" ]; then
+              (cd packages/tauri-plugin && pnpm pack)
+            fi
             if [ -d "packages/tauri-service/dist" ]; then
               (cd packages/tauri-service && pnpm pack)
             fi

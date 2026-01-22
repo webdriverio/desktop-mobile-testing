@@ -278,8 +278,8 @@ importers:
         specifier: ^2.0.0
         version: 2.4.4
       '@tauri-apps/plugin-log':
-        specifier: ^2.7.1
-        version: 2.7.1
+        specifier: 2.8.0
+        version: 2.8.0
       '@wdio/tauri-plugin':
         specifier: workspace:*
         version: link:../../../packages/tauri-plugin
@@ -594,8 +594,8 @@ importers:
         specifier: ^2.0.0
         version: 2.4.4
       '@tauri-apps/plugin-log':
-        specifier: ^2.7.1
-        version: 2.7.1
+        specifier: 2.8.0
+        version: 2.8.0
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.9.6
@@ -918,9 +918,15 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
       '@tauri-apps/plugin-log':
-        specifier: ^2.7.1
-        version: 2.7.1
+        specifier: ^2.8.0
+        version: 2.8.0
+      '@vitest/spy':
+        specifier: ^4.0.17
+        version: 4.0.17
     devDependencies:
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.11
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -928,8 +934,11 @@ importers:
   packages/tauri-service:
     dependencies:
       '@babel/parser':
-        specifier: ^7.28.5
-        version: 7.28.6
+        specifier: ^7.26.0
+        version: 7.28.4
+      '@vitest/spy':
+        specifier: ^4.0.4
+        version: 4.0.16
       '@wdio/globals':
         specifier: catalog:default
         version: 9.23.0(expect-webdriverio@5.4.3)(webdriverio@9.23.0(puppeteer-core@24.35.0))
@@ -957,6 +966,9 @@ importers:
       recast:
         specifier: ^0.23.11
         version: 0.23.11
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
       webdriverio:
         specifier: catalog:default
         version: 9.23.0(puppeteer-core@24.35.0)
@@ -2498,8 +2510,8 @@ packages:
   '@tauri-apps/plugin-fs@2.4.4':
     resolution: {integrity: sha512-MTorXxIRmOnOPT1jZ3w96vjSuScER38ryXY88vl5F0uiKdnvTKKTtaEjTEo8uPbl4e3gnUtfsDVwC7h77GQLvQ==}
 
-  '@tauri-apps/plugin-log@2.7.1':
-    resolution: {integrity: sha512-jdb+o0wxQc8PjnLktgGpOs9Dh1YupaOGDXzO+Y8peA1UZ1ep3eXv4E1oiJ7nIQVN0XUFDDhnn3aBszl8ijhR+A==}
+  '@tauri-apps/plugin-log@2.8.0':
+    resolution: {integrity: sha512-a+7rOq3MJwpTOLLKbL8d0qGZ85hgHw5pNOWusA9o3cf7cEgtYHiGY/+O8fj8MvywQIGqFv0da2bYQDlrqLE7rw==}
 
   '@tootallnate/once@2.0.0':
     resolution: {integrity: sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A==}
@@ -2723,8 +2735,14 @@ packages:
   '@vitest/spy@4.0.16':
     resolution: {integrity: sha512-4jIOWjKP0ZUaEmJm00E0cOBLU+5WE0BpeNr3XN6TEF05ltro6NJqHWxXD0kA8/Zc8Nh23AT8WQxwNG+WeROupw==}
 
+  '@vitest/spy@4.0.16':
+    resolution: {integrity: sha512-4jIOWjKP0ZUaEmJm00E0cOBLU+5WE0BpeNr3XN6TEF05ltro6NJqHWxXD0kA8/Zc8Nh23AT8WQxwNG+WeROupw==}
+
   '@vitest/spy@4.0.17':
     resolution: {integrity: sha512-I1bQo8QaP6tZlTomQNWKJE6ym4SHf3oLS7ceNjozxxgzavRAgZDc06T7kD8gb9bXKEgcLNt00Z+kZO6KaJ62Ew==}
+
+  '@vitest/utils@1.6.1':
+    resolution: {integrity: sha512-jOrrUvXM4Av9ZWiG1EajNto0u96kWAhJ1LmPmJhXXQx/32MecEKd10pOLYgS2BQx1TgkGhloPU1ArDW2vvaY6g==}
 
   '@vitest/utils@4.0.17':
     resolution: {integrity: sha512-RG6iy+IzQpa9SB8HAFHJ9Y+pTzI+h8553MrciN9eC6TFBErqrQaTas4vG+MVj8S4uKk8uTT2p0vgZPnTdxd96w==}
@@ -8169,7 +8187,7 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.9.1
 
-  '@tauri-apps/plugin-log@2.7.1':
+  '@tauri-apps/plugin-log@2.8.0':
     dependencies:
       '@tauri-apps/api': 2.9.1
 
@@ -8441,7 +8459,16 @@ snapshots:
 
   '@vitest/spy@4.0.16': {}
 
+  '@vitest/spy@4.0.16': {}
+
   '@vitest/spy@4.0.17': {}
+
+  '@vitest/utils@1.6.1':
+    dependencies:
+      diff-sequences: 29.6.3
+      estree-walker: 3.0.3
+      loupe: 2.3.7
+      pretty-format: 29.7.0
 
   '@vitest/utils@4.0.17':
     dependencies:

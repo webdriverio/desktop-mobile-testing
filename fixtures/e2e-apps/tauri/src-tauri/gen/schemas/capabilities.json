@@ -19,12 +19,7 @@
       "fs:read-dirs",
       "fs:read-meta",
       { "identifier": "fs:scope", "allow": [{ "path": "$TEMP/**" }, { "path": "/tmp/**" }, { "path": "$HOME/**" }] },
-      "wdio:allow-execute",
-      "wdio:allow-set-mock",
-      "wdio:allow-get-mock",
-      "wdio:allow-clear-mocks",
-      "wdio:allow-reset-mocks",
-      "wdio:allow-restore-mocks"
+      "wdio:default"
     ]
   }
 }

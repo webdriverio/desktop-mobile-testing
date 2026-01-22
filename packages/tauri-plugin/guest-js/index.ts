@@ -4,6 +4,7 @@
  */
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
+import type * as vitestSpy from '@vitest/spy';
 
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
@@ -46,17 +47,68 @@ declare global {
         warn?: (message: string) => Promise<void>;
         error?: (message: string) => Promise<void>;
       };
+      event?: {
+        listen?: (event: string, callback: (event: { payload: unknown }) => void) => Promise<() => void>;
+        emit?: (event: string, payload: unknown) => Promise<void>;
+      };
     };
     wdioTauri?: {
       execute: (script: string, args?: unknown[]) => Promise<unknown>;
-      setMock: (command: string, config: unknown) => Promise<void>;
-      getMock: (command: string) => Promise<unknown | null>;
-      clearMocks: () => Promise<void>;
-      resetMocks: () => Promise<void>;
-      restoreMocks: () => Promise<void>;
       waitForInit: () => Promise<void>;
+      cleanupBackendLogListener?: () => void;
+      cleanupFrontendLogListener?: () => void;
+      cleanupInvokeInterception?: () => void;
+      cleanupLogListeners: () => void;
+      cleanupAll: () => void;
     };
+    __vitest_spy__?: typeof vitestSpy;
+    __wdio_mocks__?: Record<string, unknown>;
   }
+}
+
+/**
+ * Cleanup registry to manage timers and event listeners
+ * Prevents memory leaks from retry loops and orphaned listeners
+ */
+class CleanupRegistry {
+  private timers = new Set<number>();
+  private listeners = new Set<() => void>();
+
+  addTimer(id: number): void {
+    this.timers.add(id);
+  }
+
+  clearTimers(): void {
+    this.timers.forEach((id) => {
+      clearTimeout(id);
+    });
+    this.timers.clear();
+  }
+
+  addListener(fn: () => void): void {
+    this.listeners.add(fn);
+  }
+
+  cleanup(): void {
+    this.clearTimers();
+    this.listeners.forEach((fn) => {
+      try {
+        fn();
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+    this.listeners.clear();
+  }
+}
+
+export const cleanupRegistry = new CleanupRegistry();
+
+// Add page unload handler to cleanup automatically
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    cleanupRegistry.cleanup();
+  });
 }
 
 /**
@@ -85,6 +137,21 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
       (async () => {
         const __wdio_tauri = window.__TAURI__;
         const __wdio_args = ${argsJson};
+
+        // Wait for window.__TAURI__.core.invoke to be available
+        // This handles the race condition where window.eval() runs before dynamic imports complete
+        if (!__wdio_tauri?.core?.invoke) {
+          // Wait up to 5 seconds for core.invoke to be set up
+          const startTime = Date.now();
+          const timeout = 5000;
+          while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          if (!__wdio_tauri?.core?.invoke) {
+            throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
+          }
+        }
+
         // Execute the script as a function with tauri as first arg, then spread additional args
         // Await the result in case it's a Promise (most Tauri commands return Promises)
         return await (${script})(__wdio_tauri, ...__wdio_args);
@@ -94,84 +161,28 @@ export async function execute(script: string, args: unknown[] = []): Promise<unk
     // Call the plugin command to execute the wrapped script
     // Tauri v2 plugin commands use format: plugin:plugin-name|command-name
     const invoke = await getInvoke();
-    const result = await invoke('plugin:wdio|execute', {
-      request: {
-        script: wrappedScript,
-        args: [],
-      },
-    } as InvokeArgs);
-    return result;
+    console.debug('[WDIO Plugin] Calling invoke with command: plugin:wdio|execute');
+    try {
+      const result = await invoke('plugin:wdio|execute', {
+        request: {
+          script: wrappedScript,
+          args: [],
+        },
+      } as InvokeArgs);
+      console.debug('[WDIO Plugin] Invoke result:', result);
+      return result;
+    } catch (error) {
+      console.error('[WDIO Plugin] Invoke error:', error);
+      throw new Error(`Failed to execute script: ${error instanceof Error ? error.message : String(error)}`);
+    }
   } catch (error) {
     throw new Error(`Failed to execute script: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-/**
- * Set a mock for a Tauri command
- * @param command - Command name to mock
- * @param config - Mock configuration
- */
-export async function setMock(command: string, config: unknown): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|set-mock', {
-      command,
-      config,
-    } as InvokeArgs);
-  } catch (error) {
-    throw new Error(`Failed to set mock for ${command}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Get mock configuration for a command
- * @param command - Command name
- * @returns Mock configuration or null
- */
-export async function getMock(command: string): Promise<unknown | null> {
-  try {
-    const invoke = await getInvoke();
-    return await invoke('plugin:wdio|get-mock', { command } as InvokeArgs);
-  } catch (error) {
-    throw new Error(`Failed to get mock for ${command}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Clear all mocks
- */
-export async function clearMocks(): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|clear-mocks');
-  } catch (error) {
-    throw new Error(`Failed to clear mocks: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Reset all mocks
- */
-export async function resetMocks(): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|reset-mocks');
-  } catch (error) {
-    throw new Error(`Failed to reset mocks: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Restore all mocks
- */
-export async function restoreMocks(): Promise<void> {
-  try {
-    const invoke = await getInvoke();
-    await invoke('plugin:wdio|restore-mocks');
-  } catch (error) {
-    throw new Error(`Failed to restore mocks: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
+// NOTE: Mock commands (setMock, getMock, clearMocks, resetMocks, restoreMocks) removed.
+// Mocking is now JavaScript-only via window.__wdio_mocks__ and invoke interception.
+// No backend Rust commands are needed for mocking - it's all handled in the frontend.
 
 /**
  * Get the console forwarding setup code as a string
@@ -194,7 +205,8 @@ export function getConsoleForwardingCode(): string {
         error: console.error.bind(console),
       };
 
-      // Helper to forward to Tauri
+      // Helper to forward to Tauri log plugin
+      // The log plugin outputs to stdout with target="frontend"
       function forward(level, args) {
         const message = Array.from(args).map(arg =>
           typeof arg === 'string' ? arg : JSON.stringify(arg)
@@ -204,17 +216,41 @@ export function getConsoleForwardingCode(): string {
         originalConsole[level === 'trace' ? 'log' : level](message);
 
         // Forward to Tauri log plugin
-        if (window.__TAURI__?.log?.[level]) {
+        if (window.__TAURI__.log[level]) {
           window.__TAURI__.log[level](message).catch(() => {});
         }
       }
 
-      // Wrap console methods
-      console.log = function() { forward('trace', arguments); };
-      console.debug = function() { forward('debug', arguments); };
-      console.info = function() { forward('info', arguments); };
-      console.warn = function() { forward('warn', arguments); };
-      console.error = function() { forward('error', arguments); };
+      // Wrap console methods using Object.defineProperty (works on WebKit)
+      try {
+        Object.defineProperty(console, 'log', {
+          value: function() { forward('trace', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'debug', {
+          value: function() { forward('debug', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'info', {
+          value: function() { forward('info', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'warn', {
+          value: function() { forward('warn', arguments); },
+          writable: true,
+          configurable: true
+        });
+        Object.defineProperty(console, 'error', {
+          value: function() { forward('error', arguments); },
+          writable: true,
+          configurable: true
+        });
+      } catch (err) {
+        // If Object.defineProperty fails, console forwarding won't work
+      }
     })();
   `;
 }
@@ -229,9 +265,9 @@ function setupConsoleForwarding(): void {
   }
 
   // Helper function to safely forward to Tauri log plugin
+  // Uses window.__TAURI__.log directly - the log plugin outputs to stdout with target="frontend"
   async function forwardToTauri(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string): Promise<void> {
     try {
-      // Check if Tauri log plugin is available
       if (window.__TAURI__?.log?.[level]) {
         await window.__TAURI__.log[level](message);
       }
@@ -250,59 +286,331 @@ function setupConsoleForwarding(): void {
     trace: console.trace,
   };
 
-  // Forward console.log to trace level
-  console.log = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.log(...args);
-    forwardToTauri('trace', message).catch(() => {
-      // Ignore errors
+  // Use Object.defineProperty to override console methods (works on WebKit)
+  try {
+    // Forward console.log to trace level
+    Object.defineProperty(console, 'log', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.log(...args);
+        forwardToTauri('trace', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
     });
+
+    // Forward console.debug
+    Object.defineProperty(console, 'debug', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.debug(...args);
+        forwardToTauri('debug', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    // Forward console.info
+    Object.defineProperty(console, 'info', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.info(...args);
+        forwardToTauri('info', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    // Forward console.warn
+    Object.defineProperty(console, 'warn', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.warn(...args);
+        forwardToTauri('warn', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    // Forward console.error
+    Object.defineProperty(console, 'error', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.error(...args);
+        forwardToTauri('error', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    // Forward console.trace
+    Object.defineProperty(console, 'trace', {
+      value: (...args: unknown[]) => {
+        const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+        originalConsole.trace(...args);
+        forwardToTauri('trace', message).catch(() => {
+          // Ignore errors
+        });
+      },
+      writable: true,
+      configurable: true,
+    });
+  } catch (_error) {
+    // If Object.defineProperty fails, console forwarding won't work
+    // Console logs will still work but won't be forwarded to Tauri log plugin
+  }
+}
+
+/**
+ * Setup invoke interception for mocking
+ * This wraps window.__TAURI__.core.invoke to check for mocks before calling the real implementation
+ * Retries until window.__TAURI__.core.invoke is available (with timeout)
+ */
+function setupInvokeInterception(): void {
+  if (typeof window === 'undefined') {
+    console.warn('[WDIO Tauri Plugin] Cannot setup invoke interception - window not available');
+    return;
+  }
+
+  let attempts = 0;
+  const maxAttempts = 50; // 50 attempts * 100ms = 5 seconds max
+  const retryInterval = 100; // ms
+
+  const trySetup = () => {
+    attempts++;
+
+    // Check if window.__TAURI__.core is available and is an object
+    const core = window.__TAURI__?.core;
+    if (!core || typeof core !== 'object') {
+      if (attempts < maxAttempts) {
+        console.log(`[WDIO Tauri Plugin] Waiting for window.__TAURI__.core (attempt ${attempts}/${maxAttempts})`);
+        const timerId = window.setTimeout(trySetup, retryInterval);
+        cleanupRegistry.addTimer(timerId);
+        return;
+      } else {
+        console.warn('[WDIO Tauri Plugin] Timeout waiting for window.__TAURI__.core - invoke interception not set up');
+        return;
+      }
+    }
+
+    // Check if we already have an invoke interceptor set up
+    if ((core as { _wdioInvokeInterceptor?: boolean })._wdioInvokeInterceptor) {
+      console.log('[WDIO Tauri Plugin] Invoke interception already set up');
+      return;
+    }
+
+    // Get the original invoke function if it exists
+    const originalInvoke =
+      typeof (core as { invoke?: unknown }).invoke === 'function'
+        ? (core as { invoke: (...args: unknown[]) => Promise<unknown> }).invoke.bind(core)
+        : null;
+
+    // Create a wrapped invoke function
+    const wrappedInvoke = async (cmd: string, args?: InvokeArgs): Promise<unknown> => {
+      // Check if there's a mock for this command
+      const mockFn = window.__wdio_mocks__?.[cmd];
+
+      if (mockFn && typeof mockFn === 'function') {
+        console.log(`[WDIO Tauri Plugin] Intercepted invoke for '${cmd}' - using mock`);
+        try {
+          const result = await mockFn(args);
+          return result;
+        } catch (error) {
+          console.error(`[WDIO Tauri Plugin] Mock error for '${cmd}':`, error);
+          throw error;
+        }
+      }
+
+      // No mock found, call the original invoke if available
+      if (originalInvoke) {
+        return originalInvoke(cmd, args);
+      }
+
+      // No original invoke, try to get it dynamically
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        return invoke(cmd, args);
+      } catch (_error) {
+        throw new Error(`Tauri API not available for command: ${cmd}`);
+      }
+    };
+
+    // Use Object.defineProperty with a getter to ensure interception persists
+    try {
+      Object.defineProperty(core, 'invoke', {
+        value: wrappedInvoke,
+        writable: true,
+        configurable: true,
+      });
+      (core as { _wdioInvokeInterceptor?: boolean })._wdioInvokeInterceptor = true;
+      console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete');
+    } catch (_error) {
+      console.error('[WDIO Tauri Plugin] Failed to set up invoke interception:', _error);
+    }
   };
 
-  // Forward console.debug
-  console.debug = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.debug(...args);
-    forwardToTauri('debug', message).catch(() => {
-      // Ignore errors
-    });
+  trySetup();
+}
+
+/**
+ * Setup event listener for backend logs
+ * Backend emits 'backend-log' events that we forward to console for WebDriver capture
+ * This bypasses tauri-driver's stdout limitation by routing through frontend console
+ */
+function setupBackendLogListener(): void {
+  if (typeof window === 'undefined') {
+    console.info('[WDIO][Frontend] setupBackendLogListener: window is undefined, skipping');
+    return;
+  }
+
+  console.info('[WDIO][Frontend] Installing backend-log listener');
+
+  const maxAttempts = 100;
+  const retryInterval = 50;
+  let attempts = 0;
+  let removeListenerRef: (() => void) | null = null;
+
+  const trySetup = () => {
+    attempts++;
+
+    if (attempts % 10 === 1) {
+      console.info(`[WDIO][Frontend] Waiting for Tauri (attempt ${attempts}/${maxAttempts})`);
+    }
+
+    if (attempts >= maxAttempts) {
+      console.warn('[WDIO][Frontend] Timeout waiting for Tauri - backend log listener not set up');
+      return;
+    }
+
+    if (typeof window.__TAURI__ === 'undefined' || typeof window.__TAURI__.event === 'undefined') {
+      const timerId = window.setTimeout(trySetup, retryInterval);
+      cleanupRegistry.addTimer(timerId);
+      return;
+    }
+
+    console.info('[WDIO][Frontend] Tauri ready - setting up backend-log listener');
+
+    const setupListener = async () => {
+      try {
+        console.info('[WDIO][Frontend] Importing @tauri-apps/api/event');
+        const { listen } = await import('@tauri-apps/api/event');
+        console.info('[WDIO][Frontend] Event module imported successfully');
+
+        const removeListener = await listen('backend-log', (event) => {
+          console.info('[WDIO][Frontend] backend-log received:', event.payload);
+          const logMessage = event.payload as string;
+          console.info(logMessage);
+        });
+
+        removeListenerRef = removeListener;
+        cleanupRegistry.addListener(removeListener);
+
+        console.info('[WDIO][Frontend] Backend log listener registered successfully');
+
+        if (!window.wdioTauri) {
+          window.wdioTauri = {} as Window['wdioTauri'];
+        }
+        const wdioTauri = window.wdioTauri!;
+        wdioTauri.cleanupBackendLogListener = () => {
+          if (removeListenerRef) {
+            removeListenerRef();
+            removeListenerRef = null;
+          }
+          console.log('[WDIO Tauri Plugin] Backend log listener cleaned up');
+        };
+      } catch (error) {
+        console.log(`[WDIO Tauri Plugin] Failed to setup backend log listener: ${error}`);
+      }
+    };
+
+    setupListener();
   };
 
-  // Forward console.info
-  console.info = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.info(...args);
-    forwardToTauri('info', message).catch(() => {
-      // Ignore errors
-    });
+  trySetup();
+}
+
+/**
+ * Setup event listener for frontend logs
+ * Backend emits 'frontend-log' events that we forward to console for WebDriver capture
+ * This allows log_frontend command to route logs through frontend console for capture
+ */
+function setupFrontendLogListener(): void {
+  if (typeof window === 'undefined') {
+    console.info('[WDIO][Frontend] setupFrontendLogListener: window is undefined, skipping');
+    return;
+  }
+
+  console.info('[WDIO][Frontend] Installing frontend-log listener');
+
+  const maxAttempts = 100;
+  const retryInterval = 50;
+  let attempts = 0;
+  let removeListenerRef: (() => void) | null = null;
+
+  const trySetup = () => {
+    attempts++;
+
+    if (attempts % 10 === 1) {
+      console.info(`[WDIO][Frontend] Waiting for Tauri for frontend-log listener (attempt ${attempts}/${maxAttempts})`);
+    }
+
+    if (attempts >= maxAttempts) {
+      console.warn('[WDIO][Frontend] Timeout waiting for Tauri - frontend log listener not set up');
+      return;
+    }
+
+    if (typeof window.__TAURI__ === 'undefined' || typeof window.__TAURI__.event === 'undefined') {
+      const timerId = window.setTimeout(trySetup, retryInterval);
+      cleanupRegistry.addTimer(timerId);
+      return;
+    }
+
+    console.info('[WDIO][Frontend] Tauri ready - setting up frontend-log listener');
+
+    const setupListener = async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+
+        const removeListener = await listen('frontend-log', (event) => {
+          const logMessage = event.payload as string;
+          console.info(logMessage);
+        });
+
+        removeListenerRef = removeListener;
+        cleanupRegistry.addListener(removeListener);
+
+        console.info('[WDIO][Frontend] Frontend log listener registered successfully');
+
+        if (!window.wdioTauri) {
+          window.wdioTauri = {} as Window['wdioTauri'];
+        }
+        const wdioTauri = window.wdioTauri!;
+        wdioTauri.cleanupFrontendLogListener = () => {
+          if (removeListenerRef) {
+            removeListenerRef();
+            removeListenerRef = null;
+          }
+          console.log('[WDIO Tauri Plugin] Frontend log listener cleaned up');
+        };
+      } catch (error) {
+        console.log(`[WDIO Tauri Plugin] Failed to setup frontend log listener: ${error}`);
+      }
+    };
+
+    setupListener();
   };
 
-  // Forward console.warn
-  console.warn = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.warn(...args);
-    forwardToTauri('warn', message).catch(() => {
-      // Ignore errors
-    });
-  };
-
-  // Forward console.error
-  console.error = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.error(...args);
-    forwardToTauri('error', message).catch(() => {
-      // Ignore errors
-    });
-  };
-
-  // Forward console.trace
-  console.trace = (...args: unknown[]) => {
-    const message = args.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
-    originalConsole.trace(...args);
-    forwardToTauri('trace', message).catch(() => {
-      // Ignore errors
-    });
-  };
+  trySetup();
 }
 
 /**
@@ -310,6 +618,11 @@ function setupConsoleForwarding(): void {
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
 export async function init(): Promise<void> {
+  if (isInitialized) {
+    console.log('[WDIO Tauri Plugin] Already initialized, skipping');
+    return;
+  }
+
   const messages: string[] = [];
   messages.push('[WDIO Tauri Plugin] Initializing...');
   messages.push(`[WDIO Tauri Plugin] typeof window: ${typeof window}`);
@@ -331,18 +644,30 @@ export async function init(): Promise<void> {
   // Expose wdioTauri on window object for backward compatibility
   // Note: window.__TAURI__ might not be available immediately, but we can set up the API
   // The API functions will check for __TAURI__ when they're called
-  window.wdioTauri = {
-    execute,
-    setMock,
-    getMock,
-    clearMocks,
-    resetMocks,
-    restoreMocks,
-    waitForInit,
+  // Mock commands are not exposed here - mocking is handled via window.__wdio_mocks__
+  if (!window.wdioTauri) {
+    window.wdioTauri = {} as Window['wdioTauri'];
+  }
+  const wdioTauriObj = window.wdioTauri as Window['wdioTauri'] & { execute: unknown; waitForInit: unknown };
+  wdioTauriObj.execute = execute;
+  wdioTauriObj.waitForInit = waitForInit;
+
+  // Add cleanup functions
+  wdioTauriObj.cleanupLogListeners = () => cleanupRegistry.cleanup();
+  wdioTauriObj.cleanupInvokeInterception = () => {
+    cleanupRegistry.clearTimers();
+  };
+  wdioTauriObj.cleanupAll = () => {
+    wdioTauriObj.cleanupBackendLogListener?.();
+    wdioTauriObj.cleanupFrontendLogListener?.();
+    wdioTauriObj.cleanupInvokeInterception?.();
+    cleanupRegistry.cleanup();
   };
 
   messages.push('[WDIO Tauri Plugin] window.wdioTauri set successfully');
-  messages.push(`[WDIO Tauri Plugin] window.wdioTauri.execute: ${typeof window.wdioTauri.execute}`);
+  messages.push(
+    `[WDIO Tauri Plugin] window.wdioTauri.execute: ${window.wdioTauri?.execute ? 'function' : 'undefined'}`,
+  );
 
   // Log all messages (console.log is synchronous, will work immediately)
   for (const msg of messages) {
@@ -357,6 +682,22 @@ export async function init(): Promise<void> {
   setupConsoleForwarding();
   console.log('[WDIO Tauri Plugin] ✅ Console forwarding initialized');
 
+  // Setup event listener for backend logs
+  // Backend emits 'backend-log' events that we forward to console for WebDriver capture
+  console.log('[WDIO Tauri Plugin] Setting up backend log event listener...');
+  setupBackendLogListener();
+  console.log('[WDIO Tauri Plugin] ✅ Backend log listener initialized');
+
+  // Setup event listener for frontend logs
+  // Backend emits 'frontend-log' events that we forward to console for WebDriver capture
+  console.log('[WDIO Tauri Plugin] Setting up frontend log event listener...');
+  setupFrontendLogListener();
+  console.log('[WDIO Tauri Plugin] ✅ Frontend log listener initialized');
+
+  // Setup invoke interception for mocking support
+  console.log('[WDIO Tauri Plugin] Setting up invoke interception for mocking...');
+  setupInvokeInterception();
+
   // Log all accumulated messages now that forwarding is active
   for (const msg of messages) {
     console.log(msg);
@@ -365,28 +706,50 @@ export async function init(): Promise<void> {
   // Test that console forwarding works
   console.info('[WDIO Tauri Plugin] TEST: This is a test INFO log after setupConsoleForwarding()');
   console.warn('[WDIO Tauri Plugin] TEST: This is a test WARN log after setupConsoleForwarding()');
+
+  isInitialized = true;
 }
 
 // Auto-initialize when imported
-// Note: We can't await at module level, but we start the initialization immediately
+// NOTE: We can't await at module level, but we start the initialization immediately
 // and expose a promise that can be awaited by consumers if needed
 const initMessages: string[] = [];
-initMessages.push('[WDIO Tauri Plugin] Module loaded, checking if should auto-initialize...');
-initMessages.push(`[WDIO Tauri Plugin] typeof window at module level: ${typeof window}`);
+initMessages.push('[WDIO][CRITICAL] Plugin module loaded - this message must appear in logs');
+initMessages.push(`[WDIO][CRITICAL] typeof window at module level: ${typeof window}`);
+
+// Add visible marker to DOM
+if (typeof document !== 'undefined' && document.body) {
+  const marker = document.createElement('div');
+  marker.id = 'wdio-plugin-loaded';
+  marker.style.cssText =
+    'position:fixed;top:0;left:0;background:red;color:white;padding:10px;z-index:999999;font-size:20px;';
+  marker.textContent = '[WDIO][CRITICAL] Plugin JS loaded!';
+  document.body.appendChild(marker);
+}
 
 let initPromise: Promise<void> | null = null;
+let isInitialized = false;
 
 if (typeof window !== 'undefined') {
-  initMessages.push('[WDIO Tauri Plugin] Auto-initializing...');
+  initMessages.push('[WDIO][CRITICAL] Auto-initializing plugin...');
   for (const msg of initMessages) {
-    console.log(msg);
+    console.error(msg);
   }
-  // Start initialization immediately, store the promise
-  initPromise = init();
+  if (typeof document !== 'undefined' && document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!isInitialized) {
+        initPromise = init();
+      }
+    });
+  } else {
+    if (!isInitialized) {
+      initPromise = init();
+    }
+  }
 } else {
-  initMessages.push('[WDIO Tauri Plugin] Window not available at module level, skipping auto-init');
+  initMessages.push('[WDIO][CRITICAL] Window not available at module level, skipping auto-init');
   for (const msg of initMessages) {
-    console.log(msg);
+    console.error(msg);
   }
 }
 

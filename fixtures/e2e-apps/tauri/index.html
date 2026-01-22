@@ -139,6 +139,24 @@
           }
           window.__TAURI__.core.invoke = invoke;
           console.log('[App] window.__TAURI__.core.invoke set successfully');
+
+          // Listen for log events from Rust backend and log via console.log
+          // This ensures logs are captured by WebDriver via browser console protocol
+          const { listen } = await import('@tauri-apps/api/event');
+          console.log('[App] Setting up log event listener');
+          await listen('wdio-log', (event) => {
+            const { source, level, message } = event.payload;
+            const logMessage = `[Tauri:${source === 'backend' ? 'Backend' : 'Frontend'}] ${message}`;
+            switch (level) {
+              case 'trace': console.trace(logMessage); break;
+              case 'debug': console.debug(logMessage); break;
+              case 'info': console.info(logMessage); break;
+              case 'warn': console.warn(logMessage); break;
+              case 'error': console.error(logMessage); break;
+              default: console.log(logMessage);
+            }
+          });
+          console.log('[App] Log event listener setup complete');
         } catch (error) {
           console.warn('[App] Failed to import @tauri-apps/api/core, using global API:', error);
           // Fallback: ensure window.__TAURI__.core.invoke exists (should be available with withGlobalTauri: true)

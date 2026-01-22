@@ -159,7 +159,7 @@ export class StatusBar {
     const { total, completed, passed, failed, skipped, inProgress, startTime } = status;
 
     // Title
-    console.log(`${ANSI.fg.cyan}${ANSI.bright}📊 WebdriverIO Electron Service Test Status${ANSI.reset}`);
+    console.log(`${ANSI.fg.cyan}${ANSI.bright}📊 WebdriverIO Desktop/Mobile E2E Test Status${ANSI.reset}`);
     console.log('═'.repeat(80));
 
     // Progress bar

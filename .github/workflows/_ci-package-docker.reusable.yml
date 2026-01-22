@@ -29,10 +29,20 @@ jobs:
           cd fixtures/package-tests/tauri-app/docker
           ./test.sh ${{ inputs.distro }} test
 
+      - name: Copy logs to workspace
+        run: |
+          # Copy Docker test logs to workspace for upload
+          mkdir -p fixtures/package-tests/tauri-app/logs-docker/
+          cp /tmp/docker-test-${{ inputs.distro }}.log fixtures/package-tests/tauri-app/logs-docker/ 2>/dev/null || true
+          # Copy any test logs that were captured
+          cp -r /tmp/tauri-test-logs-${{ inputs.distro }}/* fixtures/package-tests/tauri-app/logs-docker/ 2>/dev/null || true
+
       - name: Upload test results
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: test-results-${{ inputs.distro }}
-          path: fixtures/package-tests/tauri-app/wdio-*.log
-          if-no-files-found: ignore
+          path: fixtures/package-tests/**/logs-*/
+          retention-days: 7
+          if-no-files-found: warn
