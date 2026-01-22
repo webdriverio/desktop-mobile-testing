@@ -450,7 +450,7 @@ export async function createClassMock(
       (globalThis.originalApi as Record<string, unknown>)[className] = OriginalClass;
 
       // Create mock constructor that tracks calls and returns an instance with mocked prototype
-      const MockClass = spy.fn(function (this: unknown, ...args: unknown[]) {
+      const MockClass = spy.fn(function (this: unknown, ..._args: unknown[]) {
         // Call original constructor behavior by setting up prototype chain
         Object.setPrototypeOf(this, OriginalClass.prototype);
         return this;
@@ -508,7 +508,7 @@ export async function createClassMock(
   };
 
   // Add getMockName method for consistency with ElectronMock
-  (stubInstance as any).getMockName = () => `electron.${className}`;
+  (stubInstance as ElectronClassMock).getMockName = () => `electron.${className}`;
 
   log.debug(`[${className}] Class mock created successfully`);
 
