@@ -2,9 +2,10 @@ import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
 import url from 'node:url';
-import { assertLogContains, findLogEntries, readWdioLogs } from './helpers/logging.js';
+import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const logBaseDir = path.join(__dirname, '..', '..', 'logs');
 
 describe('Electron Log Integration', () => {
   describe('Main Process Log Capture', () => {
@@ -17,9 +18,11 @@ describe('Electron Log Integration', () => {
       });
 
       // Wait for logs to be captured and written to disk
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const logsCaptured = await waitForLog(logBaseDir, /\[Electron:MainProcess\].*\[Test\].*INFO/i, 10000);
+      if (!logsCaptured) {
+        throw new Error('Main process logs not captured within timeout');
+      }
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
       const logs = readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
       console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
@@ -41,9 +44,16 @@ describe('Electron Log Integration', () => {
         console.info('[Test] Main process INFO log for filtering test');
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait for logs to be captured
+      const logsCaptured = await waitForLog(
+        logBaseDir,
+        /\[Electron:MainProcess\].*INFO log for filtering test/i,
+        10000,
+      );
+      if (!logsCaptured) {
+        throw new Error('Main process logs not captured within timeout');
+      }
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
       const logs = readWdioLogs(logBaseDir);
 
       // With default 'info' level, DEBUG should be filtered out
@@ -62,9 +72,11 @@ describe('Electron Log Integration', () => {
       });
 
       // Wait for logs to be captured and written to disk
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const logsCaptured = await waitForLog(logBaseDir, /\[Electron:Renderer\].*\[Test\].*INFO/i, 10000);
+      if (!logsCaptured) {
+        throw new Error('Renderer logs not captured within timeout');
+      }
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
       const logs = readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
 
@@ -92,9 +104,12 @@ describe('Electron Log Integration', () => {
         console.info('[Test] Renderer INFO log for filtering test');
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait for logs to be captured
+      const logsCaptured = await waitForLog(logBaseDir, /\[Electron:Renderer\].*INFO log for filtering test/i, 10000);
+      if (!logsCaptured) {
+        throw new Error('Renderer logs not captured within timeout');
+      }
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
       const logs = readWdioLogs(logBaseDir);
 
       // With default 'info' level, DEBUG should be filtered out
@@ -115,9 +130,12 @@ describe('Electron Log Integration', () => {
         console.info('[Test] Combined renderer log');
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Wait for logs to be captured
+      const logsCaptured = await waitForLog(logBaseDir, /\[Electron:MainProcess\].*Combined main process/i, 10000);
+      if (!logsCaptured) {
+        throw new Error('Combined logs not captured within timeout');
+      }
 
-      const logBaseDir = path.join(__dirname, '..', '..', 'logs');
       const logs = readWdioLogs(logBaseDir);
 
       // Both should be present
