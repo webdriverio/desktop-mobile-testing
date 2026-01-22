@@ -2,9 +2,10 @@ import { expect, multiremotebrowser } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
 import url from 'node:url';
-import { assertLogContains, findLogEntries, readWdioLogs } from '../helpers/logging.js';
+import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const logDir = path.join(__dirname, '..', '..', '..', 'logs');
 
 describe('Electron Log Integration - Multiremote', () => {
   it('should capture main process logs per instance with instance ID', async () => {
@@ -26,11 +27,17 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    // Wait for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(
+      logDir,
+      /\[Electron:MainProcess:browserA\].*\[Test\].*Instance browserA.*INFO/i,
+      10000,
+    );
+    if (!logsCaptured) {
+      throw new Error('Main process logs not captured within timeout');
+    }
 
     // Verify logs were captured with correct prefixes and instance IDs
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
     console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
     const logs = readWdioLogs(logDir);
 
@@ -67,11 +74,17 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    // Wait for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(
+      logDir,
+      /\[Electron:Renderer:browserA\].*\[Test\].*Instance browserA renderer INFO/i,
+      10000,
+    );
+    if (!logsCaptured) {
+      throw new Error('Renderer logs not captured within timeout');
+    }
 
     // Verify renderer logs were captured with correct prefixes
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
     const logs = readWdioLogs(logDir);
 
     if (!logs) {
@@ -102,11 +115,17 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    // Wait for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(
+      logDir,
+      /\[Electron:MainProcess:browserA\].*\[Test\].*BrowserA main process only log/i,
+      10000,
+    );
+    if (!logsCaptured) {
+      throw new Error('Logs not captured within timeout');
+    }
 
     // Verify both types of logs are captured independently
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
     const logs = readWdioLogs(logDir);
 
     if (!logs) {
@@ -144,9 +163,12 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(logDir, /\[Electron:MainProcess:browserA\].*INFO/i, 10000);
+    if (!logsCaptured) {
+      throw new Error('Logs not captured within timeout');
+    }
 
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
     const logs = readWdioLogs(logDir);
 
     // With default 'info' level, DEBUG should be filtered out

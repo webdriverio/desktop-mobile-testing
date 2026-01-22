@@ -2,7 +2,7 @@ import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
 import url from 'node:url';
-import { readWdioLogs } from './helpers/logging.js';
+import { readWdioLogs } from '../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
