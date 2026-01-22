@@ -36,7 +36,7 @@
     "@vitest/spy": "^4.0.16"
   },
   "devDependencies": {
-    "@electron-forge/shared-types": "^7.10.2",
+    "@electron-forge/shared-types": "^7.11.1",
     "@electron/packager": "^19.0.1",
     "@types/node": "^25.0.3",
     "@wdio/globals": "catalog:default",
