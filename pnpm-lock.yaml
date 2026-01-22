@@ -8875,7 +8875,7 @@ snapshots:
       js-yaml: 4.1.0
       json5: 2.2.3
       lazy-val: 1.0.5
-      minimatch: 10.0.3
+      minimatch: 10.1.1
       plist: 3.1.0
       resedit: 1.7.2
       semver: 7.7.3
