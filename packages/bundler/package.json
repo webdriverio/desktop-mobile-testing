@@ -40,7 +40,7 @@
     "commander": "^14.0.2",
     "debug": "^4.4.3",
     "read-package-up": "^11.0.0",
-    "rollup": "^4.55.1",
+    "rollup": "^4.56.0",
     "rollup-plugin-node-externals": "^8.1.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
