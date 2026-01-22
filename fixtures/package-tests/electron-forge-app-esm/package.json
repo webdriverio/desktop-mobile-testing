@@ -28,7 +28,7 @@
     "@wdio/mocha-framework": "^9.23.0",
     "@wdio/native-types": "workspace:*",
     "@wdio/native-utils": "workspace:*",
-    "@wdio/spec-reporter": "^9.20.0",
+    "@wdio/spec-reporter": "^9.23.2",
     "cross-env": "^10.1.0",
     "electron": "39.2.7",
     "electron-vite": "^5.0.0",

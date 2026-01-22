@@ -21,9 +21,9 @@ catalogs:
     '@wdio/local-runner': ^9.23.0
     '@wdio/logger': ^9.18.0
     '@wdio/mocha-framework': ^9.23.0
-    '@wdio/spec-reporter': ^9.20.0
-    '@wdio/types': 9.20.0
-    '@wdio/xvfb': ^9.20.0
+    '@wdio/spec-reporter': ^9.23.2
+    '@wdio/types': 9.23.2
+    '@wdio/xvfb': ^9.23.2
     electron: 39.2.7
     webdriverio: ^9.23.0
   minimum:
