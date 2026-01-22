@@ -280,7 +280,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: 👷 Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: 🛠️ Setup Development Environment
         uses: ./.github/workflows/actions/setup-workspace
