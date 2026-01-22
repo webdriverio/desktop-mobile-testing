@@ -5,7 +5,7 @@ import url from 'node:url';
 import { cleanupWdioSession, createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
 import '@wdio/native-types';
 import { xvfb } from '@wdio/xvfb';
-import { assertLogContains, readWdioLogs } from '../helpers/logging.js';
+import { assertLogContains, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -27,14 +27,13 @@ const sessionOptions = createTauriCapabilities(appBinaryPath, {
 });
 
 // Enable log capture
+const appDirName = path.basename(appDir);
+const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
 if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].captureBackendLogs = true;
   sessionOptions['wdio:tauriServiceOptions'].captureFrontendLogs = true;
   sessionOptions['wdio:tauriServiceOptions'].backendLogLevel = 'info';
   sessionOptions['wdio:tauriServiceOptions'].frontendLogLevel = 'info';
-  // Set log directory - full path where logs should be written
-  const appDirName = path.basename(appDir);
-  const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
   sessionOptions['wdio:tauriServiceOptions'].logDir = logDir;
   console.log(`[DEBUG] Setting logDir to: ${logDir}`);
 }
@@ -50,15 +49,19 @@ const browser = await startWdioSession(sessionOptions, {
   autoInstallTauriDriver: true,
 });
 
-// Wait a moment to ensure browser is fully initialized
-await new Promise((resolve) => setTimeout(resolve, 1000));
+// Wait for browser to be fully initialized and logs to be ready
+await browser.tauri.execute(({ core }) => core.invoke('get_platform_info'));
+await browser.waitUntil(
+  async () => {
+    const logs = readWdioLogs(logDir);
+    return logs.length > 0;
+  },
+  { timeout: 10000, timeoutMsg: 'Log infrastructure not ready' },
+);
 
 try {
   // For standalone tests, logs go to logs/standalone-{appDirName}/
   // Since standalone tests don't run through WDIO, we need to construct the path manually
-  const appDirName = path.basename(appDir);
-  const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
-
   console.log(`[DEBUG] Test will read logs from: ${logDir}`);
   console.log(`[DEBUG] appDir: ${appDir}`);
   console.log(`[DEBUG] appDirName: ${appDirName}`);
@@ -67,7 +70,12 @@ try {
   // Test 1: Capture backend logs in standalone session
   console.log('Test 1: Backend logs...');
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Wait for backend logs to appear
+  const backendLogsFound = await waitForLog(logDir, /\[Tauri:Backend\].*INFO level log/i, 10000);
+  if (!backendLogsFound) {
+    throw new Error('Backend logs not captured within timeout');
+  }
 
   // Verify logs were captured with correct prefix
   console.log(`[DEBUG] Reading logs from: ${logDir}`);
@@ -95,7 +103,12 @@ try {
     console.warn('[Test] Standalone frontend WARN log');
     console.error('[Test] Standalone frontend ERROR log');
   });
-  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  // Wait for frontend logs to appear
+  const frontendLogsFound = await waitForLog(logDir, /\[Tauri:Frontend\].*Standalone frontend INFO/i, 10000);
+  if (!frontendLogsFound) {
+    throw new Error('Frontend logs not captured within timeout');
+  }
 
   // Verify frontend logs were captured with correct prefix
   const logs2 = readWdioLogs(logDir);
@@ -107,7 +120,12 @@ try {
   // Test 3: Log level filtering - Using backend logs for verification
   console.log('Test 3: Backend log level filtering...');
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Wait for backend logs to appear
+  const backendFilterLogsFound = await waitForLog(logDir, /\[Tauri:Backend\].*INFO.*log/i, 10000);
+  if (!backendFilterLogsFound) {
+    throw new Error('Backend logs not captured within timeout');
+  }
 
   // Verify backend logs were captured with correct prefix and levels
   const logs3 = readWdioLogs(logDir);

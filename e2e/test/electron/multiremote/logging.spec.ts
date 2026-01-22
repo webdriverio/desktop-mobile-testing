@@ -2,9 +2,15 @@ import { expect, multiremotebrowser } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
 import url from 'node:url';
-import { assertLogContains, findLogEntries, readWdioLogs } from '../helpers/logging.js';
+import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+const appDirName = path.basename(process.env.APP_DIR || 'electron-builder');
+
+function getMultiremoteLogDir() {
+  return path.join(__dirname, '..', '..', '..', 'logs', `multiremote-${appDirName}`);
+}
 
 describe('Electron Log Integration - Multiremote', () => {
   it('should capture main process logs per instance with instance ID', async () => {
@@ -26,13 +32,19 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    // Wait for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(
+      getMultiremoteLogDir(),
+      /\[Electron:MainProcess:browserA\].*\[Test\].*Instance browserA.*INFO/i,
+      10000,
+    );
+    if (!logsCaptured) {
+      throw new Error('Main process logs not captured within timeout');
+    }
 
     // Verify logs were captured with correct prefixes and instance IDs
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
-    console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
-    const logs = readWdioLogs(logDir);
+    console.log(`[DEBUG] Reading multiremote logs from: ${getMultiremoteLogDir()}`);
+    const logs = readWdioLogs(getMultiremoteLogDir());
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -67,12 +79,18 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    // Wait for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(
+      getMultiremoteLogDir(),
+      /\[Electron:Renderer:browserA\].*\[Test\].*Instance browserA renderer INFO/i,
+      10000,
+    );
+    if (!logsCaptured) {
+      throw new Error('Renderer logs not captured within timeout');
+    }
 
     // Verify renderer logs were captured with correct prefixes
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
-    const logs = readWdioLogs(logDir);
+    const logs = readWdioLogs(getMultiremoteLogDir());
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -102,12 +120,18 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    // Wait for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(
+      getMultiremoteLogDir(),
+      /\[Electron:MainProcess:browserA\].*\[Test\].*BrowserA main process only log/i,
+      10000,
+    );
+    if (!logsCaptured) {
+      throw new Error('Logs not captured within timeout');
+    }
 
     // Verify both types of logs are captured independently
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
-    const logs = readWdioLogs(logDir);
+    const logs = readWdioLogs(getMultiremoteLogDir());
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -144,10 +168,13 @@ describe('Electron Log Integration - Multiremote', () => {
       }),
     ]);
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logsCaptured = await waitForLog(getMultiremoteLogDir(), /\[Electron:MainProcess:browserA\].*INFO/i, 10000);
+    if (!logsCaptured) {
+      throw new Error('Logs not captured within timeout');
+    }
 
-    const logDir = path.join(__dirname, '..', '..', '..', 'logs');
-    const logs = readWdioLogs(logDir);
+    const logs = readWdioLogs(getMultiremoteLogDir());
 
     // With default 'info' level, DEBUG should be filtered out
     const debugLogs = findLogEntries(logs, /\[Electron:MainProcess:(browserA|browserB)\].*DEBUG/i);

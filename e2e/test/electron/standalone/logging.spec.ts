@@ -1,6 +1,6 @@
 import path from 'node:path';
 import url from 'node:url';
-import { assertLogContains, assertLogDoesNotContain, readWdioLogs } from '../helpers/logging.js';
+import { assertLogContains, assertLogDoesNotContain, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 import { setupStandaloneTest } from './helpers/setup.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
@@ -30,7 +30,12 @@ try {
     console.warn('[Test] Standalone main process WARN log');
     console.error('[Test] Standalone main process ERROR log');
   });
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Wait for main process logs to appear
+  const mainLogsFound = await waitForLog(logDir, /\[Electron:MainProcess\].*\[Test\].*INFO log/i, 10000);
+  if (!mainLogsFound) {
+    throw new Error('Main process logs not captured within timeout');
+  }
 
   // Verify logs were captured with correct prefix
   const logs1 = readWdioLogs(logDir);
@@ -49,7 +54,16 @@ try {
     console.warn('[Test] Standalone renderer WARN log');
     console.error('[Test] Standalone renderer ERROR log');
   });
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Wait for renderer logs to appear
+  const rendererLogsFound = await waitForLog(
+    logDir,
+    /\[Electron:Renderer\].*\[Test\].*Standalone renderer INFO/i,
+    10000,
+  );
+  if (!rendererLogsFound) {
+    throw new Error('Renderer logs not captured within timeout');
+  }
 
   // Verify renderer logs were captured with correct prefix
   const logs2 = readWdioLogs(logDir);
@@ -68,7 +82,12 @@ try {
     console.debug('[Test] This renderer DEBUG log should be filtered out');
     console.info('[Test] This renderer INFO log should appear');
   });
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Wait for logs to appear
+  const filterLogsFound = await waitForLog(logDir, /\[Electron:MainProcess\].*INFO.*should appear/i, 10000);
+  if (!filterLogsFound) {
+    throw new Error('Logs not captured within timeout');
+  }
 
   // Verify DEBUG logs are filtered out (info level filtering)
   const logs3 = readWdioLogs(logDir);
