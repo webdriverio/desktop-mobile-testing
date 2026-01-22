@@ -85,7 +85,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             drop(initialized);
 
             // Setup frontend log listener
-            setup_frontend_log_listener(&app_handle);
+            setup_frontend_log_listener(app_handle);
 
             #[cfg(desktop)]
             let wdio = desktop::init(app_handle, _api)?;

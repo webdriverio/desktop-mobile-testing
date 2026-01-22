@@ -1,4 +1,4 @@
-use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
@@ -48,7 +48,7 @@ pub(crate) async fn execute<R: Runtime>(
     let (tx, rx) = mpsc::channel();
 
     // Generate unique event ID for this execution
-    let event_id = format!("wdio-result-{}", Uuid::new_v4().to_string());
+    let event_id = format!("wdio-result-{}", Uuid::new_v4());
     log::trace!("Generated event_id for result: {}", event_id);
 
     let result_tx = tx.clone();

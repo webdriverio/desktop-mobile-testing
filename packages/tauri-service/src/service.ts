@@ -233,7 +233,11 @@ export default class TauriWorkerService {
    * This ensures console logs from browser.execute() contexts are captured
    */
   private patchBrowserExecute(browser: WebdriverIO.Browser): void {
-    if ((browser as any)[EXECUTE_PATCHED]) {
+    interface PatchedBrowser extends WebdriverIO.Browser {
+      [EXECUTE_PATCHED]?: boolean;
+    }
+    const patchedBrowser = browser as PatchedBrowser;
+    if (patchedBrowser[EXECUTE_PATCHED]) {
       log.debug('browser.execute already patched, skipping');
       return;
     }
@@ -269,7 +273,7 @@ export default class TauriWorkerService {
       configurable: true,
     });
 
-    (browser as any)[EXECUTE_PATCHED] = true;
+    patchedBrowser[EXECUTE_PATCHED] = true;
     log.debug('browser.execute() patched with console forwarding');
   }
 }
