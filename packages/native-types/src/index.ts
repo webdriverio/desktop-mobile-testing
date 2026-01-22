@@ -59,6 +59,8 @@ export { MockResultType } from './shared.js';
 export type {
   TauriAPIs,
   TauriBrowserExtension,
+  TauriMock,
+  TauriMockInstance,
   TauriResult,
   TauriServiceAPI,
   TauriServiceCapabilities,

@@ -24,6 +24,8 @@
 description = "Allows all WebDriverIO plugin commands for testing"
 permissions = [
   "allow-execute",
+  "allow-log-frontend",
+  "allow-debug-plugin",
   "allow-set-mock",
   "allow-get-mock",
   "allow-clear-mocks",
@@ -35,6 +37,16 @@ permissions = [
 identifier = "allow-execute"
 description = "Allow executing scripts via the wdio plugin"
 commands = { allow = ["wdio.execute"], deny = [] }
+
+[allow-log-frontend]
+identifier = "allow-log-frontend"
+description = "Allow logging frontend messages to stderr"
+commands = { allow = ["wdio.log_frontend"], deny = [] }
+
+[allow-debug-plugin]
+identifier = "allow-debug-plugin"
+description = "Allow debug plugin command"
+commands = { allow = ["wdio.debug_plugin"], deny = [] }
 
 [allow-set-mock]
 identifier = "allow-set-mock"

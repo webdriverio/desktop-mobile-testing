@@ -12,6 +12,14 @@ export {
   getTauriVersion,
   isTauriApiAvailable,
 } from './commands/execute.js';
+export {
+  clearAllMocks,
+  isMockFunction,
+  mock,
+  mockAll,
+  resetAllMocks,
+  restoreAllMocks,
+} from './commands/mock.js';
 export { default as launcher } from './launcher.js';
 // Export utilities
 export {

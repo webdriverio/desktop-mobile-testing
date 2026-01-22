@@ -268,6 +268,18 @@
           "markdownDescription": "Denies the clear_mocks command without any pre-configured scope."
         },
         {
+          "description": "Enables the debug_plugin command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-debug-plugin",
+          "markdownDescription": "Enables the debug_plugin command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the debug_plugin command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-debug-plugin",
+          "markdownDescription": "Denies the debug_plugin command without any pre-configured scope."
+        },
+        {
           "description": "Enables the execute command without any pre-configured scope.",
           "type": "string",
           "const": "allow-execute",
@@ -290,6 +302,18 @@
           "type": "string",
           "const": "deny-get-mock",
           "markdownDescription": "Denies the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the log_frontend command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-log-frontend",
+          "markdownDescription": "Enables the log_frontend command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the log_frontend command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-log-frontend",
+          "markdownDescription": "Denies the log_frontend command without any pre-configured scope."
         },
         {
           "description": "Enables the reset_mocks command without any pre-configured scope.",
@@ -328,10 +352,10 @@
           "markdownDescription": "Denies the set_mock command without any pre-configured scope."
         },
         {
-          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`",
+          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-log-frontend`\n- `allow-debug-plugin`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`"
+          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-log-frontend`\n- `allow-debug-plugin`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`"
         }
       ]
     }

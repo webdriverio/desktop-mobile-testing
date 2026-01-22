@@ -9,7 +9,7 @@ const config: BundlerConfig = {
         targetFile: 'src/mock.ts',
         bundleRegExp: /export\s*\{\s*([^}]+)\s*\}\s*;/,
         importName: 'spy',
-        bundleReplace: (importName) => `const ${importName} = { $1 };`,
+        bundleReplace: (importName: string) => `const ${importName} = { $1 };`,
       },
     },
     {

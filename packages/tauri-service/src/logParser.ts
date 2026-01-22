@@ -1,10 +1,15 @@
+import { createLogger } from '@wdio/native-utils';
+import { FRONTEND_MARKER, PREFIXES } from './constants/logging.js';
 import type { LogLevel } from './logForwarder.js';
+
+const log = createLogger('tauri-service', 'service');
 
 export interface ParsedLog {
   level: LogLevel;
   message: string;
   raw: string;
   source?: 'backend' | 'frontend';
+  prefixedMessage?: string;
 }
 
 /**
@@ -30,41 +35,37 @@ const TAURI_DRIVER_PATTERNS = [
 ];
 
 /**
- * Patterns that indicate frontend console logs (forwarded via custom log_frontend command)
- * These logs come through stdout but originate from the frontend.
- *
- * Frontend logs use target="frontend" and appear in the format:
- * [timestamp][time][frontend][LEVEL] message
- *
- * We identify frontend logs by checking for the [frontend] target or frontend-specific patterns.
+ * Extract prefix and source from a log line
+ * Returns the prefix (e.g., [Tauri:Backend]) and source type
  */
-const FRONTEND_LOG_PATTERNS = [
-  // Logs with target="frontend" from our custom log_frontend command
-  /\[frontend\]/i,
-  // Console log patterns from our test code - must contain "Frontend" keyword
-  /\[Test\].*(Frontend|frontend)/i,
-  // Frontend-specific patterns that wouldn't appear in Rust
-  /console\.(log|info|warn|error|debug|trace)/i,
-  // App initialization logs from HTML
-  /\[App\]/i,
-  // Window/DOM related logs
-  /window\.|document\.|typeof window/i,
-  // Frontend-specific error patterns
-  /Uncaught|ReferenceError|TypeError.*window/i,
-];
+function extractPrefixAndSource(line: string): { prefix: string | null; source: 'backend' | 'frontend' } {
+  // Check for explicit Tauri prefixes (highest priority)
+  if (line.includes(PREFIXES.backend)) {
+    return { prefix: PREFIXES.backend, source: 'backend' };
+  }
+  if (line.includes(PREFIXES.frontend)) {
+    return { prefix: PREFIXES.frontend, source: 'frontend' };
+  }
+  // Check for [frontend] target from Tauri log plugin
+  if (/\[frontend\]/i.test(line)) {
+    return { prefix: '[frontend]', source: 'frontend' };
+  }
+
+  // Check for WDIO frontend log marker from log_frontend Rust command
+  // Format: [WDIO-FRONTEND][LEVEL] message
+  if (line.includes(FRONTEND_MARKER)) {
+    return { prefix: null, source: 'frontend' };
+  }
+
+  // backend logs get their prefix added in logForwarder.ts via formatLogMessage()
+  return { prefix: null, source: 'backend' };
+}
 
 /**
  * Check if a log line is from tauri-driver (should be filtered out)
  */
 function isTauriDriverLog(line: string): boolean {
   return TAURI_DRIVER_PATTERNS.some((pattern) => pattern.test(line));
-}
-
-/**
- * Check if a log line is from the frontend (console logs forwarded via attachConsole)
- */
-function isFrontendLog(line: string): boolean {
-  return FRONTEND_LOG_PATTERNS.some((pattern) => pattern.test(line));
 }
 
 /**
@@ -80,19 +81,23 @@ function extractLogLevel(line: string): LogLevel | undefined {
 }
 
 /**
- * Clean up log message by removing timestamps and brackets
+ * Clean up log message by removing timestamps and app names
+ * If line already has a prefix, we preserve it and just trim
  */
-function cleanLogMessage(line: string): string {
-  // Remove common timestamp patterns: [2024-01-01T12:00:00Z] or [12:00:00]
-  let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\d]*[Z]?\]/g, '');
-  // Remove brackets around log levels: [INFO] or [ERROR]
-  cleaned = cleaned.replace(
-    /\[(ERROR|WARN|INFO|DEBUG|TRACE|Error|Warn|Info|Debug|Trace|error|warn|info|debug|trace)\]/gi,
-    '',
-  );
-  // Remove leading/trailing whitespace and colons
-  cleaned = cleaned.trim().replace(/^:\s*/, '').trim();
-  return cleaned;
+function cleanLogMessage(line: string, hasPrefix: boolean): string {
+  if (hasPrefix) {
+    return line.trim();
+  }
+
+  // Remove tauri-plugin-log format: [2026-01-19][15:09:22][appname][LEVEL]
+  let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}\]\[\d{2}:\d{2}:\d{2}\]/g, '');
+  cleaned = cleaned.replace(/\]\[tauri_[a-zA-Z0-9_]+\]/g, ']');
+
+  // Remove simple_logger format: 2026-01-20T15:41:50.030Z INFO [appname]
+  cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s*/g, '');
+  cleaned = cleaned.replace(/\[[a-zA-Z0-9_-]+\]\s*/g, '');
+
+  return cleaned.trim();
 }
 
 /**
@@ -111,36 +116,66 @@ export function parseLogLine(line: string): ParsedLog | undefined {
     return undefined;
   }
 
+  // Extract prefix and source before cleaning
+  const { prefix, source } = extractPrefixAndSource(trimmedLine);
+
   // Try to extract log level
   const level = extractLogLevel(trimmedLine);
 
   // If no level found, default to 'info' for Tauri app logs
-  // (tauri-driver logs should have been filtered out already)
   const logLevel: LogLevel = level ?? 'info';
 
   // Clean up the message
-  const message = cleanLogMessage(trimmedLine);
+  // If line has a prefix, strip it first - we'll add it back via prefixedMessage
+  const hasPrefix = prefix !== null;
+  let cleanedMessage = hasPrefix
+    ? trimmedLine.replace(/^\[Tauri:(Backend|Frontend)\]\s*/i, '')
+    : cleanLogMessage(trimmedLine, hasPrefix);
+
+  // For frontend logs from log_frontend command, strip the [WDIO-FRONTEND][LEVEL] prefix
+  // Format: [WDIO-FRONTEND][LEVEL] message
+  if (source === 'frontend' && hasPrefix === false) {
+    const wdioFrontendPattern = /\[WDIO-FRONTEND\]\[(INFO|WARN|ERROR|DEBUG|TRACE)\]\s*/i;
+    if (wdioFrontendPattern.test(cleanedMessage)) {
+      cleanedMessage = cleanedMessage.replace(wdioFrontendPattern, '').trim();
+    }
+  }
+
+  // For raw frontend logs (JSON-quoted strings from Rust listener),
+  // strip the surrounding quotes
+  // Format: [Tauri:Frontend] "message" or just "message" (raw from Rust)
+  if (source === 'frontend') {
+    const trimmed = cleanedMessage.trim();
+    if (/^".*"$/.test(trimmed)) {
+      cleanedMessage = trimmed.slice(1, -1);
+    }
+  }
 
   // If message is empty after cleaning, skip it
-  if (!message) {
+  if (!cleanedMessage) {
     return undefined;
   }
 
-  // Determine if this is a frontend log (console logs forwarded via attachConsole)
-  const source = isFrontendLog(trimmedLine) ? 'frontend' : 'backend';
+  // Build prefixed message if we have a prefix
+  const prefixedMessage = prefix ? `${prefix} ${cleanedMessage}` : undefined;
 
   return {
     level: logLevel,
-    message,
+    message: cleanedMessage,
     raw: trimmedLine,
     source,
+    prefixedMessage,
   };
 }
 
 /**
  * Parse multiple log lines (handles multi-line logs)
  */
+let parseCallCount = 0;
+
 export function parseLogLines(lines: string): ParsedLog[] {
+  parseCallCount++;
+
   const parsed: ParsedLog[] = [];
   const logLines = lines.split('\n');
 
@@ -149,6 +184,19 @@ export function parseLogLines(lines: string): ParsedLog[] {
     if (parsedLog) {
       parsed.push(parsedLog);
     }
+  }
+
+  // Only log debug output every 10th call to reduce overhead
+  if (parsed.length > 0 && parseCallCount % 10 === 0) {
+    log.debug(
+      `[LOG-PARSER] Parsed ${parsed.length} log entries from ${logLines.length} lines (sample #${parseCallCount})`,
+    );
+    log.debug(
+      `[LOG-PARSER] Sample: ${parsed
+        .slice(0, 3)
+        .map((p) => `${p.source}:${p.level}:${p.message.substring(0, 30)}`)
+        .join(', ')}`,
+    );
   }
 
   return parsed;

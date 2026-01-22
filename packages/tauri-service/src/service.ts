@@ -1,14 +1,20 @@
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
+import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
+
+const EXECUTE_PATCHED = Symbol('wdio-tauri-execute-patched');
 
 /**
  * Tauri worker service
  */
 export default class TauriWorkerService {
+  private browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
+
   constructor(_options: TauriServiceOptions, _capabilities: TauriCapabilities) {
     log.debug('TauriWorkerService initialized');
   }
@@ -22,6 +28,7 @@ export default class TauriWorkerService {
     browser: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser,
   ): Promise<void> {
     log.debug('Initializing Tauri worker service');
+    this.browser = browser;
 
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
@@ -100,6 +107,22 @@ export default class TauriWorkerService {
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
     // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
+
+    // Initialize Tauri mocking system
+    log.info('🔧 Initializing Tauri mocking system...');
+    try {
+      await (browser as WebdriverIO.Browser).execute(async function initMocks() {
+        // @ts-expect-error - injection script will be bundled
+        if (typeof window.initializeTauriMocks === 'function') {
+          // @ts-expect-error - injection script will be bundled
+          await window.initializeTauriMocks();
+        }
+      });
+      log.info('✅ Tauri mocking system initialized');
+    } catch (error) {
+      log.warn('⚠️ Failed to initialize Tauri mocking system:', error);
+      log.warn('   Mocking functionality may not be available');
+    }
   }
 
   async beforeTest(_test: unknown, _context: unknown): Promise<void> {
@@ -110,8 +133,52 @@ export default class TauriWorkerService {
     // Post-test logic if needed
   }
 
-  async after(): Promise<void> {
+  async after(_results: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     // Cleanup if needed
+  }
+
+  /**
+   * Clean up session after tests complete
+   * This is critical for retry functionality - without explicit session deletion,
+   * retries fail with "invalid session id" errors
+   */
+  async afterSession(_config: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
+    log.debug('Cleaning up session...');
+
+    if (!this.browser) {
+      log.warn('No browser instance available for session cleanup');
+      return;
+    }
+
+    try {
+      // Delete WebDriver session explicitly for clean retry handling
+      if (!this.browser.isMultiremote) {
+        const stdBrowser = this.browser as WebdriverIO.Browser;
+        if (stdBrowser.sessionId) {
+          log.debug(`Deleting session: ${stdBrowser.sessionId}`);
+          await stdBrowser.deleteSession();
+          log.debug('Session deleted successfully');
+        }
+      } else {
+        // Handle multiremote cleanup
+        const mrBrowser = this.browser as WebdriverIO.MultiRemoteBrowser;
+        for (const instanceName of mrBrowser.instances) {
+          try {
+            const instance = mrBrowser.getInstance(instanceName);
+            if (instance.sessionId) {
+              log.debug(`Deleting session for instance ${instanceName}: ${instance.sessionId}`);
+              await instance.deleteSession();
+              log.debug(`Session deleted for instance ${instanceName}`);
+            }
+          } catch (error) {
+            log.warn(`Failed to delete session for instance ${instanceName}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      log.warn('Failed to delete session:', error);
+      // Don't throw - allow cleanup to continue
+    }
   }
 
   /**
@@ -136,30 +203,27 @@ export default class TauriWorkerService {
       },
 
       clearAllMocks: async (): Promise<void> => {
-        // TODO: Implement Tauri API mocking
+        return clearAllMocks.call({ browser });
       },
 
-      isMockFunction: (_fn: unknown): boolean => {
-        // TODO: Implement Tauri API mocking
-        return false;
+      isMockFunction: async (command: string): Promise<boolean> => {
+        return isMockFunction.call({ browser }, command);
       },
 
-      mock: async (_apiName: string, _funcName: string): Promise<unknown> => {
-        // TODO: Implement Tauri API mocking
-        return {};
+      mock: async (command: string) => {
+        return mock.call({ browser }, command);
       },
 
-      mockAll: async (_apiName: string): Promise<unknown> => {
-        // TODO: Implement Tauri API mocking
-        return {};
+      mockAll: async (): Promise<void> => {
+        return mockAll.call({ browser });
       },
 
-      resetAllMocks: async (_apiName?: string): Promise<void> => {
-        // TODO: Implement Tauri API mocking
+      resetAllMocks: async (): Promise<void> => {
+        return resetAllMocks.call({ browser });
       },
 
-      restoreAllMocks: async (_apiName?: string): Promise<void> => {
-        // TODO: Implement Tauri API mocking
+      restoreAllMocks: async (): Promise<void> => {
+        return restoreAllMocks.call({ browser });
       },
     };
   }
@@ -169,6 +233,11 @@ export default class TauriWorkerService {
    * This ensures console logs from browser.execute() contexts are captured
    */
   private patchBrowserExecute(browser: WebdriverIO.Browser): void {
+    if ((browser as any)[EXECUTE_PATCHED]) {
+      log.debug('browser.execute already patched, skipping');
+      return;
+    }
+
     // Store the original execute method
     const originalExecute = browser.execute.bind(browser);
 
@@ -183,74 +252,9 @@ export default class TauriWorkerService {
 
       // Wrap the script with console forwarding setup executed IN THE SAME CONTEXT
       // The forwarding code wraps console methods, then the test script runs with wrapped console
+      const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
       const wrappedScript = `
-        // Setup console forwarding first
-        (function() {
-          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.core) {
-            return;
-          }
-
-          // Store original console methods
-          const originalConsole = {
-            log: console.log.bind(console),
-            debug: console.debug.bind(console),
-            info: console.info.bind(console),
-            warn: console.warn.bind(console),
-            error: console.error.bind(console),
-          };
-
-          // Log level enum matching Tauri plugin-log
-          const LogLevel = {
-            Trace: 1,
-            Debug: 2,
-            Info: 3,
-            Warn: 4,
-            Error: 5
-          };
-
-          // Helper to forward to Tauri log plugin using invoke
-          function forward(level, args) {
-            const message = Array.from(args).map(function(arg) {
-              return typeof arg === 'string' ? arg : JSON.stringify(arg);
-            }).join(' ');
-
-            // Call original console method
-            const method = level === LogLevel.Trace ? 'log' :
-                          level === LogLevel.Debug ? 'debug' :
-                          level === LogLevel.Info ? 'info' :
-                          level === LogLevel.Warn ? 'warn' : 'error';
-            if (originalConsole[method]) {
-              originalConsole[method](message);
-            }
-
-            // Forward to custom frontend logging command with target="frontend"
-            // Using custom command instead of plugin:log|log to avoid target="webview" filtering issues
-            if (window.__TAURI__.core.invoke) {
-              // Map LogLevel enum to string
-              const levelStr = level === LogLevel.Trace ? 'trace' :
-                              level === LogLevel.Debug ? 'debug' :
-                              level === LogLevel.Info ? 'info' :
-                              level === LogLevel.Warn ? 'warn' : 'error';
-
-              window.__TAURI__.core.invoke('log_frontend', {
-                level: levelStr,
-                message: message
-              }).catch(function(err) {
-                // Log error to original console for debugging
-                originalConsole.error('[WDIO Console Forwarding] Failed to forward log:', err);
-              });
-            }
-          }
-
-          // Wrap console methods
-          console.log = function() { forward(LogLevel.Trace, arguments); };
-          console.debug = function() { forward(LogLevel.Debug, arguments); };
-          console.info = function() { forward(LogLevel.Info, arguments); };
-          console.warn = function() { forward(LogLevel.Warn, arguments); };
-          console.error = function() { forward(LogLevel.Error, arguments); };
-        })();
-
-        // Now execute the test script with wrapped console
+        ${consoleWrapperScript}
         return (${scriptString}).apply(null, arguments);
       `;
 
@@ -265,6 +269,7 @@ export default class TauriWorkerService {
       configurable: true,
     });
 
-    log.debug('Patched browser.execute() to auto-inject console forwarding');
+    (browser as any)[EXECUTE_PATCHED] = true;
+    log.debug('browser.execute() patched with console forwarding');
   }
 }
