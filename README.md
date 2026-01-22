@@ -2,14 +2,13 @@
 
 > Specialized WebdriverIO services for testing Electron and Tauri applications
 
-<a href="https://www.npmjs.com/package/@wdio/electron-service" alt="NPM Version">
-  <img src="https://img.shields.io/npm/v/@wdio/electron-service" /></a>
-<a href="https://www.npmjs.com/package/@wdio/electron-service" alt="NPM Downloads">
-  <img src="https://img.shields.io/npm/dw/@wdio/electron-service" /></a>
-<a href="https://www.npmjs.com/package/@wdio/tauri-service" alt="NPM Version">
-  <img src="https://img.shields.io/npm/v/@wdio/tauri-service" /></a>
-<a href="https://www.npmjs.com/package/@wdio/tauri-service" alt="NPM Downloads">
-  <img src="https://img.shields.io/npm/dw/@wdio/tauri-service" /></a>
+[![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
+[![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
+[![Downloads](https://img.shields.io/npm/dw/@wdio/electron-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
+
+[![@wdio/tauri-service](https://img.shields.io/badge/@wdio-tauri--service-FFC131?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
+[![Version](https://img.shields.io/npm/v/@wdio/tauri-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
+[![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
 
 ## Overview
 
@@ -20,9 +19,15 @@ This monorepo provides specialized WebdriverIO services for testing desktop and 
 - **Electron Service** - Production-ready testing for Electron applications with automatic binary detection, CDP bridge for main process access, comprehensive API mocking, and window management
 - **Tauri Service** - Full-featured testing for Tauri applications with official tauri-driver integration, multiremote support, and plugin-based architecture
 
-### Future Services
+### Planned Services Roadmap
 
-We aim to add Flutter and Neutralino integrations in the near future to expand cross-platform testing capabilities.
+Future WebdriverIO services will expand cross-platform testing coverage post-Tauri service release, leveraging shared utilities from @wdio/native-utils:
+
+- React Native: Appium-powered service automating Metro bundler and app deployment workflows
+- Flutter: Appium-powered convenience layer with binary detection for all 5 platforms (iOS/Android/desktop)
+- Neutralino: Lightweight service for NeutralinoJS desktop application automation
+
+All services maintain API consistency with `@wdio/electron-service` and `@wdio/tauri-service`, prioritizing developer experience through auto-detection and platform-agnostic configuration.
 
 ## Quick Start
 
