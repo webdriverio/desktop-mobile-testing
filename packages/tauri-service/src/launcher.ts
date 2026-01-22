@@ -2,12 +2,14 @@ import { type ChildProcess, execSync, spawn } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
+import type { Readable } from 'node:stream';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
 import { ensureTauriDriver, ensureWebKitWebDriver } from './driverManager.js';
 import { forwardLog, type LogLevel } from './logForwarder.js';
-import { parseLogLines } from './logParser.js';
+import { parseLogLine } from './logParser.js';
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
@@ -45,6 +47,68 @@ function mergeOptions(
     backendLogLevel: (capabilityOptions?.backendLogLevel ?? globalOptions.backendLogLevel ?? 'info') as LogLevel,
     frontendLogLevel: (capabilityOptions?.frontendLogLevel ?? globalOptions.frontendLogLevel ?? 'info') as LogLevel,
   };
+}
+
+/**
+ * Options for setting up readline-based log handling
+ */
+interface StreamLogHandlerOptions {
+  stream: Readable | null;
+  streamName: 'stdout' | 'stderr';
+  identifier: string;
+  options: TauriServiceOptions;
+  onStartupDetected?: () => void;
+  instanceId?: string;
+}
+
+/**
+ * Set up readline-based log handling for a process stream.
+ * This ensures complete lines are processed, avoiding Windows buffering issues
+ * where partial lines could be received in separate chunks.
+ */
+function setupStreamLogHandler({
+  stream,
+  streamName,
+  identifier,
+  options,
+  onStartupDetected,
+  instanceId,
+}: StreamLogHandlerOptions): ReadlineInterface | undefined {
+  if (!stream) return undefined;
+
+  const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+  rl.on('line', (line: string) => {
+    // Log raw output for debugging
+    if (streamName === 'stdout') {
+      log.info(`[STDOUT] ${identifier} line: ${line.substring(0, 200)}`);
+    } else {
+      log.error(`[${identifier}] stderr: ${line}`);
+    }
+
+    // Check for startup messages
+    if (onStartupDetected && (line.includes('tauri-driver started') || line.includes('listening on'))) {
+      log.info(`✅ tauri-driver [${identifier}] started successfully`);
+      onStartupDetected();
+    }
+
+    // Parse and forward log
+    const parsedLog = parseLogLine(line);
+    if (parsedLog) {
+      // Forward backend logs
+      if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
+        const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
+        forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
+      }
+      // Forward frontend logs
+      if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
+        const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
+        forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
+      }
+    }
+  });
+
+  return rl;
 }
 
 /**
@@ -612,56 +676,20 @@ export default class TauriLaunchService {
       log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
       this.perWorkerDrivers.set(workerId, { proc, port, nativePort, dataDir });
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        // Log all stdout for debugging
-        log.info(
-          `[STDOUT] worker-${workerId} received ${output.length} chars, content preview: ${output.substring(0, 200)}`,
-        );
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          log.info(`✅ tauri-driver [worker-${workerId}] started successfully on port ${port}`);
-          resolve();
-        }
-
-        // Parse and forward logs if enabled
-        const parsedLogs = parseLogLines(output);
-        log.info(`[STDOUT] worker-${workerId} parsed ${parsedLogs.length} log lines`);
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (workerOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (workerOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-        }
+      // Use readline for line-buffered log handling (fixes Windows chunking issues)
+      setupStreamLogHandler({
+        stream: proc.stdout,
+        streamName: 'stdout',
+        identifier: `worker-${workerId}`,
+        options: workerOptions,
+        onStartupDetected: () => resolve(),
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`[worker-${workerId}] stderr: ${output.trim()}`);
-
-        // Parse and forward logs from stderr if enabled
-        const parsedLogs = parseLogLines(output);
-        log.debug(`[worker-${workerId}] Parsed ${parsedLogs.length} log lines from stderr`);
-        for (const parsedLog of parsedLogs) {
-          log.debug(
-            `[worker-${workerId}] Log: source=${parsedLog.source}, level=${parsedLog.level}, message=${parsedLog.message.substring(0, 100)}`,
-          );
-          // Forward backend logs
-          if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (workerOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (workerOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-        }
+      setupStreamLogHandler({
+        stream: proc.stderr,
+        streamName: 'stderr',
+        identifier: `worker-${workerId}`,
+        options: workerOptions,
       });
 
       proc.on('error', (error: Error) => {
@@ -819,59 +847,20 @@ export default class TauriLaunchService {
       const firstCap = capabilities?.[0];
       const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
 
-      this.tauriDriverProcess.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.debug(`tauri-driver stdout: ${output}`);
-
-        // Check if tauri-driver is ready
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          resolve();
-        }
-
-        // Parse and forward logs if enabled
-        const parsedLogs = parseLogLines(output);
-        let frontendCount = 0;
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-            frontendCount += 1;
-          }
-        }
-        if (options.captureFrontendLogs && frontendCount === 0) {
-          log.debug('No frontend logs detected in tauri-driver stdout chunk');
-        }
+      // Use readline for line-buffered log handling (fixes Windows chunking issues)
+      setupStreamLogHandler({
+        stream: this.tauriDriverProcess.stdout,
+        streamName: 'stdout',
+        identifier: 'tauri-driver',
+        options,
+        onStartupDetected: () => resolve(),
       });
 
-      this.tauriDriverProcess.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`tauri-driver stderr: ${output}`);
-
-        // Parse and forward logs from stderr if enabled
-        const parsedLogs = parseLogLines(output);
-        let frontendCount = 0;
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-            frontendCount += 1;
-          }
-        }
-        if (options.captureFrontendLogs && frontendCount === 0) {
-          log.debug('No frontend logs detected in tauri-driver stderr chunk');
-        }
+      setupStreamLogHandler({
+        stream: this.tauriDriverProcess.stderr,
+        streamName: 'stderr',
+        identifier: 'tauri-driver',
+        options,
       });
 
       this.tauriDriverProcess.on('error', (error: Error) => {
@@ -934,50 +923,24 @@ export default class TauriLaunchService {
       log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
       this.tauriDriverProcesses.set(instanceId, { proc, port, nativePort });
 
-      const instanceOptions = options ?? mergeOptions(this.options, undefined);
+      const instanceOpts = options ?? mergeOptions(this.options, undefined);
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.debug(`[${instanceId}] stdout: ${output.trim()}`);
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          log.info(`✅ tauri-driver [${instanceId}] started successfully on port ${port}`);
-          resolve();
-        }
-
-        // Parse and forward logs if enabled
-        const parsedLogs = parseLogLines(output);
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-        }
+      // Use readline for line-buffered log handling (fixes Windows chunking issues)
+      setupStreamLogHandler({
+        stream: proc.stdout,
+        streamName: 'stdout',
+        identifier: instanceId,
+        options: instanceOpts,
+        onStartupDetected: () => resolve(),
+        instanceId,
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`[${instanceId}] stderr: ${output.trim()}`);
-
-        // Parse and forward logs from stderr if enabled
-        const parsedLogs = parseLogLines(output);
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-        }
+      setupStreamLogHandler({
+        stream: proc.stderr,
+        streamName: 'stderr',
+        identifier: instanceId,
+        options: instanceOpts,
+        instanceId,
       });
 
       proc.on('error', (error: Error) => {
