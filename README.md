@@ -1,6 +1,6 @@
-# WebdriverIO Desktop & Mobile Testing Services
+# WebdriverIO Desktop & Mobile Testing
 
-> Specialized WebdriverIO services for testing Electron and Tauri applications
+> WebdriverIO services for automated testing of native desktop and mobile applications across modern frameworks.
 
 [![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
 [![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
@@ -10,24 +10,34 @@
 [![Version](https://img.shields.io/npm/v/@wdio/tauri-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
 [![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
 
-## Overview
+## Features
 
-This monorepo provides specialized WebdriverIO services for testing desktop and mobile applications across modern frameworks. Our services enable comprehensive end-to-end testing with automatic binary management, API mocking, and seamless integration with WebdriverIO's testing ecosystem.
+- 🎯 **Framework-specific automation** - Native integration with Electron, Tauri
+- 🔍 **Smart binary detection** - Automatic app discovery and configuration
+- 🎭 **API mocking & isolation** - Built-in mocking for deterministic tests
+- 🌐 **Cross-platform support** - Write once, test everywhere
+- 🔧 **Consistent API** - Familiar WDIO patterns across all frameworks
 
-### Current Services
+## Services
 
-- **Electron Service** - Production-ready testing for Electron applications with automatic binary detection, CDP bridge for main process access, comprehensive API mocking, and window management
-- **Tauri Service** - Full-featured testing for Tauri applications with official tauri-driver integration, multiremote support, and plugin-based architecture
+### Production Ready
 
-### Planned Services Roadmap
+**[@wdio/electron-service](./packages/electron-service)** - Electron applications  
+✅ CDP bridge for main process • Full API mocking • Window management
 
-Future WebdriverIO services will expand cross-platform testing coverage post-Tauri service release, leveraging shared utilities from @wdio/native-utils:
+**[@wdio/tauri-service](./packages/tauri-service)** - Tauri applications  
+✅ Official tauri-driver integration • Multiremote support • Plugin architecture
 
-- **React Native**: Appium-powered service for iOS/Android mobile apps with RN-specific test helpers (experimental Windows/macOS desktop)
-- **Flutter**: Appium Flutter Driver integration with automated binary detection across all 5 platforms (iOS/Android/Windows/macOS/Linux)
-- **Neutralino**: Lightweight desktop service with platform-specific WebDriver management with Chrome mode fallback (Windows/macOS/Linux)
+### In Development
 
-All services maintain API consistency with `@wdio/electron-service` and `@wdio/tauri-service`, prioritizing developer experience through auto-detection and platform-agnostic configuration.
+**React Native** - React Native apps (iOS/Android)  
+Appium-powered with RN test helpers • Experimental desktop (Windows/macOS)
+
+**Flutter** - Flutter apps (5 platforms)  
+Appium Flutter Driver • iOS • Android • Windows • macOS • Linux
+
+**Neutralino** - Neutralino desktop apps  
+Native window automation (EdgeDriver/WebKitWebDriver) • Chrome mode fallback
 
 ## Quick Start
 
