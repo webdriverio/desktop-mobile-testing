@@ -33,7 +33,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@vitest/spy": "^4.0.16"
+    "@vitest/spy": "^4.0.18"
   },
   "devDependencies": {
     "@electron-forge/shared-types": "^7.10.2",
