@@ -21,6 +21,8 @@
   "scripts": {
     "backport": "tsx ./scripts/backport.ts",
     "build": "turbo run build --filter=./packages/* --filter=./e2e",
+    "build:electron": "turbo run build --filter=@wdio/electron-service --filter=@wdio/electron-cdp-bridge --filter=@wdio/native-types --filter=@wdio/native-utils --filter=@wdio/bundler",
+    "build:tauri": "turbo run build --filter=@wdio/tauri-service --filter=@wdio/tauri-plugin --filter=@wdio/native-types --filter=@wdio/native-utils --filter=@wdio/bundler",
     "catalog:default": "tsx ./scripts/switch-catalog.ts default",
     "catalog:minimum": "tsx ./scripts/switch-catalog.ts minimum",
     "catalog:next": "tsx ./scripts/switch-catalog.ts next",
@@ -48,6 +50,7 @@
     "graph:e2e:mac-universal": "tsx ./scripts/create-task-graph.ts ./.github/assets/e2e-graph-mac-universal.png test:e2e-mac-universal:electron-builder test:e2e-mac-universal:electron-forge",
     "lint": "biome check --formatter-enabled=false --linter-enabled=true . && eslint --cache \"**/*.{j,mj,cj,t}s\"",
     "lint:fix": "biome check --write --formatter-enabled=false --linter-enabled=true . && eslint --cache --fix \"**/*.{j,mj,cj,t}s\"",
+    "lint:fix:unsafe": "biome check --write --unsafe --formatter-enabled=false --linter-enabled=true . && eslint --cache --fix \"**/*.{j,mj,cj,t}s\"",
     "prepare": "husky",
     "release": "turbo run release --filter=@wdio/electron-service --filter=@wdio/* --only --concurrency=1",
     "test": "turbo run test",

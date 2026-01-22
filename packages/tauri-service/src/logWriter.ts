@@ -1,5 +1,8 @@
 import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
+import { createLogger } from '@wdio/native-utils';
+
+const log = createLogger('tauri-service');
 
 /**
  * Log writer for standalone mode (when WDIO test runner is not available)
@@ -33,7 +36,7 @@ export class StandaloneLogWriter {
   /**
    * Write log message to file
    */
-  write(message: string): void {
+  write(message: string, prefixedMessage?: string): void {
     if (!this.logStream) {
       // If not initialized, write to stdout instead
       console.log(message);
@@ -41,7 +44,9 @@ export class StandaloneLogWriter {
     }
 
     const timestamp = new Date().toISOString();
-    const formattedMessage = `${timestamp} INFO tauri-service:service: ${message}\n`;
+    // Use prefixedMessage if available, otherwise use regular message
+    const logMessage = prefixedMessage || message;
+    const formattedMessage = `${timestamp} INFO tauri-service:service: ${logMessage}\n`;
     this.logStream.write(formattedMessage);
   }
 
@@ -88,4 +93,15 @@ export function getStandaloneLogWriter(): StandaloneLogWriter {
  */
 export function isStandaloneLogWriterInitialized(): boolean {
   return !!standaloneWriter?.getLogFile();
+}
+
+/**
+ * Close the standalone log writer and release resources
+ */
+export function closeStandaloneLogWriter(): void {
+  if (standaloneWriter) {
+    standaloneWriter.close();
+    standaloneWriter = undefined;
+    log.debug('Standalone log writer closed');
+  }
 }

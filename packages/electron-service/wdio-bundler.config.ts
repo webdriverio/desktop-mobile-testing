@@ -9,7 +9,7 @@ const config: BundlerConfig = {
         targetFile: 'src/mock.ts',
         bundleRegExp: /export\s*\{\s*([^}]+)\s*\}\s*;/,
         importName: 'spy',
-        bundleReplace: (importName) => `const ${importName} = { $1 };`,
+        bundleReplace: (importName: string) => `const ${importName} = { $1 };`,
       },
     },
     {
@@ -19,7 +19,7 @@ const config: BundlerConfig = {
         targetFile: 'src/service.ts',
         bundleRegExp: /export.*$/m,
         importName: '{ default: copy }',
-        bundleReplace: (importName) => `const ${importName} = { default: index };`,
+        bundleReplace: (importName: string) => `const ${importName} = { default: index };`,
       },
     },
   ],

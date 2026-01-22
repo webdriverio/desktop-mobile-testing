@@ -28,6 +28,8 @@
 
 const COMMANDS: &[&str] = &[
     "execute",
+    "log_frontend",
+    "debug_plugin",
     "set_mock",
     "get_mock",
     "clear_mocks",
@@ -41,4 +43,3 @@ fn main() {
         .ios_path("ios")
         .build();
 }
-

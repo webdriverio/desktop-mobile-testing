@@ -189,7 +189,7 @@ async function testExample(
     cdpBridgePath?: string;
   },
   service: 'electron' | 'tauri',
-  skipBuild: boolean,
+  _skipBuild: boolean,
 ) {
   const packageName = packagePath.split(/[/\\]/).pop();
   if (!packageName) {
@@ -203,7 +203,8 @@ async function testExample(
   }
 
   // Create isolated test environment to avoid pnpm hoisting issues
-  const tempDir = normalize(join(tmpdir(), `wdio-package-test-${Date.now()}`));
+  const testId = Date.now();
+  const tempDir = normalize(join(tmpdir(), `wdio-package-test-${testId}`));
   const packageDir = normalize(join(tempDir, packageName));
 
   try {
@@ -271,7 +272,7 @@ async function testExample(
       const cargoTomlPath = join(packageDir, 'src-tauri', 'Cargo.toml');
 
       if (existsSync(cargoTomlPath)) {
-        const cargoToml = readFileSync(cargoTomlPath, 'utf-8');
+        let cargoToml = readFileSync(cargoTomlPath, 'utf-8');
         // Check if plugin is referenced as a path dependency
         if (cargoToml.includes('tauri-plugin-wdio') && cargoToml.includes('path =')) {
           // Copy plugin source to make it accessible from isolated environment
@@ -289,6 +290,20 @@ async function testExample(
             } else {
               log(`⚠️  Plugin permissions directory not found at ${permissionsDir}`);
             }
+
+            // Update Cargo.toml path to point to the correct location in isolated environment
+            // From tempDir/tauri-app/src-tauri, ../../packages/tauri-plugin points to tempDir/packages/tauri-plugin
+            // Original path: ../../../../packages/tauri-plugin (for monorepo)
+            // Isolated path: Use absolute path to avoid Cargo path resolution issues
+            const oldPathPattern =
+              /(tauri-plugin-wdio\s*=\s*\{\s*path\s*=\s*)"\.\.\/\.\.\/\.\.\/\.\.\/packages\/tauri-plugin"(\s*\})/;
+            if (oldPathPattern.test(cargoToml)) {
+              // Use absolute path to ensure Cargo can find it
+              const absolutePluginPath = normalize(pluginDestDir);
+              cargoToml = cargoToml.replace(oldPathPattern, `$1"${absolutePluginPath}"$2`);
+              writeFileSync(cargoTomlPath, cargoToml);
+              log(`✅ Updated Cargo.toml path dependency to absolute path: ${absolutePluginPath}`);
+            }
           } else {
             log(`⚠️  Plugin source not found at ${pluginSourceDir}`);
           }
@@ -296,13 +311,28 @@ async function testExample(
       }
     }
 
-    // Handle pre-built binaries for Tauri (skipBuild only applies to Tauri)
-    // Electron apps are always built in isolated environments (like electron-service repo)
-    if (skipBuild && service === 'tauri') {
-      // Tauri apps: need to build plugin JS and web frontend even with pre-built binary
-      if (packageJson.scripts?.['build:js']) {
-        execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
+    // Handle building/copying for different service types
+    if (service === 'tauri') {
+      const pluginSourceDir = join(rootDir, 'packages', 'tauri-plugin');
+      const pluginDistJsDir = join(pluginSourceDir, 'dist-js');
+
+      // The built plugin should already exist from the main pnpm build step
+      // Copy the built plugin JS to the location expected by build:web script
+      const pluginDestParentDir = join(tempDir, 'packages', 'tauri-plugin');
+      const pluginDestJsDir = join(pluginDestParentDir, 'dist-js');
+      if (existsSync(pluginDistJsDir)) {
+        log(`Copying plugin JavaScript to isolated environment...`);
+        mkdirSync(pluginDestParentDir, { recursive: true });
+        if (existsSync(pluginDestJsDir)) {
+          rmSync(pluginDestJsDir, { recursive: true, force: true });
+        }
+        cpSync(pluginDistJsDir, pluginDestJsDir, { recursive: true });
+        log(`✅ Plugin JavaScript copied successfully`);
+      } else {
+        throw new Error(`Plugin JavaScript build not found at ${pluginDistJsDir}`);
       }
+
+      // Run the build:web script which will copy the plugin JS into dist/plugins
       if (packageJson.scripts?.['build:web']) {
         execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
       }
@@ -319,115 +349,101 @@ async function testExample(
       } else {
         log(`⚠️  Pre-built Tauri binary not found at ${sourceTargetDir}, will build instead`);
         if (packageJson.scripts?.build) {
+          // Add debugging before build
+          const srcTauriDir = join(packageDir, 'src-tauri');
+          const capabilitiesDir = join(srcTauriDir, 'capabilities');
+          const capabilitiesFile = join(capabilitiesDir, 'default.json');
+          const genDir = join(srcTauriDir, 'gen');
+          const buildRs = join(srcTauriDir, 'build.rs');
+          const cargoToml = join(srcTauriDir, 'Cargo.toml');
+
+          log(`🔍 Debugging Tauri app build environment before build...`);
+          log(`   src-tauri directory: ${srcTauriDir} (exists: ${existsSync(srcTauriDir)})`);
+          log(`   capabilities directory: ${capabilitiesDir} (exists: ${existsSync(capabilitiesDir)})`);
+          log(`   capabilities/default.json: ${capabilitiesFile} (exists: ${existsSync(capabilitiesFile)})`);
+          log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
+          log(`   build.rs: ${buildRs} (exists: ${existsSync(buildRs)})`);
+          log(`   Cargo.toml: ${cargoToml} (exists: ${existsSync(cargoToml)})`);
+
+          if (existsSync(capabilitiesFile)) {
+            try {
+              const capabilitiesContent = readFileSync(capabilitiesFile, 'utf-8');
+              const capabilitiesJson = JSON.parse(capabilitiesContent) as {
+                identifier?: string;
+                permissions?: string[];
+              };
+              log(`   ✅ Capabilities file is valid JSON`);
+              log(`   ✅ Capability identifier: ${capabilitiesJson.identifier}`);
+              log(`   ✅ Capability has ${capabilitiesJson.permissions?.length || 0} permissions`);
+
+              // Check if plugin permissions are referenced
+              const pluginPerms = capabilitiesJson.permissions?.filter((p) => p.startsWith('wdio:'));
+              if (pluginPerms && pluginPerms.length > 0) {
+                log(`   ✅ References ${pluginPerms.length} plugin permissions: ${pluginPerms.join(', ')}`);
+              } else {
+                log(`   ⚠️  No plugin permissions referenced in capabilities file`);
+              }
+            } catch (error) {
+              log(`   ❌ Capabilities file is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          }
+
+          // Check if plugin is accessible
+          const pluginPath = join(tempDir, 'packages', 'tauri-plugin');
+          log(`   Plugin path: ${pluginPath} (exists: ${existsSync(pluginPath)})`);
+          if (existsSync(pluginPath)) {
+            const pluginPermissions = join(pluginPath, 'permissions');
+            log(`   Plugin permissions: ${pluginPermissions} (exists: ${existsSync(pluginPermissions)})`);
+          }
+
+          // Check Cargo.toml for plugin dependency
+          if (existsSync(cargoToml)) {
+            const cargoTomlContent = readFileSync(cargoToml, 'utf-8');
+            if (cargoTomlContent.includes('tauri-plugin-wdio')) {
+              log(`   ✅ Plugin dependency found in Cargo.toml`);
+            } else {
+              log(`   ❌ Plugin dependency NOT found in Cargo.toml`);
+            }
+          }
+
           execCommand('pnpm build', packageDir, `Building ${packageName} app`);
+
+          // After build, check if gen directory was created
+          const aclManifest = join(genDir, 'schemas', 'acl-manifests.json');
+          log(`🔍 Debugging Tauri app build results...`);
+          log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
+          if (existsSync(genDir)) {
+            log(`   ✅ gen directory created`);
+            if (existsSync(aclManifest)) {
+              log(`   ✅ ACL manifest created: ${aclManifest}`);
+              try {
+                const manifestContent = readFileSync(aclManifest, 'utf-8');
+                const manifestJson = JSON.parse(manifestContent) as Record<string, unknown>;
+                log(`   ✅ ACL manifest is valid JSON`);
+                if (manifestJson.wdio) {
+                  log(`   ✅ Plugin (wdio) found in ACL manifest`);
+                } else {
+                  log(`   ⚠️  Plugin (wdio) NOT found in ACL manifest`);
+                }
+                if (manifestJson.default) {
+                  log(`   ✅ Default capability found in ACL manifest`);
+                } else {
+                  log(`   ❌ Default capability NOT found in ACL manifest`);
+                }
+              } catch (error) {
+                log(`   ❌ ACL manifest is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            } else {
+              log(`   ❌ ACL manifest NOT created: ${aclManifest}`);
+            }
+          } else {
+            log(`   ❌ gen directory NOT created - this indicates ACL manifest generation failed`);
+          }
         }
       }
     } else if (packageJson.scripts?.build) {
-      // Build the app in isolated environment (Electron always, Tauri if not skipBuild)
-      // For Tauri apps, ensure the plugin's JavaScript is built and bundled
-      if (service === 'tauri') {
-        if (packageJson.scripts?.['build:js']) {
-          execCommand('pnpm build:js', packageDir, `Building plugin JavaScript for ${packageName}`);
-        }
-        if (packageJson.scripts?.['build:web']) {
-          execCommand('pnpm build:web', packageDir, `Building web frontend for ${packageName}`);
-        }
-      }
-
-      // For Tauri apps, add debugging before build to diagnose ACL manifest issues
-      if (service === 'tauri') {
-        const srcTauriDir = join(packageDir, 'src-tauri');
-        const capabilitiesDir = join(srcTauriDir, 'capabilities');
-        const capabilitiesFile = join(capabilitiesDir, 'default.json');
-        const genDir = join(srcTauriDir, 'gen');
-        const buildRs = join(srcTauriDir, 'build.rs');
-        const cargoToml = join(srcTauriDir, 'Cargo.toml');
-
-        log(`🔍 Debugging Tauri app build environment before build...`);
-        log(`   src-tauri directory: ${srcTauriDir} (exists: ${existsSync(srcTauriDir)})`);
-        log(`   capabilities directory: ${capabilitiesDir} (exists: ${existsSync(capabilitiesDir)})`);
-        log(`   capabilities/default.json: ${capabilitiesFile} (exists: ${existsSync(capabilitiesFile)})`);
-        log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
-        log(`   build.rs: ${buildRs} (exists: ${existsSync(buildRs)})`);
-        log(`   Cargo.toml: ${cargoToml} (exists: ${existsSync(cargoToml)})`);
-
-        if (existsSync(capabilitiesFile)) {
-          try {
-            const capabilitiesContent = readFileSync(capabilitiesFile, 'utf-8');
-            const capabilitiesJson = JSON.parse(capabilitiesContent);
-            log(`   ✅ Capabilities file is valid JSON`);
-            log(`   ✅ Capability identifier: ${capabilitiesJson.identifier}`);
-            log(`   ✅ Capability has ${capabilitiesJson.permissions?.length || 0} permissions`);
-
-            // Check if plugin permissions are referenced
-            const pluginPerms = capabilitiesJson.permissions?.filter((p: string) => p.startsWith('wdio:'));
-            if (pluginPerms && pluginPerms.length > 0) {
-              log(`   ✅ References ${pluginPerms.length} plugin permissions: ${pluginPerms.join(', ')}`);
-            } else {
-              log(`   ⚠️  No plugin permissions referenced in capabilities file`);
-            }
-          } catch (error) {
-            log(`   ❌ Capabilities file is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
-          }
-        }
-
-        // Check if plugin is accessible
-        const pluginPath = join(tempDir, 'packages', 'tauri-plugin');
-        log(`   Plugin path: ${pluginPath} (exists: ${existsSync(pluginPath)})`);
-        if (existsSync(pluginPath)) {
-          const pluginPermissions = join(pluginPath, 'permissions');
-          log(`   Plugin permissions: ${pluginPermissions} (exists: ${existsSync(pluginPermissions)})`);
-        }
-
-        // Check Cargo.toml for plugin dependency
-        if (existsSync(cargoToml)) {
-          const cargoTomlContent = readFileSync(cargoToml, 'utf-8');
-          if (cargoTomlContent.includes('tauri-plugin-wdio')) {
-            log(`   ✅ Plugin dependency found in Cargo.toml`);
-          } else {
-            log(`   ❌ Plugin dependency NOT found in Cargo.toml`);
-          }
-        }
-      }
-
+      // Build Electron apps in isolated environment
       execCommand('pnpm build', packageDir, `Building ${packageName} app`);
-
-      // After build, check if gen directory was created
-      if (service === 'tauri') {
-        const srcTauriDir = join(packageDir, 'src-tauri');
-        const genDir = join(srcTauriDir, 'gen');
-        const aclManifest = join(genDir, 'schemas', 'acl-manifests.json');
-
-        log(`🔍 Debugging Tauri app build results...`);
-        log(`   gen directory: ${genDir} (exists: ${existsSync(genDir)})`);
-        if (existsSync(genDir)) {
-          log(`   ✅ gen directory created`);
-          if (existsSync(aclManifest)) {
-            log(`   ✅ ACL manifest created: ${aclManifest}`);
-            try {
-              const manifestContent = readFileSync(aclManifest, 'utf-8');
-              const manifestJson = JSON.parse(manifestContent);
-              log(`   ✅ ACL manifest is valid JSON`);
-              if (manifestJson.wdio) {
-                log(`   ✅ Plugin (wdio) found in ACL manifest`);
-              } else {
-                log(`   ⚠️  Plugin (wdio) NOT found in ACL manifest`);
-              }
-              if (manifestJson.default) {
-                log(`   ✅ Default capability found in ACL manifest`);
-              } else {
-                log(`   ❌ Default capability NOT found in ACL manifest`);
-              }
-            } catch (error) {
-              log(`   ❌ ACL manifest is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          } else {
-            log(`   ❌ ACL manifest NOT created: ${aclManifest}`);
-          }
-        } else {
-          log(`   ❌ gen directory NOT created - this indicates ACL manifest generation failed`);
-        }
-      }
     }
 
     execCommand('pnpm test', packageDir, `Running tests for ${packageName}`);
@@ -440,6 +456,19 @@ async function testExample(
     }
     throw error;
   } finally {
+    // Copy logs back to source directory for debugging
+    const logsSourceDir = join(packageDir, 'logs');
+    if (existsSync(logsSourceDir)) {
+      const logsDestDir = join(packagePath, `logs-${testId}`);
+      try {
+        mkdirSync(dirname(logsDestDir), { recursive: true });
+        cpSync(logsSourceDir, logsDestDir, { recursive: true });
+        log(`📋 Copied logs to ${logsDestDir}`);
+      } catch (logError) {
+        console.error(`⚠️  Failed to copy logs: ${logError instanceof Error ? logError.message : String(logError)}`);
+      }
+    }
+
     // Clean up isolated environment
     if (existsSync(tempDir)) {
       log(`Cleaning up isolated test environment`);

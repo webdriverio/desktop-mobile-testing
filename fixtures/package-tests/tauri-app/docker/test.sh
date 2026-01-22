@@ -46,11 +46,17 @@ test_dockerfile() {
 run_tests_in_container() {
     local distro=$1
 
+    # Create a directory on the host to capture logs
+    local log_dir="/tmp/tauri-test-logs-$distro"
+    rm -rf "$log_dir"
+    mkdir -p "$log_dir"
+
     echo -e "${YELLOW}=== Running tests for $distro ===${NC}"
 
     docker run --rm \
         -u root \
         -v "$REPO_ROOT:/workspace" \
+        -v "$log_dir:/workspace/logs-output" \
         -w /workspace \
         "tauri-distro-test:$distro" \
         bash -c "
@@ -64,6 +70,7 @@ run_tests_in_container() {
                 Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
                 XVFB_PID=\$!
                 sleep 2
+                echo \"Xvfb started with PID: \$XVFB_PID\"
             else
                 echo '⚠️  Xvfb not found, tests may fail'
             fi
@@ -84,6 +91,9 @@ run_tests_in_container() {
             echo '=== Running Tauri package test ==='
             pnpm test
 
+            echo '=== Copying logs to mounted volume ==='
+            cp -r fixtures/package-tests/tauri-app/logs-* /workspace/logs-output/ 2>/dev/null || echo 'No logs to copy'
+
             # Clean up Xvfb if it was started
             if [ ! -z \"\$XVFB_PID\" ]; then
                 kill \$XVFB_PID 2>/dev/null || true
@@ -92,6 +102,12 @@ run_tests_in_container() {
 
     # Check the exit code of docker run (PIPESTATUS[0]), not tee (PIPESTATUS[1])
     local docker_exit_code=${PIPESTATUS[0]}
+
+    # Copy logs from mounted volume to repo for upload
+    if [ -d "$log_dir" ]; then
+        cp -r "$log_dir"/* "$REPO_ROOT/fixtures/package-tests/tauri-app/" 2>/dev/null || true
+        echo "Logs copied to fixtures/package-tests/tauri-app/"
+    fi
 
     if [ $docker_exit_code -eq 0 ]; then
         echo -e "${GREEN}✓ Tests passed for $distro${NC}"

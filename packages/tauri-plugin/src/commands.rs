@@ -1,229 +1,170 @@
-use tauri::{AppHandle, WebviewWindow, command, Runtime, Manager, Listener};
-use std::sync::{Arc, Mutex};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
 use serde_json::Value as JsonValue;
+use uuid::Uuid;
 
-use crate::models::{ExecuteRequest, MockConfig};
+use crate::models::ExecuteRequest;
 use crate::Result;
-use crate::mock_store::MockStore;
+
+/// Debug command to verify plugin is working
+#[command]
+pub(crate) async fn debug_plugin<R: Runtime>(_window: WebviewWindow<R>) -> String {
+    eprintln!("[WDIO-Rust] DEBUG PLUGIN CALLED!");
+    "Plugin alive".to_string()
+}
+
+/// Log a frontend message to stderr (for standalone mode capture)
+/// This bypasses the event system and writes directly to stderr
+#[command]
+pub(crate) async fn log_frontend<R: Runtime>(
+    _window: WebviewWindow<R>,
+    message: String,
+    level: String,
+) -> Result<String> {
+    // Output with a special marker that the log parser recognizes as frontend
+    // Format: [WDIO-FRONTEND][LEVEL] message
+    eprintln!("[WDIO-FRONTEND][{}] {}", level.to_uppercase(), message);
+
+    // Return success indicator
+    Ok(format!("logged: {} @ {}", level, message))
+}
 
 /// Execute JavaScript code in the frontend context
+/// This command is called via invoke from the frontend plugin
+/// It extracts the script from the request, evaluates it, and returns the result via events
 #[command]
 pub(crate) async fn execute<R: Runtime>(
     window: WebviewWindow<R>,
     request: ExecuteRequest,
 ) -> Result<JsonValue> {
-    log::info!("[WDIO Plugin] Execute request - script: {}", request.script);
-    log::info!("[WDIO Plugin] Execute request - args: {:?}", request.args);
+    log::debug!("Execute command called");
+    log::trace!("Script length: {} chars", request.script.len());
 
-    // Build the script with args injected
-    // The script should be a function that receives args, or a standalone script
-    // We'll wrap it to pass args if args are provided
-    let script = if !request.args.is_empty() {
-        // Serialize args to JSON and inject them into the script
-        let args_json = serde_json::to_string(&request.args)
-            .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
+    let app_handle = window.app_handle().clone();
+    let window_label = window.label().to_owned();
 
-        // Wrap the script to inject args as a variable
-        format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, request.script)
-    } else {
-        request.script
-    };
-
-    log::info!("[WDIO Plugin] Prepared script: {}", script);
-
-    // Use WebviewWindow::eval() to execute JavaScript in the frontend context
-    // This gives the code access to window.__TAURI__ APIs
-    // Note: eval() returns Result<(), Error> - it executes the script but doesn't return the result
-    // We need to use a channel to get the result back from the frontend
     use std::sync::mpsc;
     use std::time::Duration;
-    
+
     let (tx, rx) = mpsc::channel();
-    // Use timestamp + random number for unique event ID
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let event_id = format!("wdio:execute:{}", timestamp);
-    
-    // Set up event listener to capture result
-    let app_handle = window.app_handle().clone();
+
+    // Generate unique event ID for this execution
+    let event_id = format!("wdio-result-{}", Uuid::new_v4().to_string());
+    log::trace!("Generated event_id for result: {}", event_id);
+
     let result_tx = tx.clone();
     let error_tx = tx;
-    
+
+    // Listen for the result event from the frontend
     let listener_id = app_handle.listen(&event_id, move |event| {
-        log::info!("[WDIO Plugin] Received event payload: {}", event.payload());
+        log::trace!("Received result event payload: {}", event.payload());
+
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
-            log::info!("[WDIO Plugin] Parsed payload: {:?}", payload);
-            if let Some(result) = payload.get("result") {
-                log::info!("[WDIO Plugin] Got result field: {:?}", result);
-                // Result is a JSON string that needs to be parsed back to a value
-                if let Some(json_str) = result.as_str() {
-                    log::info!("[WDIO Plugin] Result is string: {}", json_str);
-                    match serde_json::from_str::<serde_json::Value>(json_str) {
-                        Ok(parsed) => {
-                            log::info!("[WDIO Plugin] Successfully parsed result: {:?}", parsed);
-                            let _ = result_tx.send(Ok(parsed));
-                        }
-                        Err(e) => {
-                            log::error!("[WDIO Plugin] Failed to parse result JSON: {}", e);
-                            let _ = error_tx.send(Err(crate::Error::ExecuteError(
-                                format!("Failed to parse result JSON: {}", e)
-                            )));
-                        }
-                    }
+            if let Some(success) = payload.get("success").and_then(|s| s.as_bool()) {
+                if success {
+                    let value: JsonValue = payload.get("value").unwrap_or(&JsonValue::Null).clone();
+                    let _ = result_tx.send(Ok(value));
                 } else {
-                    log::info!("[WDIO Plugin] Result is not a string, using as-is");
-                    // If it's not a string, just use it as-is
-                    let _ = result_tx.send(Ok(result.clone()));
+                    let error_msg = payload.get("error")
+                        .and_then(|e| e.as_str())
+                        .unwrap_or("Unknown error")
+                        .to_string();
+                    let _ = error_tx.send(Err(crate::Error::ExecuteError(error_msg)));
                 }
-            } else if let Some(error) = payload.get("error") {
-                log::error!("[WDIO Plugin] Got error field: {:?}", error);
-                let _ = error_tx.send(Err(crate::Error::ExecuteError(
-                    error.as_str().unwrap_or("Unknown error").to_string()
-                )));
-            } else {
-                log::warn!("[WDIO Plugin] Payload has neither result nor error field!");
             }
-        } else {
-            log::error!("[WDIO Plugin] Failed to parse event payload as JSON");
         }
     });
-    
-    // Wrap the script to emit result via event
-    // According to Tauri v2 docs: https://v2.tauri.app/develop/calling-frontend/#event-system
-    // Events can be emitted using window.__TAURI__.event.emit() when withGlobalTauri is enabled
-    let script_with_return = format!(
+
+    // Build the script with args if provided
+    let script = if !request.args.is_empty() {
+        let args_json = serde_json::to_string(&request.args)
+            .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
+        format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, request.script)
+    } else {
+        request.script.clone()
+    };
+
+    // Wrap the script to:
+    // 1. Wait for window.__TAURI__.core.invoke to be available (handles race condition)
+    // 2. Execute the user's script
+    // 3. Emit the result via a Tauri event (using window.__TAURI__.event if available)
+    let script_with_result = format!(
         r#"
         (async () => {{
             try {{
+                // Wait for window.__TAURI__.core.invoke to be available
+                const maxWait = 5000;
+                const startTime = Date.now();
+                while (!window.__TAURI__?.core?.invoke && (Date.now() - startTime) < maxWait) {{
+                    await new Promise(r => setTimeout(r, 10));
+                }}
+                if (!window.__TAURI__?.core?.invoke) {{
+                    throw new Error('window.__TAURI__.core.invoke not available after timeout');
+                }}
+
+                // Execute the user's script
                 const result = await ({});
-                const jsonResult = JSON.stringify(result);
-                // Use Tauri event API to send result back to Rust
-                if (window.__TAURI__?.event?.emit) {{
-                    window.__TAURI__.event.emit('{}', {{ result: jsonResult }});
+
+                // Emit the result via event - prefer window.__TAURI__.event if available
+                const emit = window.__TAURI__?.event?.emit;
+                if (emit) {{
+                    await emit('{}', {{ success: true, value: result }});
                 }} else {{
-                    // Fallback: try importing from @tauri-apps/api/event
+                    // Fallback to dynamic import
                     const {{ emit }} = await import('@tauri-apps/api/event');
-                    emit('{}', {{ result: jsonResult }});
+                    await emit('{}', {{ success: true, value: result }});
                 }}
             }} catch (error) {{
-                const errorMsg = error.message || String(error);
-                if (window.__TAURI__?.event?.emit) {{
-                    window.__TAURI__.event.emit('{}', {{ error: errorMsg }});
-                }} else {{
-                    const {{ emit }} = await import('@tauri-apps/api/event');
-                    emit('{}', {{ error: errorMsg }});
+                // Emit error via event
+                try {{
+                    const emit = window.__TAURI__?.event?.emit;
+                    if (emit) {{
+                        await emit('{}', {{ success: false, error: error.message || String(error) }});
+                    }} else {{
+                        const {{ emit }} = await import('@tauri-apps/api/event');
+                        await emit('{}', {{ success: false, error: error.message || String(error) }});
+                    }}
+                }} catch (emitError) {{
+                    // If emit also fails, log to console as last resort
+                    console.error('[WDIO Execute] Failed to emit result:', emitError);
                 }}
             }}
-        }})()
+        }})();
         "#,
         script, event_id, event_id, event_id, event_id
     );
 
-    // Execute the script
-    window
-        .eval(&script_with_return)
-        .map_err(|e| crate::Error::ExecuteError(e.to_string()))?;
+    log::trace!("Executing script via window.eval()");
 
-    // Wait for result with timeout
-    match rx.recv_timeout(Duration::from_secs(30)) {
+    // Evaluate the script
+    if let Err(e) = window.eval(&script_with_result) {
+        log::error!("Failed to eval script: {}", e);
+        app_handle.unlisten(listener_id);
+        return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
+    }
+
+    log::trace!("Waiting for execute result (10s timeout)");
+
+    // Wait for the result event with 10s timeout
+    match rx.recv_timeout(Duration::from_secs(10)) {
         Ok(Ok(result)) => {
+            log::debug!("Execute completed successfully");
+            log::trace!("Result: {:?}", result);
             app_handle.unlisten(listener_id);
             Ok(result)
         }
         Ok(Err(e)) => {
+            log::error!("JS error during execution: {}", e);
             app_handle.unlisten(listener_id);
             Err(e)
         }
         Err(_) => {
+            log::error!("Timeout waiting for execute result after 10s. Event ID: {}. Window: {}",
+                event_id, window_label);
             app_handle.unlisten(listener_id);
-            Err(crate::Error::ExecuteError("Timeout waiting for execute result".to_string()))
+            Err(crate::Error::ExecuteError(format!(
+                "Script execution timed out after 10s. Event ID: {}. Window: {}",
+                event_id, window_label
+            )))
         }
     }
 }
-
-/// Set a mock for a Tauri command
-#[command]
-pub(crate) async fn set_mock<R: Runtime>(
-    app: AppHandle<R>,
-    command: String,
-    config: MockConfig,
-) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    store.set_mock(command, config);
-    Ok(())
-}
-
-/// Get a mock configuration for a command
-#[command]
-pub(crate) async fn get_mock<R: Runtime>(
-    app: AppHandle<R>,
-    command: String,
-) -> Result<Option<MockConfig>> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    Ok(store.get_mock(&command).cloned())
-}
-
-/// Clear all mocks
-#[command]
-pub(crate) async fn clear_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    store.clear_mocks();
-    Ok(())
-}
-
-/// Reset all mocks (clear and remove original handlers)
-#[command]
-pub(crate) async fn reset_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    store.reset_mocks();
-    Ok(())
-}
-
-/// Restore all mocks (remove mocks and restore original handlers)
-#[command]
-pub(crate) async fn restore_mocks<R: Runtime>(app: AppHandle<R>) -> Result<()> {
-    let mock_store = app
-        .try_state::<Arc<Mutex<MockStore>>>()
-        .ok_or_else(|| crate::Error::MockError("Mock store not found".to_string()))?;
-
-    let mut store = mock_store
-        .lock()
-        .map_err(|e| crate::Error::MockError(format!("Failed to lock mock store: {}", e)))?;
-
-    // For now, same as reset - restore functionality will be enhanced when we implement
-    // original handler storage
-    store.reset_mocks();
-    Ok(())
-}
-

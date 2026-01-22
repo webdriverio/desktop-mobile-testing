@@ -23,7 +23,7 @@
       "./dist/cjs/index.js"
     ]
   },
-  "files": ["dist"],
+  "files": ["dist", "scripts"],
   "scripts": {
     "build": "tsx ../../scripts/build-package.ts",
     "build:watch": "tsx ../../scripts/build-package.ts --watch",
@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@babel/parser": "^7.26.0",
+    "@vitest/spy": "^4.0.4",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
     "@wdio/native-types": "workspace:*",
@@ -48,6 +49,7 @@
     "debug": "^4.4.3",
     "get-port": "^7.1.0",
     "recast": "^0.23.11",
+    "tslib": "^2.8.1",
     "webdriverio": "catalog:default"
   },
   "devDependencies": {

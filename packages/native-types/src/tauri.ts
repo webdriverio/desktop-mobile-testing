@@ -1,5 +1,6 @@
+import type { Mock } from '@vitest/spy';
 import type { Capabilities, Options } from '@wdio/types';
-import type { BrowserBase } from './shared.js';
+import type { AbstractFn, BrowserBase, MockContext, MockOverride, MockResult } from './shared.js';
 
 // ============================================================================
 // Tauri-Specific Types
@@ -19,6 +20,52 @@ export interface TauriAPIs {
   window?: unknown;
   event?: unknown;
   [key: string]: unknown;
+}
+
+/**
+ * Tauri mock context
+ */
+interface TauriMockContext extends MockContext {
+  results: MockResult[];
+}
+
+/**
+ * Tauri mock instance interface
+ */
+export interface TauriMockInstance extends Omit<Mock, MockOverride> {
+  mockImplementation(fn: AbstractFn): Promise<TauriMock>;
+  mockImplementationOnce(fn: AbstractFn): Promise<TauriMock>;
+  mockReturnValue(obj: unknown): Promise<TauriMock>;
+  mockReturnValueOnce(obj: unknown): Promise<TauriMock>;
+  mockResolvedValue(obj: unknown): Promise<TauriMock>;
+  mockResolvedValueOnce(obj: unknown): Promise<TauriMock>;
+  mockRejectedValue(obj: unknown): Promise<TauriMock>;
+  mockRejectedValueOnce(obj: unknown): Promise<TauriMock>;
+  mockClear(): Promise<TauriMock>;
+  mockReset(): Promise<TauriMock>;
+  mockRestore(): Promise<TauriMock>;
+  mockReturnThis(): Promise<unknown>;
+  withImplementation<ReturnValue, InnerArguments extends unknown[]>(
+    implFn: AbstractFn,
+    callbackFn: (tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue,
+  ): Promise<unknown>;
+  mockName(name: string): TauriMock;
+  getMockName(): string;
+  getMockImplementation(): AbstractFn;
+  update(): Promise<TauriMock>;
+  __isTauriMock: boolean;
+  mock: TauriMockContext;
+  results: MockResult[];
+  invocationCallOrder: number[];
+  lastCall?: unknown;
+}
+
+/**
+ * Tauri mock function type
+ */
+export interface TauriMock<TArgs extends unknown[] = unknown[], TReturns = unknown> extends TauriMockInstance {
+  new (...args: TArgs): TReturns;
+  (...args: TArgs): TReturns;
 }
 
 /**
@@ -42,29 +89,33 @@ export interface TauriServiceAPI {
   ): Promise<ReturnValue | undefined>;
 
   /**
-   * Check if a function is a Tauri mock function.
+   * Check if a command is a Tauri mock function.
    *
-   * @param fn - Function to check
-   * @returns True if the function is a Tauri mock
+   * @param command - Command name to check
+   * @returns True if the command is mocked
    */
-  isMockFunction: (fn: unknown) => boolean;
+  isMockFunction: (command: string) => Promise<boolean>;
 
   /**
-   * Mock a Tauri API command.
+   * Mock a Tauri backend command.
    *
-   * @param apiName - Name of the API to mock
-   * @param funcName - Name of the function to mock
+   * @param command - Name of the Tauri command to mock
    * @returns Promise that resolves to the mock
+   *
+   * @example
+   * ```js
+   * const mock = await browser.tauri.mock('read_clipboard');
+   * await mock.mockReturnValue('mocked clipboard content');
+   * ```
    */
-  mock: (apiName: string, funcName: string) => Promise<unknown>;
+  mock: (command: string) => Promise<TauriMock>;
 
   /**
-   * Mock all functions from a Tauri API.
+   * Mock all Tauri commands.
    *
-   * @param apiName - Name of the API to mock
-   * @returns Promise that resolves to the mocks
+   * @returns Promise that resolves when all mocks are cleared
    */
-  mockAll: (apiName: string) => Promise<unknown>;
+  mockAll: () => Promise<void>;
 
   /**
    * Clear all Tauri API mocks.

@@ -428,7 +428,7 @@ export class PackageAnalyzer {
       call: `injectDependencyPlugin(${optionsStr})`,
       options, // Store the actual options for programmatic use
       import: {
-        from: '@wdio/electron-bundler',
+        from: '@wdio/bundler',
         named: ['injectDependencyPlugin'],
       },
     };
@@ -455,7 +455,7 @@ export class PackageAnalyzer {
       call: `codeReplacePlugin(${optionsStr})`,
       options, // Store the actual options for programmatic use
       import: {
-        from: '@wdio/electron-bundler',
+        from: '@wdio/bundler',
         named: ['codeReplacePlugin'],
       },
     };
