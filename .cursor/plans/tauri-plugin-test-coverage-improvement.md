@@ -243,7 +243,7 @@ it('should error clearly when window.__TAURI__ is not available', async () => {
 **14. Multiremote with Different Commands**
 ```typescript
 it('should execute different commands on different instances', async () => {
-  const multi = multiremotebrowser as WebdriverIO.MultiRemoteBrowser;
+  const multi = multiRemoteBrowser as WebdriverIO.MultiRemoteBrowser;
   const browserA = multi.getInstance('browserA');
   const browserB = multi.getInstance('browserB');
 
@@ -261,7 +261,7 @@ it('should execute different commands on different instances', async () => {
 **15. Multiremote Sequential vs Parallel**
 ```typescript
 it('should handle sequential execution in multiremote', async () => {
-  const multi = multiremotebrowser as WebdriverIO.MultiRemoteBrowser;
+  const multi = multiRemoteBrowser as WebdriverIO.MultiRemoteBrowser;
   const browserA = multi.getInstance('browserA');
   const browserB = multi.getInstance('browserB');
 
