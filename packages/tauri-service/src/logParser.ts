@@ -116,13 +116,6 @@ export function parseLogLine(line: string): ParsedLog | undefined {
     return undefined;
   }
 
-  // Filter out lines that already have [Tauri:Frontend] prefix
-  // These come from browser console logs captured by tauri-driver
-  // We only want raw logs from Rust listener (without prefix)
-  if (trimmedLine.includes(PREFIXES.frontend)) {
-    return undefined;
-  }
-
   // Extract prefix and source before cleaning
   const { prefix, source } = extractPrefixAndSource(trimmedLine);
 
