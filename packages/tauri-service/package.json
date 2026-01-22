@@ -23,7 +23,7 @@
       "./dist/cjs/index.js"
     ]
   },
-  "files": ["dist"],
+  "files": ["dist", "scripts"],
   "scripts": {
     "build": "tsx ../../scripts/build-package.ts",
     "build:watch": "tsx ../../scripts/build-package.ts --watch",

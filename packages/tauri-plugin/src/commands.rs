@@ -1,9 +1,32 @@
-use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
 use crate::models::ExecuteRequest;
 use crate::Result;
+
+/// Debug command to verify plugin is working
+#[command]
+pub(crate) async fn debug_plugin<R: Runtime>(_window: WebviewWindow<R>) -> String {
+    eprintln!("[WDIO-Rust] DEBUG PLUGIN CALLED!");
+    "Plugin alive".to_string()
+}
+
+/// Log a frontend message to stderr (for standalone mode capture)
+/// This bypasses the event system and writes directly to stderr
+#[command]
+pub(crate) async fn log_frontend<R: Runtime>(
+    _window: WebviewWindow<R>,
+    message: String,
+    level: String,
+) -> Result<String> {
+    // Output with a special marker that the log parser recognizes as frontend
+    // Format: [WDIO-FRONTEND][LEVEL] message
+    eprintln!("[WDIO-FRONTEND][{}] {}", level.to_uppercase(), message);
+
+    // Return success indicator
+    Ok(format!("logged: {} @ {}", level, message))
+}
 
 /// Execute JavaScript code in the frontend context
 /// This command is called via invoke from the frontend plugin

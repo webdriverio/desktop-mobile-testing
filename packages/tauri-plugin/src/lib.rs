@@ -45,18 +45,29 @@ impl log::Log for WdioUnifiedLogger {
 }
 
 /// Listen for frontend-log events and output to stderr
-/// Outputs raw messages - TypeScript parseLogLine() will detect and add [Tauri:Frontend] prefix
+/// Uses app.listen() to catch events emitted from frontend
+/// Outputs with [Tauri:Frontend] prefix for unified log parsing
 fn setup_frontend_log_listener<R: Runtime>(app: &tauri::AppHandle<R>) {
-    let listener_id = app.listen("frontend-log", move |event| {
-        eprintln!("{}", event.payload());
+    eprintln!("[WDIO-Rust] Setting up frontend-log listener");
+    let app_handle = app.app_handle().clone();
+
+    // Try app-level listener
+    let _ = app_handle.listen("frontend-log", move |event: tauri::Event| {
+        eprintln!("[WDIO-Rust] Received frontend-log event on app, payload: {:?}", event.payload());
     });
-    let _ = listener_id;
+
+    // Also try listen_any for cross-window events
+    let _ = app_handle.listen_any("frontend-log", move |event: tauri::Event| {
+        eprintln!("[WDIO-Rust] Received frontend-log event via listen_any, payload: {:?}", event.payload());
+    });
+
+    eprintln!("[WDIO-Rust] frontend-log listeners set up");
 }
 
 /// Creates the Wdio plugin with default options.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     plugin::Builder::new("wdio")
-        .invoke_handler(tauri::generate_handler![commands::execute])
+        .invoke_handler(tauri::generate_handler![commands::execute, commands::log_frontend, commands::debug_plugin])
         .setup(|app_handle, _api| {
             set_app_handle(app_handle.clone());
 

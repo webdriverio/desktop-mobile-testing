@@ -5,6 +5,8 @@ Allows all WebDriverIO plugin commands for testing
 #### This default permission set includes the following:
 
 - `allow-execute`
+- `allow-log-frontend`
+- `allow-debug-plugin`
 - `allow-set-mock`
 - `allow-get-mock`
 - `allow-clear-mocks`
@@ -42,6 +44,32 @@ Enables the clear_mocks command without any pre-configured scope.
 <td>
 
 Denies the clear_mocks command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:allow-debug-plugin`
+
+</td>
+<td>
+
+Enables the debug_plugin command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:deny-debug-plugin`
+
+</td>
+<td>
+
+Denies the debug_plugin command without any pre-configured scope.
 
 </td>
 </tr>
@@ -94,6 +122,32 @@ Enables the get_mock command without any pre-configured scope.
 <td>
 
 Denies the get_mock command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:allow-log-frontend`
+
+</td>
+<td>
+
+Enables the log_frontend command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:deny-log-frontend`
+
+</td>
+<td>
+
+Denies the log_frontend command without any pre-configured scope.
 
 </td>
 </tr>

@@ -2,6 +2,7 @@ import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
@@ -251,99 +252,9 @@ export default class TauriWorkerService {
 
       // Wrap the script with console forwarding setup executed IN THE SAME CONTEXT
       // The forwarding code wraps console methods, then the test script runs with wrapped console
+      const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
       const wrappedScript = `
-        // Setup console forwarding first
-        (function() {
-          if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.log) {
-            return;
-          }
-
-          // Store original console methods
-          const originalConsole = {
-            log: console.log.bind(console),
-            debug: console.debug.bind(console),
-            info: console.info.bind(console),
-            warn: console.warn.bind(console),
-            error: console.error.bind(console),
-          };
-
-          // Log level enum matching Tauri plugin-log
-          const LogLevel = {
-            Trace: 1,
-            Debug: 2,
-            Info: 3,
-            Warn: 4,
-            Error: 5
-          };
-
-          // Helper to forward to Tauri log plugin
-          function forward(level, args) {
-            const message = Array.from(args).map(function(arg) {
-              return typeof arg === 'string' ? arg : JSON.stringify(arg);
-            }).join(' ');
-
-            // Add [Tauri:Frontend] prefix for WebDriver log capture
-            const prefixedMessage = \`[Tauri:Frontend] \${message}\`;
-
-            // Map log level to method name
-            const methodMap = {
-              [LogLevel.Trace]: 'trace',
-              [LogLevel.Debug]: 'debug',
-              [LogLevel.Info]: 'info',
-              [LogLevel.Warn]: 'warn',
-              [LogLevel.Error]: 'error',
-            };
-            const method = methodMap[level] || 'log';
-
-            // Call original console method with prefix - this outputs to browser console
-            // which tauri-driver captures via WebDriver protocol
-            const originalMethod = originalConsole[method];
-            if (originalMethod) {
-              originalMethod.call(console, prefixedMessage);
-            }
-
-            // Emit event for Rust listener → stderr capture
-            // This enables frontend log capture in standalone mode
-            // Note: Rust listener adds [Tauri:Frontend] prefix, so we send raw message
-            if (window.__TAURI__?.event?.emit) {
-              window.__TAURI__.event.emit('frontend-log', message);
-            }
-          }
-
-          // Wrap console methods using Object.defineProperty (works on WebKit)
-          try {
-            Object.defineProperty(console, 'log', {
-              value: function() { forward(LogLevel.Trace, arguments); },
-              writable: true,
-              configurable: true
-            });
-            Object.defineProperty(console, 'debug', {
-              value: function() { forward(LogLevel.Debug, arguments); },
-              writable: true,
-              configurable: true
-            });
-            Object.defineProperty(console, 'info', {
-              value: function() { forward(LogLevel.Info, arguments); },
-              writable: true,
-              configurable: true
-            });
-            Object.defineProperty(console, 'warn', {
-              value: function() { forward(LogLevel.Warn, arguments); },
-              writable: true,
-              configurable: true
-            });
-            Object.defineProperty(console, 'error', {
-              value: function() { forward(LogLevel.Error, arguments); },
-              writable: true,
-              configurable: true
-            });
-          } catch (err) {
-            // If Object.defineProperty fails, console forwarding won't work
-            originalConsole.warn('[WDIO Console Forwarding] Failed to override console methods:', err);
-          }
-        })();
-
-        // Now execute the test script with wrapped console
+        ${consoleWrapperScript}
         return (${scriptString}).apply(null, arguments);
       `;
 

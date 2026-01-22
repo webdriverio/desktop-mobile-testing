@@ -1,4 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
+import { FRONTEND_MARKER, PREFIXES } from './constants/logging.js';
 import type { LogLevel } from './logForwarder.js';
 
 const log = createLogger('tauri-service', 'service');
@@ -39,22 +40,21 @@ const TAURI_DRIVER_PATTERNS = [
  */
 function extractPrefixAndSource(line: string): { prefix: string | null; source: 'backend' | 'frontend' } {
   // Check for explicit Tauri prefixes (highest priority)
-  if (/\[Tauri:Backend\]/i.test(line)) {
-    return { prefix: '[Tauri:Backend]', source: 'backend' };
+  if (line.includes(PREFIXES.backend)) {
+    return { prefix: PREFIXES.backend, source: 'backend' };
   }
-  if (/\[Tauri:Frontend\]/i.test(line)) {
-    return { prefix: '[Tauri:Frontend]', source: 'frontend' };
+  if (line.includes(PREFIXES.frontend)) {
+    return { prefix: PREFIXES.frontend, source: 'frontend' };
   }
   // Check for [frontend] target from Tauri log plugin
   if (/\[frontend\]/i.test(line)) {
     return { prefix: '[frontend]', source: 'frontend' };
   }
 
-  // Check for raw frontend log from Rust listener
-  // Format: "message" (JSON-quoted string without [Tauri:Frontend] prefix)
-  // These come from eprintln!("{}") where {} is the event payload (JSON-serialized string)
-  if (/^".*"$/.test(line.trim())) {
-    return { prefix: '[Tauri:Frontend]', source: 'frontend' };
+  // Check for WDIO frontend log marker from log_frontend Rust command
+  // Format: [WDIO-FRONTEND][LEVEL] message
+  if (line.includes(FRONTEND_MARKER)) {
+    return { prefix: null, source: 'frontend' };
   }
 
   // backend logs get their prefix added in logForwarder.ts via formatLogMessage()
@@ -119,7 +119,7 @@ export function parseLogLine(line: string): ParsedLog | undefined {
   // Filter out lines that already have [Tauri:Frontend] prefix
   // These come from browser console logs captured by tauri-driver
   // We only want raw logs from Rust listener (without prefix)
-  if (/\[Tauri:Frontend\]/.test(trimmedLine)) {
+  if (trimmedLine.includes(PREFIXES.frontend)) {
     return undefined;
   }
 
@@ -138,6 +138,15 @@ export function parseLogLine(line: string): ParsedLog | undefined {
   let cleanedMessage = hasPrefix
     ? trimmedLine.replace(/^\[Tauri:(Backend|Frontend)\]\s*/i, '')
     : cleanLogMessage(trimmedLine, hasPrefix);
+
+  // For frontend logs from log_frontend command, strip the [WDIO-FRONTEND][LEVEL] prefix
+  // Format: [WDIO-FRONTEND][LEVEL] message
+  if (source === 'frontend' && hasPrefix === false) {
+    const wdioFrontendPattern = /\[WDIO-FRONTEND\]\[(INFO|WARN|ERROR|DEBUG|TRACE)\]\s*/i;
+    if (wdioFrontendPattern.test(cleanedMessage)) {
+      cleanedMessage = cleanedMessage.replace(wdioFrontendPattern, '').trim();
+    }
+  }
 
   // For raw frontend logs (JSON-quoted strings from Rust listener),
   // strip the surrounding quotes

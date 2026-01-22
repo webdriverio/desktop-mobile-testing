@@ -3445,6 +3445,8 @@
       "description": "Allows all WebDriverIO plugin commands for testing",
       "permissions": [
         "allow-execute",
+        "allow-log-frontend",
+        "allow-debug-plugin",
         "allow-set-mock",
         "allow-get-mock",
         "allow-clear-mocks",
@@ -3458,6 +3460,11 @@
         "description": "Enables the clear_mocks command without any pre-configured scope.",
         "commands": { "allow": ["clear_mocks"], "deny": [] }
       },
+      "allow-debug-plugin": {
+        "identifier": "allow-debug-plugin",
+        "description": "Enables the debug_plugin command without any pre-configured scope.",
+        "commands": { "allow": ["debug_plugin"], "deny": [] }
+      },
       "allow-execute": {
         "identifier": "allow-execute",
         "description": "Enables the execute command without any pre-configured scope.",
@@ -3467,6 +3474,11 @@
         "identifier": "allow-get-mock",
         "description": "Enables the get_mock command without any pre-configured scope.",
         "commands": { "allow": ["get_mock"], "deny": [] }
+      },
+      "allow-log-frontend": {
+        "identifier": "allow-log-frontend",
+        "description": "Enables the log_frontend command without any pre-configured scope.",
+        "commands": { "allow": ["log_frontend"], "deny": [] }
       },
       "allow-reset-mocks": {
         "identifier": "allow-reset-mocks",
@@ -3488,6 +3500,11 @@
         "description": "Denies the clear_mocks command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["clear_mocks"] }
       },
+      "deny-debug-plugin": {
+        "identifier": "deny-debug-plugin",
+        "description": "Denies the debug_plugin command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["debug_plugin"] }
+      },
       "deny-execute": {
         "identifier": "deny-execute",
         "description": "Denies the execute command without any pre-configured scope.",
@@ -3497,6 +3514,11 @@
         "identifier": "deny-get-mock",
         "description": "Denies the get_mock command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["get_mock"] }
+      },
+      "deny-log-frontend": {
+        "identifier": "deny-log-frontend",
+        "description": "Denies the log_frontend command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["log_frontend"] }
       },
       "deny-reset-mocks": {
         "identifier": "deny-reset-mocks",
