@@ -23,9 +23,9 @@ This monorepo provides specialized WebdriverIO services for testing desktop and 
 
 Future WebdriverIO services will expand cross-platform testing coverage post-Tauri service release, leveraging shared utilities from @wdio/native-utils:
 
-- React Native: Appium-powered service automating Metro bundler and app deployment workflows
-- Flutter: Appium-powered convenience layer with binary detection for all 5 platforms (iOS/Android/desktop)
-- Neutralino: Lightweight service for NeutralinoJS desktop application automation
+- **React Native**: Appium-powered service for iOS/Android mobile apps with RN-specific test helpers (experimental Windows/macOS desktop)
+- **Flutter**: Appium Flutter Driver integration with automated binary detection across all 5 platforms (iOS/Android/Windows/macOS/Linux)
+- **Neutralino**: Lightweight desktop service with platform-specific WebDriver management with Chrome mode fallback (Windows/macOS/Linux)
 
 All services maintain API consistency with `@wdio/electron-service` and `@wdio/tauri-service`, prioritizing developer experience through auto-detection and platform-agnostic configuration.
 
