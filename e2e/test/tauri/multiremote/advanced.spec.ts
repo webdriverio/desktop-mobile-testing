@@ -1,9 +1,9 @@
-import { expect, multiremotebrowser } from '@wdio/globals';
+import { expect, multiRemoteBrowser } from '@wdio/globals';
 import '@wdio/native-types';
 
 describe('Tauri Multiremote - Advanced Patterns', () => {
   it('should execute different commands on different instances', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -21,7 +21,7 @@ describe('Tauri Multiremote - Advanced Patterns', () => {
   });
 
   it('should handle sequential execution in multiremote', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 

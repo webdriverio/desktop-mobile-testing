@@ -1,4 +1,4 @@
-import { expect, multiremotebrowser } from '@wdio/globals';
+import { expect, multiRemoteBrowser } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
 import url from 'node:url';
@@ -14,7 +14,7 @@ function getMultiremoteLogDir() {
 
 describe('Electron Log Integration - Multiremote', () => {
   it('should capture main process logs per instance with instance ID', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -63,7 +63,7 @@ describe('Electron Log Integration - Multiremote', () => {
   });
 
   it('should capture renderer logs per instance with instance ID', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -106,7 +106,7 @@ describe('Electron Log Integration - Multiremote', () => {
   });
 
   it('should capture logs independently per instance', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -152,7 +152,7 @@ describe('Electron Log Integration - Multiremote', () => {
   });
 
   it('should apply different log levels per instance', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 

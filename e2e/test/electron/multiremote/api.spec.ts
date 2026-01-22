@@ -1,5 +1,5 @@
 import { browser } from '@wdio/electron-service';
-import { expect, multiremotebrowser } from '@wdio/globals';
+import { expect, multiRemoteBrowser } from '@wdio/globals';
 import type * as Electron from 'electron';
 
 // Helper function to get the expected app name from globalThis
@@ -45,7 +45,7 @@ describe('Electron APIs using Multiremote', () => {
 
   it('should retrieve instance-specific values from a single instance', async () => {
     // Add proper type casting for multiremote browser
-    const multi = multiremotebrowser as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as WebdriverIO.MultiRemoteBrowser;
 
     const browserA = multi.getInstance('browserA');
     expect(await browserA.electron.execute(() => process.argv.includes('--browser=A'))).toBe(true);

@@ -1,4 +1,4 @@
-import { expect, multiremotebrowser } from '@wdio/globals';
+import { expect, multiRemoteBrowser } from '@wdio/globals';
 import '@wdio/native-types';
 
 function assertHasOwnProperty<Property extends PropertyKey>(
@@ -12,7 +12,7 @@ function assertHasOwnProperty<Property extends PropertyKey>(
 
 describe('Tauri APIs using Multiremote', () => {
   it('should retrieve platform info through the Tauri API on multiple instances', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -31,7 +31,7 @@ describe('Tauri APIs using Multiremote', () => {
   });
 
   it('should execute commands independently on multiple instances', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -53,7 +53,7 @@ describe('Tauri APIs using Multiremote', () => {
   });
 
   it('should retrieve instance-specific values from each instance', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
