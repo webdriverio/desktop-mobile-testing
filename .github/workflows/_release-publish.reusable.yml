@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Checkout target branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.deploy_key }}
           ref: ${{ inputs.target_branch }}
