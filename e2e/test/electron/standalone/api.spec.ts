@@ -46,7 +46,7 @@ if (appVersion !== expectedAppVersion) {
 // Now that we've confirmed browser.electron.execute works, let's test mocking
 console.log('🔍 Browser is initialized, testing mock functionality...');
 
-// Test 1: Basic mock test (should work) - using browser.electron.execute like the working test
+// Test 1: Basic mock test (should work) - using browser.electron.execute
 console.log('🔍 Testing basic mock with browser.electron.execute...');
 try {
   console.log(
@@ -58,7 +58,7 @@ try {
   const basicMock = await browser.electron.mock('dialog', 'showOpenDialog');
   console.log('✅ Basic mock created successfully');
 
-  // Call the mocked function directly via execute (like the working test)
+  // Call the mocked function directly via execute
   await browser.electron.execute(async (electron) => {
     await electron.dialog.showOpenDialog({
       title: 'basic test dialog',
