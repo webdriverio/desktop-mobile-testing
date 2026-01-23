@@ -106,9 +106,13 @@ export async function createMock(
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
 
-      // Import native-spy's fn() in the Electron context
-      const { fn } = await import('@wdio/native-spy');
-      const mockFn = fn();
+      const spy = await import('@wdio/native-spy');
+      const mockFn = spy.fn(function (this: unknown) {
+        // Default implementation returns undefined (does not call the original function)
+        // This prevents real dialogs/actions from occurring when mocking
+        // Users can call mockImplementation() to provide custom behavior
+        return undefined;
+      });
 
       // replace target API with mock
       electronApi[funcName as keyof typeof electronApi] = mockFn as unknown as ElectronApiFn;
