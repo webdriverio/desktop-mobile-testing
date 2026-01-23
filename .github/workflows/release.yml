@@ -12,7 +12,7 @@ on:
           - tauri
         default: electron
       branch:
-        description: 'Branch type to release from'
+        description: 'Branch type to release from (main is recommended for all release types)'
         required: true
         type: choice
         options:

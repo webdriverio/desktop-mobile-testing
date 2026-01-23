@@ -143,14 +143,6 @@ jobs:
             exit 1
           fi
 
-          # Major releases should be from feature branches
-          if [ "$RELEASE_VERSION" = "major" ] || [ "$RELEASE_VERSION" = "premajor" ]; then
-            if [ "$BRANCH_TYPE" != "feature" ]; then
-              echo "Error: Major releases must be from a feature branch"
-              exit 1
-            fi
-          fi
-
       - name: Verify target branch exists
         run: |
           BRANCH="${{ steps.determine_branch.outputs.branch }}"
