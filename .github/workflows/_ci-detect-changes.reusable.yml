@@ -24,9 +24,9 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      run_electron: ${{ steps.changes.outputs.run_electron }}
-      run_tauri: ${{ steps.changes.outputs.run_tauri }}
-      has_shared_changes: ${{ steps.changes.outputs.has_shared_changes }}
+      run_electron: ${{ steps.determine.outputs.run_electron || 'false' }}
+      run_tauri: ${{ steps.determine.outputs.run_tauri || 'false' }}
+      has_shared_changes: ${{ steps.determine.outputs.has_shared_changes || 'false' }}
 
     steps:
       - name: Checkout Repository
@@ -34,20 +34,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug Ref Info
-        run: |
-          echo "Event: ${{ github.event_name }}"
-          echo "Base ref: ${{ github.base_ref }}"
-          echo "Head ref: ${{ github.ref_name }}"
-          echo "PR base ref: ${{ github.event.pull_request.base.ref }}"
-          echo "PR head ref: ${{ github.event.pull_request.head.ref }}"
-
       - name: Detect Changed Files
         id: changes
         uses: dorny/paths-filter@v3
         with:
-          base: ${{ github.event.pull_request.base.ref || github.base_ref || github.ref_name }}
-          head: ${{ github.ref_name }}
           filters: |
             # Electron service packages
             electron_service:
@@ -96,6 +86,16 @@ jobs:
             echo "::notice::Force all mode enabled - running all tests"
             exit 0
           fi
+
+          echo "::notice::Checking paths-filter outputs..."
+          echo "electron_service=${{ steps.changes.outputs.electron_service }}"
+          echo "tauri_service=${{ steps.changes.outputs.tauri_service }}"
+          echo "shared=${{ steps.changes.outputs.shared }}"
+          echo "e2e_electron=${{ steps.changes.outputs.e2e_electron }}"
+          echo "e2e_tauri=${{ steps.changes.outputs.e2e_tauri }}"
+          echo "fixtures_electron=${{ steps.changes.outputs.fixtures_electron }}"
+          echo "fixtures_tauri=${{ steps.changes.outputs.fixtures_tauri }}"
+          echo "infra=${{ steps.changes.outputs.infra }}"
 
           ELECTRON=${{ steps.changes.outputs.electron_service }}
           TAURI=${{ steps.changes.outputs.tauri_service }}

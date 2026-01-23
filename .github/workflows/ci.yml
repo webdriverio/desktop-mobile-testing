@@ -32,7 +32,6 @@ jobs:
   build:
     name: Build [Linux]
     needs: [detect-changes]
-    if: needs.detect-changes.outputs.run_electron == 'true' || needs.detect-changes.outputs.run_tauri == 'true' || needs.detect-changes.outputs.has_shared_changes == 'true'
     uses: ./.github/workflows/_ci-build.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -41,7 +40,6 @@ jobs:
   lint:
     name: Lint [Linux]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_electron == 'true' || needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-lint.reusable.yml
     with:
       cache_key: ${{ needs.build.outputs.cache_key }}
