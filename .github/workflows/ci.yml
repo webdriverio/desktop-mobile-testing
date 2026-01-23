@@ -8,6 +8,12 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+*
   pull_request:
   workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Run all tests (ignore change detection)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -16,9 +22,16 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
+  # Detect which services are affected by changes
+  detect-changes:
+    uses: ./.github/workflows/_ci-detect-changes.reusable.yml
+    with:
+      force_all: ${{ inputs.force_all }}
+
   # Build on Linux first since it's the fastest and its artifacts are used by all other jobs
   build:
     name: Build [Linux]
+    needs: [detect-changes]
     uses: ./.github/workflows/_ci-build.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -47,11 +60,11 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # Build app binaries in parallel for better CI efficiency
-  # Package test apps and E2E apps are built separately so tests don't wait for each other
+  # Build Tauri E2E app binaries - only if Tauri tests will run
   build-tauri-e2e-app-linux:
     name: Build Tauri E2E App [Linux]
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -61,7 +74,8 @@ jobs:
 
   build-tauri-e2e-app-windows:
     name: Build Tauri E2E App [Windows]
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     with:
       os: 'windows-latest'
@@ -70,23 +84,27 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
+  # Build Tauri package test apps - only if Tauri package tests will run
   build-tauri-package-app-linux:
     name: Build Tauri Package Test App [Linux]
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     with:
       os: 'ubuntu-latest'
 
   build-tauri-package-app-windows:
     name: Build Tauri Package Test App [Windows]
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     with:
       os: 'windows-latest'
 
   build-tauri-package-app-linux-arm:
     name: Build Tauri Package Test App [Linux-ARM64]
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     with:
       os: 'ubuntu-24.04-arm'
@@ -98,7 +116,8 @@ jobs:
   # Electron package tests are split by module type (CJS/ESM) for better error isolation
   package-electron-matrix:
     name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'ubuntu-24.04-arm' && 'Linux-ARM64' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.module-type }}
-    needs: [build, lint]
+    needs: [detect-changes, build, lint]
+    if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -115,7 +134,8 @@ jobs:
 
   package-tauri-linux:
     name: Package - Tauri [Linux]
-    needs: [build, lint, build-tauri-package-app-linux]
+    needs: [detect-changes, build, lint, build-tauri-package-app-linux]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -127,7 +147,8 @@ jobs:
 
   package-tauri-windows:
     name: Package - Tauri [Windows]
-    needs: [build, lint, build-tauri-package-app-windows]
+    needs: [detect-changes, build, lint, build-tauri-package-app-windows]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: 'windows-latest'
@@ -139,7 +160,8 @@ jobs:
 
   package-tauri-linux-arm:
     name: Package - Tauri [Linux-ARM64]
-    needs: [build, lint, build-tauri-package-app-linux-arm]
+    needs: [detect-changes, build, lint, build-tauri-package-app-linux-arm]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: 'ubuntu-24.04-arm'
@@ -158,7 +180,8 @@ jobs:
   # - CentOS Stream 10: WebKitGTK removed by Red Hat due to 200+ CVEs and unsustainable maintenance
   package-tauri-distros:
     name: Package - Tauri (Docker) [Linux-${{ matrix.distro }}]
-    needs: [build, lint]
+    needs: [detect-changes, build, lint]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -172,10 +195,11 @@ jobs:
     with:
       distro: ${{ matrix.distro }}
 
-  # Run build tests outside of the main Linux build job.
+  # Run build tests outside of the main Linux build job
   build-matrix:
     name: Build [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}]
-    needs: [build, lint]
+    needs: [detect-changes, build, lint]
+    if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -191,7 +215,8 @@ jobs:
   # - Optimize for GitHub Actions concurrency limits
   e2e-matrix:
     name: E2E - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.scenario }}
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -209,10 +234,10 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
 
   # Tauri E2E tests for Linux - only waits for E2E app build
-  # This allows Linux tests to start immediately after E2E app build completes
   e2e-tauri-linux-matrix:
     name: E2E - Tauri [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build, build-tauri-e2e-app-linux]
+    needs: [detect-changes, build, build-tauri-e2e-app-linux]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -229,11 +254,11 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ${{ needs.build-tauri-e2e-app-linux.outputs.cache_key }}
 
-  # Tauri E2E tests for Windows - only waits for E2E app build
-  # This allows Windows tests to start immediately after E2E app build completes
+  # Tauri E2E tests for Windows
   e2e-tauri-windows-matrix:
     name: E2E - Tauri [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build, build-tauri-e2e-app-windows]
+    needs: [detect-changes, build, build-tauri-e2e-app-windows]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -254,7 +279,8 @@ jobs:
   # macOS is not supported due to WKWebView WebDriver limitations
   e2e-tauri-macos-matrix:
     name: E2E - Tauri [${{ matrix.os == 'macos-latest' && 'macOS-ARM' || 'macOS-Intel' }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -272,11 +298,11 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ''
 
-  # Universal binary verification - ensures binaries contain both ARM64 and Intel architectures
-  # Replaces redundant universal e2e tests (which only tested ARM64 slice when run on ARM64 runner)
+  # Universal binary verification - Electron only
   package-electron-mac-universal:
     name: Package - Electron [macOS-Universal-Verify]
-    needs: [build, lint]
+    needs: [detect-changes, build, lint]
+    if: needs.detect-changes.outputs.run_electron == 'true'
     runs-on: macos-latest
     steps:
       - name: 👷 Checkout Repository

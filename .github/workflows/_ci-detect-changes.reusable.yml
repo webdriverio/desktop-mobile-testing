@@ -1,0 +1,130 @@
+name: Detect Affected Services (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      force_all:
+        description: 'Run all tests (ignore change detection)'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      run_electron:
+        description: 'Whether to run Electron-related tests and builds'
+        value: ${{ jobs.detect.outputs.run_electron }}
+      run_tauri:
+        description: 'Whether to run Tauri-related tests and builds'
+        value: ${{ jobs.detect.outputs.run_tauri }}
+      has_shared_changes:
+        description: 'Whether shared packages changed (affects both services)'
+        value: ${{ jobs.detect.outputs.has_shared_changes }}
+
+jobs:
+  detect:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      run_electron: ${{ steps.changes.outputs.run_electron }}
+      run_tauri: ${{ steps.changes.outputs.run_tauri }}
+      has_shared_changes: ${{ steps.changes.outputs.has_shared_changes }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Changed Files
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          base: ${{ github.base_ref || github.ref_name }}
+          head: ${{ github.ref_name }}
+          filters: |
+            # Electron service packages
+            electron_service:
+              - 'packages/electron-service/**'
+              - 'packages/electron-cdp-bridge/**'
+
+            # Tauri service packages
+            tauri_service:
+              - 'packages/tauri-service/**'
+              - 'packages/tauri-plugin/**'
+
+            # Shared packages (affect both services)
+            shared:
+              - 'packages/native-types/**'
+              - 'packages/native-utils/**'
+              - 'packages/bundler/**'
+
+            # E2E tests
+            e2e_electron:
+              - 'e2e/test/electron/**'
+            e2e_tauri:
+              - 'e2e/test/tauri/**'
+
+            # Test fixtures and apps
+            fixtures_electron:
+              - 'fixtures/e2e-apps/electron-builder/**'
+              - 'fixtures/e2e-apps/electron-forge/**'
+              - 'fixtures/e2e-apps/electron-script/**'
+            fixtures_tauri:
+              - 'fixtures/e2e-apps/tauri/**'
+
+            # Infrastructure (always triggers both)
+            infra:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+              - 'scripts/**'
+
+      - name: Determine What to Run
+        id: determine
+        if: inputs.force_all != true
+        run: |
+          ELECTRON=${{ steps.changes.outputs.electron_service }}
+          TAURI=${{ steps.changes.outputs.tauri_service }}
+          SHARED=${{ steps.changes.outputs.shared }}
+          E2E_ELECTRON=${{ steps.changes.outputs.e2e_electron }}
+          E2E_TAURI=${{ steps.changes.outputs.e2e_tauri }}
+          FIXTURES_ELECTRON=${{ steps.changes.outputs.fixtures_electron }}
+          FIXTURES_TAURI=${{ steps.changes.outputs.fixtures_tauri }}
+          INFRA=${{ steps.changes.outputs.infra }}
+
+          # Electron runs if: electron_service || e2e_electron || fixtures_electron || shared || infra
+          RUN_ELECTRON=$(echo "$ELECTRON $E2E_ELECTRON $FIXTURES_ELECTRON $SHARED $INFRA" | grep -o 'true' | head -1 || echo "")
+          if [ -z "$RUN_ELECTRON" ]; then
+            RUN_ELECTRON="false"
+          fi
+
+          # Tauri runs if: tauri_service || e2e_tauri || fixtures_tauri || shared || infra
+          RUN_TAURI=$(echo "$TAURI $E2E_TAURI $FIXTURES_TAURI $SHARED $INFRA" | grep -o 'true' | head -1 || echo "")
+          if [ -z "$RUN_TAURI" ]; then
+            RUN_TAURI="false"
+          fi
+
+          echo "run_electron=$RUN_ELECTRON" >> $GITHUB_OUTPUT
+          echo "run_tauri=$RUN_TAURI" >> $GITHUB_OUTPUT
+          echo "has_shared_changes=$SHARED" >> $GITHUB_OUTPUT
+
+          echo "============================================"
+          echo "Change Detection Summary:"
+          echo "  Electron service: $ELECTRON"
+          echo "  Tauri service: $TAURI"
+          echo "  Shared packages: $SHARED"
+          echo "  E2E Electron: $E2E_ELECTRON"
+          echo "  E2E Tauri: $E2E_TAURI"
+          echo "  Fixtures Electron: $FIXTURES_ELECTRON"
+          echo "  Fixtures Tauri: $FIXTURES_TAURI"
+          echo "  Infrastructure: $INFRA"
+          echo ""
+          echo "Run Electron: $RUN_ELECTRON"
+          echo "Run Tauri: $RUN_TAURI"
+          echo "============================================"
+
+      - name: Force All Mode
+        if: inputs.force_all == true
+        run: |
+          echo "run_electron=true" >> $GITHUB_OUTPUT
+          echo "run_tauri=true" >> $GITHUB_OUTPUT
+          echo "has_shared_changes=true" >> $GITHUB_OUTPUT
+          echo "Force all mode enabled - running all tests"
