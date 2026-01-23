@@ -34,11 +34,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Debug Ref Info
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Base ref: ${{ github.base_ref }}"
+          echo "Head ref: ${{ github.ref_name }}"
+          echo "PR base ref: ${{ github.event.pull_request.base.ref }}"
+          echo "PR head ref: ${{ github.event.pull_request.head.ref }}"
+
       - name: Detect Changed Files
         id: changes
         uses: dorny/paths-filter@v3
         with:
-          base: ${{ github.base_ref || github.ref_name }}
+          base: ${{ github.event.pull_request.base.ref || github.base_ref || github.ref_name }}
           head: ${{ github.ref_name }}
           filters: |
             # Electron service packages
@@ -79,8 +87,16 @@ jobs:
 
       - name: Determine What to Run
         id: determine
-        if: inputs.force_all != true
         run: |
+          # If force_all is true, always run everything
+          if [ "${{ inputs.force_all }}" = "true" ]; then
+            echo "run_electron=true" >> $GITHUB_OUTPUT
+            echo "run_tauri=true" >> $GITHUB_OUTPUT
+            echo "has_shared_changes=true" >> $GITHUB_OUTPUT
+            echo "::notice::Force all mode enabled - running all tests"
+            exit 0
+          fi
+
           ELECTRON=${{ steps.changes.outputs.electron_service }}
           TAURI=${{ steps.changes.outputs.tauri_service }}
           SHARED=${{ steps.changes.outputs.shared }}
@@ -106,8 +122,7 @@ jobs:
           echo "run_tauri=$RUN_TAURI" >> $GITHUB_OUTPUT
           echo "has_shared_changes=$SHARED" >> $GITHUB_OUTPUT
 
-          echo "============================================"
-          echo "Change Detection Summary:"
+          echo "::notice::Change Detection Summary:"
           echo "  Electron service: $ELECTRON"
           echo "  Tauri service: $TAURI"
           echo "  Shared packages: $SHARED"
@@ -117,14 +132,5 @@ jobs:
           echo "  Fixtures Tauri: $FIXTURES_TAURI"
           echo "  Infrastructure: $INFRA"
           echo ""
-          echo "Run Electron: $RUN_ELECTRON"
-          echo "Run Tauri: $RUN_TAURI"
-          echo "============================================"
-
-      - name: Force All Mode
-        if: inputs.force_all == true
-        run: |
-          echo "run_electron=true" >> $GITHUB_OUTPUT
-          echo "run_tauri=true" >> $GITHUB_OUTPUT
-          echo "has_shared_changes=true" >> $GITHUB_OUTPUT
-          echo "Force all mode enabled - running all tests"
+          echo "  Run Electron: $RUN_ELECTRON"
+          echo "  Run Tauri: $RUN_TAURI"

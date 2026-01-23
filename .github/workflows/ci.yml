@@ -26,12 +26,13 @@ jobs:
   detect-changes:
     uses: ./.github/workflows/_ci-detect-changes.reusable.yml
     with:
-      force_all: ${{ inputs.force_all }}
+      force_all: ${{ inputs.force_all || false }}
 
   # Build on Linux first since it's the fastest and its artifacts are used by all other jobs
   build:
     name: Build [Linux]
     needs: [detect-changes]
+    if: needs.detect-changes.outputs.run_electron == 'true' || needs.detect-changes.outputs.run_tauri == 'true' || needs.detect-changes.outputs.has_shared_changes == 'true'
     uses: ./.github/workflows/_ci-build.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -39,7 +40,8 @@ jobs:
   # Run linting after build to use the build artifacts
   lint:
     name: Lint [Linux]
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_electron == 'true' || needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-lint.reusable.yml
     with:
       cache_key: ${{ needs.build.outputs.cache_key }}
