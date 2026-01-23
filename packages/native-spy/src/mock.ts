@@ -1,79 +1,6 @@
-import type { Mock, MockInstance, MockMetadata, MockResult } from './types.js';
+import type { Mock, MockMetadata, MockResult } from './types.js';
 
 let globalCallId = 0;
-
-/**
- * Create a mock instance with all state tracking
- */
-function createMockInstance<T extends (...args: unknown[]) => unknown>(implementation?: T): MockInstance<T> {
-  const state: MockMetadata<T> = {
-    calls: [],
-    results: [],
-    invocationCallOrder: [],
-    instances: [],
-  };
-
-  return {
-    mock: {} as Mock<T>,
-    state,
-    implementation,
-    implementationQueue: [],
-    defaultReturnValue: undefined,
-    defaultResolvedValue: undefined,
-    defaultRejectedValue: undefined,
-    isConstructor: false,
-    returnThis: false,
-  };
-}
-
-/**
- * Get the next result from the implementation queue, or use default
- */
-function getNextResult<T extends (...args: unknown[]) => unknown>(
-  instance: MockInstance<T>,
-  args: unknown[],
-  callThis: unknown,
-): MockResult {
-  // Check implementation queue first
-  if (instance.implementationQueue.length > 0) {
-    const implementation = instance.implementationQueue.shift()!;
-
-    try {
-      const result = implementation(...(args as Parameters<T>));
-      return { type: 'return' as const, value: result };
-    } catch (error) {
-      return { type: 'throw' as const, value: error };
-    }
-  }
-
-  // Check for explicit rejections
-  if (instance.defaultRejectedValue !== undefined) {
-    return { type: 'throw' as const, value: instance.defaultRejectedValue };
-  }
-
-  // Check for explicit resolved values
-  if (instance.defaultResolvedValue !== undefined) {
-    return { type: 'return' as const, value: Promise.resolve(instance.defaultResolvedValue) };
-  }
-
-  // Check for mockReturnThis
-  if (instance.returnThis) {
-    return { type: 'return' as const, value: callThis };
-  }
-
-  // Use the base implementation if set
-  if (instance.implementation !== undefined) {
-    try {
-      const result = instance.implementation(...(args as Parameters<T>));
-      return { type: 'return' as const, value: result };
-    } catch (error) {
-      return { type: 'throw' as const, value: error };
-    }
-  }
-
-  // Default return value
-  return { type: 'return' as const, value: instance.defaultReturnValue };
-}
 
 /**
  * Create the mock function with all methods
@@ -81,37 +8,77 @@ function getNextResult<T extends (...args: unknown[]) => unknown>(
 export function createMock<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown>(
   implementation?: T,
 ): Mock<T> {
-  const instance = createMockInstance<T>(implementation);
   let mockNameValue = '';
+  let defaultReturnValue: ReturnType<T> | undefined;
+  let defaultResolvedValue: Awaited<ReturnType<T>> | undefined;
+  let defaultRejectedValue: unknown;
+  let returnThis = false;
+  let isConstructor = false;
+  let implementationFn = implementation;
+  const implementationQueue: T[] = [];
+
+  // State that needs to be shared across calls
+  const state: MockMetadata<T> = {
+    calls: [],
+    results: [],
+    invocationCallOrder: [],
+    instances: [],
+  };
 
   const mockFn: Mock<T> = function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
     // Handle constructor case
-    if (instance.isConstructor) {
+    if (isConstructor) {
       const Constructor = function (this: unknown, ...ctorArgs: Parameters<T>) {
-        const result = instance.mock(...ctorArgs);
+        const result = mockFn(...ctorArgs);
         if (typeof result === 'object' && result !== null) {
           Object.setPrototypeOf(result, Object.getPrototypeOf(this));
         }
         return result;
       } as T;
 
-      Constructor.prototype = Object.create(implementation?.prototype || null);
-      instance.state.instances.push(Constructor as T);
+      Constructor.prototype = Object.create(implementationFn?.prototype || null);
+      state.instances.push(Constructor as T);
       return Constructor as ReturnType<T>;
     }
 
-    const result = getNextResult(instance, args, this);
+    // Get next result from queue or defaults
+    let result: MockResult;
+    if (implementationQueue.length > 0) {
+      const impl = implementationQueue.shift()!;
+      try {
+        const value = impl(...(args as Parameters<T>));
+        result = { type: 'return', value };
+      } catch (error) {
+        result = { type: 'throw', value: error };
+      }
+    } else if (defaultRejectedValue !== undefined) {
+      result = { type: 'throw', value: defaultRejectedValue };
+    } else if (defaultResolvedValue !== undefined) {
+      result = { type: 'return', value: Promise.resolve(defaultResolvedValue) };
+    } else if (returnThis) {
+      result = { type: 'return', value: this };
+    } else if (implementationFn !== undefined) {
+      try {
+        const value = implementationFn(...(args as Parameters<T>));
+        result = { type: 'return', value };
+      } catch (error) {
+        result = { type: 'throw', value: error };
+      }
+    } else {
+      result = { type: 'return', value: defaultReturnValue };
+    }
 
-    // Record the call
-    instance.state.calls.push({ this: this as unknown, args: args as Parameters<T> });
-    instance.state.invocationCallOrder.push(globalCallId++);
+    // Record the call - avoid circular reference by not storing the mock function as 'this'
+    const callThis = this === mockFn ? undefined : this;
+    state.calls.push({ this: callThis as unknown, args: args as Parameters<T> });
+    state.invocationCallOrder.push(globalCallId++);
 
     if (result.type === 'throw') {
-      instance.state.results.push({ type: 'throw', value: result.value });
+      state.results.push({ type: 'throw', value: result.value });
       throw result.value;
     }
 
-    instance.state.results.push({ type: 'return', value: result.value });
+    state.results.push({ type: 'return', value: result.value });
     return result.value as ReturnType<T>;
   } as Mock<T>;
 
@@ -124,138 +91,138 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
   mockFn.getMockName = (): string => mockNameValue;
 
   mockFn.mockClear = function (this: Mock<T>): Mock<T> {
-    instance.state.calls = [];
-    instance.state.results = [];
-    instance.state.invocationCallOrder = [];
-    instance.state.instances = [];
-    instance.implementationQueue = [];
+    state.calls = [];
+    state.results = [];
+    state.invocationCallOrder = [];
+    state.instances = [];
+    implementationQueue.length = 0;
     return this;
   };
 
   mockFn.mockReset = function (this: Mock<T>): Mock<T> {
     mockFn.mockClear();
-    instance.implementation = undefined;
-    instance.defaultReturnValue = undefined;
-    instance.defaultResolvedValue = undefined;
-    instance.defaultRejectedValue = undefined;
-    instance.isConstructor = false;
-    instance.returnThis = false;
+    implementationFn = undefined;
+    defaultReturnValue = undefined;
+    defaultResolvedValue = undefined;
+    defaultRejectedValue = undefined;
+    isConstructor = false;
+    returnThis = false;
     return this;
   };
 
   mockFn.mockRestore = function (this: Mock<T>): Mock<T> {
     mockFn.mockReset();
-    instance.implementation = undefined;
+    implementationFn = undefined;
     return this;
   };
 
   mockFn.mockImplementation = function (this: Mock<T>, fn: T): Mock<T> {
-    instance.implementation = fn;
-    instance.returnThis = false;
+    implementationFn = fn;
+    returnThis = false;
     return this;
   };
 
   mockFn.mockImplementationOnce = function (this: Mock<T>, fn: T): Mock<T> {
-    instance.implementationQueue.push(fn);
+    implementationQueue.push(fn);
     return this;
   };
 
   mockFn.mockReturnValue = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
-    instance.defaultReturnValue = value;
-    instance.defaultResolvedValue = undefined;
-    instance.defaultRejectedValue = undefined;
-    instance.returnThis = false;
+    defaultReturnValue = value;
+    defaultResolvedValue = undefined;
+    defaultRejectedValue = undefined;
+    returnThis = false;
     return this;
   };
 
   mockFn.mockReturnValueOnce = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
-    instance.implementationQueue.push((() => value) as T);
+    implementationQueue.push((() => value) as T);
     return this;
   };
 
   mockFn.mockResolvedValue = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
-    instance.defaultResolvedValue = value;
-    instance.defaultReturnValue = undefined;
-    instance.defaultRejectedValue = undefined;
-    instance.returnThis = false;
+    defaultResolvedValue = value;
+    defaultReturnValue = undefined;
+    defaultRejectedValue = undefined;
+    returnThis = false;
     return this;
   };
 
   mockFn.mockResolvedValueOnce = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
-    instance.implementationQueue.push((async () => value) as T);
+    implementationQueue.push((async () => value) as T);
     return this;
   };
 
   mockFn.mockRejectedValue = function (this: Mock<T>, reason: unknown): Mock<T> {
-    instance.defaultRejectedValue = reason;
-    instance.defaultReturnValue = undefined;
-    instance.defaultResolvedValue = undefined;
-    instance.returnThis = false;
+    defaultRejectedValue = reason;
+    defaultReturnValue = undefined;
+    defaultResolvedValue = undefined;
+    returnThis = false;
     return this;
   };
 
   mockFn.mockRejectedValueOnce = function (this: Mock<T>, reason: unknown): Mock<T> {
-    instance.implementationQueue.push((async () => {
+    implementationQueue.push((async () => {
       throw reason;
     }) as T);
     return this;
   };
 
   mockFn.mockReturnThis = function (this: Mock<T>): Mock<T> {
-    instance.returnThis = true;
-    instance.defaultReturnValue = undefined;
-    instance.defaultResolvedValue = undefined;
-    instance.defaultRejectedValue = undefined;
+    returnThis = true;
+    defaultReturnValue = undefined;
+    defaultResolvedValue = undefined;
+    defaultRejectedValue = undefined;
     return this;
   };
 
   mockFn.withImplementation = function <R>(this: Mock<T>, fn: T, callback: () => R): Awaited<ReturnType<T>> {
-    const originalImplementation = instance.implementation;
-    const originalQueue = [...instance.implementationQueue];
-    const originalReturnThis = instance.returnThis;
+    const originalImplementation = implementationFn;
+    const originalQueue = [...implementationQueue];
+    const originalReturnThis = returnThis;
 
-    instance.implementation = fn;
-    instance.implementationQueue = [];
-    instance.returnThis = false;
+    implementationFn = fn;
+    implementationQueue.length = 0;
+    returnThis = false;
 
     try {
       const result = callback() as Awaited<ReturnType<T>>;
       return result;
     } finally {
-      instance.implementation = originalImplementation;
-      instance.implementationQueue = originalQueue;
-      instance.returnThis = originalReturnThis;
+      implementationFn = originalImplementation;
+      implementationQueue.splice(0, implementationQueue.length, ...originalQueue);
+      returnThis = originalReturnThis;
     }
   };
 
   // Make properties read-only (using Object.defineProperty)
   Object.defineProperty(mockFn, 'calls', {
-    get: () => instance.state.calls,
+    get: () => state.calls,
     enumerable: true,
     configurable: true,
   });
 
   Object.defineProperty(mockFn, 'results', {
-    get: () => instance.state.results,
+    get: () => state.results,
     enumerable: true,
     configurable: true,
   });
 
   Object.defineProperty(mockFn, 'invocationCallOrder', {
-    get: () => instance.state.invocationCallOrder,
+    get: () => state.invocationCallOrder,
     enumerable: true,
     configurable: true,
   });
 
   Object.defineProperty(mockFn, 'instances', {
-    get: () => instance.state.instances,
+    get: () => state.instances,
     enumerable: true,
     configurable: true,
   });
 
   // Mock metadata (non-circular, safe for CDP serialization)
   Object.defineProperty(mockFn, 'mock', {
-    get: () => instance.state,
+    get: () => state,
     enumerable: true,
     configurable: true,
   });

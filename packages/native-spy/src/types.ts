@@ -136,18 +136,3 @@ export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unkn
    */
   withImplementation(fn: T, callback: () => Awaited<ReturnType<T>>): Awaited<ReturnType<T>>;
 }
-
-/**
- * Internal implementation details - allowing undefined for default values
- */
-export interface MockInstance<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
-  mock: Mock<T>;
-  state: MockMetadata<T>;
-  implementation: T | undefined;
-  implementationQueue: T[];
-  defaultReturnValue: ReturnType<T> | undefined;
-  defaultResolvedValue: Awaited<ReturnType<T>> | undefined;
-  defaultRejectedValue: unknown | undefined;
-  isConstructor: boolean;
-  returnThis: boolean;
-}
