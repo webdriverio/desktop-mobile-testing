@@ -1,4 +1,4 @@
-import { type Mock, fn as vitestFn } from '@vitest/spy';
+import { type Mock, fn as vitestFn } from '@wdio/native-spy';
 import type {
   AbstractFn,
   ElectronApiFn,
@@ -11,6 +11,17 @@ import type {
 import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'mock');
+
+interface InnerMockContext {
+  calls: Array<{ this: unknown; args: unknown[] }>;
+  results: Array<{ type: string; value: unknown }>;
+  invocationCallOrder: number[];
+}
+
+interface InnerMockFn {
+  (): unknown;
+  mock: InnerMockContext;
+}
 
 async function restoreElectronFunctionality(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   const browserToUse = browserContext || browser;
@@ -98,16 +109,14 @@ export async function createMock(
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
-      const spy = await import('@vitest/spy');
-      const mockFn = spy.fn(function (this: unknown) {
-        // Default implementation returns undefined (does not call the original function)
-        // This prevents real dialogs/actions from occurring when mocking
-        // Users can call mockImplementation() to provide custom behavior
+      const mockFn: InnerMockFn = function (this: unknown) {
+        mockFn.mock.calls.push({ this: this, args: Array.from(arguments) });
         return undefined;
-      });
+      } as InnerMockFn;
+      mockFn.mock = { calls: [], results: [], invocationCallOrder: [] };
 
       // replace target API with mock
-      electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
+      electronApi[funcName as keyof typeof electronApi] = mockFn as unknown as ElectronApiFn;
     },
     apiName,
     funcName,
@@ -440,7 +449,6 @@ export async function createClassMock(
   // Replace the class constructor in Electron
   await browserToUse.electron.execute<void, [string, ExecuteOpts]>(
     async (electron, className) => {
-      const spy = await import('@vitest/spy');
       const OriginalClass = electron[className as keyof typeof electron] as new (...args: unknown[]) => unknown;
 
       // Store original for restoration
@@ -450,11 +458,16 @@ export async function createClassMock(
       (globalThis.originalApi as Record<string, unknown>)[className] = OriginalClass;
 
       // Create mock constructor that tracks calls and returns an instance with mocked prototype
-      const MockClass = spy.fn(function (this: unknown, ..._args: unknown[]) {
-        // Call original constructor behavior by setting up prototype chain
-        Object.setPrototypeOf(this, OriginalClass.prototype);
-        return this;
-      }) as unknown as typeof OriginalClass;
+      const MockClassFn = function (this: unknown, ..._args: unknown[]) {
+        const fnWithMock = MockClassFn as unknown as { mock: InnerMockContext };
+        fnWithMock.mock.calls.push({ this: this, args: _args });
+        const instance = Object.create(OriginalClass.prototype);
+        Object.assign(instance, OriginalClass.prototype);
+        return instance;
+      };
+      const fnWithMock = MockClassFn as unknown as { mock: InnerMockContext };
+      fnWithMock.mock = { calls: [], results: [], invocationCallOrder: [] };
+      const MockClass = MockClassFn as unknown as typeof OriginalClass & { mock: InnerMockContext };
 
       // Copy prototype so instanceof checks and method access work
       MockClass.prototype = OriginalClass.prototype;

@@ -1,0 +1,163 @@
+import { describe, expect, it } from 'vitest';
+import { fn } from '../src/index.js';
+
+describe('native-spy', () => {
+  describe('fn()', () => {
+    it('creates a mock function', () => {
+      const mock = fn();
+      expect(typeof mock).toBe('function');
+    });
+
+    it('tracks calls', () => {
+      const mock = fn();
+      mock('arg1', 'arg2');
+      mock('arg3');
+
+      expect(mock.calls.length).toBe(2);
+      expect(mock.calls[0].args).toEqual(['arg1', 'arg2']);
+      expect(mock.calls[1].args).toEqual(['arg3']);
+    });
+
+    it('tracks call order', () => {
+      const mock = fn();
+      mock();
+      mock();
+      mock();
+
+      expect(mock.invocationCallOrder.length).toBe(3);
+    });
+
+    it('mockReturnValue sets return value', () => {
+      const mock = fn();
+      mock.mockReturnValue('hello');
+
+      expect(mock()).toBe('hello');
+      expect(mock()).toBe('hello');
+    });
+
+    it('mockReturnValueOnce sets return value for next call only', () => {
+      const mock = fn();
+      mock.mockReturnValueOnce('first');
+      mock.mockReturnValue('rest');
+
+      expect(mock()).toBe('first');
+      expect(mock()).toBe('rest');
+      expect(mock()).toBe('rest');
+    });
+
+    it('mockImplementation sets implementation', () => {
+      const mock = fn();
+      mock.mockImplementation(() => 'implemented');
+
+      expect(mock()).toBe('implemented');
+    });
+
+    it('mockImplementationOnce sets implementation for next call', () => {
+      const mock = fn();
+      mock.mockImplementationOnce(() => 'once');
+
+      expect(mock()).toBe('once');
+      expect(mock()).toBe(undefined);
+    });
+
+    it('mockClear clears call history', () => {
+      const mock = fn();
+      mock('test');
+      expect(mock.calls.length).toBe(1);
+
+      mock.mockClear();
+      expect(mock.calls.length).toBe(0);
+    });
+
+    it('mockReset clears everything including return values', () => {
+      const mock = fn();
+      mock.mockReturnValue('value');
+      mock('test');
+
+      mock.mockReset();
+
+      expect(mock.calls.length).toBe(0);
+      expect(mock()).toBe(undefined);
+    });
+
+    it('mockName sets and gets mock name', () => {
+      const mock = fn();
+      mock.mockName('myMock');
+
+      expect(mock.getMockName()).toBe('myMock');
+    });
+
+    it('mockResolvedValue handles promises', async () => {
+      const mock = fn();
+      mock.mockResolvedValue('resolved');
+
+      const result = mock();
+      expect(result).toBeInstanceOf(Promise);
+      expect(await result).toBe('resolved');
+    });
+
+    it('mockRejectedValue handles rejections', () => {
+      const mock = fn();
+      mock.mockRejectedValue(new Error('fail'));
+
+      expect(() => mock()).toThrow('fail');
+    });
+
+    it('tracks results with mockReturnValue', () => {
+      const mock = fn();
+      mock.mockReturnValue('result');
+
+      mock();
+      mock();
+
+      expect(mock.results.length).toBe(2);
+      // Both calls should return 'result'
+      expect(mock.results[0].value).toBe('result');
+      expect(mock.results[1].value).toBe('result');
+    });
+
+    it('tracks results with mockReturnValueOnce', () => {
+      const mock = fn();
+      mock.mockReturnValueOnce('once');
+      mock.mockReturnValue('default');
+
+      mock();
+      mock();
+      mock();
+
+      // First call returns 'once', rest return 'default'
+      expect(mock.results.length).toBe(3);
+      expect(mock.results[0].value).toBe('once');
+      expect(mock.results[1].value).toBe('default');
+      expect(mock.results[2].value).toBe('default');
+    });
+  });
+
+  describe('withImplementation', () => {
+    it('temporarily changes implementation', () => {
+      const mock = fn();
+      mock.mockReturnValue('original');
+
+      const result = mock.withImplementation(
+        () => 'temporary',
+        () => mock(),
+      );
+
+      expect(result).toBe('temporary');
+      // Original implementation should be restored
+      expect(mock()).toBe('original');
+    });
+  });
+
+  describe('mockReturnThis', () => {
+    it('returns this context when set', () => {
+      const mock = fn();
+      mock.mockReturnThis();
+
+      // When mockReturnThis is set, calling mock() should return the context passed as 'this'
+      const thisObj = { called: false };
+      const result = mock.call(thisObj);
+      expect(result).toBe(thisObj);
+    });
+  });
+});

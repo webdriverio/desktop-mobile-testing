@@ -87,7 +87,7 @@ export interface BrowserExtension extends ElectronBrowserExtension, TauriBrowser
 // Module Augmentation (WebdriverIO)
 // ============================================================================
 
-import type { fn as vitestFn } from '@vitest/spy';
+import type { fn as vitestFn } from '@wdio/native-spy';
 import type {
   ElectronInterface,
   ElectronServiceGlobalOptions,

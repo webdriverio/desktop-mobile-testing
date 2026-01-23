@@ -1,6 +1,6 @@
 import type { OfficialArch } from '@electron/packager';
 import type { ForgeConfig as ElectronForgeConfig } from '@electron-forge/shared-types';
-import type { Mock, fn as vitestFn } from '@vitest/spy';
+import type { Mock, fn as vitestFn } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { ArchType } from 'builder-util';
 import type * as Electron from 'electron';

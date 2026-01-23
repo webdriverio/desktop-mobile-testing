@@ -1,0 +1,153 @@
+/**
+ * Mock result types for tracking call outcomes
+ */
+export type MockResultType = 'return' | 'throw' | 'innate';
+
+export interface MockResult<T = unknown> {
+  type: MockResultType;
+  value: T;
+}
+
+/**
+ * Context for tracking mock calls
+ */
+export interface MockContext {
+  callId: number;
+  this: unknown;
+  arguments: unknown[];
+}
+
+/**
+ * Internal mock state
+ */
+export interface MockState<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
+  calls: Array<{ this: unknown; args: unknown[] }>;
+  results: MockResult[];
+  invocationCallOrder: number[];
+  instances: T[];
+}
+
+/**
+ * The Mock interface exposed to users
+ */
+export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
+  /**
+   * Mock function implementation
+   */
+  (...args: Parameters<T>): ReturnType<T>;
+
+  /**
+   * Mock state - array of call arguments
+   */
+  readonly calls: Array<{ this: unknown; args: Parameters<T> }>;
+
+  /**
+   * Mock state - results of each call
+   */
+  readonly results: Array<MockResult<ReturnType<T>>>;
+
+  /**
+   * Mock state - order of invocations
+   */
+  readonly invocationCallOrder: number[];
+
+  /**
+   * Instances created by the mock (when constructor is mocked)
+   */
+  readonly instances: T[];
+
+  /**
+   * Mock object reference (for internal tracking)
+   */
+  readonly mock: Mock<T>;
+
+  /**
+   * Set the mock name
+   */
+  mockName(name: string): this;
+
+  /**
+   * Get the mock name
+   */
+  getMockName(): string;
+
+  /**
+   * Clear all call data
+   */
+  mockClear(): this;
+
+  /**
+   * Reset all state including return values
+   */
+  mockReset(): this;
+
+  /**
+   * Restore original implementation
+   */
+  mockRestore(): this;
+
+  /**
+   * Set implementation
+   */
+  mockImplementation(fn: T): this;
+
+  /**
+   * Set implementation for next call only
+   */
+  mockImplementationOnce(fn: T): this;
+
+  /**
+   * Return a specific value
+   */
+  mockReturnValue(value: ReturnType<T>): this;
+
+  /**
+   * Return a specific value for next call only
+   */
+  mockReturnValueOnce(value: ReturnType<T>): this;
+
+  /**
+   * Resolve with a specific value
+   */
+  mockResolvedValue(value: Awaited<ReturnType<T>>): this;
+
+  /**
+   * Resolve with a specific value for next call only
+   */
+  mockResolvedValueOnce(value: Awaited<ReturnType<T>>): this;
+
+  /**
+   * Reject with an error
+   */
+  mockRejectedValue(reason: unknown): this;
+
+  /**
+   * Reject with an error for next call only
+   */
+  mockRejectedValueOnce(reason: unknown): this;
+
+  /**
+   * Return `this` context
+   */
+  mockReturnThis(): this;
+
+  /**
+   * Run a function with a temporary implementation
+   */
+  withImplementation(fn: T, callback: () => Awaited<ReturnType<T>>): Awaited<ReturnType<T>>;
+}
+
+/**
+ * Internal implementation details - allowing undefined for default values
+ */
+export interface MockInstance<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
+  mock: Mock<T>;
+  state: MockState<T>;
+  implementation: T | undefined;
+  implementationQueue: T[];
+  defaultReturnValue: ReturnType<T> | undefined;
+  defaultResolvedValue: Awaited<ReturnType<T>> | undefined;
+  defaultRejectedValue: unknown | undefined;
+  isConstructor: boolean;
+  returnThis: boolean;
+}
