@@ -129,19 +129,19 @@ jobs:
             echo "::warning::No dist directories found, build extraction may have failed"
           fi
 
-      # Pack services from downloaded artifacts so --skip-build can use them
-      # This creates the .tgz files that the test script expects when --skip-build is used
-      - name: 📦 Pack Services from Artifacts
-        shell: bash
-        run: |
-          echo "Packing services from downloaded artifacts..."
-          # Pack shared dependencies
-          if [ -d "packages/native-utils/dist" ]; then
-            (cd packages/native-utils && pnpm pack)
-          fi
-          if [ -d "packages/native-types/dist" ]; then
-            (cd packages/native-types && pnpm pack)
-          fi
+       # Pack services from downloaded artifacts so --skip-build can use them
+       # This creates the .tgz files that the test script expects when --skip-build is used
+       - name: 📦 Pack Services from Artifacts
+         shell: bash
+         run: |
+           echo "Packing services from downloaded artifacts..."
+           # Pack all native-* packages
+           for package in packages/native-*; do
+             if [ -d "$package/dist" ]; then
+               echo "Packing $package..."
+               (cd "$package" && pnpm pack)
+             fi
+           done
 
           # Pack Electron service and dependencies if needed
           if [ "${{ inputs.service }}" == "electron" ] || [ "${{ inputs.service }}" == "both" ]; then
