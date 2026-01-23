@@ -127,7 +127,9 @@ export async function createMock(
           funcName as keyof ElectronType[ElectronInterface]
         ] as ElectronFunctionMock;
         // Extract just the args from each call (native-spy stores { this, args })
-        return mockObj.mock?.calls ? mockObj.mock.calls.map((call: any) => call.args) : [];
+        return mockObj.mock?.calls
+          ? (mockObj.mock.calls as unknown as Array<{ this: unknown; args: unknown[] }>).map((call) => call.args)
+          : [];
       },
       apiName,
       funcName,
@@ -482,7 +484,9 @@ export async function createClassMock(
       (electron, className) => {
         const mockObj = electron[className as keyof typeof electron] as unknown as ElectronFunctionMock;
         // Extract just the args from each call
-        return mockObj.mock?.calls ? mockObj.mock.calls.map((call: any) => call.args) : [];
+        return mockObj.mock?.calls
+          ? (mockObj.mock.calls as unknown as Array<{ this: unknown; args: unknown[] }>).map((call) => call.args)
+          : [];
       },
       className,
       { internal: true },

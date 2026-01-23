@@ -28,7 +28,7 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
     // Get next result from queue or defaults
     let result: MockResult;
     if (implementationQueue.length > 0) {
-      const impl = implementationQueue.shift()!;
+      const impl = implementationQueue.shift() as T;
       try {
         const value = impl(...(args as Parameters<T>));
         result = { type: 'return', value };
