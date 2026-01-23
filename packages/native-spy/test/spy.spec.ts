@@ -160,4 +160,66 @@ describe('native-spy', () => {
       expect(result).toBe(thisObj);
     });
   });
+
+  describe('serialization', () => {
+    it('mock object is serializable (no circular references)', () => {
+      const mock = fn();
+      mock('test');
+
+      // Should be able to serialize the mock object
+      expect(() => JSON.stringify(mock)).not.toThrow();
+
+      // Should be able to serialize mock.calls
+      expect(() => JSON.stringify(mock.calls)).not.toThrow();
+
+      // Should be able to serialize mock.mock
+      expect(() => JSON.stringify(mock.mock)).not.toThrow();
+    });
+
+    it('mock.mock returns plain data object', () => {
+      const mock = fn();
+      mock('arg1', 'arg2');
+
+      const mockData = mock.mock;
+      expect(typeof mockData).toBe('object');
+      expect(Array.isArray(mockData.calls)).toBe(true);
+      expect(mockData.calls[0].args).toEqual(['arg1', 'arg2']);
+      expect(typeof mockData.results).toBe('object');
+      expect(Array.isArray(mockData.invocationCallOrder)).toBe(true);
+    });
+
+    it('mock function itself is not in circular reference', () => {
+      const mock = fn();
+
+      // mock.mock should not be the mock function itself
+      expect(mock.mock).not.toBe(mock);
+
+      // Accessing mock.mock should not cause circular references
+      const mockData = mock.mock;
+      expect(mockData).toBeDefined();
+      expect(typeof mockData).toBe('object');
+    });
+
+    it('handles call arguments without creating circular references in mock structure', () => {
+      const mock = fn();
+
+      // Call mock with regular objects (no circular references)
+      const obj = { prop: 'value', nested: { count: 42 } };
+      mock(obj, 'arg2', 123);
+
+      // Should be able to access calls without issues
+      expect(mock.calls.length).toBe(1);
+      expect(mock.calls[0].args[0]).toBe(obj);
+      expect(mock.calls[0].args[1]).toBe('arg2');
+      expect(mock.calls[0].args[2]).toBe(123);
+
+      // Should still be serializable even with complex call arguments
+      expect(() => JSON.stringify(mock.mock)).not.toThrow();
+
+      // The serialized data should contain the call information
+      const serialized = JSON.stringify(mock.mock);
+      expect(serialized).toContain('"prop":"value"');
+      expect(serialized).toContain('"count":42');
+    });
+  });
 });
