@@ -117,6 +117,10 @@
       "dependsOn": ["@wdio/native-utils#build", "@wdio/tauri-plugin#build:js", "typecheck"],
       "outputs": ["dist/**"]
     },
+    "@wdio/native-spy#build": {
+      "dependsOn": ["@wdio/bundler#build", "typecheck"],
+      "outputs": ["dist/**"]
+    },
     "electron-builder-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
