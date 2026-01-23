@@ -155,14 +155,15 @@ jobs:
             fi
           fi
 
-          # Pack Tauri service and plugin if needed
-          if [ "$SERVICE" == "tauri" ] || [ "$SERVICE" == "both" ]; then
-            if [ -d "packages/tauri-plugin/dist-js" ]; then
-              (cd packages/tauri-plugin && pnpm pack)
-            fi
-          if [ -d "packages/tauri-service/dist" ]; then
-            (cd packages/tauri-service && pnpm pack)
-          fi
+           # Pack Tauri service and plugin if needed
+           if [ "$SERVICE" == "tauri" ] || [ "$SERVICE" == "both" ]; then
+             if [ -d "packages/tauri-plugin/dist-js" ]; then
+               (cd packages/tauri-plugin && pnpm pack)
+             fi
+             if [ -d "packages/tauri-service/dist" ]; then
+               (cd packages/tauri-service && pnpm pack)
+             fi
+           fi
 
       # Run package tests using test-package.ts script
       # All apps are built in isolated environments (Electron always, Tauri if not skipBuild)
@@ -174,8 +175,9 @@ jobs:
           RUST_BACKTRACE: '1'
           # Disable AT-SPI accessibility bus warnings (same as E2E)
           NO_AT_BRIDGE: '1'
+          SERVICE: ${{ inputs.service }}
         run: |
-          case "${{ inputs.service }}" in
+          case "$SERVICE" in
             electron)
               echo "Running Electron package tests (apps built in isolated environments)"
               echo "Module type: ${{ inputs.module-type }}"
@@ -214,7 +216,7 @@ jobs:
               fi
               ;;
             *)
-              echo "Invalid service: ${{ inputs.service }}"
+              echo "Invalid service: $SERVICE"
               exit 1
               ;;
           esac
