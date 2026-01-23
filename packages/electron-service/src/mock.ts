@@ -97,17 +97,28 @@ export async function createMock(
   // initialise inner (Electron) mock
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     async (electron, apiName, funcName) => {
+      console.log(`[MOCK-INIT] Starting mock creation for ${apiName}.${funcName}`);
       const electronApi = electron[apiName as keyof typeof electron];
+      console.log(`[MOCK-INIT] Got electronApi:`, typeof electronApi);
+
+      console.log(`[MOCK-INIT] About to import @wdio/native-spy...`);
       const spy = await import('@wdio/native-spy');
+      console.log(`[MOCK-INIT] Imported spy:`, typeof spy, Object.keys(spy));
+
       const mockFn = spy.fn(function (this: unknown) {
         // Default implementation returns undefined (does not call the original function)
         // This prevents real dialogs/actions from occurring when mocking
         // Users can call mockImplementation() to provide custom behavior
+        console.log(`[MOCK-CALL] ${apiName}.${funcName} was called`);
         return undefined;
       });
+      console.log(`[MOCK-INIT] Created mockFn:`, typeof mockFn);
+      console.log(`[MOCK-INIT] mockFn._isMockFunction:`, (mockFn as any)._isMockFunction);
+      console.log(`[MOCK-INIT] mockFn.mock:`, mockFn.mock);
 
       // replace target API with mock
       electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
+      console.log(`[MOCK-INIT] Replaced ${apiName}.${funcName} with mock`);
     },
     apiName,
     funcName,

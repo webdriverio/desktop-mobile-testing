@@ -73,7 +73,17 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   // Mark as mock function (vitest compatibility)
   (mockFn as any)._isMockFunction = true;
 
-  // Make properties read-only (using Object.defineProperty)
+  // Use direct value assignment (NOT getters) - matches vitest's approach
+  // This is critical for CDP serialization to work correctly
+  Object.defineProperty(mockFn, 'mock', {
+    configurable: false,
+    enumerable: true,
+    writable: false,
+    value: state,
+  });
+
+  // These are convenience aliases that point to state properties
+  // Using getters here is fine since they're not typically serialized directly
   Object.defineProperty(mockFn, 'calls', {
     get: () => state.calls,
     enumerable: true,
@@ -94,13 +104,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
 
   Object.defineProperty(mockFn, 'instances', {
     get: () => state.instances,
-    enumerable: true,
-    configurable: true,
-  });
-
-  // Mock metadata (non-circular, safe for CDP serialization)
-  Object.defineProperty(mockFn, 'mock', {
-    get: () => state,
     enumerable: true,
     configurable: true,
   });
