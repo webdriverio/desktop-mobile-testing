@@ -19,12 +19,14 @@ export interface MockContext {
 
 /**
  * Mock metadata (non-circular, safe for serialization)
+ * Matches vitest's MockContext structure
  */
 export interface MockMetadata<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
-  calls: Array<{ this: unknown; args: Parameters<T> }>;
+  calls: Parameters<T>[]; // Array of argument arrays (like vitest)
+  contexts: unknown[]; // Array of `this` values
   results: MockResult[];
   invocationCallOrder: number[];
-  instances: T[];
+  instances: unknown[];
 }
 
 /**
@@ -37,9 +39,14 @@ export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unkn
   (...args: Parameters<T>): ReturnType<T>;
 
   /**
-   * Mock state - array of call arguments
+   * Marker property to identify mock functions (vitest compatibility)
    */
-  readonly calls: Array<{ this: unknown; args: Parameters<T> }>;
+  _isMockFunction: boolean;
+
+  /**
+   * Mock state - array of call arguments (like vitest spy)
+   */
+  readonly calls: Parameters<T>[];
 
   /**
    * Mock state - results of each call

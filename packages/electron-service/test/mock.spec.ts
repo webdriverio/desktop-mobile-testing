@@ -63,9 +63,6 @@ beforeEach(() => {
       execute: mockExecute,
     },
   } as unknown as WebdriverIO.Browser;
-
-  // Clear global mock state between tests
-  globalThis.__wdioMocks = {};
 });
 
 describe('Mock API', () => {
@@ -98,12 +95,7 @@ describe('Mock API', () => {
       const electron = { app: { getName: () => 'actual name' } as Omit<ElectronType['app'], 'on'> };
       await processExecuteCalls(electron);
 
-      // Inner mock should be a function with a mock property for call tracking
-      expect(typeof electron.app.getName).toBe('function');
-      expect(electron.app.getName).toHaveProperty('mock');
-      expect(electron.app.getName.mock).toHaveProperty('calls');
-      expect(electron.app.getName.mock).toHaveProperty('results');
-      expect(electron.app.getName.mock).toHaveProperty('invocationCallOrder');
+      expect(electron.app.getName).toStrictEqual(expect.anyMockFunction());
     });
 
     describe('update', () => {
@@ -115,7 +107,7 @@ describe('Mock API', () => {
               app: {
                 getFileIcon: {
                   mock: {
-                    calls: [{ this: undefined, args: ['/path/to/another/icon', { size: 'small' }] }],
+                    calls: [['/path/to/another/icon', { size: 'small' }]],
                   },
                 },
               },
@@ -127,8 +119,8 @@ describe('Mock API', () => {
         await mock.update();
         const returnedMock = mock as unknown as Mock;
 
-        expect(returnedMock.calls.length).toBe(1);
-        expect(returnedMock.calls[0].args).toEqual(['/path/to/another/icon', { size: 'small' }]);
+        expect(returnedMock).toHaveBeenCalledTimes(1);
+        expect(returnedMock).toHaveBeenCalledWith('/path/to/another/icon', { size: 'small' });
       });
 
       it('should update according to the empty calls', async () => {
@@ -147,7 +139,7 @@ describe('Mock API', () => {
         await mock.update();
         const returnedMock = mock as unknown as Mock;
 
-        expect(returnedMock.calls.length).toBe(0);
+        expect(returnedMock).toHaveBeenCalledTimes(0);
       });
     });
 

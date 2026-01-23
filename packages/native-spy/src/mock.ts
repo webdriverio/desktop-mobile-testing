@@ -1,11 +1,13 @@
+/**
+ * @wdio/native-spy - Standalone mock function implementation
+ * Drop-in replacement for @vitest/spy
+ */
+
 import type { Mock, MockMetadata, MockResult } from './types.js';
 
 let globalCallId = 0;
 
-/**
- * Create the mock function with all methods
- */
-export function createMock<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown>(
+export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown>(
   implementation?: T,
 ): Mock<T> {
   let mockNameValue = '';
@@ -19,6 +21,7 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
   // State that needs to be shared across calls
   const state: MockMetadata<T> = {
     calls: [],
+    contexts: [],
     results: [],
     invocationCallOrder: [],
     instances: [],
@@ -52,9 +55,10 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
       result = { type: 'return', value: defaultReturnValue };
     }
 
-    // Record the call - avoid circular reference by not storing the mock function as 'this'
-    const callThis = this === mockFn ? undefined : this;
-    state.calls.push({ this: callThis as unknown, args: args as Parameters<T> });
+    // Record the call (matches vitest's structure)
+    const context = this === mockFn ? undefined : this;
+    state.calls.push(args as Parameters<T>);
+    state.contexts.push(context);
     state.invocationCallOrder.push(globalCallId++);
 
     if (result.type === 'throw') {
@@ -66,6 +70,41 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
     return result.value as ReturnType<T>;
   } as Mock<T>;
 
+  // Mark as mock function (vitest compatibility)
+  (mockFn as any)._isMockFunction = true;
+
+  // Make properties read-only (using Object.defineProperty)
+  Object.defineProperty(mockFn, 'calls', {
+    get: () => state.calls,
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(mockFn, 'results', {
+    get: () => state.results,
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(mockFn, 'invocationCallOrder', {
+    get: () => state.invocationCallOrder,
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(mockFn, 'instances', {
+    get: () => state.instances,
+    enumerable: true,
+    configurable: true,
+  });
+
+  // Mock metadata (non-circular, safe for CDP serialization)
+  Object.defineProperty(mockFn, 'mock', {
+    get: () => state,
+    enumerable: true,
+    configurable: true,
+  });
+
   // Attach all mock methods
   mockFn.mockName = function (this: Mock<T>, name: string): Mock<T> {
     mockNameValue = name;
@@ -76,6 +115,7 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
 
   mockFn.mockClear = function (this: Mock<T>): Mock<T> {
     state.calls = [];
+    state.contexts = [];
     state.results = [];
     state.invocationCallOrder = [];
     state.instances = [];
@@ -177,38 +217,6 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
       returnThis = originalReturnThis;
     }
   };
-
-  // Make properties read-only (using Object.defineProperty)
-  Object.defineProperty(mockFn, 'calls', {
-    get: () => state.calls,
-    enumerable: true,
-    configurable: true,
-  });
-
-  Object.defineProperty(mockFn, 'results', {
-    get: () => state.results,
-    enumerable: true,
-    configurable: true,
-  });
-
-  Object.defineProperty(mockFn, 'invocationCallOrder', {
-    get: () => state.invocationCallOrder,
-    enumerable: true,
-    configurable: true,
-  });
-
-  Object.defineProperty(mockFn, 'instances', {
-    get: () => state.instances,
-    enumerable: true,
-    configurable: true,
-  });
-
-  // Mock metadata (non-circular, safe for CDP serialization)
-  Object.defineProperty(mockFn, 'mock', {
-    get: () => state,
-    enumerable: true,
-    configurable: true,
-  });
 
   return mockFn;
 }

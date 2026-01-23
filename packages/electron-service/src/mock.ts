@@ -12,13 +12,6 @@ import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'mock');
 
-// Simple mock context for class constructor tracking
-interface InnerMockContext {
-  calls: Array<{ this: unknown; args: unknown[] }>;
-  results: Array<{ type: string; value: unknown }>;
-  invocationCallOrder: number[];
-}
-
 async function restoreElectronFunctionality(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   const browserToUse = browserContext || browser;
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
@@ -101,11 +94,10 @@ export async function createMock(
 
   log.debug(`[${apiName}.${funcName}] Using browser context:`, typeof browserToUse, browserToUse?.constructor?.name);
 
-  // initialise inner (Electron) mock using native-spy
+  // initialise inner (Electron) mock
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
-
       const spy = await import('@wdio/native-spy');
       const mockFn = spy.fn(function (this: unknown) {
         // Default implementation returns undefined (does not call the original function)
@@ -115,7 +107,7 @@ export async function createMock(
       });
 
       // replace target API with mock
-      electronApi[funcName as keyof typeof electronApi] = mockFn as unknown as ElectronApiFn;
+      electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
     },
     apiName,
     funcName,
@@ -130,10 +122,7 @@ export async function createMock(
         const mockObj = electron[apiName as keyof typeof electron][
           funcName as keyof ElectronType[ElectronInterface]
         ] as ElectronFunctionMock;
-        // Extract just the args from each call (native-spy stores { this, args })
-        return mockObj.mock?.calls
-          ? (mockObj.mock.calls as unknown as Array<{ this: unknown; args: unknown[] }>).map((call) => call.args)
-          : [];
+        return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
       },
       apiName,
       funcName,
@@ -451,6 +440,7 @@ export async function createClassMock(
   // Replace the class constructor in Electron
   await browserToUse.electron.execute<void, [string, ExecuteOpts]>(
     async (electron, className) => {
+      const spy = await import('@wdio/native-spy');
       const OriginalClass = electron[className as keyof typeof electron] as new (...args: unknown[]) => unknown;
 
       // Store original for restoration
@@ -460,16 +450,11 @@ export async function createClassMock(
       (globalThis.originalApi as Record<string, unknown>)[className] = OriginalClass;
 
       // Create mock constructor that tracks calls and returns an instance with mocked prototype
-      const MockClassFn = function (this: unknown, ..._args: unknown[]) {
-        const fnWithMock = MockClassFn as unknown as { mock: InnerMockContext };
-        fnWithMock.mock.calls.push({ this: this, args: _args });
-        const instance = Object.create(OriginalClass.prototype);
-        Object.assign(instance, OriginalClass.prototype);
-        return instance;
-      };
-      const fnWithMock = MockClassFn as unknown as { mock: InnerMockContext };
-      fnWithMock.mock = { calls: [], results: [], invocationCallOrder: [] };
-      const MockClass = MockClassFn as unknown as typeof OriginalClass & { mock: InnerMockContext };
+      const MockClass = spy.fn(function (this: unknown, ..._args: unknown[]) {
+        // Call original constructor behavior by setting up prototype chain
+        Object.setPrototypeOf(this, OriginalClass.prototype);
+        return this;
+      }) as unknown as typeof OriginalClass;
 
       // Copy prototype so instanceof checks and method access work
       MockClass.prototype = OriginalClass.prototype;
@@ -487,10 +472,7 @@ export async function createClassMock(
     const calls = await browserToUse.electron.execute<unknown[][], [string, ExecuteOpts]>(
       (electron, className) => {
         const mockObj = electron[className as keyof typeof electron] as unknown as ElectronFunctionMock;
-        // Extract just the args from each call
-        return mockObj.mock?.calls
-          ? (mockObj.mock.calls as unknown as Array<{ this: unknown; args: unknown[] }>).map((call) => call.args)
-          : [];
+        return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
       },
       className,
       { internal: true },

@@ -14,8 +14,8 @@ describe('native-spy', () => {
       mock('arg3');
 
       expect(mock.calls.length).toBe(2);
-      expect(mock.calls[0].args).toEqual(['arg1', 'arg2']);
-      expect(mock.calls[1].args).toEqual(['arg3']);
+      expect(mock.calls[0]).toEqual(['arg1', 'arg2']);
+      expect(mock.calls[1]).toEqual(['arg3']);
     });
 
     it('tracks call order', () => {
@@ -183,7 +183,7 @@ describe('native-spy', () => {
       const mockData = mock.mock;
       expect(typeof mockData).toBe('object');
       expect(Array.isArray(mockData.calls)).toBe(true);
-      expect(mockData.calls[0].args).toEqual(['arg1', 'arg2']);
+      expect(mockData.calls[0]).toEqual(['arg1', 'arg2']);
       expect(typeof mockData.results).toBe('object');
       expect(Array.isArray(mockData.invocationCallOrder)).toBe(true);
     });
@@ -209,9 +209,9 @@ describe('native-spy', () => {
 
       // Should be able to access calls without issues
       expect(mock.calls.length).toBe(1);
-      expect(mock.calls[0].args[0]).toBe(obj);
-      expect(mock.calls[0].args[1]).toBe('arg2');
-      expect(mock.calls[0].args[2]).toBe(123);
+      expect(mock.calls[0][0]).toBe(obj);
+      expect(mock.calls[0][1]).toBe('arg2');
+      expect(mock.calls[0][2]).toBe(123);
 
       // Should still be serializable even with complex call arguments
       expect(() => JSON.stringify(mock.mock)).not.toThrow();
