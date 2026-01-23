@@ -815,10 +815,6 @@ importers:
         version: 4.0.17(@types/node@25.0.8)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/native-spy:
-    dependencies:
-      tinyspy:
-        specifier: ^4.0.4
-        version: 4.0.4
     devDependencies:
       '@types/node':
         specifier: ^25.0.3

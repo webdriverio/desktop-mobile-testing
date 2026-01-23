@@ -57,38 +57,15 @@ try {
 
   const basicMock = await browser.electron.mock('dialog', 'showOpenDialog');
   console.log('✅ Basic mock created successfully');
-  console.log('🔍 Debug: basicMock type:', typeof basicMock);
-  console.log('🔍 Debug: basicMock.mock:', basicMock.mock);
-  console.log('🔍 Debug: basicMock._isMockFunction:', (basicMock as any)._isMockFunction);
 
   // Call the mocked function directly via execute
-  console.log('🔍 Debug: About to call electron.execute to invoke the mock...');
-  const executeResult = await browser.electron.execute((electron) => {
-    // Debug: log that we entered the execute callback
-    console.log('[ELECTRON] Entered execute callback');
-
-    // Debug: check the mock function
-    const mockFn = electron.dialog.showOpenDialog as any;
-    console.log('[ELECTRON] showOpenDialog type:', typeof mockFn);
-    console.log('[ELECTRON] showOpenDialog._isMockFunction:', mockFn._isMockFunction);
-    console.log('[ELECTRON] showOpenDialog.mock:', mockFn.mock);
-
-    // Call the mock
-    console.log('[ELECTRON] About to call showOpenDialog...');
-    const result = mockFn({
+  await browser.electron.execute(async (electron) => {
+    await electron.dialog.showOpenDialog({
       title: 'basic test dialog',
       properties: ['openFile'],
     });
-    console.log('[ELECTRON] showOpenDialog returned:', result);
-
-    // Get calls
-    console.log('[ELECTRON] Getting mock.calls...');
-    const calls = mockFn.mock?.calls;
-    console.log('[ELECTRON] mock.calls:', JSON.stringify(calls));
-
-    return calls;
+    return (electron.dialog.showOpenDialog as any).mock.calls;
   });
-  console.log('🔍 Debug: executeResult:', executeResult);
 
   // Check if the mock was called
   const basicCalls = basicMock.mock.calls.length;
