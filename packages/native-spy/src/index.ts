@@ -7,4 +7,4 @@
  */
 
 export { createMock as fn } from './mock.js';
-export type { Mock, MockContext, MockResult, MockResultType, MockState } from './types.js';
+export type { Mock, MockContext, MockMetadata, MockResult, MockResultType } from './types.js';

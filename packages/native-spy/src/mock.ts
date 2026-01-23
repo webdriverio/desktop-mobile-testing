@@ -1,4 +1,4 @@
-import type { Mock, MockInstance, MockResult, MockState } from './types.js';
+import type { Mock, MockInstance, MockMetadata, MockResult } from './types.js';
 
 let globalCallId = 0;
 
@@ -6,7 +6,7 @@ let globalCallId = 0;
  * Create a mock instance with all state tracking
  */
 function createMockInstance<T extends (...args: unknown[]) => unknown>(implementation?: T): MockInstance<T> {
-  const state: MockState<T> = {
+  const state: MockMetadata<T> = {
     calls: [],
     results: [],
     invocationCallOrder: [],
@@ -249,6 +249,13 @@ export function createMock<T extends (...args: unknown[]) => unknown = (...args:
 
   Object.defineProperty(mockFn, 'instances', {
     get: () => instance.state.instances,
+    enumerable: true,
+    configurable: true,
+  });
+
+  // Mock metadata (non-circular, safe for CDP serialization)
+  Object.defineProperty(mockFn, 'mock', {
+    get: () => instance.state,
     enumerable: true,
     configurable: true,
   });

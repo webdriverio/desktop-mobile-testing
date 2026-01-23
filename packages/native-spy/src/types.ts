@@ -18,10 +18,10 @@ export interface MockContext {
 }
 
 /**
- * Internal mock state
+ * Mock metadata (non-circular, safe for serialization)
  */
-export interface MockState<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
-  calls: Array<{ this: unknown; args: unknown[] }>;
+export interface MockMetadata<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
+  calls: Array<{ this: unknown; args: Parameters<T> }>;
   results: MockResult[];
   invocationCallOrder: number[];
   instances: T[];
@@ -57,9 +57,9 @@ export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unkn
   readonly instances: T[];
 
   /**
-   * Mock object reference (for internal tracking)
+   * Mock metadata - non-circular reference for tracking
    */
-  readonly mock: Mock<T>;
+  readonly mock: MockMetadata<T>;
 
   /**
    * Set the mock name
@@ -142,7 +142,7 @@ export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unkn
  */
 export interface MockInstance<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
   mock: Mock<T>;
-  state: MockState<T>;
+  state: MockMetadata<T>;
   implementation: T | undefined;
   implementationQueue: T[];
   defaultReturnValue: ReturnType<T> | undefined;
