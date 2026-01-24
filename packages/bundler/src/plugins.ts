@@ -130,4 +130,43 @@ export const codeReplacePlugin = (options: CodeReplacePluginOption | CodeReplace
   };
 };
 
+export type BrowserGlobalsPluginOption = {
+  packageName: string;
+  globalName: string;
+};
+
+/**
+ * Plugin to replace package imports with window globals for browser builds.
+ * Used to expose bundled packages as window.X for access by backend services.
+ */
+export const browserGlobalsPlugin = (globals: BrowserGlobalsPluginOption[]): Plugin => {
+  return {
+    name: 'rollup-wdio-browser-globals',
+    async transform(code, id) {
+      let newCode = code;
+
+      for (const global of globals) {
+        const importRegex = new RegExp(
+          `import\\s*(?:\\*\\s+as\\s+\\w+\\s+)?(?:\\{[^}]*\\}\\s+)?from\\s*['"]${global.packageName}['"]`,
+          'g',
+        );
+        const requireRegex = new RegExp(`require\\s*\\(\\s*['"]${global.packageName}['"]\\s*\\)`, 'g');
+
+        const varDeclaration = `const ${global.globalName.replace('window.', '')} = window.${global.globalName};`;
+
+        if (importRegex.test(newCode) || requireRegex.test(newCode)) {
+          newCode = newCode.replace(importRegex, varDeclaration);
+          newCode = newCode.replace(requireRegex, varDeclaration);
+          this.info(`Replaced ${global.packageName} import with window.${global.globalName}`);
+        }
+      }
+
+      if (newCode !== code) {
+        return { code: newCode, map: null };
+      }
+      return null;
+    },
+  };
+};
+
 export type { InjectDependencyPluginOptions };

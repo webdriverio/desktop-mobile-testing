@@ -110,11 +110,12 @@
       "dependsOn": ["@wdio/electron-cdp-bridge#build"],
       "outputs": ["dist/**"]
     },
-    "@wdio/tauri-plugin#build:js": {
+    "@wdio/tauri-plugin#build:guest-js": {
+      "dependsOn": ["@wdio/bundler#build"],
       "outputs": ["dist-js/**"]
     },
     "@wdio/tauri-service#build": {
-      "dependsOn": ["@wdio/native-utils#build", "@wdio/tauri-plugin#build:js", "typecheck"],
+      "dependsOn": ["@wdio/native-utils#build", "@wdio/tauri-plugin#build:guest-js", "typecheck"],
       "outputs": ["dist/**"]
     },
     "@wdio/native-spy#build": {
@@ -142,11 +143,11 @@
       "outputs": ["out/**"]
     },
     "tauri-e2e-app#build": {
-      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
+      "dependsOn": ["@wdio/tauri-plugin#build:guest-js", "^build"],
       "outputs": ["src-tauri/target/**"]
     },
     "tauri-e2e-app#build:debug": {
-      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
+      "dependsOn": ["@wdio/tauri-plugin#build:guest-js", "^build"],
       "outputs": ["src-tauri/target/**"]
     }
   }
