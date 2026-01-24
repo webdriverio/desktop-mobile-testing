@@ -115,10 +115,10 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     browserToUse,
     (_tauri, cmd) => {
       // @ts-expect-error - window is available in browser context
-      const spy = window.__vitest_spy__;
+      const spy = window.__native_spy__;
       if (!spy || !spy.fn) {
         throw new Error(
-          'Vitest spy not available. Make sure @vitest/spy is imported and exposed as window.__vitest_spy__ in your app.',
+          'Native spy not available. Make sure @wdio/native-spy is imported and exposed as window.__native_spy__ in your app.',
         );
       }
 
