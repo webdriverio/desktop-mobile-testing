@@ -114,7 +114,7 @@ const { envContext, appBinaryPath } = context;
 
 // Configure specs based on test type
 let specs: string[] = [];
-let exclude: string[] = [];
+const exclude: string[] = [];
 switch (envContext.testType) {
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
@@ -125,8 +125,6 @@ switch (envContext.testType) {
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
-    // Exclude mocking tests for now
-    exclude = ['./test/tauri/mocking.spec.ts'];
     break;
 }
 
