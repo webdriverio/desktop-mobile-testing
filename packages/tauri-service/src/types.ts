@@ -21,6 +21,13 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    */
   autoInstallTauriDriver?: boolean;
   /**
+   * Automatically download and configure matching msedgedriver on Windows
+   * Detects Edge version and ensures WebDriver matches to prevent version mismatch errors
+   * Only applies on Windows platform, ignored on Linux/macOS
+   * @default true
+   */
+  autoDownloadEdgeDriver?: boolean;
+  /**
    * Log directory for standalone mode
    * Full path where log files should be written
    * If not specified, uses logs/standalone-{appDirName}/ in current working directory
@@ -38,6 +45,11 @@ export interface TauriServiceGlobalOptions extends BaseTauriServiceGlobalOptions
    * @default false
    */
   autoInstallTauriDriver?: boolean;
+  /**
+   * Automatically download and configure matching msedgedriver on Windows
+   * @default true
+   */
+  autoDownloadEdgeDriver?: boolean;
 }
 
 /**

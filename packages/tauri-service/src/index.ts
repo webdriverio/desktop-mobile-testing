@@ -20,6 +20,16 @@ export {
   resetAllMocks,
   restoreAllMocks,
 } from './commands/mock.js';
+// Export Edge driver management (Windows only)
+export {
+  detectEdgeVersion,
+  detectWebView2VersionFromBinary,
+  downloadMsEdgeDriver,
+  type EdgeDriverResult,
+  ensureMsEdgeDriver,
+  findMsEdgeDriver,
+  getMajorVersion,
+} from './edgeDriverManager.js';
 export { default as launcher } from './launcher.js';
 // Export utilities
 export {
