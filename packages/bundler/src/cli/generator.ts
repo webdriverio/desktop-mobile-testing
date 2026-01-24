@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { PackageAnalyzer } from './analyzer.js';
 import type { Logger } from './logger.js';
 import type {
+  BundlerBrowserConfig,
   BundlerConfig,
   ConfigSpec,
   GeneratedRollupConfig,
@@ -48,6 +49,73 @@ export class ConfigGenerator {
 
     this.logger.verbose(`✅ Generated ${result.configs.length} configuration(s)`);
     return result;
+  }
+
+  /**
+   * Generate browser rollup configuration
+   */
+  async generateBrowserConfig(config: BundlerConfig, packagePath: string): Promise<GeneratedRollupConfig> {
+    this.logger.verbose('📦 Generating browser rollup configuration...');
+
+    const browserConfig = config.browser!;
+
+    this.logger.extraDetail(`Package: browser mode`);
+    this.logger.extraDetail(`Entry: ${browserConfig.entry}`);
+    this.logger.extraDetail(`Output: ${browserConfig.output}`);
+
+    const spec = this.generateBrowserConfigSpec(browserConfig, packagePath);
+
+    const result: GeneratedRollupConfig = {
+      imports: [],
+      configs: [spec],
+      packageInfo: {
+        name: 'browser-bundle',
+        version: '0.0.0',
+        type: 'module',
+        input: { index: browserConfig.entry },
+        outDir: { esm: 'dist-js', cjs: 'dist-js' },
+        dependencies: [],
+        devDependencies: [],
+        peerDependencies: [],
+      },
+    };
+
+    this.logger.verbose(`✅ Generated browser configuration`);
+    return result;
+  }
+
+  /**
+   * Generate browser config spec
+   */
+  private generateBrowserConfigSpec(browserConfig: BundlerBrowserConfig, packagePath: string): ConfigSpec {
+    this.logger.extraVerbose('🔧 Generating browser config spec...');
+
+    const packageInfo = {
+      name: 'browser-bundle',
+      version: '0.0.0',
+      type: 'module' as const,
+      input: { index: browserConfig.entry },
+      outDir: { esm: 'dist-js', cjs: 'dist-js' },
+      dependencies: [],
+      devDependencies: [],
+      peerDependencies: [],
+    };
+
+    const plugins = this.packageAnalyzer.buildBrowserPluginSpecs(browserConfig, packageInfo, packagePath);
+
+    const output: OutputSpec = {
+      format: 'esm',
+      file: path.resolve(packagePath, browserConfig.output),
+      sourcemap: true,
+      plugins: [],
+    };
+
+    return {
+      input: path.resolve(packagePath, browserConfig.entry),
+      output,
+      plugins,
+      format: 'esm',
+    };
   }
 
   /**
@@ -320,7 +388,11 @@ const ${namedImports} = ${imp.default};`;
   /**
    * Format input object
    */
-  private formatInput(input: Record<string, string>): string {
+  private formatInput(input: Record<string, string> | string): string {
+    if (typeof input === 'string') {
+      return `'${input}'`;
+    }
+
     const entries = Object.entries(input);
     if (entries.length === 1 && entries[0][0] === 'index') {
       return `'${entries[0][1]}'`;

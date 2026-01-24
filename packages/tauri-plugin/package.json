@@ -6,18 +6,20 @@
   "private": true,
   "type": "module",
   "main": "./dist-js/index.js",
-  "types": "./dist-js/index.d.ts",
+  "types": "./dist-types/index.d.ts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist-js/index.d.ts",
+        "types": "./dist-types/index.d.ts",
         "default": "./dist-js/index.js"
       }
     }
   },
-  "files": ["README.md", "dist-js", "LICENSE"],
+  "files": ["README.md", "dist-js", "dist-types", "LICENSE"],
   "scripts": {
-    "build:js": "tsx scripts/build-guest-js.ts"
+    "build:guest-js": "tsx scripts/build-guest-js.ts",
+    "build:types": "tsx scripts/build-types.ts",
+    "build": "pnpm build:guest-js && pnpm build:types"
   },
   "keywords": ["tauri", "webdriverio", "testing", "automation"],
   "author": "WebDriverIO Community",
@@ -25,10 +27,10 @@
   "dependencies": {
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-log": "^2.8.0",
-    "@vitest/spy": "^4.0.17"
+    "@wdio/native-spy": "workspace:*"
   },
   "devDependencies": {
-    "esbuild": "^0.25.11",
+    "@wdio/bundler": "workspace:*",
     "typescript": "^5.0.0"
   }
 }

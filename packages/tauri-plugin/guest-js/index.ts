@@ -3,37 +3,12 @@
  * Provides execute and mocking interfaces for testing
  */
 
+/// <reference types="@wdio/native-spy" />
+
 import type { InvokeArgs } from '@tauri-apps/api/core';
-import type * as vitestSpy from '@vitest/spy';
 
-// Lazy-load invoke function to support both global Tauri API and dynamic imports
-// This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
-let _invokeCache: ((cmd: string, args?: InvokeArgs) => Promise<unknown>) | null = null;
+import type { Mock } from '@wdio/native-spy';
 
-async function getInvoke(): Promise<(cmd: string, args?: InvokeArgs) => Promise<unknown>> {
-  if (_invokeCache) {
-    return _invokeCache;
-  }
-
-  // Check if window.__TAURI__ is available globally (withGlobalTauri: true)
-  if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
-    _invokeCache = window.__TAURI__.core.invoke;
-    return _invokeCache;
-  }
-
-  // Fallback to dynamic import for bundler environments
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    _invokeCache = invoke;
-    return _invokeCache;
-  } catch (_error) {
-    throw new Error(
-      'Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json or @tauri-apps/api is installed.',
-    );
-  }
-}
-
-// Type declarations for window extensions
 declare global {
   interface Window {
     __TAURI__?: {
@@ -49,11 +24,12 @@ declare global {
       };
       event?: {
         listen?: (event: string, callback: (event: { payload: unknown }) => void) => Promise<() => void>;
-        emit?: (event: string, payload: unknown) => Promise<void>;
+        emit?: (event: string, payload?: unknown) => Promise<void>;
       };
     };
     wdioTauri?: {
-      execute: (script: string, args?: unknown[]) => Promise<unknown>;
+      execute: (cmd: string, args?: InvokeArgs) => Promise<unknown>;
+      init: () => Promise<void>;
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
@@ -61,8 +37,33 @@ declare global {
       cleanupLogListeners: () => void;
       cleanupAll: () => void;
     };
-    __vitest_spy__?: typeof vitestSpy;
+    __native_spy__?: {
+      fn: typeof import('@wdio/native-spy').fn;
+    };
     __wdio_mocks__?: Record<string, unknown>;
+  }
+}
+
+let _invokeCache: ((cmd: string, args?: InvokeArgs) => Promise<unknown>) | null = null;
+
+async function getInvoke(): Promise<(cmd: string, args?: InvokeArgs) => Promise<unknown>> {
+  if (_invokeCache) {
+    return _invokeCache;
+  }
+
+  if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
+    _invokeCache = window.__TAURI__.core.invoke;
+    return _invokeCache;
+  }
+
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    _invokeCache = invoke;
+    return _invokeCache;
+  } catch (_error) {
+    throw new Error(
+      'Tauri API not available. Make sure withGlobalTauri is enabled in tauri.conf.json or @tauri-apps/api is installed.',
+    );
   }
 }
 
