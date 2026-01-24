@@ -23,8 +23,16 @@ export interface BundlerFormatConfig {
   external?: string[];
 }
 
+export interface BundlerBrowserConfig {
+  entry: string;
+  output: string;
+  globals?: Record<string, string>;
+  externals?: string[];
+}
+
 export interface BundlerConfig {
   packageRoot?: string;
+  browser?: BundlerBrowserConfig;
   esm?: BundlerFormatConfig;
   cjs?: BundlerFormatConfig | boolean;
   transformations?: Transformation[];
@@ -96,7 +104,8 @@ export interface InlinePluginSpec {
  */
 export interface OutputSpec {
   format: 'esm' | 'cjs';
-  dir: string;
+  dir?: string;
+  file?: string;
   sourcemap: boolean;
   plugins: InlinePluginSpec[];
   dynamicImportInCjs?: boolean;
@@ -106,7 +115,7 @@ export interface OutputSpec {
  * Complete configuration specification for one format
  */
 export interface ConfigSpec {
-  input: Record<string, string>;
+  input: Record<string, string> | string;
   output: OutputSpec;
   plugins: PluginSpec[];
   format: 'esm' | 'cjs';

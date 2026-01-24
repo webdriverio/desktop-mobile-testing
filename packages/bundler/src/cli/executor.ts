@@ -101,6 +101,7 @@ export class RollupExecutor {
         const hasTsconfig = existsSync(tsconfigPath);
 
         // Only add declaration options if tsconfig.json exists to avoid TypeScript plugin issues
+        const outDir = configSpec.output.dir ? resolve(targetCwd, configSpec.output.dir) : undefined;
         const compilerOptions: CompilerOptions = {
           target: 'ES2020',
           module: 'ESNext',
@@ -109,7 +110,7 @@ export class RollupExecutor {
           esModuleInterop: true,
           skipLibCheck: true,
           noEmitOnError: false,
-          outDir: resolve(targetCwd, configSpec.output.dir),
+          ...(outDir && { outDir }),
         };
 
         if (hasTsconfig) {
@@ -144,6 +145,9 @@ export class RollupExecutor {
         // Import the code replace plugin from our bundler
         const { codeReplacePlugin } = await import('../plugins.js');
         plugins.push(codeReplacePlugin(pluginSpec.options as CodeReplacePluginOption | CodeReplacePluginOption[]));
+      } else if (pluginSpec.name === 'browser-globals') {
+        const { browserGlobalsPlugin } = await import('../plugins.js');
+        plugins.push(browserGlobalsPlugin(pluginSpec.options as Parameters<typeof browserGlobalsPlugin>[0]));
       } else if (pluginSpec.name === 'warn-to-error') {
         plugins.push({
           name: 'warn-to-error',
@@ -157,31 +161,39 @@ export class RollupExecutor {
       }
     }
 
+    const outputOptions: OutputOptions = {
+      format: configSpec.output.format,
+      sourcemap: configSpec.output.sourcemap,
+      exports: 'named',
+      dynamicImportInCjs: configSpec.output.dynamicImportInCjs,
+      plugins:
+        configSpec.output.plugins?.map((plugin) => ({
+          name: plugin.name,
+          generateBundle() {
+            (this as { emitFile: (options: { type: 'asset'; fileName: string; source: string }) => void }).emitFile({
+              type: 'asset' as const,
+              fileName: 'package.json',
+              source:
+                plugin.name === 'emit-package-json'
+                  ? configSpec.output.format === 'esm'
+                    ? '{ "type": "module" }'
+                    : '{ "type": "commonjs" }'
+                  : '',
+            });
+          },
+        })) || [],
+    };
+
+    if (configSpec.output.file) {
+      outputOptions.file = resolve(targetCwd, configSpec.output.file);
+    }
+    if (configSpec.output.dir) {
+      outputOptions.dir = resolve(targetCwd, configSpec.output.dir);
+    }
+
     return {
       input,
-      output: {
-        format: configSpec.output.format,
-        dir: resolve(targetCwd, configSpec.output.dir),
-        sourcemap: configSpec.output.sourcemap,
-        exports: 'named', // Always use named exports to avoid mixed export warnings
-        dynamicImportInCjs: configSpec.output.dynamicImportInCjs,
-        plugins:
-          configSpec.output.plugins?.map((plugin) => ({
-            name: plugin.name,
-            generateBundle() {
-              (this as { emitFile: (options: { type: 'asset'; fileName: string; source: string }) => void }).emitFile({
-                type: 'asset' as const,
-                fileName: 'package.json',
-                source:
-                  plugin.name === 'emit-package-json'
-                    ? configSpec.output.format === 'esm'
-                      ? '{ "type": "module" }'
-                      : '{ "type": "commonjs" }'
-                    : '',
-              });
-            },
-          })) || [],
-      },
+      output: outputOptions,
       plugins: plugins as RollupOptions['plugins'],
     };
   }

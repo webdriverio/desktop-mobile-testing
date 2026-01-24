@@ -168,7 +168,7 @@ jobs:
       # Build the Tauri plugin's JavaScript first
       # This is needed by the E2E app's build process (for bundling)
       - name: 🏗️ Build Tauri Plugin JavaScript
-        run: pnpm exec turbo run build:js --filter=@wdio/tauri-plugin
+        run: pnpm exec turbo run build:guest-js --filter=@wdio/tauri-plugin
         shell: bash
 
       # Clean the E2E app's existing build artifacts to ensure a fresh build

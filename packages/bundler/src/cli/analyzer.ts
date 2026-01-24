@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import type { Logger } from './logger.js';
 import type {
+  BundlerBrowserConfig,
   BundlerConfig,
   BundlerFormatConfig,
   ImportSpec,
@@ -96,6 +97,29 @@ export class PackageAnalyzer {
     plugins.push(this.createWarnToErrorPlugin());
 
     this.logger.extraDetail(`Built ${plugins.length} plugin specs`);
+    return plugins;
+  }
+
+  /**
+   * Build plugin specifications for browser builds
+   */
+  buildBrowserPluginSpecs(config: BundlerBrowserConfig, packageInfo: PackageInfo, packageRoot: string): PluginSpec[] {
+    this.logger.extraVerbose('🔌 Building browser plugin specs...');
+
+    const plugins: PluginSpec[] = [];
+
+    // TypeScript plugin (no declarations for browser-only builds)
+    plugins.push(this.createBrowserTypescriptPlugin(packageRoot));
+
+    // Node externals for specified externals (all deps are externalized by default in browser mode)
+    plugins.push(this.createBrowserExternalsPlugin(config));
+
+    // Code replace plugin for globals injection
+    if (config.globals && Object.keys(config.globals).length > 0) {
+      plugins.push(this.createBrowserGlobalsPlugin(config.globals));
+    }
+
+    this.logger.extraDetail(`Built ${plugins.length} browser plugin specs`);
     return plugins;
   }
 
@@ -457,6 +481,88 @@ export class PackageAnalyzer {
       import: {
         from: '@wdio/bundler',
         named: ['codeReplacePlugin'],
+      },
+    };
+  }
+
+  /**
+   * Create TypeScript plugin for browser builds (no declarations)
+   */
+  private createBrowserTypescriptPlugin(_packageRoot: string): PluginSpec {
+    const compilerOptions = `{
+    target: 'ES2020',
+    module: 'ESNext',
+    moduleResolution: 'Node',
+    allowSyntheticDefaultImports: true,
+    esModuleInterop: true,
+    skipLibCheck: true,
+    noEmitOnError: false,
+  }`;
+
+    return {
+      name: 'typescript',
+      call: `typescript({
+  compilerOptions: ${compilerOptions},
+  tsconfig: false,
+})`,
+      import: {
+        from: '@rollup/plugin-typescript',
+        default: 'typescript',
+      },
+    };
+  }
+
+  /**
+   * Create externals plugin for browser builds
+   */
+  private createBrowserExternalsPlugin(config: BundlerBrowserConfig): PluginSpec {
+    const externals = config.externals || [];
+
+    if (externals.length === 0) {
+      return {
+        name: 'node-externals',
+        call: 'nodeExternals()',
+        import: {
+          from: 'rollup-plugin-node-externals',
+          default: 'nodeExternals',
+        },
+      };
+    }
+
+    const includePatterns = externals.map((pattern) => {
+      if (pattern.startsWith('^') && pattern.endsWith('$')) {
+        return new RegExp(pattern);
+      }
+      return pattern;
+    });
+
+    return {
+      name: 'node-externals',
+      call: `nodeExternals({ include: [${externals.map((e) => JSON.stringify(e)).join(', ')}] })`,
+      options: { include: includePatterns },
+      import: {
+        from: 'rollup-plugin-node-externals',
+        default: 'nodeExternals',
+      },
+    };
+  }
+
+  /**
+   * Create globals plugin for browser builds using browserGlobalsPlugin
+   */
+  private createBrowserGlobalsPlugin(globals: Record<string, string>): PluginSpec {
+    const globalsList = Object.entries(globals).map(([packageName, globalName]) => ({
+      packageName,
+      globalName,
+    }));
+
+    return {
+      name: 'browser-globals',
+      call: `browserGlobalsPlugin(${JSON.stringify(globalsList)})`,
+      options: globalsList,
+      import: {
+        from: '@wdio/bundler',
+        named: ['browserGlobalsPlugin'],
       },
     };
   }

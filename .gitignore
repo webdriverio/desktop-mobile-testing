@@ -64,3 +64,6 @@ coverage
 **/src-tauri/target/*
 
 
+
+# Package build outputs
+packages/*/dist-types

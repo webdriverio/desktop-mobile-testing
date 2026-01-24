@@ -7,10 +7,10 @@
     "tauri": "tauri",
     "dev": "tauri dev",
     "clean:dist": "rm -rf dist",
-    "build:js": "pnpm --filter @wdio/tauri-plugin build:js",
+    "build:guest-js": "pnpm exec turbo run build:guest-js --filter=@wdio/tauri-plugin",
     "build:web": "tsx scripts/build-web.ts",
-    "build": "pnpm build:js && pnpm build:web && tauri build",
-    "build:debug": "pnpm build:js && pnpm build:web && tauri build --debug",
+    "build": "pnpm build:guest-js && pnpm build:web && tauri build",
+    "build:debug": "pnpm build:guest-js && pnpm build:web && tauri build --debug",
     "test": "cross-env DEBUG=@wdio/tauri-service wdio run wdio.conf.ts"
   },
   "dependencies": {
