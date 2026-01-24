@@ -24,9 +24,9 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      run_electron: ${{ steps.changes.outputs.run_electron }}
-      run_tauri: ${{ steps.changes.outputs.run_tauri }}
-      has_shared_changes: ${{ steps.changes.outputs.has_shared_changes }}
+      run_electron: ${{ steps.determine.outputs.run_electron || 'false' }}
+      run_tauri: ${{ steps.determine.outputs.run_tauri || 'false' }}
+      has_shared_changes: ${{ steps.determine.outputs.has_shared_changes || 'false' }}
 
     steps:
       - name: Checkout Repository
@@ -38,8 +38,6 @@ jobs:
         id: changes
         uses: dorny/paths-filter@v3
         with:
-          base: ${{ github.base_ref || github.ref_name }}
-          head: ${{ github.ref_name }}
           filters: |
             # Electron service packages
             electron_service:
@@ -79,8 +77,26 @@ jobs:
 
       - name: Determine What to Run
         id: determine
-        if: inputs.force_all != true
         run: |
+          # If force_all is true, always run everything
+          if [ "${{ inputs.force_all }}" = "true" ]; then
+            echo "run_electron=true" >> $GITHUB_OUTPUT
+            echo "run_tauri=true" >> $GITHUB_OUTPUT
+            echo "has_shared_changes=true" >> $GITHUB_OUTPUT
+            echo "::notice::Force all mode enabled - running all tests"
+            exit 0
+          fi
+
+          echo "::notice::Checking paths-filter outputs..."
+          echo "electron_service=${{ steps.changes.outputs.electron_service }}"
+          echo "tauri_service=${{ steps.changes.outputs.tauri_service }}"
+          echo "shared=${{ steps.changes.outputs.shared }}"
+          echo "e2e_electron=${{ steps.changes.outputs.e2e_electron }}"
+          echo "e2e_tauri=${{ steps.changes.outputs.e2e_tauri }}"
+          echo "fixtures_electron=${{ steps.changes.outputs.fixtures_electron }}"
+          echo "fixtures_tauri=${{ steps.changes.outputs.fixtures_tauri }}"
+          echo "infra=${{ steps.changes.outputs.infra }}"
+
           ELECTRON=${{ steps.changes.outputs.electron_service }}
           TAURI=${{ steps.changes.outputs.tauri_service }}
           SHARED=${{ steps.changes.outputs.shared }}
@@ -106,8 +122,7 @@ jobs:
           echo "run_tauri=$RUN_TAURI" >> $GITHUB_OUTPUT
           echo "has_shared_changes=$SHARED" >> $GITHUB_OUTPUT
 
-          echo "============================================"
-          echo "Change Detection Summary:"
+          echo "::notice::Change Detection Summary:"
           echo "  Electron service: $ELECTRON"
           echo "  Tauri service: $TAURI"
           echo "  Shared packages: $SHARED"
@@ -117,14 +132,5 @@ jobs:
           echo "  Fixtures Tauri: $FIXTURES_TAURI"
           echo "  Infrastructure: $INFRA"
           echo ""
-          echo "Run Electron: $RUN_ELECTRON"
-          echo "Run Tauri: $RUN_TAURI"
-          echo "============================================"
-
-      - name: Force All Mode
-        if: inputs.force_all == true
-        run: |
-          echo "run_electron=true" >> $GITHUB_OUTPUT
-          echo "run_tauri=true" >> $GITHUB_OUTPUT
-          echo "has_shared_changes=true" >> $GITHUB_OUTPUT
-          echo "Force all mode enabled - running all tests"
+          echo "  Run Electron: $RUN_ELECTRON"
+          echo "  Run Tauri: $RUN_TAURI"

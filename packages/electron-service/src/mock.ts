@@ -1,4 +1,4 @@
-import { type Mock, fn as vitestFn } from '@vitest/spy';
+import { type Mock, fn as vitestFn } from '@wdio/native-spy';
 import type {
   AbstractFn,
   ElectronApiFn,
@@ -98,7 +98,7 @@ export async function createMock(
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
-      const spy = await import('@vitest/spy');
+      const spy = await import('@wdio/native-spy');
       const mockFn = spy.fn(function (this: unknown) {
         // Default implementation returns undefined (does not call the original function)
         // This prevents real dialogs/actions from occurring when mocking
@@ -440,7 +440,7 @@ export async function createClassMock(
   // Replace the class constructor in Electron
   await browserToUse.electron.execute<void, [string, ExecuteOpts]>(
     async (electron, className) => {
-      const spy = await import('@vitest/spy');
+      const spy = await import('@wdio/native-spy');
       const OriginalClass = electron[className as keyof typeof electron] as new (...args: unknown[]) => unknown;
 
       // Store original for restoration

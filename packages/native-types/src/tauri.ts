@@ -1,4 +1,4 @@
-import type { Mock } from '@vitest/spy';
+import type { Mock } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { AbstractFn, BrowserBase, MockContext, MockOverride, MockResult } from './shared.js';
 

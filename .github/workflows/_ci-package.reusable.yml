@@ -43,7 +43,7 @@ env:
 jobs:
   # This job runs package tests on multiple Node.js versions and operating systems
   package:
-    name: Package Tests - ${{ inputs.service == 'electron' && 'Electron' || inputs.service == 'tauri' && 'Tauri' || 'Both' }}
+    name: Package Tests
     runs-on: ${{ inputs.os }}
     steps:
       # Standard checkout with SSH key for private repositories
@@ -129,22 +129,24 @@ jobs:
             echo "::warning::No dist directories found, build extraction may have failed"
           fi
 
-      # Pack services from downloaded artifacts so --skip-build can use them
-      # This creates the .tgz files that the test script expects when --skip-build is used
+        # Pack services from downloaded artifacts so --skip-build can use them
+        # This creates the .tgz files that the test script expects when --skip-build is used
       - name: 📦 Pack Services from Artifacts
         shell: bash
+        env:
+          SERVICE: ${{ inputs.service }}
         run: |
           echo "Packing services from downloaded artifacts..."
-          # Pack shared dependencies
-          if [ -d "packages/native-utils/dist" ]; then
-            (cd packages/native-utils && pnpm pack)
-          fi
-          if [ -d "packages/native-types/dist" ]; then
-            (cd packages/native-types && pnpm pack)
-          fi
+          # Pack all native-* packages
+          for package in packages/native-*; do
+            if [ -d "$package/dist" ]; then
+              echo "Packing $package..."
+              (cd "$package" && pnpm pack)
+            fi
+          done
 
           # Pack Electron service and dependencies if needed
-          if [ "${{ inputs.service }}" == "electron" ] || [ "${{ inputs.service }}" == "both" ]; then
+          if [ "$SERVICE" == "electron" ] || [ "$SERVICE" == "both" ]; then
             if [ -d "packages/electron-cdp-bridge/dist" ]; then
               (cd packages/electron-cdp-bridge && pnpm pack)
             fi
@@ -153,15 +155,15 @@ jobs:
             fi
           fi
 
-          # Pack Tauri service and plugin if needed
-          if [ "${{ inputs.service }}" == "tauri" ] || [ "${{ inputs.service }}" == "both" ]; then
-            if [ -d "packages/tauri-plugin/dist-js" ]; then
-              (cd packages/tauri-plugin && pnpm pack)
-            fi
-            if [ -d "packages/tauri-service/dist" ]; then
-              (cd packages/tauri-service && pnpm pack)
-            fi
-          fi
+           # Pack Tauri service and plugin if needed
+           if [ "$SERVICE" == "tauri" ] || [ "$SERVICE" == "both" ]; then
+             if [ -d "packages/tauri-plugin/dist-js" ]; then
+               (cd packages/tauri-plugin && pnpm pack)
+             fi
+             if [ -d "packages/tauri-service/dist" ]; then
+               (cd packages/tauri-service && pnpm pack)
+             fi
+           fi
 
       # Run package tests using test-package.ts script
       # All apps are built in isolated environments (Electron always, Tauri if not skipBuild)
@@ -173,8 +175,9 @@ jobs:
           RUST_BACKTRACE: '1'
           # Disable AT-SPI accessibility bus warnings (same as E2E)
           NO_AT_BRIDGE: '1'
+          SERVICE: ${{ inputs.service }}
         run: |
-          case "${{ inputs.service }}" in
+          case "$SERVICE" in
             electron)
               echo "Running Electron package tests (apps built in isolated environments)"
               echo "Module type: ${{ inputs.module-type }}"
@@ -213,7 +216,7 @@ jobs:
               fi
               ;;
             *)
-              echo "Invalid service: ${{ inputs.service }}"
+              echo "Invalid service: $SERVICE"
               exit 1
               ;;
           esac

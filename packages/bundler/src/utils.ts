@@ -150,13 +150,6 @@ export async function injectDependency(
     console.log(`[DEBUG] Contains import statements: ${hasImport}`);
     console.log(`[DEBUG] Contains export statements: ${hasExport}`);
 
-    if (hasExport && injectPrams.packageName === '@vitest/spy') {
-      // Show the export statements for debugging
-      const lines = injectedContents.split('\n');
-      const exportLines = lines.filter((line) => line.includes('export')).slice(0, 5);
-      console.log(`[DEBUG] Export statements found:`, exportLines);
-    }
-
     this.info(`Successfully bundled and injected "${injectPrams.packageName}" into ${injectPrams.targetFile}`);
     return renderedContent;
   } catch (error) {

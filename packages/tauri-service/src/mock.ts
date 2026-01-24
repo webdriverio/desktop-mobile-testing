@@ -1,4 +1,4 @@
-import { fn as vitestFn } from '@vitest/spy';
+import { fn as vitestFn } from '@wdio/native-spy';
 import type { AbstractFn, TauriMock } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { execute as tauriExecute } from './commands/execute.js';

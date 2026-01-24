@@ -8,6 +8,7 @@ import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
 import { ensureTauriDriver, ensureWebKitWebDriver } from './driverManager.js';
+import { ensureMsEdgeDriver } from './edgeDriverManager.js';
 import { forwardLog, type LogLevel } from './logForwarder.js';
 import { parseLogLine } from './logParser.js';
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
@@ -204,6 +205,39 @@ export default class TauriLaunchService {
       const originalAppPath = tauriOptions.application;
       const appBinaryPath = await getTauriBinaryPath(originalAppPath);
       log.debug(`App binary: ${appBinaryPath}`);
+
+      // Ensure Edge WebDriver compatibility on Windows
+      // This checks if msedgedriver matches the WebView2 version in the Tauri binary and downloads if needed
+      // Only runs on Windows; skipped on Linux/macOS
+      const autoDownloadEdgeDriver = this.options.autoDownloadEdgeDriver ?? true; // Default to true
+      if (process.platform === 'win32') {
+        log.debug('Checking Edge WebDriver compatibility...');
+        const edgeDriverResult = await ensureMsEdgeDriver(appBinaryPath, autoDownloadEdgeDriver);
+
+        if (!edgeDriverResult.success) {
+          const errorMsg = edgeDriverResult.error || 'Unknown error checking Edge WebDriver';
+          log.error(`Edge WebDriver check failed: ${errorMsg}`);
+
+          if (!autoDownloadEdgeDriver) {
+            // Only throw if auto-download is disabled - let user fix manually
+            throw new Error(
+              `${errorMsg}\n` +
+                `To auto-fix: set autoDownloadEdgeDriver: true in tauri service options.\n` +
+                `Or manually download from: https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/`,
+            );
+          } else {
+            // Auto-download was enabled but still failed - log warning and continue
+            log.warn(`${errorMsg} - continuing anyway, test may fail with version mismatch`);
+          }
+        } else if (edgeDriverResult.method === 'downloaded') {
+          log.info(
+            `✅ Downloaded msedgedriver ${edgeDriverResult.driverVersion} for WebView2 ${edgeDriverResult.edgeVersion}`,
+          );
+        } else if (edgeDriverResult.method === 'found') {
+          log.info(`✅ Using existing msedgedriver ${edgeDriverResult.driverVersion}`);
+        }
+        break; // Only check once for the first capability
+      }
 
       // Validate app args if provided
       const appArgs = tauriOptions.args || [];

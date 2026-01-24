@@ -32,5 +32,8 @@ describe('mockAll Command', () => {
       showErrorBox: expect.anyMockFunction(),
       showCertificateTrustDialog: expect.anyMockFunction(),
     });
+    // Verify they have mock properties
+    expect(mockedDialog.showOpenDialog).toHaveProperty('mock');
+    expect(mockedDialog.showOpenDialog).toHaveProperty('mockImplementation');
   });
 });

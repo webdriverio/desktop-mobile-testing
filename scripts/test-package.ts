@@ -82,6 +82,7 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
   electronServicePath?: string;
   tauriServicePath?: string;
   utilsPath: string;
+  spyPath: string;
   typesPath?: string;
   cdpBridgePath?: string;
 }> {
@@ -98,6 +99,13 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     }
     execCommand('pnpm pack', utilsDir, 'Packing @wdio/native-utils');
 
+    // Pack native-spy (required for both services)
+    const spyDir = normalize(join(rootDir, 'packages', 'native-spy'));
+    if (!existsSync(spyDir)) {
+      throw new Error(`Spy directory does not exist: ${spyDir}`);
+    }
+    execCommand('pnpm pack', spyDir, 'Packing @wdio/native-spy');
+
     const findTgzFile = (dir: string, prefix: string): string => {
       const files = readdirSync(dir);
       const tgzFile = files.find((f) => f.startsWith(prefix) && f.endsWith('.tgz'));
@@ -108,14 +116,16 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     };
 
     const utilsPath = findTgzFile(utilsDir, 'wdio-native-utils-');
+    const spyPath = findTgzFile(spyDir, 'wdio-native-spy-');
 
     const result: {
       electronServicePath?: string;
       tauriServicePath?: string;
       utilsPath: string;
+      spyPath: string;
       typesPath?: string;
       cdpBridgePath?: string;
-    } = { utilsPath };
+    } = { utilsPath, spyPath };
 
     // Pack Electron service and dependencies if needed
     if (service === 'electron' || service === 'both') {
@@ -157,6 +167,7 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
 
     log(`📦 Packages packed:`);
     log(`   Utils: ${utilsPath}`);
+    log(`   Spy: ${spyPath}`);
     if (result.electronServicePath) {
       log(`   Electron Service: ${result.electronServicePath}`);
       log(`   Types: ${result.typesPath}`);
@@ -185,6 +196,7 @@ async function testExample(
     electronServicePath?: string;
     tauriServicePath?: string;
     utilsPath: string;
+    spyPath: string;
     typesPath?: string;
     cdpBridgePath?: string;
   },
@@ -230,8 +242,9 @@ async function testExample(
     // Build overrides and packages to install based on service type
     const overrides: Record<string, string> = {
       '@wdio/native-utils': `file:${packages.utilsPath}`,
+      '@wdio/native-spy': `file:${packages.spyPath}`,
     };
-    const packagesToInstall: string[] = [packages.utilsPath];
+    const packagesToInstall: string[] = [packages.utilsPath, packages.spyPath];
 
     // Add @wdio/utils override if the tarball exists
     const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.19.1.tgz');
@@ -592,6 +605,7 @@ async function main() {
       electronServicePath?: string;
       tauriServicePath?: string;
       utilsPath: string;
+      spyPath: string;
       typesPath?: string;
       cdpBridgePath?: string;
     };
@@ -607,8 +621,10 @@ async function main() {
       };
 
       const utilsDir = normalize(join(rootDir, 'packages', 'native-utils'));
+      const spyDir = normalize(join(rootDir, 'packages', 'native-spy'));
       packages = {
         utilsPath: findTgzFile(utilsDir, 'wdio-native-utils-'),
+        spyPath: findTgzFile(spyDir, 'wdio-native-spy-'),
       };
 
       if (options.service === 'electron' || options.service === 'both') {
@@ -629,6 +645,7 @@ async function main() {
 
       log(`📦 Using existing packages:`);
       log(`   Utils: ${packages.utilsPath}`);
+      log(`   Spy: ${packages.spyPath}`);
       if (packages.electronServicePath) {
         log(`   Electron Service: ${packages.electronServicePath}`);
         log(`   Types: ${packages.typesPath}`);

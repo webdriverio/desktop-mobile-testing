@@ -8,7 +8,7 @@ import { createMock } from '../src/mock.js';
 let mockFn: Mock;
 let mockExecute: Mock;
 
-vi.doMock('@vitest/spy', () => ({
+vi.doMock('@wdio/native-spy', () => ({
   fn: () => mockFn,
 }));
 vi.mock('../src/commands/execute', () => {

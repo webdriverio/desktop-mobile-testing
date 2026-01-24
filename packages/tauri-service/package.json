@@ -39,9 +39,9 @@
   },
   "dependencies": {
     "@babel/parser": "^7.28.5",
-    "@vitest/spy": "^4.0.4",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
+    "@wdio/native-spy": "workspace:*",
     "@wdio/native-types": "workspace:*",
     "@wdio/native-utils": "workspace:*",
     "@wdio/spec-reporter": "catalog:default",

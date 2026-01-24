@@ -1,8 +1,8 @@
 {
-  "name": "@wdio/native-types",
-  "version": "2.0.0",
-  "description": "Type definitions for WebdriverIO Native Desktop Services (Electron and Tauri)",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/native-types",
+  "name": "@wdio/native-spy",
+  "version": "1.0.0",
+  "description": "Minimal mock function implementation for WebdriverIO Native Desktop Services",
+  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/native-spy",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -19,8 +19,7 @@
           "types": "./dist/cjs/index.d.ts",
           "default": "./dist/cjs/index.js"
         }
-      },
-      "./dist/cjs/index.js"
+      }
     ]
   },
   "engines": {
@@ -30,32 +29,26 @@
     "clean": "shx rm -rf dist coverage .turbo",
     "build": "tsx ../../scripts/build-package.ts",
     "dev": "tsx ../../scripts/build-package.ts --watch",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage",
+    "test:dev": "vitest --coverage",
+    "lint": "biome check ."
   },
-  "dependencies": {
-    "@wdio/native-spy": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@electron-forge/shared-types": "^7.10.2",
-    "@electron/packager": "^19.0.1",
     "@types/node": "^25.0.3",
-    "@wdio/globals": "catalog:default",
-    "@wdio/types": "catalog:default",
-    "builder-util": "^26.3.4",
-    "electron": "catalog:default",
-    "read-package-up": "^11.0.0",
+    "@vitest/coverage-v8": "^4.0.16",
     "shx": "^0.4.0",
     "typescript": "^5.9.3",
-    "webdriverio": "catalog:default"
+    "vitest": "^4.0.16"
   },
   "files": ["dist", "LICENSE"],
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
-    "directory": "packages/native-types"
+    "directory": "packages/native-spy"
   }
 }
