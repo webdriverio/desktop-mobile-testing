@@ -1,6 +1,6 @@
 # WebdriverIO Desktop & Mobile Testing
 
-> WebdriverIO services for automated testing of native desktop and mobile applications.
+> WebdriverIO services for automated testing of native desktop and mobile applications
 
 [![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
 [![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
@@ -11,8 +11,6 @@
 [![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
 
 ## Supported Frameworks
-
-### Production Ready
 
 - **[@wdio/electron-service](./packages/electron-service)** - Electron applications \
   CDP bridge for main process • Full API mocking • Window management
