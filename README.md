@@ -12,10 +12,10 @@
 
 ## Supported Frameworks
 
-- **[@wdio/electron-service](./packages/electron-service)** - Electron applications \
+- **[@wdio/electron-service](./packages/electron-service)** - Electron applications (Windows/macOS/Linux) \
   CDP bridge for main process • Full API mocking • Window management
 
-- **[@wdio/tauri-service](./packages/tauri-service)** - Tauri applications \
+- **[@wdio/tauri-service](./packages/tauri-service)** - Tauri applications (Windows/Linux) \
   Official tauri-driver integration • Multiremote support • Plugin architecture
 
 ### Planned / In Development
