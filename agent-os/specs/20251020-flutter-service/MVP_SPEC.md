@@ -33,7 +33,7 @@ Create a minimal viable Flutter service (`@wdio/flutter-service`) that proves th
 ### Platform Selection Rationale
 **Android (Mobile):**
 - ✅ Most accessible mobile platform (emulator easier than iOS simulator)
-- ✅ Critical for "desktop-mobile-testing" repository name
+- ✅ Critical for "desktop-mobile" repository name
 - ✅ Large user base (most Flutter devs target Android)
 - ✅ GitHub Actions has good Android emulator support
 - ✅ No Apple developer account or macOS required for development

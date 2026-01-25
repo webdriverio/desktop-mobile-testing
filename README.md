@@ -58,7 +58,7 @@ pnpm lint
 ## Project Structure
 
 ```
-desktop-mobile-testing/
+desktop-mobile/
 ├── packages/                    # Service packages
 │   ├── electron-service/        # Electron service implementation
 │   ├── tauri-service/           # Tauri service implementation
@@ -230,7 +230,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [WebdriverIO](https://webdriver.io) - Main WebdriverIO project
 - [WebdriverIO Docs](https://webdriver.io/docs/gettingstarted) - Official documentation
 - [WebdriverIO Community](https://github.com/webdriverio-community) - Community resources
-- [GitHub Issues](https://github.com/webdriverio/desktop-mobile-testing/issues) - Bug reports and feature requests
+- [GitHub Issues](https://github.com/webdriverio/desktop-mobile/issues) - Bug reports and feature requests
 
 ## Related Projects
 

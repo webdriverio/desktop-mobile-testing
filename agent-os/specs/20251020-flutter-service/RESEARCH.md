@@ -141,7 +141,7 @@
 - Item 3a: Flutter Service Foundation (Desktop: macOS, Windows, Linux) - 6-8 weeks
 - Item 3b: Flutter Mobile Support (iOS, Android) - 6-9 weeks
 - Pros: Desktop-first matches Electron experience, mobile adds later
-- Cons: Doesn't align with "desktop-mobile-testing" repository name
+- Cons: Doesn't align with "desktop-mobile" repository name
 - Timeline: 12-17 weeks total (but phased)
 
 **Option C: Split by Feature**

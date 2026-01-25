@@ -1,11 +1,8 @@
-# WDIO Electron Service
+# @wdio/electron-service
 
-<a href="https://www.npmjs.com/package/@wdio/electron-service" alt="NPM Version">
-  <img src="https://img.shields.io/npm/v/@wdio/electron-service" /></a>
-<a href="https://www.npmjs.com/package/@wdio/electron-service" alt="NPM Downloads">
-  <img src="https://img.shields.io/npm/dw/@wdio/electron-service" /></a>
-
-<br />
+[![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
+[![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
+[![Downloads](https://img.shields.io/npm/dw/@wdio/electron-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
 
 **WebdriverIO service for testing Electron applications**
 
@@ -17,15 +14,15 @@ Spiritual successor to [Spectron](https://github.com/electron-userland/spectron)
 
 Makes testing Electron applications much easier via:
 
-- 🚗 auto-setup of required Chromedriver (for Electron v26 and above)
-- 📦 automatic path detection of your Electron application
-  - supports [Electron Forge](https://www.electronforge.io/), [Electron Builder](https://www.electron.build/) and unpackaged apps
-- 🧩 access Electron APIs within your tests
-- 🕵️ mocking of Electron APIs via a Vitest-like API
-- 🔗 deeplink/protocol handler testing support
-- 📊 console log capture from main and renderer processes
-- 🖥️ headless testing support
-  - automatic Xvfb integration for Linux environments (requires WebdriverIO 9.19.1+)
+- 🚗 Auto-setup of required Chromedriver (for Electron v26 and above)
+- 📦 Automatic path detection of your Electron application
+  - Supports [Electron Forge](https://www.electronforge.io/), [Electron Builder](https://www.electron.build/) and unpackaged apps
+- 🧩 Access Electron APIs within your tests
+- 🕵️ Mocking of Electron APIs via a Vitest-like API
+- 🔗 Deeplink/protocol handler testing support
+- 📊 Console log capture from main and renderer processes
+- 🖥️ Headless testing support
+  - Automatic Xvfb integration for Linux environments (requires WebdriverIO 9.19.1+)
 
 ## Installation
 
