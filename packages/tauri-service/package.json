@@ -3,7 +3,7 @@
   "version": "1.0.0-next.0",
   "description": "WebdriverIO service for testing Tauri applications",
   "author": "WebdriverIO Community",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/tauri-service",
+  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/tauri-service",
   "license": "MIT",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -69,10 +69,10 @@
   "keywords": ["webdriverio", "wdio", "wdio-service", "tauri", "testing", "e2e", "desktop"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
     "directory": "packages/tauri-service"
   },
   "bugs": {
-    "url": "https://github.com/webdriverio/desktop-mobile-testing/issues"
+    "url": "https://github.com/webdriverio/desktop-mobile/issues"
   }
 }
