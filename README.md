@@ -1,6 +1,6 @@
 # WebdriverIO Desktop & Mobile Testing
 
-> WebdriverIO services for automated testing of native desktop and mobile applications across modern frameworks.
+> WebdriverIO services for automated testing of native desktop and mobile applications.
 
 [![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
 [![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
@@ -10,6 +10,22 @@
 [![Version](https://img.shields.io/npm/v/@wdio/tauri-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
 [![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
 
+## Supported Frameworks
+
+### Production Ready
+
+- **[@wdio/electron-service](./packages/electron-service)** - Electron applications \
+  CDP bridge for main process • Full API mocking • Window management
+
+- **[@wdio/tauri-service](./packages/tauri-service)** - Tauri applications \
+  Official tauri-driver integration • Multiremote support • Plugin architecture
+
+### Planned / In Development
+
+- **React Native** - iOS/Android (Experimental support for Windows/macOS)
+- **Flutter** - iOS/Android/Windows/macOS/Linux
+- **Neutralino** - Windows/macOS/Linux
+
 ## Features
 
 - 🎯 **Framework-specific automation** - Native integration with Electron, Tauri
@@ -17,27 +33,6 @@
 - 🎭 **API mocking & isolation** - Built-in mocking for deterministic tests
 - 🌐 **Cross-platform support** - Write once, test everywhere
 - 🔧 **Consistent API** - Familiar WDIO patterns across all frameworks
-
-## Services
-
-### Production Ready
-
-**[@wdio/electron-service](./packages/electron-service)** - Electron applications  
-✅ CDP bridge for main process • Full API mocking • Window management
-
-**[@wdio/tauri-service](./packages/tauri-service)** - Tauri applications  
-✅ Official tauri-driver integration • Multiremote support • Plugin architecture
-
-### In Development
-
-**React Native** - React Native apps (iOS/Android)  
-Appium-powered with RN test helpers • Experimental desktop (Windows/macOS)
-
-**Flutter** - Flutter apps (5 platforms)  
-Appium Flutter Driver • iOS • Android • Windows • macOS • Linux
-
-**Neutralino** - Neutralino desktop apps  
-Native window automation (EdgeDriver/WebKitWebDriver) • Chrome mode fallback
 
 ## Quick Start
 
