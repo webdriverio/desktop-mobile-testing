@@ -52,7 +52,7 @@ function updatePuppeteerBrowsers() {
   runCommand(`npm pack --pack-destination ${TMP_DIR}`, browsersDir);
 
   // Copy to workspace
-  const packedFile = 'puppeteer-browsers-2.11.0.tgz';
+  const packedFile = 'puppeteer-browsers-2.11.1.tgz';
   runCommand(`cp ${TMP_DIR}/${packedFile} ${ROOT_DIR}/`);
 
   console.log('✅ @puppeteer/browsers repackaged\n');
@@ -72,7 +72,7 @@ function updateWdioUtils() {
   runCommand(`npm pack --pack-destination ${TMP_DIR}`, join(WEBDRIVERIO_DIR, 'packages', 'wdio-utils'));
 
   // Extract and fix dependencies
-  const packedFile = 'wdio-utils-9.19.1.tgz';
+  const packedFile = 'wdio-utils-9.23.0.tgz';
   const extractDir = join(TMP_DIR, 'wdio-utils-fix');
 
   // Clean up any existing extract dir
