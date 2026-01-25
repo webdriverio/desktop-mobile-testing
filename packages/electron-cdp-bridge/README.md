@@ -7,7 +7,7 @@
 
 <br />
 
-A lightweight connector for the Node debugger using the Chrome DevTools Protocol (CDP), designed for the [WebdriverIO Electron Service](https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/electron-service).
+A lightweight connector for the Node debugger using the Chrome DevTools Protocol (CDP), designed for the [WebdriverIO Electron Service](https://github.com/webdriverio/desktop-mobile/tree/main/packages/electron-service).
 
 ## 📋 Table of Contents
 

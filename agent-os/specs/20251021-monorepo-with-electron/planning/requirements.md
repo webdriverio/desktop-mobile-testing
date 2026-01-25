@@ -14,7 +14,7 @@ Establish the foundational monorepo infrastructure for the WebdriverIO Cross-Pla
 This spec combines OLD Roadmap Items #1 (Monorepo Foundation) and #2 (Electron Service Migration) into a single, practical deliverable.
 
 **Source Repository:** `/Users/sam/Workspace/wdio-electron-service`
-**Target Location:** `/Users/sam/Workspace/wdio-desktop-mobile-testing/`
+**Target Location:** `/Users/sam/Workspace/wdio-desktop-mobile/`
 
 **Key Principle:** Infrastructure decisions informed by actual requirements (Electron's multi-platform testing, E2E tests, coverage).
 
