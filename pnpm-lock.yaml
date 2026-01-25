@@ -38,8 +38,8 @@ catalogs:
       version: 9.23.0
 
 overrides:
-  '@puppeteer/browsers': file:./puppeteer-browsers-2.11.0.tgz
-  '@wdio/utils': file:./wdio-utils-9.19.1.tgz
+  '@puppeteer/browsers': file:./puppeteer-browsers-2.11.1.tgz
+  '@wdio/utils': file:./wdio-utils-9.23.0.tgz
 
 importers:
 
@@ -720,8 +720,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       '@puppeteer/browsers':
-        specifier: file:../../puppeteer-browsers-2.11.0.tgz
-        version: file:puppeteer-browsers-2.11.0.tgz
+        specifier: file:../../puppeteer-browsers-2.11.1.tgz
+        version: file:puppeteer-browsers-2.11.1.tgz
       '@wdio/electron-cdp-bridge':
         specifier: workspace:*
         version: link:../electron-cdp-bridge
@@ -2256,9 +2256,9 @@ packages:
   '@promptbook/utils@0.69.5':
     resolution: {integrity: sha512-xm5Ti/Hp3o4xHrsK9Yy3MS6KbDxYbq485hDsFvxqaNA7equHLPdo8H8faTitTeb14QCDfLW4iwCxdVYu5sn6YQ==}
 
-  '@puppeteer/browsers@file:puppeteer-browsers-2.11.0.tgz':
-    resolution: {integrity: sha512-ph8B/U2Ak58Mzl+io20fRzXZ1e4TUcYOdA8neZwSHWQXyFiEO2eoMR+9+37UpIHIiHI6CUoqI2akfZq02xxvRw==, tarball: file:puppeteer-browsers-2.11.0.tgz}
-    version: 2.11.0
+  '@puppeteer/browsers@file:puppeteer-browsers-2.11.1.tgz':
+    resolution: {integrity: sha512-wv3MHIgbJgdNGYOjOJ77/cZ6gFjSt1DR6ycj9wD0L17X9kQqdawcWCaE39B9EPVOaJkJMJVvptja3cg9NUQKPg==, tarball: file:puppeteer-browsers-2.11.1.tgz}
+    version: 2.11.1
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2820,9 +2820,9 @@ packages:
     resolution: {integrity: sha512-zMmAtse2UMCSOW76mvK3OejauAdcFGuKopNRH7crI0gwKTZtvV89yXWRziz9cVXpFgfmJCjf9edxKFWdhuF5yw==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/utils@file:wdio-utils-9.19.1.tgz':
-    resolution: {integrity: sha512-3TXtGQcq/E2A/nC/5Jsq3iKcfG2Rr2IdeXY0fp9yGYPN7+2U8qrlZfLfN6ZfmK/tL7pkQqv+Pntp6mMJ7VtiYQ==, tarball: file:wdio-utils-9.19.1.tgz}
-    version: 9.19.1
+  '@wdio/utils@file:wdio-utils-9.23.0.tgz':
+    resolution: {integrity: sha512-5cZWdgEjJb1mGH2Hj5Yj51HILYtLhxPstKJhPSAwWuUu4VkpOAHL+NlscrJ6efDzkQP2p9IflnIcYcZ0uqVCnw==, tarball: file:wdio-utils-9.23.0.tgz}
+    version: 9.23.0
     engines: {node: '>=18.20.0'}
 
   '@wdio/xvfb@9.20.0':
@@ -2883,6 +2883,10 @@ packages:
 
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
+
+  '@zip.js/zip.js@2.8.15':
+    resolution: {integrity: sha512-HZKJLFe4eGVgCe9J87PnijY7T1Zn638bEHS+Fm/ygHZozRpefzWcOYfPaP52S8pqk9g4xN3+LzMDl3Lv9dLglA==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=18.0.0'}
 
   '@zip.js/zip.js@2.8.8':
     resolution: {integrity: sha512-v0KutehhSAuaoFAFGLp+V4+UiZ1mIxQ8vNOYMD7k9ZJaBbtQV49MYlg568oRLiuwWDg2Di58Iw3Q0ESNWR+5JA==}
@@ -4165,9 +4169,9 @@ packages:
     resolution: {integrity: sha512-w4n9cPWyP7aHxKxYHFQMegj7WIAsL/YX/C4Bs5Rr8s1H9M1rNtRWRsw+ovYMkXDQ5S4ZbYHsHAPmevPjPgw44w==}
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  geckodriver@5.0.0:
-    resolution: {integrity: sha512-vn7TtQ3b9VMJtVXsyWtQQl1fyBVFhQy7UvJF96kPuuJ0or5THH496AD3eUyaDD11+EqCxH9t6V+EP9soZQk4YQ==}
-    engines: {node: '>=18.0.0'}
+  geckodriver@6.1.0:
+    resolution: {integrity: sha512-ZRXLa4ZaYTTgUO4Eefw+RsQCleugU2QLb1ME7qTYxxuRj51yAhfnXaItXNs5/vUzfIaDHuZ+YnSF005hfp07nQ==}
+    engines: {node: '>=20.0.0'}
     hasBin: true
 
   gensync@1.0.0-beta.2:
@@ -5016,6 +5020,10 @@ packages:
     resolution: {integrity: sha512-VZlYo/WE8t1tstuRmqgeyBgCbJc/lEdopaa+axcKzTBJ+UIdlAB9XnmvTCAH4pwR4ElNInaedhEBmZD8iCSVEg==}
     engines: {node: '>= 14.0.0'}
     hasBin: true
+
+  modern-tar@0.7.3:
+    resolution: {integrity: sha512-4W79zekKGyYU4JXVmB78DOscMFaJth2gGhgfTl2alWE4rNe3nf4N2pqenQ0rEtIewrnD79M687Ouba3YGTLOvg==}
+    engines: {node: '>=18.0.0'}
 
   ms@2.0.0:
     resolution: {integrity: sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==}
@@ -8004,7 +8012,7 @@ snapshots:
     dependencies:
       spacetrim: 0.11.59
 
-  '@puppeteer/browsers@file:puppeteer-browsers-2.11.0.tgz':
+  '@puppeteer/browsers@file:puppeteer-browsers-2.11.1.tgz':
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       extract-zip: 2.0.1
@@ -8488,7 +8496,7 @@ snapshots:
       '@wdio/logger': 9.18.0
       '@wdio/protocols': 9.16.2
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.19.1.tgz
+      '@wdio/utils': file:wdio-utils-9.23.0.tgz
       async-exit-hook: 2.0.1
       chalk: 5.6.2
       chokidar: 4.0.3
@@ -8517,7 +8525,7 @@ snapshots:
     dependencies:
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.19.1.tgz
+      '@wdio/utils': file:wdio-utils-9.23.0.tgz
       deepmerge-ts: 7.1.5
       glob: 10.4.5
       import-meta-resolve: 4.2.0
@@ -8574,7 +8582,7 @@ snapshots:
       '@types/node': 20.19.23
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.19.1.tgz
+      '@wdio/utils': file:wdio-utils-9.23.0.tgz
       mocha: 10.8.2
     transitivePeerDependencies:
       - bare-abort-controller
@@ -8604,7 +8612,7 @@ snapshots:
       '@wdio/globals': 9.23.0(expect-webdriverio@5.4.3)(webdriverio@9.23.0(puppeteer-core@24.35.0))
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.19.1.tgz
+      '@wdio/utils': file:wdio-utils-9.23.0.tgz
       deepmerge-ts: 7.1.5
       expect-webdriverio: 5.4.3(@wdio/globals@9.23.0)(@wdio/logger@9.18.0)(webdriverio@9.23.0(puppeteer-core@24.35.0))
       webdriver: 9.23.0
@@ -8629,16 +8637,16 @@ snapshots:
     dependencies:
       '@types/node': 20.19.23
 
-  '@wdio/utils@file:wdio-utils-9.19.1.tgz':
+  '@wdio/utils@file:wdio-utils-9.23.0.tgz':
     dependencies:
-      '@puppeteer/browsers': file:puppeteer-browsers-2.11.0.tgz
+      '@puppeteer/browsers': file:puppeteer-browsers-2.11.1.tgz
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
       decamelize: 6.0.1
       deepmerge-ts: 7.1.5
       edgedriver: 6.1.2
       electron-to-chromium: 1.5.267
-      geckodriver: 5.0.0
+      geckodriver: 6.1.0
       get-port: 7.1.0
       import-meta-resolve: 4.2.0
       locate-app: 2.5.0
@@ -8737,6 +8745,8 @@ snapshots:
   '@xtuc/ieee754@1.2.0': {}
 
   '@xtuc/long@4.2.2': {}
+
+  '@zip.js/zip.js@2.8.15': {}
 
   '@zip.js/zip.js@2.8.8': {}
 
@@ -10320,20 +10330,15 @@ snapshots:
   gar@1.0.4:
     optional: true
 
-  geckodriver@5.0.0:
+  geckodriver@6.1.0:
     dependencies:
       '@wdio/logger': 9.18.0
-      '@zip.js/zip.js': 2.8.8
+      '@zip.js/zip.js': 2.8.15
       decamelize: 6.0.1
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
-      node-fetch: 3.3.2
-      tar-fs: 3.1.1
-      which: 5.0.0
+      modern-tar: 0.7.3
     transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
       - supports-color
 
   gensync@1.0.0-beta.2: {}
@@ -11265,6 +11270,8 @@ snapshots:
       yargs-parser: 20.2.9
       yargs-unparser: 2.0.0
 
+  modern-tar@0.7.3: {}
+
   ms@2.0.0: {}
 
   ms@2.1.3: {}
@@ -11700,7 +11707,7 @@ snapshots:
 
   puppeteer-core@24.35.0:
     dependencies:
-      '@puppeteer/browsers': file:puppeteer-browsers-2.11.0.tgz
+      '@puppeteer/browsers': file:puppeteer-browsers-2.11.1.tgz
       chromium-bidi: 12.0.1(devtools-protocol@0.0.1534754)
       debug: 4.4.3(supports-color@8.1.1)
       devtools-protocol: 0.0.1534754
@@ -12582,7 +12589,7 @@ snapshots:
       '@wdio/logger': 9.18.0
       '@wdio/protocols': 9.16.2
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.19.1.tgz
+      '@wdio/utils': file:wdio-utils-9.23.0.tgz
       deepmerge-ts: 7.1.5
       https-proxy-agent: 7.0.6
       undici: 6.22.0
@@ -12604,7 +12611,7 @@ snapshots:
       '@wdio/protocols': 9.16.2
       '@wdio/repl': 9.16.2
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.19.1.tgz
+      '@wdio/utils': file:wdio-utils-9.23.0.tgz
       archiver: 7.0.1
       aria-query: 5.3.2
       cheerio: 1.1.2
