@@ -226,7 +226,7 @@ jobs:
       - name: 📦 Upload Package Test Logs
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: package-test-logs-${{ inputs.os }}-${{ inputs.service }}-${{ inputs.module-type || 'default' }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: logs/package-tests/*.log
