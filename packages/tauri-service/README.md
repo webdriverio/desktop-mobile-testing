@@ -1,8 +1,8 @@
 # @wdio/tauri-service
 
-[![@wdio/tauri-service](https://img.shields.io/badge/@wdio-tauri--service-FFC131?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
-[![Version](https://img.shields.io/npm/v/@wdio/tauri-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
-[![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/tauri-service)
+[![@wdio/tauri-service](https://img.shields.io/badge/@wdio-tauri--service-FFC131?labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
+[![Version](https://img.shields.io/npm/v/@wdio/tauri-service?color=28a745&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
+[![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
 
 WebdriverIO service for testing Tauri applications on Windows and Linux.
 
