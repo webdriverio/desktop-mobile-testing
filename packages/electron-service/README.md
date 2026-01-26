@@ -1,8 +1,8 @@
 # @wdio/electron-service
 
-[![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?style=for-the-badge&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
-[![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
-[![Downloads](https://img.shields.io/npm/dw/@wdio/electron-service?color=6f42c1&labelColor=1a1a1a&style=for-the-badge)](https://www.npmjs.com/package/@wdio/electron-service)
+[![@wdio/electron-service](https://img.shields.io/badge/@wdio-electron--service-9feaf9?labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
+[![Version](https://img.shields.io/npm/v/@wdio/electron-service?color=28a745&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
+[![Downloads](https://img.shields.io/npm/dw/@wdio/electron-service?color=6f42c1&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/electron-service)
 
 **WebdriverIO service for testing Electron applications**
 

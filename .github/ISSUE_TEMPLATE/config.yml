@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussion Forum
+    url: https://github.com/webdriverio/desktop-mobile/discussions
+    about: Ask questions, share ideas, and discuss with the community
+  - name: 💁 WebdriverIO Support
+    url: https://discord.webdriver.io
+    about: Get help from the broader WebdriverIO community on Discord
+  - name: 📖 Documentation
+    url: https://github.com/webdriverio/desktop-mobile#readme
+    about: Check out the documentation and guides
