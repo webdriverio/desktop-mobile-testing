@@ -1,0 +1,133 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve
+title: "[🐛 Bug]: "
+labels: ["type:bug", "status:investigating"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Have you read the Contributing Guidelines?
+      options:
+        - label: I have read the [Contributing Guidelines](https://github.com/webdriverio/desktop-mobile/blob/main/CONTRIBUTING.md)
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please provide as much detail as possible.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Which service/package is affected?
+      description: Select the area where you encountered the bug
+      options:
+        - Electron Service (@wdio/electron-service)
+        - Tauri Service (@wdio/tauri-service)
+        - Shared Utilities (@wdio/native-utils, @wdio/native-types)
+        - Electron CDP Bridge (@wdio/electron-cdp-bridge)
+        - Tauri Plugin (@wdio/tauri-plugin)
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package Version
+      description: What version of the package are you using?
+      placeholder: "e.g., 10.0.0-next.2"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      description: What version of Node.js are you using?
+      placeholder: "e.g., v20.11.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating System
+      description: Which OS are you using?
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: |
+        Describe the bug clearly and concisely. Include steps to reproduce.
+      placeholder: |
+        1. Set up a project with...
+        2. Run the command...
+        3. Observe the error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal Reproducible Example
+      description: |
+        Provide a minimal code example or link to a repository that reproduces the issue.
+
+        **Important:** Issues without reproducible examples may be closed.
+      placeholder: |
+        ```javascript
+        // Your minimal reproducible code here
+        ```
+
+        Or link to a repository: https://github.com/your-username/minimal-repro
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Copy and paste any relevant log output here.
+        Set debug mode if applicable (e.g., `DEBUG=wdio-*`)
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here (screenshots, related issues, etc.)
+    validations:
+      required: false
+
+  - type: checkboxes
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/webdriverio/desktop-mobile/blob/main/CODE_OF_CONDUCT.md)
+          required: true
+
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      options:
+        - label: I have searched the [existing issues](https://github.com/webdriverio/desktop-mobile/issues)
+          required: true
