@@ -100,7 +100,6 @@ Technical stack choices for the WebdriverIO Cross-Platform Testing Services mono
 - **Task Graphs:** Custom scripts for visualizing E2E test dependencies
 - **Shell Utilities:** shelljs 0.10+, shx 0.4+ (cross-platform shell operations)
 - **Catalog Management:** Custom scripts for dependency catalog switching (default/next/minimum)
-- **Backporting:** Custom backport script for version management
 
 ## Documentation and Examples
 

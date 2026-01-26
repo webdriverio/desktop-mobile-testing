@@ -333,7 +333,7 @@ Add to `.vscode/launch.json`:
 
 ## Release Process
 
-Releases are managed by maintainers. For detailed information about release management, versioning, and backporting, see:
+Releases are managed by maintainers. For detailed information about release management and versioning, see:
 
 - [Top-level Release Management](../../CONTRIBUTING.md#release-process)
 - [Electron Service Release Management](../electron-service/docs/release-management.md)

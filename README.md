@@ -162,7 +162,6 @@ pnpm e2e:multiremote       # Multiremote tests
 # Package Management
 pnpm release               # Release packages
 pnpm catalog:update        # Update dependency catalogs
-pnpm backport              # Run backport script
 ```
 
 ## Testing
