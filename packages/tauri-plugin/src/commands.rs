@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::models::ExecuteRequest;
 use crate::Result;
+use crate::Error;
 
 /// Debug command to verify plugin is working
 #[command]
@@ -167,4 +168,31 @@ pub(crate) async fn execute<R: Runtime>(
             )))
         }
     }
+}
+
+/// Get the label of the currently focused/active window
+#[command]
+pub(crate) async fn get_active_window_label<R: Runtime>(
+  app: tauri::AppHandle<R>,
+) -> Result<String> {
+  let windows = app.webview_windows();
+  if windows.is_empty() {
+    return Err(Error::WindowError("No windows available".to_string()));
+  }
+  // In Tauri 2.x, we can't easily detect which window is focused
+  // Return the main window if it exists, otherwise the first window
+  if let Some(main) = windows.get("main") {
+    return Ok(main.label().to_string());
+  }
+  let first = windows.values().next()
+    .ok_or_else(|| Error::WindowError("No windows available".to_string()))?;
+  Ok(first.label().to_string())
+}
+
+/// List all window labels in the application
+#[command]
+pub(crate) async fn list_windows<R: Runtime>(
+  app: tauri::AppHandle<R>,
+) -> Result<Vec<String>> {
+  Ok(app.webview_windows().keys().cloned().collect())
 }

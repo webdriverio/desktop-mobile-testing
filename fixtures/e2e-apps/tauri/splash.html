@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Splash Screen</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin: 0;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 1rem;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(45deg, #61dafb, #21a1f1);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tauri E2E Test App</h1>
+    <p>Splash Screen</p>
+    <button id="switch-main-window" class="switch-main-window">Continue</button>
+  </div>
+  <script type="module">
+    import '@wdio/tauri-plugin';
+    document.getElementById('switch-main-window').addEventListener('click', async () => {
+      await core.invoke('window:switchToMain');
+    });
+  </script>
+</body>
+</html>
