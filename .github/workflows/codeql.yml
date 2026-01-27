@@ -100,6 +100,8 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
+      with:
+        category: ${{ matrix.language }}
 
     - name: Upload SARIF
       uses: github/codeql-action/upload-sarif@v4
