@@ -215,7 +215,7 @@ jobs:
           echo "::notice::Tauri binaries: Using pre-built binaries for ${{ runner.os }}"
 
       # Dynamically generate the Tauri test commands to run
-      # Since we only have one Tauri app (basic), no module type filtering needed
+      # Uses 'tauri-basic' naming convention to align with Electron's 'builder/forge/script' naming
       - name: 🪄 Generate Tauri Test Execution Plan
         id: gen-test
         uses: actions/github-script@v8
@@ -227,7 +227,8 @@ jobs:
                 .split(',')
                 .map((s) => {
                   const scenario = s.trim();
-                  const baseCommand = `test:e2e:tauri:${scenario.replace('tauri-', '')}`;
+                  // Use 'tauri-basic' as the app name (single Tauri app variant)
+                  const baseCommand = `test:e2e:tauri-basic`;
                   return testType !== 'standard'
                     ? `${baseCommand}:${testType}`
                     : baseCommand;

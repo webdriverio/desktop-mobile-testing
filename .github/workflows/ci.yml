@@ -317,6 +317,33 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
+  # Electron window tests - run on Linux with splash screen enabled
+  e2e-electron-window:
+    name: E2E - Electron [Linux] (window)
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_electron == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            display-name: Linux
+            scenario: builder
+          - os: ubuntu-latest
+            display-name: Linux
+            scenario: forge
+          - os: ubuntu-latest
+            display-name: Linux
+            scenario: script
+    uses: ./.github/workflows/_ci-e2e.reusable.yml
+    with:
+      os: ${{ matrix.os }}
+      node-version: '20'
+      scenario: ${{ matrix.scenario }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+
   # Tauri E2E tests for Linux - only waits for E2E app build
   e2e-tauri-linux-matrix:
     name: E2E - Tauri [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
