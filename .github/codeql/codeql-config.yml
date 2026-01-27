@@ -1,2 +1,0 @@
-paths-ignore:
-  - 'fixtures/config-formats/invalid-syntax.ts'
