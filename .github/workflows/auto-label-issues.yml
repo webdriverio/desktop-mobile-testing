@@ -1,0 +1,66 @@
+name: Auto-label issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  label-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract scope and apply area label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = github.context.issue;
+            const body = context.payload.issue.body || '';
+
+            const scopeLabels = {
+              'Electron Service': 'area:electron',
+              'Tauri Service': 'area:tauri',
+              'Shared Utilities': 'area:shared',
+              'Electron CDP Bridge': 'area:electron-cdp',
+              'Tauri Plugin': 'area:tauri-plugin',
+              'Documentation': 'area:docs'
+            };
+
+            for (const [key, label] of Object.entries(scopeLabels)) {
+              if (body.includes(key)) {
+                github.rest.issues.addLabels({
+                  issue_number: issue.number,
+                  labels: [label],
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+                break;
+              }
+            }
+
+  label-platform:
+    runs-on: ubuntu-latest
+    if: startsWith(context.payload.issue.title, '[🐛 Bug]')
+    steps:
+      - name: Extract platform and apply OS label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = github.context.issue;
+            const body = context.payload.issue.body || '';
+
+            const platformLabels = {
+              'Windows': 'os:windows',
+              'macOS': 'os:macos',
+              'Linux': 'os:linux'
+            };
+
+            for (const [key, label] of Object.entries(platformLabels)) {
+              if (body.includes(key)) {
+                github.rest.issues.addLabels({
+                  issue_number: issue.number,
+                  labels: [label],
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+                break;
+              }
+            }
