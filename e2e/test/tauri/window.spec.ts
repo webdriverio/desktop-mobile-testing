@@ -2,7 +2,13 @@ import { expect } from '@wdio/globals';
 import { browser } from '@wdio/tauri-service';
 
 describe('application window tests', () => {
-  it('should launch the application splash screen window', async () => {
+  // Skip splash screen test if ENABLE_SPLASH_WINDOW is not set
+  const isSplashEnabled = process.env.ENABLE_SPLASH_WINDOW === 'true';
+
+  it('should launch the application splash screen window', async function () {
+    if (!isSplashEnabled) {
+      return this.skip(); // Skip if splash screen not enabled
+    }
     if (browser.isMultiremote) {
       const multi = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       const browserA = multi.getInstance('browserA');
@@ -34,13 +40,15 @@ describe('application window tests', () => {
   });
 
   it('should list all window labels', async () => {
-    const windows = (await browser.tauri.execute(({ core }) => core.invoke('window:list'))) as string[];
+    const windows = (await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'))) as string[];
     expect(Array.isArray(windows)).toBe(true);
     expect(windows.length).toBeGreaterThanOrEqual(1);
   });
 
   it('should get active window label', async () => {
-    const label = (await browser.tauri.execute(({ core }) => core.invoke('window:getActiveLabel'))) as string;
+    const label = (await browser.tauri.execute(({ core }) =>
+      core.invoke('plugin:wdio|get_active_window_label'),
+    )) as string;
     expect(typeof label).toBe('string');
   });
 });
