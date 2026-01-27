@@ -30,7 +30,10 @@ permissions = [
   "allow-get-mock",
   "allow-clear-mocks",
   "allow-reset-mocks",
-  "allow-restore-mocks"
+  "allow-restore-mocks",
+  "allow-get-active-window-label",
+  "allow-list-windows",
+  "allow-switch-to-main"
 ]
 
 [allow-execute]
@@ -72,3 +75,18 @@ commands = { allow = ["wdio.reset-mocks"], deny = [] }
 identifier = "allow-restore-mocks"
 description = "Allow restoring mocks via the wdio plugin"
 commands = { allow = ["wdio.restore-mocks"], deny = [] }
+
+[allow-get-active-window-label]
+identifier = "allow-get-active-window-label"
+description = "Allow get_active_window_label command"
+commands = { allow = ["plugin:wdio|get_active_window_label"], deny = [] }
+
+[allow-list-windows]
+identifier = "allow-list-windows"
+description = "Allow list_windows command"
+commands = { allow = ["plugin:wdio|list_windows"], deny = [] }
+
+[allow-switch-to-main]
+identifier = "allow-switch-to-main"
+description = "Allow switch_to_main command"
+commands = { allow = ["plugin:wdio|switch_to_main"], deny = [] }
