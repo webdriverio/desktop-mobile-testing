@@ -46,13 +46,20 @@ jobs:
 
   # Run unit tests after linting to ensure code quality first
   unit-matrix:
-    name: Unit [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}]
+    name: Unit [${{ matrix.display-name }}]
     needs: [build, lint]
     strategy:
       fail-fast: false
       matrix:
-        # Test on all major operating systems and architectures to ensure cross-platform compatibility
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
+        include:
+          - os: ubuntu-latest
+            display-name: Linux
+          - os: windows-latest
+            display-name: Windows
+          - os: macos-latest
+            display-name: macOS-ARM
+          - os: macos-15-intel
+            display-name: macOS-Intel
     uses: ./.github/workflows/_ci-unit.reusable.yml
     with:
       os: ${{ matrix.os }}
@@ -115,14 +122,43 @@ jobs:
   # Tauri apps are built separately due to longer build times and system dependencies
   # Electron package tests are split by module type (CJS/ESM) for better error isolation
   package-electron-matrix:
-    name: Package - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'ubuntu-24.04-arm' && 'Linux-ARM64' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.module-type }}
+    name: Package - Electron [${{ matrix.display-name }}] - ${{ matrix.module-type }}
     needs: [detect-changes, build, lint]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'ubuntu-24.04-arm', 'windows-latest', 'macos-latest', 'macos-15-intel']
-        module-type: ['cjs', 'esm']
+        include:
+          - os: ubuntu-latest
+            display-name: Linux
+            module-type: cjs
+          - os: ubuntu-latest
+            display-name: Linux
+            module-type: esm
+          - os: ubuntu-24.04-arm
+            display-name: Linux-ARM64
+            module-type: cjs
+          - os: ubuntu-24.04-arm
+            display-name: Linux-ARM64
+            module-type: esm
+          - os: windows-latest
+            display-name: Windows
+            module-type: cjs
+          - os: windows-latest
+            display-name: Windows
+            module-type: esm
+          - os: macos-latest
+            display-name: macOS-ARM
+            module-type: cjs
+          - os: macos-latest
+            display-name: macOS-ARM
+            module-type: esm
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            module-type: cjs
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            module-type: esm
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
       os: ${{ matrix.os }}
@@ -179,7 +215,7 @@ jobs:
   # - CentOS Stream 9: glib 2.68 too old (Tauri requires >= 2.70)
   # - CentOS Stream 10: WebKitGTK removed by Red Hat due to 200+ CVEs and unsustainable maintenance
   package-tauri-distros:
-    name: Package - Tauri (Docker) [Linux-${{ matrix.distro }}]
+    name: Package - Tauri (Docker) [Linux-${{ matrix.display-name }}]
     needs: [detect-changes, build, lint]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
@@ -187,23 +223,34 @@ jobs:
       matrix:
         include:
           - distro: ubuntu
+            display-name: Ubuntu
           - distro: fedora
+            display-name: Fedora
           - distro: debian
+            display-name: Debian
           - distro: arch
+            display-name: Arch
           - distro: void
+            display-name: Void
     uses: ./.github/workflows/_ci-package-docker.reusable.yml
     with:
       distro: ${{ matrix.distro }}
 
   # Run build tests outside of the main Linux build job
   build-matrix:
-    name: Build [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}]
+    name: Build [${{ matrix.display-name }}]
     needs: [detect-changes, build, lint]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
       matrix:
-        os: ['windows-latest', 'macos-latest', 'macos-15-intel']
+        include:
+          - os: windows-latest
+            display-name: Windows
+          - os: macos-latest
+            display-name: macOS-ARM
+          - os: macos-15-intel
+            display-name: macOS-Intel
     uses: ./.github/workflows/_ci-build.reusable.yml
     with:
       os: ${{ matrix.os }}
@@ -214,16 +261,49 @@ jobs:
   # - E2E tests use ESM only (CJS/ESM testing is done in package tests)
   # - Optimize for GitHub Actions concurrency limits
   e2e-matrix:
-    name: E2E - Electron [${{ matrix.os == 'ubuntu-latest' && 'Linux' || matrix.os == 'windows-latest' && 'Windows' || contains(matrix.os, 'macos-15-intel') && 'macOS-Intel' || 'macOS-ARM' }}] - ${{ matrix.scenario }}
+    name: E2E - Electron [${{ matrix.display-name }}] - ${{ matrix.scenario }}
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
       matrix:
-        # Test across all major operating systems and macOS architectures
-        os: ['ubuntu-latest', 'windows-latest', 'macos-latest', 'macos-15-intel']
-        # Test all application scenarios
-        scenario: ['builder', 'forge', 'script']
+        include:
+          - os: ubuntu-latest
+            display-name: Linux
+            scenario: builder
+          - os: ubuntu-latest
+            display-name: Linux
+            scenario: forge
+          - os: ubuntu-latest
+            display-name: Linux
+            scenario: script
+          - os: windows-latest
+            display-name: Windows
+            scenario: builder
+          - os: windows-latest
+            display-name: Windows
+            scenario: forge
+          - os: windows-latest
+            display-name: Windows
+            scenario: script
+          - os: macos-latest
+            display-name: macOS-ARM
+            scenario: builder
+          - os: macos-latest
+            display-name: macOS-ARM
+            scenario: forge
+          - os: macos-latest
+            display-name: macOS-ARM
+            scenario: script
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            scenario: builder
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            scenario: forge
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            scenario: script
     uses: ./.github/workflows/_ci-e2e.reusable.yml
     with:
       os: ${{ matrix.os }}
@@ -278,15 +358,37 @@ jobs:
   # Tauri E2E tests for macOS - skipped with clear messaging
   # macOS is not supported due to WKWebView WebDriver limitations
   e2e-tauri-macos-matrix:
-    name: E2E - Tauri [${{ matrix.os == 'macos-latest' && 'macOS-ARM' || 'macOS-Intel' }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    name: E2E - Tauri [${{ matrix.display-name }}] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
       matrix:
-        os: ['macos-latest', 'macos-15-intel']
-        scenario: ['tauri-basic']
-        test-type: ['standard', 'multiremote', 'standalone']
+        include:
+          - os: macos-latest
+            display-name: macOS-ARM
+            scenario: tauri-basic
+            test-type: standard
+          - os: macos-latest
+            display-name: macOS-ARM
+            scenario: tauri-basic
+            test-type: multiremote
+          - os: macos-latest
+            display-name: macOS-ARM
+            scenario: tauri-basic
+            test-type: standalone
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            scenario: tauri-basic
+            test-type: standard
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            scenario: tauri-basic
+            test-type: multiremote
+          - os: macos-15-intel
+            display-name: macOS-Intel
+            scenario: tauri-basic
+            test-type: standalone
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
       os: ${{ matrix.os }}
