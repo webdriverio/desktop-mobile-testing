@@ -2,13 +2,7 @@ import { expect } from '@wdio/globals';
 import { browser } from '@wdio/tauri-service';
 
 describe('application window tests', () => {
-  // Skip splash screen test if ENABLE_SPLASH_WINDOW is not set
-  const isSplashEnabled = process.env.ENABLE_SPLASH_WINDOW === 'true';
-
-  it('should launch the application splash screen window', async function () {
-    if (!isSplashEnabled) {
-      return this.skip(); // Skip if splash screen not enabled
-    }
+  it('should launch the application splash screen window', async () => {
     if (browser.isMultiremote) {
       const multi = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       const browserA = multi.getInstance('browserA');
