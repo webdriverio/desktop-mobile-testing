@@ -15,15 +15,9 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/webdriverio/desktop-mobile/actions/workflows/ci.yml">
-        <img alt="Build Status" src="https://github.com/webdriverio/desktop-mobile/actions/workflows/ci.yml/badge.svg">
-    </a>
-    <a href="https://github.com/webdriverio/desktop-mobile/blob/main/LICENSE">
-        <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg">
-    </a>
-    <a href="https://discord.webdriver.io">
-        <img alt="Discord" src="https://img.shields.io/discord/1097401827202445382?color=%234FB898&label=Discord">
-    </a>
+    <a href="https://github.com/webdriverio/desktop-mobile/actions/workflows/ci.yml"><img alt="Build Status" src="https://github.com/webdriverio/desktop-mobile/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="https://github.com/webdriverio/desktop-mobile/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+    <a href="https://discord.webdriver.io"><img alt="Discord" src="https://img.shields.io/discord/1097401827202445382?color=%234FB898&label=Discord"></a>
 </p>
 
 ---
