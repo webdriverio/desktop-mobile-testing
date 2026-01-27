@@ -195,6 +195,9 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
+    if let Some(existing) = app.get_webview_window("main") {
+        return existing;
+    }
     tauri::WebviewWindowBuilder::new(
         app,
         "main",
@@ -239,12 +242,7 @@ fn main() {
                 .transparent(true)
                 .build()
                 .expect("Failed to create splash window");
-
-                create_main_window(app.handle());
-            } else {
-                create_main_window(app.handle());
             }
-
             Ok::<(), Box<dyn std::error::Error>>(())
         })
         .invoke_handler(tauri::generate_handler![
