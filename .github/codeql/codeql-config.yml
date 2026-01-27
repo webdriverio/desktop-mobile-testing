@@ -3,27 +3,21 @@
 
 # Exclude test files and directories from analysis
 paths-ignore:
+  # Github infrastructure
+  - '.github'
+
   # Test patterns
   - '**/*.spec.ts'
-  - '**/*.test.ts'
   - '**/*.spec.js'
-  - '**/*.test.js'
   - '**/*.spec.mts'
-  - '**/*.test.mts'
   - '**/*.spec.cts'
-  - '**/*.test.cts'
 
   # Test directories
   - '**/test/**'
-  - '**/tests/**'
-  - '**/__tests__/**'
   - '**/e2e/**'
 
-  # Fixtures and mock data
+  # Fixtures
   - '**/fixtures/**'
-  - '**/mocks/**'
-  - '**/mock/**'
 
   # Coverage and debug output
   - '**/coverage/**'
-  - '**/.nyc_output/**'
