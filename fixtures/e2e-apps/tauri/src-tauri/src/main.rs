@@ -3,7 +3,7 @@
 // E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter};
+use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter, Manager};
 use serde::{Serialize, Deserialize};
 use sysinfo::System;
 use clipboard::{ClipboardProvider, ClipboardContext};
@@ -175,7 +175,7 @@ async fn write_clipboard(content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn generate_test_logs(app: tauri::AppHandle) -> Result<String> {
+async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
     let logs = [
         ("TRACE", "This is a TRACE level log"),
         ("DEBUG", "This is a DEBUG level log"),
@@ -198,7 +198,7 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::We
     tauri::WebviewWindowBuilder::new(
         app,
         "main",
-        tauri::WindowUrl::App("index.html".into())
+        tauri::WebviewUrl::App("index.html".into())
     )
     .title("Tauri E2E Test App")
     .inner_size(600.0, 400.0)
@@ -227,10 +227,10 @@ fn main() {
             let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
 
             if is_splash {
-                tauri::WebviewWindowBuilder::new(
+                let _splash = tauri::WebviewWindowBuilder::new(
                     app,
                     "splash",
-                    tauri::WindowUrl::App("splash.html".into())
+                    tauri::WebviewUrl::App("splash.html".into())
                 )
                 .title("Splash Screen")
                 .inner_size(300.0, 200.0)
@@ -238,11 +238,11 @@ fn main() {
                 .decorations(false)
                 .transparent(true)
                 .build()
-                .expect("Failed to create splash window")?;
+                .expect("Failed to create splash window");
 
-                create_main_window(app.app_handle());
+                create_main_window(app.handle());
             } else {
-                create_main_window(app.app_handle());
+                create_main_window(app.handle());
             }
 
             Ok::<(), Box<dyn std::error::Error>>(())
@@ -264,33 +264,6 @@ fn main() {
             write_clipboard,
             generate_test_logs,
             switch_to_main,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-
-    Ok(())
-}
-
-fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_wdio::init())
-        .invoke_handler(tauri::generate_handler![
-            get_window_bounds,
-            set_window_bounds,
-            minimize_window,
-            maximize_window,
-            unmaximize_window,
-            close_window,
-            take_screenshot,
-            read_file,
-            write_file,
-            delete_file,
-            get_current_dir,
-            get_platform_info,
-            read_clipboard,
-            write_clipboard,
-            generate_test_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
