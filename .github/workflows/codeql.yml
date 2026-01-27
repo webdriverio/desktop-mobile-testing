@@ -108,7 +108,7 @@ jobs:
       uses: advanced-security/filter-sarif@v1
       with:
         input: sarif-results-${{ matrix.language }}
-        patterns-to-ignore: |
+        patterns: |
           **/*.spec.ts
           **/test/**
           **/fixtures/**
@@ -116,6 +116,6 @@ jobs:
         output: filtered-${{ matrix.language }}.sarif
 
     - name: Upload filtered SARIF
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: filtered-${{ matrix.language }}.sarif
