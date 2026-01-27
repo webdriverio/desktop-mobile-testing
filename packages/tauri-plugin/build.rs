@@ -28,14 +28,18 @@
 
 const COMMANDS: &[&str] = &[
     "execute",
-    "log_frontend",
+    "log_frontend", 
     "debug_plugin",
     "set_mock",
     "get_mock",
     "clear_mocks",
     "reset_mocks",
     "restore_mocks",
+    "get_active_window_label",
+    "list_windows",
+    "switch_to_main",
 ];
+
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

@@ -3444,17 +3444,17 @@
       "identifier": "default",
       "description": "Allows all WebDriverIO plugin commands for testing",
       "permissions": [
-        "allow-execute",
-        "allow-log-frontend",
-        "allow-debug-plugin",
-        "allow-set-mock",
-        "allow-get-mock",
-        "allow-clear-mocks",
-        "allow-reset-mocks",
-        "allow-restore-mocks",
-        "allow-get-active-window-label",
-        "allow-list-windows",
-        "allow-switch-to-main"
+        "wdio:allow-execute",
+        "wdio:allow-log-frontend",
+        "wdio:allow-debug-plugin",
+        "wdio:allow-set-mock",
+        "wdio:allow-get-mock",
+        "wdio:allow-clear-mocks",
+        "wdio:allow-reset-mocks",
+        "wdio:allow-restore-mocks",
+        "wdio:allow-get-active-window-label",
+        "wdio:allow-list-windows",
+        "wdio:allow-switch-to-main"
       ]
     },
     "permissions": {
@@ -3476,7 +3476,7 @@
       "allow-get-active-window-label": {
         "identifier": "allow-get-active-window-label",
         "description": "Enables the get_active_window_label command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": [] }
+        "commands": { "allow": ["get_active_window_label"], "deny": [] }
       },
       "allow-get-mock": {
         "identifier": "allow-get-mock",
@@ -3486,7 +3486,7 @@
       "allow-list-windows": {
         "identifier": "allow-list-windows",
         "description": "Enables the list_windows command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": [] }
+        "commands": { "allow": ["list_windows"], "deny": [] }
       },
       "allow-log-frontend": {
         "identifier": "allow-log-frontend",
@@ -3511,7 +3511,7 @@
       "allow-switch-to-main": {
         "identifier": "allow-switch-to-main",
         "description": "Enables the switch_to_main command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": [] }
+        "commands": { "allow": ["switch_to_main"], "deny": [] }
       },
       "deny-clear-mocks": {
         "identifier": "deny-clear-mocks",
@@ -3531,7 +3531,7 @@
       "deny-get-active-window-label": {
         "identifier": "deny-get-active-window-label",
         "description": "Denies the get_active_window_label command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": [] }
+        "commands": { "allow": [], "deny": ["get_active_window_label"] }
       },
       "deny-get-mock": {
         "identifier": "deny-get-mock",
@@ -3541,7 +3541,7 @@
       "deny-list-windows": {
         "identifier": "deny-list-windows",
         "description": "Denies the list_windows command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": [] }
+        "commands": { "allow": [], "deny": ["list_windows"] }
       },
       "deny-log-frontend": {
         "identifier": "deny-log-frontend",
@@ -3566,7 +3566,7 @@
       "deny-switch-to-main": {
         "identifier": "deny-switch-to-main",
         "description": "Denies the switch_to_main command without any pre-configured scope.",
-        "commands": { "allow": [], "deny": [] }
+        "commands": { "allow": [], "deny": ["switch_to_main"] }
       }
     },
     "permission_sets": {},
