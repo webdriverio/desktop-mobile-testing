@@ -39,7 +39,7 @@
   <script type="module">
     import '@wdio/tauri-plugin';
     document.getElementById('switch-main-window').addEventListener('click', async () => {
-      await core.invoke('window:switchToMain');
+      await core.invoke('switch_to_main');
     });
   </script>
 </body>
