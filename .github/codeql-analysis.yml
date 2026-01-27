@@ -1,0 +1,4 @@
+- name: Perform CodeQL Analysis
+  uses: github/codeql-action/analyze@v3
+  with:
+    config-file: ./.github/codeql/codeql-config.yml
