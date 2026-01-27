@@ -21,20 +21,13 @@ body:
       label: Which service/package is affected?
       description: Select the area where you encountered the bug
       options:
-        - label: Electron Service (@wdio/electron-service)
-          label: area:electron
-        - label: Tauri Service (@wdio/tauri-service)
-          label: area:tauri
-        - label: Shared Utilities (@wdio/native-utils, @wdio/native-types)
-          label: area:shared
-        - label: Electron CDP Bridge (@wdio/electron-cdp-bridge)
-          label: area:electron-cdp
-        - label: Tauri Plugin (@wdio/tauri-plugin)
-          label: area:tauri-plugin
-        - label: Documentation
-          label: area:docs
-        - label: Other
-          label: area:other
+        - Electron Service (@wdio/electron-service)
+        - Tauri Service (@wdio/tauri-service)
+        - Shared Utilities (@wdio/native-utils, @wdio/native-types)
+        - Electron CDP Bridge (@wdio/electron-cdp-bridge)
+        - Tauri Plugin (@wdio/tauri-plugin)
+        - Documentation
+        - Other
     validations:
       required: true
 
@@ -62,12 +55,9 @@ body:
       label: Operating System
       description: Which OS are you using?
       options:
-        - label: Windows
-          label: os:windows
-        - label: macOS
-          label: os:macos
-        - label: Linux
-          label: os:linux
+        - Windows
+        - macOS
+        - Linux
     validations:
       required: true
 
