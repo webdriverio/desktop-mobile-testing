@@ -38,7 +38,7 @@ jobs:
 
   label-platform:
     runs-on: ubuntu-latest
-    if: startsWith(context.payload.issue.title, '[🐛 Bug]')
+    if: startsWith(github.context.payload.issue.title, '[🐛 Bug]')
     steps:
       - name: Extract platform and apply OS label
         uses: actions/github-script@v7
