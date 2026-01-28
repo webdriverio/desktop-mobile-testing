@@ -50,19 +50,18 @@ export async function getWindowPort(browser: WebdriverIO.Browser, label: string)
     return windowPortMap.get(label);
   }
 
-  const windows = await listWindowLabels(browser);
   const endpoints = await pollDevtoolsEndpoints();
 
   if (endpoints.length === 0) {
     return undefined;
   }
 
-  for (let i = 0; i < Math.min(windows.length, endpoints.length); i++) {
-    const windowLabel = windows[i];
-    const endpoint = endpoints[i];
+  // Map endpoints by their ID (which corresponds to window label in Tauri)
+  for (const endpoint of endpoints) {
     const port = extractPortFromWebSocketUrl(endpoint.webSocketDebuggerUrl);
-    windowPortMap.set(windowLabel, port);
-    log.debug(`Mapped window "${windowLabel}" to port ${port}`);
+    // The endpoint id typically matches the window label (e.g., "main", "secondary")
+    windowPortMap.set(endpoint.id, port);
+    log.debug(`Mapped window "${endpoint.id}" to port ${port}`);
   }
 
   return windowPortMap.get(label);
