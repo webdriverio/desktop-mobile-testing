@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process';
+import { exec, execFile } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { createLogger } from '@wdio/native-utils';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const log = createLogger('tauri-service', 'launcher');
 
 export interface EdgeDriverResult {
@@ -27,11 +28,16 @@ export async function detectWebView2VersionFromBinary(binaryPath?: string): Prom
   }
 
   try {
-    // Use PowerShell to extract version info from the binary
-    const { stdout } = await execAsync(`powershell.exe -Command "(Get-Item '${binaryPath}').VersionInfo.FileVersion"`, {
-      encoding: 'utf8',
-      timeout: 5000,
-    });
+    // Use PowerShell to extract version info from the binary.
+    // Pass the binary path as an argument to avoid interpolating it into the script.
+    const { stdout } = await execFileAsync(
+      'powershell.exe',
+      ['-Command', '(Get-Item $args[0]).VersionInfo.FileVersion', binaryPath],
+      {
+        encoding: 'utf8',
+        timeout: 5000,
+      },
+    );
 
     const version = stdout.trim();
     if (version && /^\d+\.\d+\.\d+/.test(version)) {
@@ -154,6 +160,7 @@ export async function findMsEdgeDriver(): Promise<{ path?: string; version?: str
  */
 async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
   const majorVersion = getMajorVersion(edgeVersion);
+  const safeMajorVersion = majorVersion.replace(/\D/g, '');
 
   try {
     // Try to get the latest stable release for this major version
@@ -162,7 +169,7 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
       $ProgressPreference = 'SilentlyContinue'
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       try {
-        $response = Invoke-WebRequest -Uri 'https://msedgedriver.microsoft.com/LATEST_RELEASE_${majorVersion}' -UseBasicParsing -TimeoutSec 10
+        $response = Invoke-WebRequest -Uri 'https://msedgedriver.microsoft.com/LATEST_RELEASE_${safeMajorVersion}' -UseBasicParsing -TimeoutSec 10
         $response.Content.Trim()
       } catch {
         Write-Output ''
@@ -172,8 +179,8 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
     );
 
     const latestForMajor = response.stdout.trim();
-    if (latestForMajor?.startsWith(majorVersion)) {
-      log.debug(`Found latest driver version ${latestForMajor} for Edge ${majorVersion}`);
+    if (latestForMajor?.startsWith(safeMajorVersion)) {
+      log.debug(`Found latest driver version ${latestForMajor} for Edge ${safeMajorVersion}`);
       return latestForMajor;
     }
   } catch (_error) {
@@ -254,10 +261,14 @@ try {
 
   try {
     // Execute PowerShell script
-    const { stdout, stderr } = await execAsync(`powershell.exe -ExecutionPolicy Bypass -File "${psScriptPath}"`, {
-      encoding: 'utf8',
-      timeout: 60000, // 1 minute timeout
-    });
+    const { stdout, stderr } = await execFileAsync(
+      'powershell.exe',
+      ['-ExecutionPolicy', 'Bypass', '-File', psScriptPath],
+      {
+        encoding: 'utf8',
+        timeout: 60000, // 1 minute timeout
+      },
+    );
 
     log.debug('PowerShell output:', stdout);
     if (stderr) {
