@@ -28,11 +28,15 @@ export async function detectWebView2VersionFromBinary(binaryPath?: string): Prom
   }
 
   try {
-    // Use PowerShell to extract version info from the binary
-    const { stdout } = await execAsync(`powershell.exe -Command "(Get-Item '${binaryPath}').VersionInfo.FileVersion"`, {
-      encoding: 'utf8',
-      timeout: 5000,
-    });
+    // Use PowerShell to extract version info from the binary.
+    // Pass the binary path as an argument to avoid interpolating it into the script.
+    const { stdout } = await execAsync(
+      `powershell.exe -Command "(Get-Item $args[0]).VersionInfo.FileVersion" "${binaryPath}"`,
+      {
+        encoding: 'utf8',
+        timeout: 5000,
+      },
+    );
 
     const version = stdout.trim();
     if (version && /^\d+\.\d+\.\d+/.test(version)) {
@@ -255,10 +259,14 @@ try {
 
   try {
     // Execute PowerShell script
-    const { stdout, stderr } = await execFileAsync('powershell.exe', ['-ExecutionPolicy', 'Bypass', '-File', psScriptPath], {
-      encoding: 'utf8',
-      timeout: 60000, // 1 minute timeout
-    });
+    const { stdout, stderr } = await execFileAsync(
+      'powershell.exe',
+      ['-ExecutionPolicy', 'Bypass', '-File', psScriptPath],
+      {
+        encoding: 'utf8',
+        timeout: 60000, // 1 minute timeout
+      },
+    );
 
     log.debug('PowerShell output:', stdout);
     if (stderr) {
