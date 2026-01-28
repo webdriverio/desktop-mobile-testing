@@ -478,12 +478,12 @@ export default class TauriLaunchService {
       // Generate isolated data directory
       const dataDir = generateDataDirectory(`worker-${cid}`);
 
-      // Set up environment variables for data directory isolation
-      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-      const env = { ...process.env, [envVarName]: dataDir };
-
       // Merge options (global + capability-specific)
       const workerOptions = mergeOptions(this.options, firstCap['wdio:tauriServiceOptions']);
+
+      // Set up environment variables for data directory isolation
+      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+      const env = { ...process.env, ...workerOptions.env, [envVarName]: dataDir };
 
       // Spawn tauri-driver for this worker
       await this.startTauriDriverForWorker(cid, port, nativePort, env, workerOptions);
@@ -697,14 +697,23 @@ export default class TauriLaunchService {
       log.debug(`[worker-${workerId}] Using native driver: ${nativeDriverPath}`);
     }
 
-    // Extract data directory from env for storage
-    const dataDir = env.XDG_DATA_HOME || env.TAURI_DATA_DIR || '';
+    // Extract data directory from env for storage and merge with worker options
+    const customEnv = workerOptions.env || {};
+    const spawnEnv = { ...process.env, ...env, ...customEnv };
+    const dataDir = spawnEnv.XDG_DATA_HOME || spawnEnv.TAURI_DATA_DIR || '';
+
+    // DEBUG: Log key environment variables being passed
+    log.debug(`[worker-${workerId}] Environment debug:`);
+    log.debug(`[worker-${workerId}]   ENABLE_SPLASH_WINDOW: ${spawnEnv.ENABLE_SPLASH_WINDOW || 'not set'}`);
+    log.debug(`[worker-${workerId}]   XDG_DATA_HOME: ${spawnEnv.XDG_DATA_HOME || 'not set'}`);
+    log.debug(`[worker-${workerId}]   TAURI_DATA_DIR: ${spawnEnv.TAURI_DATA_DIR || 'not set'}`);
+    log.debug(`[worker-${workerId}]   DISPLAY: ${spawnEnv.DISPLAY || 'not set'}`);
 
     await new Promise<void>((resolve, reject) => {
       const proc = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        env,
+        env: spawnEnv,
       });
 
       log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
@@ -862,24 +871,26 @@ export default class TauriLaunchService {
     }
 
     return new Promise((resolve, reject) => {
-      // Don't manually set DISPLAY - let tauri-driver inherit from environment
-      // or handle display connection itself. Setting DISPLAY here causes
-      // authorization issues because we don't have matching XAUTHORITY credentials
-      const env = { ...process.env };
+      // Use process.env as base and merge with any custom env from options
+      const customEnv = options.env || {};
+      const spawnEnv = { ...process.env, ...customEnv };
+
+      // DEBUG: Log key environment variables being passed
+      log.debug(`Environment debug (single driver):`);
+      log.debug(`  ENABLE_SPLASH_WINDOW: ${spawnEnv.ENABLE_SPLASH_WINDOW || 'not set'}`);
+      log.debug(`  XDG_DATA_HOME: ${spawnEnv.XDG_DATA_HOME || 'not set'}`);
+      log.debug(`  TAURI_DATA_DIR: ${spawnEnv.TAURI_DATA_DIR || 'not set'}`);
+      log.debug(`  DISPLAY: ${spawnEnv.DISPLAY || 'not set'}`);
 
       if (process.platform === 'linux') {
-        log.info(`Starting tauri-driver (DISPLAY from environment: ${env.DISPLAY || 'not set'})`);
+        log.info(`Starting tauri-driver (DISPLAY from environment: ${spawnEnv.DISPLAY || 'not set'})`);
       }
 
       this.tauriDriverProcess = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        env,
+        env: spawnEnv,
       });
-
-      // Get options for backend log capture (use first capability's options for single instance)
-      const firstCap = capabilities?.[0];
-      const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
 
       // Use readline for line-buffered log handling (fixes Windows chunking issues)
       setupStreamLogHandler({

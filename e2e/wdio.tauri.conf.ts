@@ -164,7 +164,12 @@ type StandardCapabilities = TauriCapability[];
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
 if (envContext.isMultiremote) {
-  // Tauri multiremote configuration
+  // Tauri multiremote configuration - create base env for tauri-driver
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+
   // The service automatically handles data directory isolation for multiremote instances
   capabilities = {
     browserA: {
@@ -178,6 +183,8 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
+          // Pass environment variables to tauri-driver
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -199,6 +206,8 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
+          // Pass environment variables to tauri-driver
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -211,7 +220,12 @@ if (envContext.isMultiremote) {
     },
   };
 } else {
-  // Tauri standard configuration
+  // Tauri standard configuration - create base env for tauri-driver
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+
   capabilities = [
     {
       browserName: 'tauri',
@@ -223,6 +237,8 @@ if (envContext.isMultiremote) {
       'wdio:tauriServiceOptions': {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
+        // Pass environment variables to tauri-driver
+        env: baseEnv,
         // Enable log capture for logging tests
         captureBackendLogs: true,
         captureFrontendLogs: true,
