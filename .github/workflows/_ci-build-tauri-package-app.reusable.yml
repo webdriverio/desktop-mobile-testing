@@ -1,6 +1,9 @@
 name: Build Tauri Package Test App
 description: 'Builds Tauri package test application and creates shareable artifacts'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
