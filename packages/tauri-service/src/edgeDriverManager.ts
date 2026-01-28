@@ -159,6 +159,7 @@ export async function findMsEdgeDriver(): Promise<{ path?: string; version?: str
  */
 async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
   const majorVersion = getMajorVersion(edgeVersion);
+  const safeMajorVersion = majorVersion.replace(/\D/g, '');
 
   try {
     // Try to get the latest stable release for this major version
@@ -167,7 +168,7 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
       $ProgressPreference = 'SilentlyContinue'
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       try {
-        $response = Invoke-WebRequest -Uri 'https://msedgedriver.microsoft.com/LATEST_RELEASE_${majorVersion}' -UseBasicParsing -TimeoutSec 10
+        $response = Invoke-WebRequest -Uri 'https://msedgedriver.microsoft.com/LATEST_RELEASE_${safeMajorVersion}' -UseBasicParsing -TimeoutSec 10
         $response.Content.Trim()
       } catch {
         Write-Output ''
@@ -177,8 +178,8 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
     );
 
     const latestForMajor = response.stdout.trim();
-    if (latestForMajor?.startsWith(majorVersion)) {
-      log.debug(`Found latest driver version ${latestForMajor} for Edge ${majorVersion}`);
+    if (latestForMajor?.startsWith(safeMajorVersion)) {
+      log.debug(`Found latest driver version ${latestForMajor} for Edge ${safeMajorVersion}`);
       return latestForMajor;
     }
   } catch (_error) {
