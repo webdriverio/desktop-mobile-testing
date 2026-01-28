@@ -239,28 +239,52 @@ runs:
           sleep $SLEEP_TIME
         done
 
-        # Find the downloaded zip (handles different behavior of gh run download)
+        # Check what was downloaded
         NORMALIZED_PATH=$(echo "${{ inputs.path }}" | sed 's|\\|/|g')
-        ZIP_FILES=$(find "$NORMALIZED_PATH" -type f -name "*.zip" | sort)
-        FIRST_ZIP=$(echo "$ZIP_FILES" | head -n 1)
-        EXPECTED_PATH="$NORMALIZED_PATH/${{ inputs.filename }}"
+        echo "Contents of download directory:"
+        ls -la "$NORMALIZED_PATH" || echo "Directory listing failed"
 
-        if [ -n "$FIRST_ZIP" ] && [ "$FIRST_ZIP" != "$EXPECTED_PATH" ]; then
-          # Move the file to the expected location
-          mv "$FIRST_ZIP" "$EXPECTED_PATH"
-        fi
-
-        # Check if the file exists
-        if [ -f "$EXPECTED_PATH" ]; then
+        # Check if expected directories exist (gh run download extracts contents directly)
+        if [ -d "$NORMALIZED_PATH/packages" ] || [ -d "$NORMALIZED_PATH/fixtures" ]; then
+          echo "Artifact contents extracted directly to directory"
           echo "valid=true" >> $GITHUB_OUTPUT
           echo "success=true" >> $GITHUB_OUTPUT
-          echo "::notice::Successfully downloaded ${{ inputs.name }} from GitHub Artifacts"
-        else
-          echo "::error::Failed to find downloaded artifact"
-          echo "valid=false" >> $GITHUB_OUTPUT
-          echo "success=false" >> $GITHUB_OUTPUT
-          exit 1
+          echo "extracted=true" >> $GITHUB_OUTPUT
+          echo "::notice::Successfully downloaded and extracted ${{ inputs.name }} from GitHub Artifacts"
+          exit 0
         fi
+
+        # Otherwise, look for a zip file
+        EXPECTED_PATH="$NORMALIZED_PATH/${{ inputs.filename }}"
+        if [ -f "$EXPECTED_PATH" ]; then
+          echo "Found artifact at expected path: $EXPECTED_PATH"
+          echo "valid=true" >> $GITHUB_OUTPUT
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "extracted=false" >> $GITHUB_OUTPUT
+          echo "::notice::Successfully downloaded ${{ inputs.name }} from GitHub Artifacts"
+          exit 0
+        fi
+
+        # Search for any zip file
+        ZIP_FILES=$(find "$NORMALIZED_PATH" -type f -name "*.zip" 2>/dev/null | sort)
+        FIRST_ZIP=$(echo "$ZIP_FILES" | head -n 1)
+
+        if [ -n "$FIRST_ZIP" ]; then
+          echo "Found zip file: $FIRST_ZIP"
+          if [ "$FIRST_ZIP" != "$EXPECTED_PATH" ]; then
+            mv "$FIRST_ZIP" "$EXPECTED_PATH"
+          fi
+          echo "valid=true" >> $GITHUB_OUTPUT
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "extracted=false" >> $GITHUB_OUTPUT
+          echo "::notice::Successfully downloaded ${{ inputs.name }} from GitHub Artifacts"
+          exit 0
+        fi
+
+        echo "::error::Failed to find downloaded artifact or extracted contents"
+        echo "valid=false" >> $GITHUB_OUTPUT
+        echo "success=false" >> $GITHUB_OUTPUT
+        exit 1
       env:
         GH_TOKEN: ${{ github.token }}
 
@@ -270,41 +294,52 @@ runs:
       if: steps.verify-file.outputs.exists == 'true' || steps.download-artifact.outputs.valid == 'true'
       shell: bash
       run: |
-        # Ensure the archive exists
-        ARCHIVE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
-        if [ ! -f "$ARCHIVE_PATH" ]; then
-          echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
-          exit 1
-        fi
-
-        # Normalize path separators for cross-platform compatibility
-        NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
-
-        # Security: Extract to a temporary directory to prevent artifact poisoning
-        # This prevents malicious artifacts from overwriting critical files in the workspace
-        EXTRACT_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
-        mkdir -p "$EXTRACT_DIR"
-        unzip -q -o "$NORMALIZED_PATH" -d "$EXTRACT_DIR"
-
-        # Check extraction success
-        if [ $? -eq 0 ]; then
-          # Count distribution directories in the extraction directory
-          DIST_DIRS=$(find "$EXTRACT_DIR" -type d -path "*/dist" | sort | wc -l)
-
-          if [ "$DIST_DIRS" -lt 1 ]; then
-            echo "::warning::Extraction completed but no dist directories found"
-          else
-            echo "Found $DIST_DIRS dist directories in artifact"
+        # Check if artifact was already extracted by gh run download
+        if [ "${{ steps.download-artifact.outputs.extracted }}" == "true" ]; then
+          echo "Artifact was already extracted by gh run download, copying to workspace..."
+          EXTRACT_DIR="${{ inputs.path }}"
+        else
+          # Ensure the archive exists
+          ARCHIVE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
+          if [ ! -f "$ARCHIVE_PATH" ]; then
+            echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
+            exit 1
           fi
 
-          # Security: Only copy expected dist directories to workspace
-          # This prevents malicious artifacts from overwriting package.json, scripts, etc.
+          # Normalize path separators for cross-platform compatibility
+          NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
+
+          # Security: Extract to a temporary directory to prevent artifact poisoning
+          # This prevents malicious artifacts from overwriting critical files in the workspace
+          EXTRACT_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
+          mkdir -p "$EXTRACT_DIR"
+          unzip -q -o "$NORMALIZED_PATH" -d "$EXTRACT_DIR"
+
+          # Check extraction success
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to extract archive"
+            exit 1
+          fi
+        fi
+
+        # Count distribution directories, dist-js directories, and target directories in the extraction directory
+        DIST_DIRS=$(find "$EXTRACT_DIR" -type d -path "*/dist" 2>/dev/null | sort | wc -l)
+        DIST_JS_DIRS=$(find "$EXTRACT_DIR" -type d -name "dist-js" 2>/dev/null | sort | wc -l)
+        TARGET_DIRS=$(find "$EXTRACT_DIR" -type d -name "target" 2>/dev/null | sort | wc -l)
+
+        # Security: Only copy expected directories to workspace
+        # This prevents malicious artifacts from overwriting package.json, scripts, etc.
+
+        # Copy dist directories to workspace
+        if [ "$DIST_DIRS" -ge 1 ]; then
           echo "Copying dist directories to workspace..."
-          find "$EXTRACT_DIR" -type d -path "*/dist" | while read -r dist_dir; do
+          find "$EXTRACT_DIR" -type d -path "*/dist" 2>/dev/null | while read -r dist_dir; do
             # Get the relative path from the extraction root
             rel_path="${dist_dir#$EXTRACT_DIR/}"
             # Remove leading ./ if present
             rel_path="${rel_path#./}"
+            # Convert Windows-style paths to Unix-style for consistent handling
+            rel_path=$(echo "$rel_path" | sed 's|\\|/|g')
             target_dir="${{ github.workspace }}/$rel_path"
 
             # Create parent directory if it doesn't exist
@@ -323,13 +358,72 @@ runs:
             fi
             echo "  ✓ Copied $rel_path"
           done
+        fi
 
-          # Cleanup: Remove temporary extraction directory
+        # Copy dist-js directories to workspace (for Tauri plugin JS builds)
+        if [ "$DIST_JS_DIRS" -ge 1 ]; then
+          echo "Copying dist-js directories to workspace..."
+          find "$EXTRACT_DIR" -type d -name "dist-js" 2>/dev/null | while read -r dist_js_dir; do
+            # Get the relative path from the extraction root
+            rel_path="${dist_js_dir#$EXTRACT_DIR/}"
+            # Remove leading ./ if present
+            rel_path="${rel_path#./}"
+            # Convert Windows-style paths to Unix-style for consistent handling
+            rel_path=$(echo "$rel_path" | sed 's|\\|/|g')
+            target_dir="${{ github.workspace }}/$rel_path"
+
+            # Create parent directory if it doesn't exist
+            parent_dir=$(dirname "$target_dir")
+            if [ ! -d "$parent_dir" ]; then
+              mkdir -p "$parent_dir"
+            fi
+
+            # Copy dist-js directory contents to workspace
+            if [ -d "$target_dir" ]; then
+              # Merge: copy contents into existing dist-js directory
+              cp -r "$dist_js_dir"/* "$target_dir/" 2>/dev/null || true
+            else
+              # Create new dist-js directory
+              cp -r "$dist_js_dir" "$parent_dir/"
+            fi
+            echo "  ✓ Copied $rel_path"
+          done
+        fi
+
+        # Copy target directories to workspace (for Tauri/Rust builds)
+        if [ "$TARGET_DIRS" -ge 1 ]; then
+          echo "Copying target directories to workspace..."
+          find "$EXTRACT_DIR" -type d -name "target" 2>/dev/null | while read -r target_dir; do
+            # Get the relative path from the extraction root
+            rel_path="${target_dir#$EXTRACT_DIR/}"
+            # Remove leading ./ if present
+            rel_path="${rel_path#./}"
+            # Convert Windows-style paths to Unix-style for consistent handling
+            rel_path=$(echo "$rel_path" | sed 's|\\|/|g')
+            dest_dir="${{ github.workspace }}/$rel_path"
+
+            # Create parent directory if it doesn't exist
+            parent_dir=$(dirname "$dest_dir")
+            if [ ! -d "$parent_dir" ]; then
+              mkdir -p "$parent_dir"
+            fi
+
+            # Copy target directory contents to workspace
+            if [ -d "$dest_dir" ]; then
+              # Merge: copy contents into existing target directory
+              cp -r "$target_dir"/* "$dest_dir/" 2>/dev/null || true
+            else
+              # Create new target directory
+              cp -r "$target_dir" "$parent_dir/"
+            fi
+            echo "  ✓ Copied $rel_path"
+          done
+        fi
+
+        # Cleanup: Remove temporary extraction directory (only if we extracted a zip)
+        if [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
           rm -rf "$EXTRACT_DIR"
           echo "Cleaned up temporary extraction directory"
-        else
-          echo "::error::Failed to extract archive"
-          exit 1
         fi
 
         # Return success
