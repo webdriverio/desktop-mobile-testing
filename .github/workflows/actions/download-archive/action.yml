@@ -213,10 +213,26 @@ runs:
         EXTRACT_DIR="${{ steps.prepare-extraction.outputs.extract_dir }}"
         WORKSPACE="${{ github.workspace }}"
 
+        echo "DEBUG: EXTRACT_DIR=$EXTRACT_DIR"
+        echo "DEBUG: WORKSPACE=$WORKSPACE"
+        echo "DEBUG: Listing EXTRACT_DIR contents:"
+        ls -la "$EXTRACT_DIR" || echo "Failed to list EXTRACT_DIR"
+
+        # Check if packages directory exists in extract dir
+        if [ -d "$EXTRACT_DIR/packages" ]; then
+          echo "DEBUG: packages directory exists in EXTRACT_DIR"
+          echo "DEBUG: Listing packages directory:"
+          ls -la "$EXTRACT_DIR/packages" || echo "Failed to list packages"
+        else
+          echo "DEBUG: packages directory NOT found in EXTRACT_DIR"
+        fi
+
         # Reusable function to copy directories safely
         copy_directory() {
           local src_dir="$1"
           local dest_base="$2"
+
+          echo "DEBUG: copy_directory called with src_dir=$src_dir"
 
           local rel_path="${src_dir#$EXTRACT_DIR/}"
           rel_path="${rel_path#./}"
@@ -224,13 +240,18 @@ runs:
           local target_dir="${dest_base}/${rel_path}"
           local parent_dir=$(dirname "$target_dir")
 
+          echo "DEBUG: rel_path=$rel_path, target_dir=$target_dir, parent_dir=$parent_dir"
+
           if [ ! -d "$parent_dir" ]; then
+            echo "DEBUG: Creating parent_dir: $parent_dir"
             mkdir -p "$parent_dir"
           fi
 
           if [ -d "$target_dir" ]; then
+            echo "DEBUG: target_dir exists, copying contents"
             cp -r "$src_dir"/* "$target_dir/" 2>/dev/null || true
           else
+            echo "DEBUG: target_dir does not exist, copying entire directory"
             cp -r "$src_dir" "$parent_dir/"
           fi
           echo "  ✓ Copied $rel_path"
@@ -252,21 +273,30 @@ runs:
           find_pattern="${DIR_TYPES[$dir_type]}"
           count=0
 
+          echo "DEBUG: Searching for $dir_type with pattern: $find_pattern"
+
           for search_base in "${SEARCH_BASES[@]}"; do
+            echo "DEBUG: Checking search_base: $search_base"
             if [ -d "$EXTRACT_DIR/$search_base" ]; then
+              echo "DEBUG: Found $search_base directory, running find..."
               # Use eval carefully to execute the find command
               while IFS= read -r dir; do
                 if [ -n "$dir" ]; then
+                  echo "DEBUG: Found dir: $dir"
                   copy_directory "$dir" "$WORKSPACE"
                   count=$((count + 1))
                 fi
               done < <(eval "find \"$EXTRACT_DIR/$search_base\" $find_pattern 2>/dev/null")
+            else
+              echo "DEBUG: $search_base directory not found in EXTRACT_DIR"
             fi
           done
 
           if [ $count -gt 0 ]; then
             echo "Copied $count $dir_type directories"
             TOTAL_COPIED=$((TOTAL_COPIED + count))
+          else
+            echo "DEBUG: No $dir_type directories found"
           fi
         done
 
@@ -275,6 +305,9 @@ runs:
         else
           echo "✅ Successfully copied $TOTAL_COPIED directories to workspace"
         fi
+
+        echo "DEBUG: Verifying copied directories in WORKSPACE:"
+        find "$WORKSPACE/packages" -name "dist" -type d 2>/dev/null | head -5 || echo "No dist directories found in WORKSPACE"
 
     # Cleanup temporary extraction directory (only if we extracted a zip)
     - name: 🧹 Cleanup Temporary Files
