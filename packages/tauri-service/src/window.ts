@@ -17,7 +17,7 @@ const DOM_COMMANDS = ['click', 'keys', 'doubleClick', 'rightClick', 'setValue', 
 
 export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promise<string> {
   try {
-    const result = await browser.tauri.execute(({ core }) => core.invoke('window:getActiveLabel'));
+    const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_active_window_label'));
     return result as string;
   } catch (error) {
     log.warn('Failed to get active window label:', error);
@@ -27,7 +27,7 @@ export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promis
 
 export async function listWindowLabels(browser: WebdriverIO.Browser): Promise<string[]> {
   try {
-    const result = await browser.tauri.execute(({ core }) => core.invoke('window:list'));
+    const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
     return result as string[];
   } catch (error) {
     log.warn('Failed to list window labels:', error);
