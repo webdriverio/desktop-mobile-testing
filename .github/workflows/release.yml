@@ -1,5 +1,9 @@
 name: Release
 
+permissions:
+  contents: write
+  actions: read
+
 on:
   workflow_dispatch:
     inputs:

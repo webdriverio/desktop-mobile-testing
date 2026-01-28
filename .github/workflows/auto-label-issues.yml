@@ -1,5 +1,8 @@
 name: Auto-label issues
 
+permissions:
+  issues: write
+
 on:
   issues:
     types: [opened]
