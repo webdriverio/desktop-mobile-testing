@@ -2257,7 +2257,7 @@ packages:
     resolution: {integrity: sha512-xm5Ti/Hp3o4xHrsK9Yy3MS6KbDxYbq485hDsFvxqaNA7equHLPdo8H8faTitTeb14QCDfLW4iwCxdVYu5sn6YQ==}
 
   '@puppeteer/browsers@file:puppeteer-browsers-2.11.1.tgz':
-    resolution: {integrity: sha512-wv3MHIgbJgdNGYOjOJ77/cZ6gFjSt1DR6ycj9wD0L17X9kQqdawcWCaE39B9EPVOaJkJMJVvptja3cg9NUQKPg==, tarball: file:puppeteer-browsers-2.11.1.tgz}
+    resolution: {integrity: sha512-PM673y80HV9D2g2Q8BLQgUPhsQLhhpH277jM2VgON2UFGJCQPpQJkV2kpWQVuHNg97Ow+jp8j/6RfjRl/yYMMg==, tarball: file:puppeteer-browsers-2.11.1.tgz}
     version: 2.11.1
     engines: {node: '>=18'}
     hasBin: true
@@ -2821,7 +2821,7 @@ packages:
     engines: {node: '>=18.20.0'}
 
   '@wdio/utils@file:wdio-utils-9.23.0.tgz':
-    resolution: {integrity: sha512-5cZWdgEjJb1mGH2Hj5Yj51HILYtLhxPstKJhPSAwWuUu4VkpOAHL+NlscrJ6efDzkQP2p9IflnIcYcZ0uqVCnw==, tarball: file:wdio-utils-9.23.0.tgz}
+    resolution: {integrity: sha512-/tn5usxxK0HlSjqp7iyQpRGmrpAGIeVZ/dDHudop7woQWwQrLbV2S+eCY8/bPjaPMEOa/fu8tQanifYDTRM8Ag==, tarball: file:wdio-utils-9.23.0.tgz}
     version: 9.23.0
     engines: {node: '>=18.20.0'}
 
