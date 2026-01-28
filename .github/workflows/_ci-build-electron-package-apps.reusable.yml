@@ -1,6 +1,9 @@
 name: Build Electron Package Test Apps
 description: 'Builds Electron package test applications and creates shareable artifacts'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

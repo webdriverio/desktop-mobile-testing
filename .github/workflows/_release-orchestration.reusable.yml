@@ -1,5 +1,8 @@
 name: Release Orchestration (Reusable)
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

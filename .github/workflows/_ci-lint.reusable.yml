@@ -1,6 +1,9 @@
 name: Lint
 description: 'Runs code quality checks across the codebase'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed

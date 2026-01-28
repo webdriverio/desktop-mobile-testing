@@ -1,6 +1,9 @@
 name: E2E Tests
 description: 'Runs end-to-end tests across different scenarios (ESM only)'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed

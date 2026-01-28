@@ -1,6 +1,9 @@
 name: Package (Docker)
 description: 'Runs Tauri package tests in Docker containers across different Linux distributions'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

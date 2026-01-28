@@ -1,6 +1,9 @@
 name: Tauri E2E Tests
 description: 'Runs Tauri end-to-end tests across different scenarios and test types'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed

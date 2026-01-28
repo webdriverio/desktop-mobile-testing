@@ -1,5 +1,8 @@
 name: Detect Affected Services (Reusable)
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

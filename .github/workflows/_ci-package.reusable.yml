@@ -1,6 +1,9 @@
 name: Package
 description: 'Runs package tests across different operating systems'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed

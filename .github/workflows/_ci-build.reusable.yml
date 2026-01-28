@@ -1,6 +1,9 @@
 name: Build
 description: 'Builds all packages and creates shareable artifacts for testing'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed

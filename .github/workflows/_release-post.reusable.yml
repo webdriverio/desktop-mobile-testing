@@ -1,5 +1,8 @@
 name: Release Post (Reusable)
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

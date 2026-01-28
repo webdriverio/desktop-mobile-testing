@@ -1,6 +1,9 @@
 name: Build Tauri Apps
 description: 'Builds Tauri test applications and creates shareable artifacts for E2E testing'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed
