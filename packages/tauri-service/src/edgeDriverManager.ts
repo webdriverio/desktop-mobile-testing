@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process';
+import { exec, execFile } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { createLogger } from '@wdio/native-utils';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const log = createLogger('tauri-service', 'launcher');
 
 export interface EdgeDriverResult {
@@ -254,7 +255,7 @@ try {
 
   try {
     // Execute PowerShell script
-    const { stdout, stderr } = await execAsync(`powershell.exe -ExecutionPolicy Bypass -File "${psScriptPath}"`, {
+    const { stdout, stderr } = await execFileAsync('powershell.exe', ['-ExecutionPolicy', 'Bypass', '-File', psScriptPath], {
       encoding: 'utf8',
       timeout: 60000, // 1 minute timeout
     });
