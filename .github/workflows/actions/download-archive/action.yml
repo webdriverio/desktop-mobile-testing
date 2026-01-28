@@ -178,25 +178,28 @@ runs:
         }
 
         # Determine source directory based on how we got the artifact
-        # Note: actions/cache/restore extracts to the workspace root, not to inputs.path
+        # Note: actions/cache/restore restores the zip file to inputs.path, not extracted contents
         WORKSPACE="${{ github.workspace }}"
         INPUT_PATH="${{ inputs.path }}"
+        ARCHIVE_PATH="$INPUT_PATH/${{ inputs.filename }}"
         
         if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
-          # Cache hit: files were extracted to workspace root by actions/cache
-          echo "Cache hit detected..."
+          # Cache hit: zip file was restored to inputs.path, need to extract it
+          echo "Cache hit detected, extracting zip file..."
           
-          # Check if contents are in workspace root (cache extracts here)
-          if [ -d "$WORKSPACE/packages" ] || [ -d "$WORKSPACE/fixtures" ]; then
-            echo "Found extracted contents in workspace root"
-            SOURCE_DIR="$WORKSPACE"
-          elif [ -d "$INPUT_PATH/packages" ] || [ -d "$INPUT_PATH/fixtures" ]; then
-            echo "Found extracted contents in inputs.path"
-            SOURCE_DIR="$INPUT_PATH"
+          if [ -f "$ARCHIVE_PATH" ]; then
+            echo "Found zip file at $ARCHIVE_PATH, extracting..."
+            SOURCE_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
+            mkdir -p "$SOURCE_DIR"
+            unzip -q -o "$ARCHIVE_PATH" -d "$SOURCE_DIR"
+            if [ $? -ne 0 ]; then
+              echo "::error::Failed to extract archive from cache"
+              exit 1
+            fi
+            echo "Extracted cache archive to $SOURCE_DIR"
           else
-            # Fallback: check inputs.path for zip file
-            echo "Looking for zip file in inputs.path..."
-            SOURCE_DIR="$INPUT_PATH"
+            echo "::error::Cache hit but zip file not found at $ARCHIVE_PATH"
+            exit 1
           fi
         elif [ "${{ steps.download-artifact.outputs.extracted }}" == "true" ]; then
           # gh run download extracted directly to inputs.path
@@ -204,7 +207,6 @@ runs:
           SOURCE_DIR="$INPUT_PATH"
         else
           # Need to extract from downloaded zip file
-          ARCHIVE_PATH="$INPUT_PATH/${{ inputs.filename }}"
           if [ ! -f "$ARCHIVE_PATH" ]; then
             echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
             exit 1
@@ -224,6 +226,21 @@ runs:
         echo "Source directory: $SOURCE_DIR"
         echo "Contents of source:"
         ls -la "$SOURCE_DIR" || echo "Directory listing failed"
+
+        # Debug: Check what's in the packages directory
+        echo "DEBUG: Checking if packages directory exists..."
+        if [ -d "$SOURCE_DIR/packages" ]; then
+          echo "DEBUG: packages directory exists at $SOURCE_DIR/packages"
+          echo "Contents of $SOURCE_DIR/packages:"
+          ls -la "$SOURCE_DIR/packages" 2>&1 || echo "Directory listing failed"
+          echo "Looking for dist directories in $SOURCE_DIR/packages:"
+          find "$SOURCE_DIR/packages" -type d -path "*/dist" 2>&1 || echo "No dist directories found"
+          echo "Checking specific package:"
+          ls -la "$SOURCE_DIR/packages/bundler" 2>&1 || echo "bundler not found"
+          ls -la "$SOURCE_DIR/packages/bundler/dist" 2>&1 || echo "bundler/dist not found"
+        else
+          echo "DEBUG: packages directory does NOT exist at $SOURCE_DIR/packages"
+        fi
 
         # Count and copy distribution directories (security: only copy expected directories)
         # Only search in packages/, fixtures/, and e2e/ directories to avoid node_modules
