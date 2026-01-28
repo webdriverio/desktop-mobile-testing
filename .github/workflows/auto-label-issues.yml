@@ -15,39 +15,43 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = github.context.issue;
+            // Get issue number from context.payload since context.issue may be undefined
+            const issueNumber = context.payload.issue.number;
             const body = context.payload.issue.body || '';
 
-            const scopeLabels = {
-              'Electron Service': 'area:electron',
-              'Tauri Service': 'area:tauri',
-              'Shared Utilities': 'area:shared',
-              'Electron CDP Bridge': 'area:electron-cdp',
-              'Tauri Plugin': 'area:tauri-plugin',
-              'Documentation': 'area:docs'
-            };
+            // Match both the issue template dropdown format and plain text
+            const scopeLabels = [
+              { patterns: ['Electron Service', '@wdio/electron-service'], label: 'area:electron' },
+              { patterns: ['Tauri Service', '@wdio/tauri-service'], label: 'area:tauri' },
+              { patterns: ['Shared Utilities', '@wdio/native-utils', '@wdio/native-types'], label: 'area:shared' },
+              { patterns: ['Electron CDP Bridge', '@wdio/electron-cdp-bridge'], label: 'area:electron-cdp' },
+              { patterns: ['Tauri Plugin', '@wdio/tauri-plugin'], label: 'area:tauri-plugin' },
+              { patterns: ['Documentation'], label: 'area:docs' }
+            ];
 
-            for (const [key, label] of Object.entries(scopeLabels)) {
-              if (body.includes(key)) {
-                github.rest.issues.addLabels({
-                  issue_number: issue.number,
+            for (const { patterns, label } of scopeLabels) {
+              const matched = patterns.some(pattern => body.includes(pattern));
+              if (matched) {
+                await github.rest.issues.addLabels({
+                  issue_number: issueNumber,
                   labels: [label],
                   owner: context.repo.owner,
                   repo: context.repo.repo
                 });
+                console.log(`Applied label ${label} for pattern match: ${patterns.find(p => body.includes(p))}`);
                 break;
               }
             }
 
   label-platform:
     runs-on: ubuntu-latest
-    if: startsWith(github.context.payload.issue.title, '[🐛 Bug]')
+    if: startsWith(github.event.issue.title, '[🐛 Bug]')
     steps:
       - name: Extract platform and apply OS label
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = github.context.issue;
+            const issueNumber = context.payload.issue.number;
             const body = context.payload.issue.body || '';
 
             const platformLabels = {
@@ -58,12 +62,13 @@ jobs:
 
             for (const [key, label] of Object.entries(platformLabels)) {
               if (body.includes(key)) {
-                github.rest.issues.addLabels({
-                  issue_number: issue.number,
+                await github.rest.issues.addLabels({
+                  issue_number: issueNumber,
                   labels: [label],
                   owner: context.repo.owner,
                   repo: context.repo.repo
                 });
+                console.log(`Applied label ${label} for platform: ${key}`);
                 break;
               }
             }
