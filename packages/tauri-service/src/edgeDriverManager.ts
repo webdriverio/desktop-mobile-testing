@@ -164,8 +164,7 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
 
   try {
     // Try to get the latest stable release for this major version
-    const response = await execAsync(
-      `powershell.exe -Command "
+    const psCommand = `
       $ProgressPreference = 'SilentlyContinue'
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       try {
@@ -174,9 +173,12 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
       } catch {
         Write-Output ''
       }
-    "`,
-      { encoding: 'utf8', timeout: 15000 },
-    );
+    `;
+
+    const response = await execFileAsync('powershell.exe', ['-Command', psCommand], {
+      encoding: 'utf8',
+      timeout: 15000,
+    });
 
     const latestForMajor = response.stdout.trim();
     if (latestForMajor?.startsWith(safeMajorVersion)) {
