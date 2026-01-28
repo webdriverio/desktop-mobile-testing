@@ -158,9 +158,8 @@ runs:
         copy_directory() {
           local src_dir="$1"
           local dest_base="$2"
-          local dir_name="$3"
 
-          local rel_path="${src_dir#$EXTRACT_DIR/}"
+          local rel_path="${src_dir#$SOURCE_DIR/}"
           rel_path="${rel_path#./}"
           rel_path=$(echo "$rel_path" | sed 's|\\|/|g')
           local target_dir="${dest_base}/${rel_path}"
@@ -178,21 +177,43 @@ runs:
           echo "  ✓ Copied $rel_path"
         }
 
-        # Determine extraction directory
-        if [ "${{ steps.download-artifact.outputs.extracted }}" == "true" ]; then
-          echo "Artifact was already extracted by gh run download, copying to workspace..."
-          EXTRACT_DIR="${{ inputs.path }}"
+        # Determine source directory based on how we got the artifact
+        # Note: actions/cache/restore extracts to the workspace root, not to inputs.path
+        WORKSPACE="${{ github.workspace }}"
+        INPUT_PATH="${{ inputs.path }}"
+        
+        if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
+          # Cache hit: files were extracted to workspace root by actions/cache
+          echo "Cache hit detected..."
+          
+          # Check if contents are in workspace root (cache extracts here)
+          if [ -d "$WORKSPACE/packages" ] || [ -d "$WORKSPACE/fixtures" ]; then
+            echo "Found extracted contents in workspace root"
+            SOURCE_DIR="$WORKSPACE"
+          elif [ -d "$INPUT_PATH/packages" ] || [ -d "$INPUT_PATH/fixtures" ]; then
+            echo "Found extracted contents in inputs.path"
+            SOURCE_DIR="$INPUT_PATH"
+          else
+            # Fallback: check inputs.path for zip file
+            echo "Looking for zip file in inputs.path..."
+            SOURCE_DIR="$INPUT_PATH"
+          fi
+        elif [ "${{ steps.download-artifact.outputs.extracted }}" == "true" ]; then
+          # gh run download extracted directly to inputs.path
+          echo "Artifact was extracted by gh run download, copying to workspace..."
+          SOURCE_DIR="$INPUT_PATH"
         else
-          ARCHIVE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
+          # Need to extract from downloaded zip file
+          ARCHIVE_PATH="$INPUT_PATH/${{ inputs.filename }}"
           if [ ! -f "$ARCHIVE_PATH" ]; then
             echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
             exit 1
           fi
 
           NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
-          EXTRACT_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
-          mkdir -p "$EXTRACT_DIR"
-          unzip -q -o "$NORMALIZED_PATH" -d "$EXTRACT_DIR"
+          SOURCE_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
+          mkdir -p "$SOURCE_DIR"
+          unzip -q -o "$NORMALIZED_PATH" -d "$SOURCE_DIR"
 
           if [ $? -ne 0 ]; then
             echo "::error::Failed to extract archive"
@@ -200,35 +221,62 @@ runs:
           fi
         fi
 
+        echo "Source directory: $SOURCE_DIR"
+        echo "Contents of source:"
+        ls -la "$SOURCE_DIR" || echo "Directory listing failed"
+
         # Count and copy distribution directories (security: only copy expected directories)
-        DIST_DIRS=$(find "$EXTRACT_DIR" -type d -path "*/dist" 2>/dev/null | wc -l)
-        DIST_JS_DIRS=$(find "$EXTRACT_DIR" -type d -name "dist-js" 2>/dev/null | wc -l)
-        TARGET_DIRS=$(find "$EXTRACT_DIR" -type d -name "target" 2>/dev/null | wc -l)
+        # Only search in packages/, fixtures/, and e2e/ directories to avoid node_modules
+        DIST_DIRS=0
+        DIST_JS_DIRS=0
+        TARGET_DIRS=0
+
+        for search_dir in "packages" "fixtures" "e2e"; do
+          if [ -d "$SOURCE_DIR/$search_dir" ]; then
+            DIST_DIRS=$((DIST_DIRS + $(find "$SOURCE_DIR/$search_dir" -type d -path "*/dist" 2>/dev/null | wc -l)))
+            DIST_JS_DIRS=$((DIST_JS_DIRS + $(find "$SOURCE_DIR/$search_dir" -type d -name "dist-js" 2>/dev/null | wc -l)))
+            TARGET_DIRS=$((TARGET_DIRS + $(find "$SOURCE_DIR/$search_dir" -type d -name "target" 2>/dev/null | wc -l)))
+          fi
+        done
+
+        echo "Found $DIST_DIRS dist directories, $DIST_JS_DIRS dist-js directories, $TARGET_DIRS target directories"
 
         if [ "$DIST_DIRS" -ge 1 ]; then
           echo "Copying dist directories to workspace..."
-          find "$EXTRACT_DIR" -type d -path "*/dist" 2>/dev/null | while read -r dir; do
-            copy_directory "$dir" "${{ github.workspace }}" "dist"
+          for search_dir in "packages" "fixtures" "e2e"; do
+            if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              find "$SOURCE_DIR/$search_dir" -type d -path "*/dist" 2>/dev/null | while read -r dir; do
+                copy_directory "$dir" "${{ github.workspace }}"
+              done
+            fi
           done
         fi
 
         if [ "$DIST_JS_DIRS" -ge 1 ]; then
           echo "Copying dist-js directories to workspace..."
-          find "$EXTRACT_DIR" -type d -name "dist-js" 2>/dev/null | while read -r dir; do
-            copy_directory "$dir" "${{ github.workspace }}" "dist-js"
+          for search_dir in "packages" "fixtures" "e2e"; do
+            if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              find "$SOURCE_DIR/$search_dir" -type d -name "dist-js" 2>/dev/null | while read -r dir; do
+                copy_directory "$dir" "${{ github.workspace }}"
+              done
+            fi
           done
         fi
 
         if [ "$TARGET_DIRS" -ge 1 ]; then
           echo "Copying target directories to workspace..."
-          find "$EXTRACT_DIR" -type d -name "target" 2>/dev/null | while read -r dir; do
-            copy_directory "$dir" "${{ github.workspace }}" "target"
+          for search_dir in "packages" "fixtures" "e2e"; do
+            if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              find "$SOURCE_DIR/$search_dir" -type d -name "target" 2>/dev/null | while read -r dir; do
+                copy_directory "$dir" "${{ github.workspace }}"
+              done
+            fi
           done
         fi
 
-        # Cleanup temporary extraction directory
-        if [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
-          rm -rf "$EXTRACT_DIR"
+        # Cleanup temporary extraction directory (only if we extracted a zip)
+        if [ "${{ steps.cache-restore.outputs.cache-hit }}" != "true" ] && [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
+          rm -rf "$SOURCE_DIR"
           echo "Cleaned up temporary extraction directory"
         fi
 
