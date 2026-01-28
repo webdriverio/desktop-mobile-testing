@@ -25,268 +25,305 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    # Check if this is a rerun of a previous workflow run
-    - name: 🔄 Check for Rerun
-      id: check-rerun
-      shell: bash
-      run: |
-        if [ "${{ github.run_attempt }}" -gt 1 ]; then
-          echo "rerun_suffix=-rerun${{ github.run_attempt }}" >> $GITHUB_OUTPUT
-        else
-          echo "rerun_suffix=" >> $GITHUB_OUTPUT
-        fi
-
-    # Generate standard cache keys
+    # Generate cache keys and check for rerun
     - name: 🔑 Generate Cache Keys
       id: generate-keys
       shell: bash
       run: |
-        # Ensure values have defaults
         CACHE_PREFIX="${{ inputs.cache_key_prefix || 'artifacts' }}"
         NAME="${{ inputs.name }}"
         OS="${{ runner.os }}"
         RUN_ID="${{ github.run_id }}"
-        RERUN_SUFFIX="${{ steps.check-rerun.outputs.rerun_suffix }}"
 
-        # Generate platform-specific key (no cross-platform sharing to avoid path issues)
-        PLATFORM_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
-        echo "platform_key=${PLATFORM_KEY}" >> $GITHUB_OUTPUT
+        # Handle rerun suffix
+        RERUN_SUFFIX=""
+        if [ "${{ github.run_attempt }}" -gt 1 ]; then
+          RERUN_SUFFIX="-rerun${{ github.run_attempt }}"
+        fi
 
-        # Generate standard key (os-specific) for backward compatibility
-        STANDARD_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
-        echo "standard_key=${STANDARD_KEY}" >> $GITHUB_OUTPUT
+        # Generate keys: exact (platform-specific), primary (with restore-keys), fallback
+        PRIMARY_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
+        FALLBACK_KEY="${CACHE_PREFIX}-${NAME}-"
 
-        # Generate OS-agnostic key
-        AGNOSTIC_KEY="${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
-        echo "agnostic_key=${AGNOSTIC_KEY}" >> $GITHUB_OUTPUT
+        echo "primary_key=${PRIMARY_KEY}" >> $GITHUB_OUTPUT
+        echo "fallback_key=${FALLBACK_KEY}" >> $GITHUB_OUTPUT
 
-        # Generate Linux-specific key for cross-OS compatibility
-        LINUX_KEY="Linux-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
-        echo "linux_key=${LINUX_KEY}" >> $GITHUB_OUTPUT
-
-        # Generate pattern keys
-        PATTERN_KEY="${OS}-${CACHE_PREFIX}-${NAME}-"
-        echo "pattern_key=${PATTERN_KEY}" >> $GITHUB_OUTPUT
-
-        # Generate OS-agnostic pattern
-        AGNOSTIC_PATTERN="${CACHE_PREFIX}-${NAME}-"
-        echo "agnostic_pattern=${AGNOSTIC_PATTERN}" >> $GITHUB_OUTPUT
-
-    # Restore cache with exact key (if provided)
-    # Normalize path for cache operations
-    - name: 🔧 Normalize Path
-      id: normalize-path
-      shell: bash
-      run: |
-        # Normalize path separators for cross-platform compatibility
+        # Normalize path for cache operations
         NORMALIZED_PATH=$(echo "${{ inputs.path }}/${{ inputs.filename }}" | sed 's|\\|/|g')
-        echo "normalized_path=$NORMALIZED_PATH" >> $GITHUB_OUTPUT
+        echo "normalized_path=${NORMALIZED_PATH}" >> $GITHUB_OUTPUT
 
-    # Restore cache with exact key (if provided)
-    - name: 🗄️ Restore with Exact Key
-      id: cache-restore-exact
-      if: inputs.exact_cache_key != ''
+        echo "Generated cache keys:"
+        echo "  primary_key: ${PRIMARY_KEY}"
+        echo "  fallback_key: ${FALLBACK_KEY}"
+
+    # Single cache restore step with restore-keys for fallback
+    - name: 🗄️ Restore Cache
+      id: cache-restore
+      if: inputs.use_cache != 'false-only'
       uses: actions/cache/restore@v4
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
-        path: ${{ steps.normalize-path.outputs.normalized_path }}
-        key: ${{ inputs.exact_cache_key }}
-        enableCrossOsArchive: true
-        lookup-only: false
-        fail-on-cache-miss: false
-
-    # Restore with platform-specific key
-    - name: 🗄️ Restore with Platform-Specific Key
-      id: cache-restore-platform
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true'
-      uses: actions/cache/restore@v4
-      env:
-        ACTIONS_CACHE_SERVICE_V2: 'true'
-      with:
-        path: ${{ steps.normalize-path.outputs.normalized_path }}
-        key: ${{ steps.generate-keys.outputs.platform_key }}
-        enableCrossOsArchive: true
-        lookup-only: false
-        fail-on-cache-miss: false
-
-    # Restore with Linux key for cross-OS compatibility
-    - name: 🗄️ Restore with Linux Key
-      id: cache-restore-linux
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-platform.outputs.cache-hit != 'true' && runner.os != 'Linux'
-      uses: actions/cache/restore@v4
-      env:
-        ACTIONS_CACHE_SERVICE_V2: 'true'
-      with:
-        path: ${{ steps.normalize-path.outputs.normalized_path }}
-        key: ${{ steps.generate-keys.outputs.linux_key }}
-        enableCrossOsArchive: true
-        lookup-only: false
-        fail-on-cache-miss: false
-
-    # Try OS-specific pattern as fallback (finds latest matching cache)
-    - name: 🗄️ Restore with Pattern
-      id: cache-restore-pattern
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-platform.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true'
-      uses: actions/cache/restore@v4
-      env:
-        ACTIONS_CACHE_SERVICE_V2: 'true'
-      with:
-        path: ${{ steps.normalize-path.outputs.normalized_path }}
-        key: ${{ steps.generate-keys.outputs.pattern_key || format('{0}-{1}-{2}-', runner.os, inputs.cache_key_prefix, inputs.name) }}
+        path: ${{ steps.generate-keys.outputs.normalized_path }}
+        key: ${{ inputs.exact_cache_key || steps.generate-keys.outputs.primary_key }}
         restore-keys: |
-          ${{ steps.generate-keys.outputs.pattern_key || format('{0}-{1}-{2}-', runner.os, inputs.cache_key_prefix, inputs.name) }}
+          ${{ steps.generate-keys.outputs.primary_key }}
+          ${{ steps.generate-keys.outputs.fallback_key }}
         enableCrossOsArchive: true
         lookup-only: false
         fail-on-cache-miss: false
 
-    # Handle cache miss
-    - name: ⚠️ Handle Cache Miss
-      if: steps.cache-restore-exact.outputs.cache-hit != 'true' && steps.cache-restore-platform.outputs.cache-hit != 'true' && steps.cache-restore-linux.outputs.cache-hit != 'true' && steps.cache-restore-pattern.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        if [ -n "${{ inputs.use_cache }}" ] && [ "${{ inputs.use_cache }}" = "true-only" ]; then
-          echo "::error::Cache miss and use_cache=true-only, failing step"
-          echo "success=false" >> $GITHUB_OUTPUT
-          exit 1
-        else
-          echo "::warning::Falling back to artifact download"
-          echo "success=false" >> $GITHUB_OUTPUT
-        fi
-
-    # Verify the downloaded file and print minimal but useful info
-    - name: 🔍 Verify Downloaded File
-      id: verify-file
-      shell: bash
-      run: |
-        # Summary of what method was used to get the file (for debugging)
-        if [ "${{ steps.cache-restore-exact.outputs.cache-hit }}" == "true" ]; then
-          SOURCE="exact key cache"
-        elif [ "${{ steps.cache-restore-platform.outputs.cache-hit }}" == "true" ]; then
-          SOURCE="platform-specific key cache"
-        elif [ "${{ steps.cache-restore-linux.outputs.cache-hit }}" == "true" ]; then
-          SOURCE="Linux key cache"
-        elif [ "${{ steps.cache-restore-pattern.outputs.cache-hit }}" == "true" ]; then
-          SOURCE="pattern key cache"
-        else
-          SOURCE="GitHub artifact (fallback)"
-        fi
-
-        # Check if file exists and get size
-        FILE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
-        NORMALIZED_FILE_PATH=$(echo "$FILE_PATH" | sed 's|\\|/|g')
-
-        if [ -f "$NORMALIZED_FILE_PATH" ]; then
-          FILE_SIZE=$(stat -c%s "$NORMALIZED_FILE_PATH" 2>/dev/null || stat -f%z "$NORMALIZED_FILE_PATH" 2>/dev/null || ls -l "$NORMALIZED_FILE_PATH" | awk '{print $5}')
-          HUMAN_SIZE=$(du -h "$NORMALIZED_FILE_PATH" | cut -f1)
-
-          # Test zip file integrity
-          unzip -t "$NORMALIZED_FILE_PATH" > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
-            ZIP_VALID="VALID"
-          else
-            ZIP_VALID="INVALID"
-          fi
-
-          # Only output essential information
-          echo "::notice::Downloaded ${{ inputs.name }} from ${SOURCE}: ${HUMAN_SIZE}, integrity: ${ZIP_VALID}"
-
-          echo "size=${FILE_SIZE}" >> $GITHUB_OUTPUT
-          echo "valid=${ZIP_VALID}" >> $GITHUB_OUTPUT
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "success=true" >> $GITHUB_OUTPUT
-        else
-          echo "::error::File not found: $NORMALIZED_FILE_PATH"
-          echo "exists=false" >> $GITHUB_OUTPUT
-          echo "success=false" >> $GITHUB_OUTPUT
-          exit 1
-        fi
-
-    # Download from GitHub Artifacts as fallback
+    # Download from GitHub Artifacts as fallback (or if cache-only requested)
     - name: 📥 Download from GitHub Artifacts
       id: download-artifact
-      if: steps.verify-file.outputs.exists != 'true' && inputs.use_cache != 'true-only'
+      if: steps.cache-restore.outputs.cache-hit != 'true' && inputs.use_cache != 'true-only'
       shell: bash
       run: |
-        # Create directory for artifact
         mkdir -p "${{ inputs.path }}"
 
-        # Download artifact with retries
         MAX_RETRIES=3
         for i in $(seq 1 $MAX_RETRIES); do
-          # Download with automatic retry
           echo "Attempt $i of $MAX_RETRIES"
           gh run download --name "${{ inputs.name }}" --dir "${{ inputs.path }}" && break
 
-          # Exit on final attempt failure
           if [ $i -eq $MAX_RETRIES ]; then
             echo "::error::Failed to download artifact after $MAX_RETRIES attempts"
             exit 1
           fi
 
-          # Wait with exponential backoff
           SLEEP_TIME=$((2 ** $i))
           echo "Waiting ${SLEEP_TIME}s before retry..."
           sleep $SLEEP_TIME
         done
 
-        # Find the downloaded zip (handles different behavior of gh run download)
         NORMALIZED_PATH=$(echo "${{ inputs.path }}" | sed 's|\\|/|g')
-        ZIP_FILES=$(find "$NORMALIZED_PATH" -type f -name "*.zip" | sort)
-        FIRST_ZIP=$(echo "$ZIP_FILES" | head -n 1)
-        EXPECTED_PATH="$NORMALIZED_PATH/${{ inputs.filename }}"
+        echo "Contents of download directory:"
+        ls -la "$NORMALIZED_PATH" || echo "Directory listing failed"
 
-        if [ -n "$FIRST_ZIP" ] && [ "$FIRST_ZIP" != "$EXPECTED_PATH" ]; then
-          # Move the file to the expected location
-          mv "$FIRST_ZIP" "$EXPECTED_PATH"
+        # Check if gh run download extracted contents directly
+        if [ -d "$NORMALIZED_PATH/packages" ] || [ -d "$NORMALIZED_PATH/fixtures" ]; then
+          echo "Artifact contents extracted directly to directory"
+          echo "extracted=true" >> $GITHUB_OUTPUT
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "::notice::Successfully downloaded and extracted ${{ inputs.name }} from GitHub Artifacts"
+          exit 0
         fi
 
-        # Check if the file exists
+        # Look for expected zip file
+        EXPECTED_PATH="$NORMALIZED_PATH/${{ inputs.filename }}"
         if [ -f "$EXPECTED_PATH" ]; then
-          echo "valid=true" >> $GITHUB_OUTPUT
+          echo "Found artifact at expected path: $EXPECTED_PATH"
+          echo "extracted=false" >> $GITHUB_OUTPUT
           echo "success=true" >> $GITHUB_OUTPUT
           echo "::notice::Successfully downloaded ${{ inputs.name }} from GitHub Artifacts"
-        else
-          echo "::error::Failed to find downloaded artifact"
-          echo "valid=false" >> $GITHUB_OUTPUT
-          echo "success=false" >> $GITHUB_OUTPUT
-          exit 1
+          exit 0
         fi
+
+        # Search for any zip file
+        FIRST_ZIP=$(find "$NORMALIZED_PATH" -type f -name "*.zip" 2>/dev/null | head -n 1)
+        if [ -n "$FIRST_ZIP" ]; then
+          echo "Found zip file: $FIRST_ZIP"
+          if [ "$FIRST_ZIP" != "$EXPECTED_PATH" ]; then
+            mv "$FIRST_ZIP" "$EXPECTED_PATH"
+          fi
+          echo "extracted=false" >> $GITHUB_OUTPUT
+          echo "success=true" >> $GITHUB_OUTPUT
+          echo "::notice::Successfully downloaded ${{ inputs.name }} from GitHub Artifacts"
+          exit 0
+        fi
+
+        echo "::error::Failed to find downloaded artifact or extracted contents"
+        exit 1
       env:
         GH_TOKEN: ${{ github.token }}
 
-    # Extract the compressed artifact to the destination
-    - name: 📂 Extract Compressed Archive
-      id: extract-archive
-      if: steps.verify-file.outputs.exists == 'true' || steps.download-artifact.outputs.valid == 'true'
+    # Fail if cache-only was requested but cache missed
+    - name: ❌ Handle Cache Miss
+      if: steps.cache-restore.outputs.cache-hit != 'true' && inputs.use_cache == 'true-only'
       shell: bash
       run: |
-        # Ensure the archive exists
-        ARCHIVE_PATH="${{ inputs.path }}/${{ inputs.filename }}"
-        if [ ! -f "$ARCHIVE_PATH" ]; then
-          echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
-          exit 1
-        fi
+        echo "::error::Cache miss and use_cache=true-only, failing step"
+        exit 1
 
-        # Normalize path separators for cross-platform compatibility
-        NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
+    # Extract and copy artifact contents to workspace
+    - name: 📂 Extract and Copy Archive
+      id: extract-archive
+      if: steps.cache-restore.outputs.cache-hit == 'true' || steps.download-artifact.outputs.success == 'true'
+      shell: bash
+      run: |
+        # Reusable function to copy directories safely
+        copy_directory() {
+          local src_dir="$1"
+          local dest_base="$2"
 
-        # Extract to workspace root directory
-        cd "${{ github.workspace }}" && unzip -q -o "$NORMALIZED_PATH"
+          # Normalize paths to use forward slashes for consistent handling
+          local normalized_src=$(echo "$src_dir" | sed 's|\\|/|g')
+          local normalized_source=$(echo "$SOURCE_DIR" | sed 's|\\|/|g')
 
-        # Check extraction success
-        if [ $? -eq 0 ]; then
-          # Count distribution directories without producing output
-          DIST_DIRS=$(find . -type d -path "*/dist" | sort | wc -l)
+          # Calculate relative path from source dir
+          local rel_path="${normalized_src#$normalized_source/}"
+          rel_path="${rel_path#./}"
 
-          # Only show a message if extraction fails
-          if [ "$DIST_DIRS" -lt 1 ]; then
-            echo "::warning::Extraction completed but no dist directories found"
+          local target_dir="${dest_base}/${rel_path}"
+          local parent_dir=$(dirname "$target_dir")
+
+          echo "DEBUG: copy_directory - src_dir=$src_dir"
+          echo "DEBUG: copy_directory - normalized_src=$normalized_src"
+          echo "DEBUG: copy_directory - normalized_source=$normalized_source"
+          echo "DEBUG: copy_directory - rel_path=$rel_path"
+          echo "DEBUG: copy_directory - target_dir=$target_dir"
+          echo "DEBUG: copy_directory - parent_dir=$parent_dir"
+
+          if [ ! -d "$parent_dir" ]; then
+            echo "DEBUG: Creating parent_dir: $parent_dir"
+            mkdir -p "$parent_dir"
           fi
+
+          if [ -d "$target_dir" ]; then
+            echo "DEBUG: target_dir exists, copying contents"
+            cp -r "$src_dir"/* "$target_dir/" 2>/dev/null || true
+          else
+            echo "DEBUG: target_dir does not exist, copying entire directory"
+            cp -r "$src_dir" "$parent_dir/"
+          fi
+          echo "  ✓ Copied $rel_path"
+        }
+
+        # Determine source directory based on how we got the artifact
+        # Note: actions/cache/restore restores the zip file to inputs.path, not extracted contents
+        WORKSPACE="${{ github.workspace }}"
+        INPUT_PATH="${{ inputs.path }}"
+        ARCHIVE_PATH="$INPUT_PATH/${{ inputs.filename }}"
+        
+        if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
+          # Cache hit: zip file was restored to inputs.path, need to extract it
+          echo "Cache hit detected, extracting zip file..."
+          
+          if [ -f "$ARCHIVE_PATH" ]; then
+            echo "Found zip file at $ARCHIVE_PATH, extracting..."
+            SOURCE_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
+            mkdir -p "$SOURCE_DIR"
+            unzip -q -o "$ARCHIVE_PATH" -d "$SOURCE_DIR"
+            if [ $? -ne 0 ]; then
+              echo "::error::Failed to extract archive from cache"
+              exit 1
+            fi
+            echo "Extracted cache archive to $SOURCE_DIR"
+          else
+            echo "::error::Cache hit but zip file not found at $ARCHIVE_PATH"
+            exit 1
+          fi
+        elif [ "${{ steps.download-artifact.outputs.extracted }}" == "true" ]; then
+          # gh run download extracted directly to inputs.path
+          echo "Artifact was extracted by gh run download, copying to workspace..."
+          SOURCE_DIR="$INPUT_PATH"
         else
-          echo "::error::Failed to extract archive"
-          exit 1
+          # Need to extract from downloaded zip file
+          if [ ! -f "$ARCHIVE_PATH" ]; then
+            echo "::error::Archive not found for extraction: $ARCHIVE_PATH"
+            exit 1
+          fi
+
+          NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
+          SOURCE_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
+          mkdir -p "$SOURCE_DIR"
+          unzip -q -o "$NORMALIZED_PATH" -d "$SOURCE_DIR"
+
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to extract archive"
+            exit 1
+          fi
         fi
 
-        # Return success
+        echo "Source directory: $SOURCE_DIR"
+        echo "Contents of source:"
+        ls -la "$SOURCE_DIR" || echo "Directory listing failed"
+
+        # Debug: Check what's in the packages directory
+        echo "DEBUG: Checking if packages directory exists..."
+        if [ -d "$SOURCE_DIR/packages" ]; then
+          echo "DEBUG: packages directory exists at $SOURCE_DIR/packages"
+          echo "Contents of $SOURCE_DIR/packages:"
+          ls -la "$SOURCE_DIR/packages" 2>&1 || echo "Directory listing failed"
+          echo "Looking for dist directories in $SOURCE_DIR/packages:"
+          find "$SOURCE_DIR/packages" -type d -path "*/dist" 2>&1 || echo "No dist directories found"
+          echo "Checking specific package:"
+          ls -la "$SOURCE_DIR/packages/bundler" 2>&1 || echo "bundler not found"
+          ls -la "$SOURCE_DIR/packages/bundler/dist" 2>&1 || echo "bundler/dist not found"
+        else
+          echo "DEBUG: packages directory does NOT exist at $SOURCE_DIR/packages"
+        fi
+
+        # Count and copy distribution directories (security: only copy expected directories)
+        # Only search in packages/, fixtures/, and e2e/ directories to avoid node_modules
+        DIST_DIRS=0
+        DIST_JS_DIRS=0
+        TARGET_DIRS=0
+
+        for search_dir in "packages" "fixtures" "e2e"; do
+          if [ -d "$SOURCE_DIR/$search_dir" ]; then
+            DIST_DIRS=$((DIST_DIRS + $(find "$SOURCE_DIR/$search_dir" -type d -path "*/dist" 2>/dev/null | wc -l)))
+            DIST_JS_DIRS=$((DIST_JS_DIRS + $(find "$SOURCE_DIR/$search_dir" -type d -name "dist-js" 2>/dev/null | wc -l)))
+            TARGET_DIRS=$((TARGET_DIRS + $(find "$SOURCE_DIR/$search_dir" -type d -name "target" 2>/dev/null | wc -l)))
+          fi
+        done
+
+        echo "Found $DIST_DIRS dist directories, $DIST_JS_DIRS dist-js directories, $TARGET_DIRS target directories"
+
+        if [ "$DIST_DIRS" -ge 1 ]; then
+          echo "Copying dist directories to workspace..."
+          for search_dir in "packages" "fixtures" "e2e"; do
+            if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              echo "DEBUG: Searching for dist directories in $SOURCE_DIR/$search_dir"
+              find "$SOURCE_DIR/$search_dir" -type d -path "*/dist" 2>/dev/null | while read -r dir; do
+                echo "DEBUG: Found dist dir: $dir"
+                copy_directory "$dir" "${{ github.workspace }}"
+              done
+            else
+              echo "DEBUG: $search_dir not found in $SOURCE_DIR"
+            fi
+          done
+        else
+          echo "DEBUG: No dist directories found to copy (DIST_DIRS=$DIST_DIRS)"
+        fi
+
+        if [ "$DIST_JS_DIRS" -ge 1 ]; then
+          echo "Copying dist-js directories to workspace..."
+          for search_dir in "packages" "fixtures" "e2e"; do
+            if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              echo "DEBUG: Searching for dist-js directories in $SOURCE_DIR/$search_dir"
+              find "$SOURCE_DIR/$search_dir" -type d -name "dist-js" 2>/dev/null | while read -r dir; do
+                echo "DEBUG: Found dist-js dir: $dir"
+                copy_directory "$dir" "${{ github.workspace }}"
+              done
+            fi
+          done
+        else
+          echo "DEBUG: No dist-js directories found to copy (DIST_JS_DIRS=$DIST_JS_DIRS)"
+        fi
+
+        if [ "$TARGET_DIRS" -ge 1 ]; then
+          echo "Copying target directories to workspace..."
+          for search_dir in "packages" "fixtures" "e2e"; do
+            if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              echo "DEBUG: Searching for target directories in $SOURCE_DIR/$search_dir"
+              find "$SOURCE_DIR/$search_dir" -type d -name "target" 2>/dev/null | while read -r dir; do
+                echo "DEBUG: Found target dir: $dir"
+                copy_directory "$dir" "${{ github.workspace }}"
+              done
+            fi
+          done
+        else
+          echo "DEBUG: No target directories found to copy (TARGET_DIRS=$TARGET_DIRS)"
+        fi
+
+        echo "DEBUG: Final verification - checking for dist directories in workspace:"
+        find "${{ github.workspace }}/packages" -name "dist" -type d 2>/dev/null | head -5 || echo "DEBUG: No dist directories found in workspace packages"
+
+        # Cleanup temporary extraction directory (only if we extracted a zip)
+        if [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
+          rm -rf "$SOURCE_DIR"
+          echo "Cleaned up temporary extraction directory"
+        fi
+
         echo "success=true" >> $GITHUB_OUTPUT
