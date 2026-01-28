@@ -152,7 +152,7 @@ export const browserGlobalsPlugin = (globals: BrowserGlobalsPluginOption[]): Plu
         );
         const requireRegex = new RegExp(`require\\s*\\(\\s*['"]${global.packageName}['"]\\s*\\)`, 'g');
 
-        const varDeclaration = `const ${global.globalName.replace('window.', '')} = window.${global.globalName};`;
+        const varDeclaration = `const ${global.globalName.replace('window.', '')} = ${global.globalName};`;
 
         if (importRegex.test(newCode) || requireRegex.test(newCode)) {
           newCode = newCode.replace(importRegex, varDeclaration);
