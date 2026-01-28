@@ -42,11 +42,9 @@ runs:
         fi
 
         # Generate keys: exact (platform-specific), primary (with restore-keys), fallback
-        EXACT_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         PRIMARY_KEY="${OS}-${CACHE_PREFIX}-${NAME}-${RUN_ID}${RERUN_SUFFIX}"
         FALLBACK_KEY="${CACHE_PREFIX}-${NAME}-"
 
-        echo "exact_key=${EXACT_KEY}" >> $GITHUB_OUTPUT
         echo "primary_key=${PRIMARY_KEY}" >> $GITHUB_OUTPUT
         echo "fallback_key=${FALLBACK_KEY}" >> $GITHUB_OUTPUT
 
@@ -55,7 +53,6 @@ runs:
         echo "normalized_path=${NORMALIZED_PATH}" >> $GITHUB_OUTPUT
 
         echo "Generated cache keys:"
-        echo "  exact_key: ${EXACT_KEY}"
         echo "  primary_key: ${PRIMARY_KEY}"
         echo "  fallback_key: ${FALLBACK_KEY}"
 
@@ -159,19 +156,34 @@ runs:
           local src_dir="$1"
           local dest_base="$2"
 
-          local rel_path="${src_dir#$SOURCE_DIR/}"
+          # Normalize paths to use forward slashes for consistent handling
+          local normalized_src=$(echo "$src_dir" | sed 's|\\|/|g')
+          local normalized_source=$(echo "$SOURCE_DIR" | sed 's|\\|/|g')
+
+          # Calculate relative path from source dir
+          local rel_path="${normalized_src#$normalized_source/}"
           rel_path="${rel_path#./}"
-          rel_path=$(echo "$rel_path" | sed 's|\\|/|g')
+
           local target_dir="${dest_base}/${rel_path}"
           local parent_dir=$(dirname "$target_dir")
 
+          echo "DEBUG: copy_directory - src_dir=$src_dir"
+          echo "DEBUG: copy_directory - normalized_src=$normalized_src"
+          echo "DEBUG: copy_directory - normalized_source=$normalized_source"
+          echo "DEBUG: copy_directory - rel_path=$rel_path"
+          echo "DEBUG: copy_directory - target_dir=$target_dir"
+          echo "DEBUG: copy_directory - parent_dir=$parent_dir"
+
           if [ ! -d "$parent_dir" ]; then
+            echo "DEBUG: Creating parent_dir: $parent_dir"
             mkdir -p "$parent_dir"
           fi
 
           if [ -d "$target_dir" ]; then
+            echo "DEBUG: target_dir exists, copying contents"
             cp -r "$src_dir"/* "$target_dir/" 2>/dev/null || true
           else
+            echo "DEBUG: target_dir does not exist, copying entire directory"
             cp -r "$src_dir" "$parent_dir/"
           fi
           echo "  ✓ Copied $rel_path"
@@ -309,7 +321,7 @@ runs:
         find "${{ github.workspace }}/packages" -name "dist" -type d 2>/dev/null | head -5 || echo "DEBUG: No dist directories found in workspace packages"
 
         # Cleanup temporary extraction directory (only if we extracted a zip)
-        if [ "${{ steps.cache-restore.outputs.cache-hit }}" != "true" ] && [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
+        if [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
           rm -rf "$SOURCE_DIR"
           echo "Cleaned up temporary extraction directory"
         fi
