@@ -262,34 +262,51 @@ runs:
           echo "Copying dist directories to workspace..."
           for search_dir in "packages" "fixtures" "e2e"; do
             if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              echo "DEBUG: Searching for dist directories in $SOURCE_DIR/$search_dir"
               find "$SOURCE_DIR/$search_dir" -type d -path "*/dist" 2>/dev/null | while read -r dir; do
+                echo "DEBUG: Found dist dir: $dir"
                 copy_directory "$dir" "${{ github.workspace }}"
               done
+            else
+              echo "DEBUG: $search_dir not found in $SOURCE_DIR"
             fi
           done
+        else
+          echo "DEBUG: No dist directories found to copy (DIST_DIRS=$DIST_DIRS)"
         fi
 
         if [ "$DIST_JS_DIRS" -ge 1 ]; then
           echo "Copying dist-js directories to workspace..."
           for search_dir in "packages" "fixtures" "e2e"; do
             if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              echo "DEBUG: Searching for dist-js directories in $SOURCE_DIR/$search_dir"
               find "$SOURCE_DIR/$search_dir" -type d -name "dist-js" 2>/dev/null | while read -r dir; do
+                echo "DEBUG: Found dist-js dir: $dir"
                 copy_directory "$dir" "${{ github.workspace }}"
               done
             fi
           done
+        else
+          echo "DEBUG: No dist-js directories found to copy (DIST_JS_DIRS=$DIST_JS_DIRS)"
         fi
 
         if [ "$TARGET_DIRS" -ge 1 ]; then
           echo "Copying target directories to workspace..."
           for search_dir in "packages" "fixtures" "e2e"; do
             if [ -d "$SOURCE_DIR/$search_dir" ]; then
+              echo "DEBUG: Searching for target directories in $SOURCE_DIR/$search_dir"
               find "$SOURCE_DIR/$search_dir" -type d -name "target" 2>/dev/null | while read -r dir; do
+                echo "DEBUG: Found target dir: $dir"
                 copy_directory "$dir" "${{ github.workspace }}"
               done
             fi
           done
+        else
+          echo "DEBUG: No target directories found to copy (TARGET_DIRS=$TARGET_DIRS)"
         fi
+
+        echo "DEBUG: Final verification - checking for dist directories in workspace:"
+        find "${{ github.workspace }}/packages" -name "dist" -type d 2>/dev/null | head -5 || echo "DEBUG: No dist directories found in workspace packages"
 
         # Cleanup temporary extraction directory (only if we extracted a zip)
         if [ "${{ steps.cache-restore.outputs.cache-hit }}" != "true" ] && [ "${{ steps.download-artifact.outputs.extracted }}" != "true" ]; then
