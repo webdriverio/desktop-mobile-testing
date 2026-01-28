@@ -30,8 +30,9 @@ export async function detectWebView2VersionFromBinary(binaryPath?: string): Prom
   try {
     // Use PowerShell to extract version info from the binary.
     // Pass the binary path as an argument to avoid interpolating it into the script.
-    const { stdout } = await execAsync(
-      `powershell.exe -Command "(Get-Item $args[0]).VersionInfo.FileVersion" "${binaryPath}"`,
+    const { stdout } = await execFileAsync(
+      'powershell.exe',
+      ['-Command', '(Get-Item $args[0]).VersionInfo.FileVersion', binaryPath],
       {
         encoding: 'utf8',
         timeout: 5000,
