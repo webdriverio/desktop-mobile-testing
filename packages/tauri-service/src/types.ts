@@ -15,12 +15,6 @@ export type TauriResult<T = unknown> = BaseTauriResult<T>;
  */
 export interface TauriServiceOptions extends BaseTauriServiceOptions {
   /**
-   * Environment variables to pass to the spawned tauri-driver process
-   * Use this to set environment-specific configurations like ENABLE_SPLASH_WINDOW
-   * @default undefined
-   */
-  env?: Record<string, string>;
-  /**
    * Automatically install tauri-driver if not found
    * Requires Rust toolchain (cargo) to be installed
    * @default false
@@ -48,10 +42,6 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
 export interface TauriServiceGlobalOptions extends BaseTauriServiceGlobalOptions {
   /**
    * Environment variables to pass to the spawned tauri-driver process
-   * Use this to set environment-specific configurations like ENABLE_SPLASH_WINDOW
-   * @default undefined
-   */
-  env?: Record<string, string>;
   /**
    * Automatically install tauri-driver if not found
    * @default false
