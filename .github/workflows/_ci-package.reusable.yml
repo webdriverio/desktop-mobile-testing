@@ -96,11 +96,11 @@ jobs:
       - name: 📦 Download Build Artifacts
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: wdio-electron-service
-          path: wdio-electron-service-build
+          name: wdio-desktop-mobile
+          path: wdio-desktop-mobile-build
           filename: artifact.zip
-          cache_key_prefix: wdio-electron-build
-          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+          cache_key_prefix: wdio-desktop-build
+          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
       # Download app binaries if testing services that require pre-built apps
       # The download-archive action extracts to workspace root, preserving directory structure

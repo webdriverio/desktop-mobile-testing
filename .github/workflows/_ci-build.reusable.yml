@@ -79,8 +79,8 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         uses: ./.github/workflows/actions/upload-archive
         with:
-          name: wdio-electron-service
-          output: wdio-electron-service-build/artifact.zip
+          name: wdio-desktop-mobile
+          output: wdio-desktop-mobile-build/artifact.zip
           paths: packages/*/dist packages/*/dist-js
-          cache_key_prefix: wdio-electron-build
+          cache_key_prefix: wdio-desktop-build
           retention_days: '90'

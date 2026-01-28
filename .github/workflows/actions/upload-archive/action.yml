@@ -232,7 +232,7 @@ runs:
         if-no-files-found: error
 
     # Cache with platform-specific key
-    # Cross-platform archive enabled - works for TypeScript packages (wdio-electron-build)
+    # Cross-platform archive enabled - works for TypeScript packages (wdio-desktop-build)
     # Tauri apps use 7zip for cross-platform compatible ZIPs
     - name: 🗄️ Cache Artifact (Platform-specific)
       uses: actions/cache/save@v4

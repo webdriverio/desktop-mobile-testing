@@ -72,6 +72,15 @@ runs:
         AGNOSTIC_PATTERN="${CACHE_PREFIX}-${NAME}-"
         echo "agnostic_pattern=${AGNOSTIC_PATTERN}" >> $GITHUB_OUTPUT
 
+        # Debug: Output the generated keys and inputs
+        echo "Generated cache keys:"
+        echo "  platform_key: ${PLATFORM_KEY}"
+        echo "  standard_key: ${STANDARD_KEY}"
+        echo "  linux_key: ${LINUX_KEY}"
+        echo "  inputs.cache_key_prefix: ${{ inputs.cache_key_prefix }}"
+        echo "  inputs.name: ${{ inputs.name }}"
+        echo "  inputs.exact_cache_key: ${{ inputs.exact_cache_key }}"
+
     # Restore cache with exact key (if provided)
     # Normalize path for cache operations
     - name: 🔧 Normalize Path
