@@ -271,18 +271,53 @@ runs:
         # Normalize path separators for cross-platform compatibility
         NORMALIZED_PATH=$(echo "$ARCHIVE_PATH" | sed 's|\\|/|g')
 
-        # Extract to workspace root directory
-        cd "${{ github.workspace }}" && unzip -q -o "$NORMALIZED_PATH"
+        # Security: Extract to a temporary directory to prevent artifact poisoning
+        # This prevents malicious artifacts from overwriting critical files in the workspace
+        EXTRACT_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"
+        mkdir -p "$EXTRACT_DIR"
+        unzip -q -o "$NORMALIZED_PATH" -d "$EXTRACT_DIR"
 
         # Check extraction success
         if [ $? -eq 0 ]; then
-          # Count distribution directories without producing output
-          DIST_DIRS=$(find . -type d -path "*/dist" | sort | wc -l)
+          # Count distribution directories in the extraction directory
+          DIST_DIRS=$(find "$EXTRACT_DIR" -type d -path "*/dist" | sort | wc -l)
 
-          # Only show a message if extraction fails
           if [ "$DIST_DIRS" -lt 1 ]; then
             echo "::warning::Extraction completed but no dist directories found"
+          else
+            echo "Found $DIST_DIRS dist directories in artifact"
           fi
+
+          # Security: Only copy expected dist directories to workspace
+          # This prevents malicious artifacts from overwriting package.json, scripts, etc.
+          echo "Copying dist directories to workspace..."
+          find "$EXTRACT_DIR" -type d -path "*/dist" | while read -r dist_dir; do
+            # Get the relative path from the extraction root
+            rel_path="${dist_dir#$EXTRACT_DIR/}"
+            # Remove leading ./ if present
+            rel_path="${rel_path#./}"
+            target_dir="${{ github.workspace }}/$rel_path"
+
+            # Create parent directory if it doesn't exist
+            parent_dir=$(dirname "$target_dir")
+            if [ ! -d "$parent_dir" ]; then
+              mkdir -p "$parent_dir"
+            fi
+
+            # Copy dist directory contents to workspace
+            if [ -d "$target_dir" ]; then
+              # Merge: copy contents into existing dist directory
+              cp -r "$dist_dir"/* "$target_dir/" 2>/dev/null || true
+            else
+              # Create new dist directory
+              cp -r "$dist_dir" "$parent_dir/"
+            fi
+            echo "  ✓ Copied $rel_path"
+          done
+
+          # Cleanup: Remove temporary extraction directory
+          rm -rf "$EXTRACT_DIR"
+          echo "Cleaned up temporary extraction directory"
         else
           echo "::error::Failed to extract archive"
           exit 1
