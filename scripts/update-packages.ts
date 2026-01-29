@@ -51,8 +51,15 @@ function updatePuppeteerBrowsers() {
   // Package it (uses existing built version)
   runCommand(`npm pack --pack-destination ${TMP_DIR}`, browsersDir);
 
+  // Get the actual packed filename (it includes version)
+  const packOutput = execSync('npm pack --dry-run', { cwd: browsersDir, encoding: 'utf8' });
+  const packMatch = packOutput.match(/puppeteer-browsers-[\d.]+\.tgz/);
+  if (!packMatch) {
+    throw new Error('Could not determine packed filename from npm pack output');
+  }
+  const packedFile = packMatch[0];
+
   // Copy to workspace
-  const packedFile = 'puppeteer-browsers-2.11.1.tgz';
   runCommand(`cp ${TMP_DIR}/${packedFile} ${ROOT_DIR}/`);
 
   console.log('✅ @puppeteer/browsers repackaged\n');
@@ -69,10 +76,18 @@ function updateWdioUtils() {
   runCommand('pnpm exec tsx ./infra/compiler/src/index.ts -p @wdio/utils', WEBDRIVERIO_DIR);
 
   // Package it
-  runCommand(`npm pack --pack-destination ${TMP_DIR}`, join(WEBDRIVERIO_DIR, 'packages', 'wdio-utils'));
+  const wdioUtilsDir = join(WEBDRIVERIO_DIR, 'packages', 'wdio-utils');
+  runCommand(`npm pack --pack-destination ${TMP_DIR}`, wdioUtilsDir);
+
+  // Get the actual packed filename
+  const wdioPackOutput = execSync('npm pack --dry-run', { cwd: wdioUtilsDir, encoding: 'utf8' });
+  const wdioPackMatch = wdioPackOutput.match(/wdio-utils-[\d.]+\.tgz/);
+  if (!wdioPackMatch) {
+    throw new Error('Could not determine packed filename from npm pack output');
+  }
+  const packedFile = wdioPackMatch[0];
 
   // Extract and fix dependencies
-  const packedFile = 'wdio-utils-9.23.0.tgz';
   const extractDir = join(TMP_DIR, 'wdio-utils-fix');
 
   // Clean up any existing extract dir
