@@ -7,7 +7,8 @@ import type { Readable } from 'node:stream';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
-import { ensureTauriDriver, ensureWebKitWebDriver } from './driverManager.js';
+import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
+import { ensureTauriDriver, ensureWebKitWebDriver, findTestRunnerBackend } from './driverManager.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
 import { forwardLog, type LogLevel } from './logForwarder.js';
 import { parseLogLine } from './logParser.js';
@@ -117,6 +118,7 @@ function setupStreamLogHandler({
  */
 export default class TauriLaunchService {
   private tauriDriverProcess?: ChildProcess;
+  private testRunnerBackend?: ChildProcess; // CrabNebula backend for macOS
   private appBinaryPath?: string;
   private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
   private instanceOptions: Map<string, TauriServiceOptions> = new Map();
@@ -169,14 +171,25 @@ export default class TauriLaunchService {
       }
     }
 
+    // Determine if using CrabNebula provider
+    const firstCap = Array.isArray(capabilities) ? capabilities[0] : Object.values(capabilities)[0]?.capabilities;
+    const mergedOptions = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
+    const isCrabNebula = mergedOptions.driverProvider === 'crabnebula';
+
     // Check for unsupported platforms
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' && !isCrabNebula) {
       const errorMessage =
-        'Tauri testing is not supported on macOS due to WKWebView WebDriver limitations. ' +
-        'Please run tests on Windows or Linux. ' +
-        'For more information, see: https://v2.tauri.app/develop/tests/webdriver/';
+        'Tauri testing on macOS requires CrabNebula driver. ' +
+        'Set driverProvider: "crabnebula" in your service options, or ' +
+        'run tests on Windows or Linux. ' +
+        'See: https://docs.crabnebula.dev/tauri/webdriver/';
       log.error(errorMessage);
       throw new Error(errorMessage);
+    }
+
+    // For CrabNebula on macOS, validate prerequisites
+    if (process.platform === 'darwin' && isCrabNebula) {
+      await this.validateCrabNebulaPrerequisites(mergedOptions);
     }
 
     // Handle both standard array and multiremote object capabilities
@@ -363,6 +376,22 @@ export default class TauriLaunchService {
               `hostname=${(cap as { hostname?: string }).hostname}`,
           );
         }
+      }
+    }
+
+    // Start test-runner-backend for CrabNebula on macOS
+    if (process.platform === 'darwin' && isCrabNebula) {
+      const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
+      if (manageBackend) {
+        const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
+        const { proc } = await startTestRunnerBackend(backendPort);
+        await waitTestRunnerBackendReady(backendPort);
+
+        this.testRunnerBackend = proc;
+
+        // Set environment variable for tauri-driver
+        process.env.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
+        log.info(`CrabNebula backend ready on port ${backendPort}`);
       }
     }
 
@@ -820,6 +849,12 @@ export default class TauriLaunchService {
       // Log writer may not have been initialized
     }
 
+    // Stop test-runner-backend for CrabNebula
+    if (this.testRunnerBackend) {
+      await stopTestRunnerBackend(this.testRunnerBackend);
+      this.testRunnerBackend = undefined;
+    }
+
     // Stop tauri-driver
     await this.stopTauriDriver();
 
@@ -1085,6 +1120,38 @@ export default class TauriLaunchService {
       await new Promise((r) => setTimeout(r, 250));
     }
     log.warn(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
+  }
+
+  /**
+   * Validate CrabNebula prerequisites for macOS testing
+   * Checks for CN_API_KEY and test-runner-backend availability
+   */
+  private async validateCrabNebulaPrerequisites(options: TauriServiceOptions): Promise<void> {
+    log.info('Validating CrabNebula prerequisites for macOS...');
+
+    // Check CN_API_KEY
+    if (!process.env.CN_API_KEY) {
+      throw new Error(
+        'CN_API_KEY environment variable is required for CrabNebula macOS testing. ' +
+          'Contact CrabNebula (https://crabnebula.dev) to obtain an API key. ' +
+          'See: https://docs.crabnebula.dev/tauri/webdriver/',
+      );
+    }
+
+    // Check for test-runner-backend if auto-management is enabled
+    const manageBackend = options.crabnebulaManageBackend ?? true;
+    if (manageBackend) {
+      const backendPath = findTestRunnerBackend();
+      if (!backendPath) {
+        throw new Error(
+          '@crabnebula/test-runner-backend not found. ' +
+            'Install with: npm install -D @crabnebula/test-runner-backend',
+        );
+      }
+      log.debug(`Found test-runner-backend at: ${backendPath}`);
+    }
+
+    log.info('✅ CrabNebula prerequisites validated');
   }
 
   /**

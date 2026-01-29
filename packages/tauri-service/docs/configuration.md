@@ -227,6 +227,63 @@ logDir: './test-logs'
 
 ---
 
+### `driverProvider` ('official' | 'crabnebula', optional)
+
+Select which driver provider to use for WebDriver communication.
+
+- `'official'`: Use the cargo-installed tauri-driver (default, supports Windows/Linux)
+- `'crabnebula'`: Use @crabnebula/tauri-driver from npm (supports Windows/Linux/macOS)
+
+**Example:**
+```typescript
+driverProvider: 'crabnebula'  // Enable macOS support
+```
+
+**Default:** `'official'`
+
+**Note:** CrabNebula driver requires a subscription and API key for macOS. See [Platform Support](./platform-support.md) for details.
+
+---
+
+### `crabnebulaDriverPath` (string, optional)
+
+Path to the @crabnebula/tauri-driver executable. Only used when `driverProvider: 'crabnebula'`.
+
+**Example:**
+```typescript
+crabnebulaDriverPath: './node_modules/.bin/tauri-driver'
+```
+
+**Default:** Auto-detected from node_modules
+
+---
+
+### `crabnebulaManageBackend` (boolean, optional)
+
+Auto-manage the test-runner-backend process (macOS only). When enabled, the service will automatically start and stop the backend.
+
+**Example:**
+```typescript
+crabnebulaManageBackend: true
+```
+
+**Default:** `true` when using CrabNebula on macOS
+
+---
+
+### `crabnebulaBackendPort` (number, optional)
+
+Port for the test-runner-backend to listen on (macOS only).
+
+**Example:**
+```typescript
+crabnebulaBackendPort: 3000
+```
+
+**Default:** `3000`
+
+---
+
 ## Capabilities Configuration
 
 Configure Tauri-specific capabilities in your `capabilities` array:
