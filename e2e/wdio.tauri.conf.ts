@@ -133,6 +133,7 @@ switch (envContext.testType) {
 // Configure capabilities
 type TauriCapability = {
   browserName?: 'tauri';
+  webSocketUrl?: boolean;
   'tauri:options': {
     application: string;
     args?: string[];
@@ -169,6 +170,8 @@ if (envContext.isMultiremote) {
     browserA: {
       capabilities: {
         browserName: 'tauri',
+        // Disable BiDi to avoid multiremote issues on Windows
+        webSocketUrl: false,
         'tauri:options': {
           application: appBinaryPath,
           args: ['--browser=A'],
@@ -189,6 +192,8 @@ if (envContext.isMultiremote) {
     browserB: {
       capabilities: {
         browserName: 'tauri',
+        // Disable BiDi to avoid multiremote issues on Windows
+        webSocketUrl: false,
         'tauri:options': {
           application: appBinaryPath,
           args: ['--browser=B'],
