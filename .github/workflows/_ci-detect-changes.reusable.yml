@@ -61,8 +61,10 @@ jobs:
             # E2E tests
             e2e_electron:
               - 'e2e/test/electron/**'
+              - 'e2e/wdio.electron.conf.ts'
             e2e_tauri:
               - 'e2e/test/tauri/**'
+              - 'e2e/wdio.tauri.conf.ts'
 
             # Test fixtures and apps
             fixtures_electron:
@@ -87,6 +89,7 @@ jobs:
               - 'turbo.json'
               - 'version.config.json'
               - 'vitest.config.ts'
+              - 'wdio.conf.ts'
 
       - name: Determine What to Run
         id: determine
