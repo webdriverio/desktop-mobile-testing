@@ -2821,7 +2821,7 @@ packages:
     engines: {node: '>=18.20.0'}
 
   '@wdio/utils@file:wdio-utils-9.23.0.tgz':
-    resolution: {integrity: sha512-EBrKtGWLXQ2G7/iV8mLIekOBIgLm38p8300W2PQhtTQps+A2TcvMeoOXmFCzCB7NK7k7k0g3saLtSc/+ZzSpjQ==, tarball: file:wdio-utils-9.23.0.tgz}
+    resolution: {integrity: sha512-BaNDNkV2E+XxHY4mmMhJ6TZ0oAJP701/l/KNdEpuvKcpsU3dbTlMc5ce61sra22z7D5pB93W/AU8phlTyotCig==, tarball: file:wdio-utils-9.23.0.tgz}
     version: 9.23.0
     engines: {node: '>=18.20.0'}
 

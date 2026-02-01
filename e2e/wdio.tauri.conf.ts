@@ -133,6 +133,7 @@ switch (envContext.testType) {
 // Configure capabilities
 type TauriCapability = {
   browserName?: 'tauri';
+  'wdio:enforceWebDriverClassic'?: boolean;
   'tauri:options': {
     application: string;
     args?: string[];
@@ -169,6 +170,7 @@ if (envContext.isMultiremote) {
     browserA: {
       capabilities: {
         browserName: 'tauri',
+        'wdio:enforceWebDriverClassic': true,
         'tauri:options': {
           application: appBinaryPath,
           args: ['--browser=A'],
@@ -189,6 +191,7 @@ if (envContext.isMultiremote) {
     browserB: {
       capabilities: {
         browserName: 'tauri',
+        'wdio:enforceWebDriverClassic': true,
         'tauri:options': {
           application: appBinaryPath,
           args: ['--browser=B'],
@@ -212,6 +215,7 @@ if (envContext.isMultiremote) {
   capabilities = [
     {
       browserName: 'tauri',
+      'wdio:enforceWebDriverClassic': true,
       'tauri:options': {
         application: appBinaryPath,
         args: ['foo', 'bar=baz'],
