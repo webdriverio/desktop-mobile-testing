@@ -700,9 +700,12 @@ export default class TauriLaunchService {
     const dataDir = process.env.XDG_DATA_HOME || process.env.TAURI_DATA_DIR || '';
 
     await new Promise<void>((resolve, reject) => {
+      const spawnEnv = workerOptions.env ? { ...process.env, ...workerOptions.env } : undefined;
+
       const proc = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       });
 
       log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
@@ -864,9 +867,12 @@ export default class TauriLaunchService {
         log.info(`Starting tauri-driver (DISPLAY from environment: ${process.env.DISPLAY || 'not set'})`);
       }
 
+      const spawnEnv = options.env ? { ...process.env, ...options.env } : undefined;
+
       this.tauriDriverProcess = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       });
 
       // Use readline for line-buffered log handling (fixes Windows chunking issues)

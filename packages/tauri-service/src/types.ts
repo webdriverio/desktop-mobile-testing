@@ -15,6 +15,11 @@ export type TauriResult<T = unknown> = BaseTauriResult<T>;
  */
 export interface TauriServiceOptions extends BaseTauriServiceOptions {
   /**
+   * Environment variables to pass to the spawned tauri-driver process
+   * These are merged with process.env when spawning the driver
+   */
+  env?: Record<string, string>;
+  /**
    * Automatically install tauri-driver if not found
    * Requires Rust toolchain (cargo) to be installed
    * @default false

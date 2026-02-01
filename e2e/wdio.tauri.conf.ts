@@ -145,6 +145,7 @@ type TauriCapability = {
   'wdio:tauriServiceOptions': {
     appBinaryPath: string;
     appArgs: string[];
+    env?: Record<string, string>;
     captureBackendLogs?: boolean;
     captureFrontendLogs?: boolean;
     backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
@@ -187,6 +188,7 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -208,6 +210,7 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -220,6 +223,11 @@ if (envContext.isMultiremote) {
     },
   };
 } else {
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+
   capabilities = [
     {
       browserName: 'tauri',
@@ -231,6 +239,7 @@ if (envContext.isMultiremote) {
       'wdio:tauriServiceOptions': {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
+        env: baseEnv,
         // Enable log capture for logging tests
         captureBackendLogs: true,
         captureFrontendLogs: true,

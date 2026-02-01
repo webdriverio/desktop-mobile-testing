@@ -242,6 +242,8 @@ fn main() {
                 .transparent(true)
                 .build()
                 .expect("Failed to create splash window");
+            } else {
+                create_main_window(app.handle());
             }
             Ok::<(), Box<dyn std::error::Error>>(())
         })
