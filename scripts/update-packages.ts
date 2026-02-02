@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +11,6 @@ const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, '..');
 const PUPPETEER_DIR = join(ROOT_DIR, '..', 'puppeteer');
 const WEBDRIVERIO_DIR = join(ROOT_DIR, '..', 'webdriverio');
-const TAURI_DIR = join(ROOT_DIR, '..', 'tauri');
 const TMP_DIR = '/tmp';
 
 console.log('🚀 Starting package update process...\n');
@@ -123,91 +122,6 @@ function updateWdioUtils() {
 }
 
 /**
- * Update tauri-driver binary from local tauri repo
- * Builds and installs the local tauri-driver to override the published version
- */
-function updateTauriDriver() {
-  console.log('🔧 Updating tauri-driver...');
-
-  const tauriDriverDir = join(TAURI_DIR, 'crates', 'tauri-driver');
-
-  // Check if tauri-driver source exists
-  if (!existsSync(tauriDriverDir)) {
-    throw new Error(
-      'tauri-driver source not found. Please ensure the tauri repo is cloned at: ' + join(ROOT_DIR, '..', 'tauri'),
-    );
-  }
-
-  console.log('  🔨 Building tauri-driver from local source...');
-
-  // Build tauri-driver in release mode
-  runCommand('cargo build --release', tauriDriverDir);
-
-  const isWindows = process.platform === 'win32';
-  const binaryName = isWindows ? 'tauri-driver.exe' : 'tauri-driver';
-
-  // In a Cargo workspace, the target directory is at the workspace root, not in the crate directory
-  const builtBinary = join(TAURI_DIR, 'target', 'release', binaryName);
-
-  // Check if build succeeded
-  if (!existsSync(builtBinary)) {
-    throw new Error(`tauri-driver build failed. Binary not found at: ${builtBinary}`);
-  }
-
-  console.log('  📦 Packaging tauri-driver...');
-
-  // Create a tarball of the binary
-  const tauriDriverTmpDir = join(TMP_DIR, 'tauri-driver-package');
-  const tarballName = `tauri-driver-local.tgz`;
-
-  // Clean up any existing temp dir
-  // Clean up any existing temp dir with unique name to avoid race conditions
-  const timestamp = Date.now();
-  const tauriDriverTmpDir = join(TMP_DIR, `tauri-driver-package-${timestamp}`);
-  if (existsSync(tauriDriverTmpDir)) {
-    runCommand(`rm -rf ${tauriDriverTmpDir}`);
-  }
-
-  // Create package structure
-  mkdirSync(join(tauriDriverTmpDir, 'bin'), { recursive: true });
-
-  // Copy binary to package
-  runCommand(`cp ${builtBinary} ${join(tauriDriverTmpDir, 'bin', binaryName)}`);
-
-  // Create a simple package.json for consistency with other packages
-  const packageJson = {
-    name: 'tauri-driver-local',
-    version: 'local',
-    description: 'Local build of tauri-driver with WebDriver stdout fix',
-    bin: {
-      'tauri-driver': `./bin/${binaryName}`,
-    },
-  };
-
-  writeFileSync(join(tauriDriverTmpDir, 'package.json'), JSON.stringify(packageJson, null, 2));
-
-  // Create tarball
-  runCommand(`tar -czf ${ROOT_DIR}/${tarballName} -C ${tauriDriverTmpDir} .`);
-
-  // Also copy binary to a known location where driverManager can find it
-  const localBinDir = join(ROOT_DIR, '.local-bin');
-  mkdirSync(localBinDir, { recursive: true });
-  runCommand(`cp ${builtBinary} ${join(localBinDir, binaryName)}`);
-
-  // Make executable on Unix
-  if (!isWindows) {
-    runCommand(`chmod +x ${join(localBinDir, binaryName)}`);
-  }
-
-  // Clean up temp dir
-  runCommand(`rm -rf ${tauriDriverTmpDir}`);
-
-  console.log(`  ✓ tauri-driver binary: ${localBinDir}/${binaryName}`);
-  console.log(`  ✓ tauri-driver tarball: ${ROOT_DIR}/${tarballName}`);
-  console.log('✅ tauri-driver updated\n');
-}
-
-/**
  * Update workspace dependencies
  */
 function updateWorkspace() {
@@ -232,14 +146,12 @@ async function main() {
 
     updatePuppeteerBrowsers();
     updateWdioUtils();
-    updateTauriDriver();
     updateWorkspace();
 
     console.log('🎉 All packages updated successfully!');
     console.log('\n📋 Summary:');
     console.log('- @puppeteer/browsers: Enhanced with Electron fallback sources');
     console.log('- @wdio/utils: Updated to detect electron usage and use fallback sources');
-    console.log('- tauri-driver: Local build with WebDriver stdout/stderr fix');
     console.log('- Workspace: Updated with new package versions');
     console.log('\n🚀 Ready for ARM64 CI testing!');
   } catch (error) {
