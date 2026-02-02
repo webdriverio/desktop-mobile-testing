@@ -161,6 +161,9 @@ function updateTauriDriver() {
   const tarballName = `tauri-driver-local.tgz`;
 
   // Clean up any existing temp dir
+  // Clean up any existing temp dir with unique name to avoid race conditions
+  const timestamp = Date.now();
+  const tauriDriverTmpDir = join(TMP_DIR, `tauri-driver-package-${timestamp}`);
   if (existsSync(tauriDriverTmpDir)) {
     runCommand(`rm -rf ${tauriDriverTmpDir}`);
   }
