@@ -36,10 +36,33 @@
     <p>Splash Screen</p>
     <button id="switch-main-window" class="switch-main-window">Continue</button>
   </div>
-  <script type="module">
-    import '@wdio/tauri-plugin';
-    document.getElementById('switch-main-window').addEventListener('click', async () => {
-      await core.invoke('switch_to_main');
+  <script type="text/javascript">
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[Splash] DOM ready');
+      console.log('[Splash] window.__TAURI__:', window.__TAURI__);
+      
+      var btn = document.getElementById('switch-main-window');
+      if (!btn) {
+        console.error('[Splash] Button not found!');
+        return;
+      }
+      
+      btn.addEventListener('click', () => {
+        console.log('[Splash] Button clicked');
+        if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+          console.log('[Splash] Calling switch_to_main...');
+          window.__TAURI__.core.invoke('switch_to_main')
+            .then((result) => {
+              console.log('[Splash] switch_to_main result:', result);
+            })
+            .catch((error) => {
+              console.error('[Splash] switch_to_main error:', error);
+            });
+        } else {
+          console.error('[Splash] window.__TAURI__.core.invoke not available');
+        }
+      });
     });
   </script>
 </body>
