@@ -61,13 +61,37 @@ jobs:
         with:
           node-version: '20'
 
-      # Install Rust toolchain for auto-installing tauri-driver if testing Tauri service
-      # The @wdio/tauri-service will automatically install tauri-driver via cargo if not found
-      - name: 🦀 Setup Rust (for tauri-driver auto-install)
+      # Install Rust toolchain for building tauri-driver
+      - name: 🦀 Setup Rust (for tauri-driver build)
         if: inputs.service == 'tauri' || inputs.service == 'both'
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+
+      # Build tauri-driver from fork with stdout pollution fix
+      # This prevents null bytes from WebKitWebDriver corrupting wdio.log
+      - name: 🔧 Build tauri-driver from fork
+        if: inputs.service == 'tauri' || inputs.service == 'both'
+        shell: bash
+        run: |
+          echo "Cloning tauri-driver from fork..."
+          git clone --branch fix/prevent-stdout-pollution --depth 1 https://github.com/goosewobbler/tauri.git /tmp/tauri-fork
+          
+          echo "Building tauri-driver..."
+          cd /tmp/tauri-fork/crates/tauri-driver
+          cargo build --release
+          
+          echo "Installing tauri-driver to cargo bin..."
+          mkdir -p ~/.cargo/bin
+          cp /tmp/tauri-fork/target/release/tauri-driver ~/.cargo/bin/
+          chmod +x ~/.cargo/bin/tauri-driver
+          
+          echo "Verifying installation..."
+          which tauri-driver
+          tauri-driver --help || true
+          
+          echo "Cleaning up..."
+          rm -rf /tmp/tauri-fork
 
       # Install WebKit WebDriver and GTK/X11 runtime dependencies for Linux (required by tauri-driver)
       # Note: Build dependencies are handled in the build workflows, we only need runtime libs for testing

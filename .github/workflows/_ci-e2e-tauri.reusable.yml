@@ -117,12 +117,35 @@ jobs:
             libgtk-3-0t64 \
             libayatana-appindicator3-1
 
-      # Install Rust toolchain for auto-installing tauri-driver
-      # The @wdio/tauri-service will automatically install tauri-driver via cargo if not found
-      - name: 🦀 Setup Rust (for tauri-driver auto-install)
+      # Install Rust toolchain for building tauri-driver
+      - name: 🦀 Setup Rust (for tauri-driver build)
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+
+      # Build tauri-driver from fork with stdout pollution fix
+      # This prevents null bytes from WebKitWebDriver corrupting wdio.log
+      - name: 🔧 Build tauri-driver from fork
+        shell: bash
+        run: |
+          echo "Cloning tauri-driver from fork..."
+          git clone --branch fix/prevent-stdout-pollution --depth 1 https://github.com/goosewobbler/tauri.git /tmp/tauri-fork
+          
+          echo "Building tauri-driver..."
+          cd /tmp/tauri-fork/crates/tauri-driver
+          cargo build --release
+          
+          echo "Installing tauri-driver to cargo bin..."
+          mkdir -p ~/.cargo/bin
+          cp /tmp/tauri-fork/target/release/tauri-driver ~/.cargo/bin/
+          chmod +x ~/.cargo/bin/tauri-driver
+          
+          echo "Verifying installation..."
+          which tauri-driver
+          tauri-driver --help || true
+          
+          echo "Cleaning up..."
+          rm -rf /tmp/tauri-fork
 
       - name: 🌐 Install WebKit WebDriver (Linux)
         if: runner.os == 'Linux'
