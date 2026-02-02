@@ -309,10 +309,6 @@ fn main() {
             write_clipboard,
             generate_test_logs,
             switch_to_main,
-            // Service window management commands (add these):
-            get_window_states,     // <- Your service needs this
-            get_window_handles,    // <- Generic handles
-            get_window_title,      // <- Title lookup
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,14 +4,18 @@ Allows all WebDriverIO plugin commands for testing
 
 #### This default permission set includes the following:
 
-- `allow-execute`
-- `allow-log-frontend`
-- `allow-debug-plugin`
-- `allow-set-mock`
-- `allow-get-mock`
-- `allow-clear-mocks`
-- `allow-reset-mocks`
-- `allow-restore-mocks`
+- `wdio:allow-execute`
+- `wdio:allow-log-frontend`
+- `wdio:allow-debug-plugin`
+- `wdio:allow-set-mock`
+- `wdio:allow-get-mock`
+- `wdio:allow-clear-mocks`
+- `wdio:allow-reset-mocks`
+- `wdio:allow-restore-mocks`
+- `wdio:allow-get-active-window-label`
+- `wdio:allow-get-window-states`
+- `wdio:allow-list-windows`
+- `wdio:allow-switch-to-main`
 
 ## Permission Table
 
@@ -103,6 +107,32 @@ Denies the execute command without any pre-configured scope.
 <tr>
 <td>
 
+`wdio:allow-get-active-window-label`
+
+</td>
+<td>
+
+Enables the get_active_window_label command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:deny-get-active-window-label`
+
+</td>
+<td>
+
+Denies the get_active_window_label command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `wdio:allow-get-mock`
 
 </td>
@@ -122,6 +152,58 @@ Enables the get_mock command without any pre-configured scope.
 <td>
 
 Denies the get_mock command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:allow-get-window-states`
+
+</td>
+<td>
+
+Enables the get_window_states command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:deny-get-window-states`
+
+</td>
+<td>
+
+Denies the get_window_states command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:allow-list-windows`
+
+</td>
+<td>
+
+Enables the list_windows command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:deny-list-windows`
+
+</td>
+<td>
+
+Denies the list_windows command without any pre-configured scope.
 
 </td>
 </tr>
@@ -226,6 +308,32 @@ Enables the set_mock command without any pre-configured scope.
 <td>
 
 Denies the set_mock command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:allow-switch-to-main`
+
+</td>
+<td>
+
+Enables the switch_to_main command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`wdio:deny-switch-to-main`
+
+</td>
+<td>
+
+Denies the switch_to_main command without any pre-configured scope.
 
 </td>
 </tr>
