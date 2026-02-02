@@ -30,29 +30,15 @@ export function isCargoAvailable(): boolean {
 
 /**
  * Check if tauri-driver is installed and accessible
- * Priority: local build > PATH > common installation paths
+ * Priority: PATH > local build > common installation paths
+ * Note: PATH is checked first to ensure CI-built binaries take precedence
  */
 export function findTauriDriver(): string | undefined {
   const isWindows = process.platform === 'win32';
   const binaryName = isWindows ? 'tauri-driver.exe' : 'tauri-driver';
 
-  // Check for local build first (from update:packages script)
-  // Try multiple locations: relative to cwd (for tests) and common repo locations
-  // When running from e2e/ directory: cwd/.. = repo root where .local-bin is located
-  const possibleLocalPaths = [
-    join(process.cwd(), '.local-bin', binaryName), // cwd/.local-bin/
-    join(process.cwd(), '..', '.local-bin', binaryName), // parent/.local-bin/ (e.g., e2e -> repo root)
-    join(process.cwd(), '..', '..', '.local-bin', binaryName), // grandparent/.local-bin/
-  ];
-
-  for (const localPath of possibleLocalPaths) {
-    log.debug(`Looking for local tauri-driver at: ${localPath}`);
-    if (existsSync(localPath)) {
-      log.info(`Using local tauri-driver: ${localPath}`);
-      return localPath;
-    }
-  }
-
+  // Check PATH first - this ensures CI-built binaries (in ~/.cargo/bin) take precedence
+  // over any locally committed binaries
   try {
     const command = isWindows ? 'where tauri-driver' : 'which tauri-driver';
     const result = execSync(command, { encoding: 'utf8', stdio: 'pipe' });
@@ -69,6 +55,23 @@ export function findTauriDriver(): string | undefined {
     }
   } catch {
     // Not found in PATH
+  }
+
+  // Check for local build (from update:packages script)
+  // Try multiple locations: relative to cwd (for tests) and common repo locations
+  // When running from e2e/ directory: cwd/.. = repo root where .local-bin is located
+  const possibleLocalPaths = [
+    join(process.cwd(), '.local-bin', binaryName), // cwd/.local-bin/
+    join(process.cwd(), '..', '.local-bin', binaryName), // parent/.local-bin/ (e.g., e2e -> repo root)
+    join(process.cwd(), '..', '..', '.local-bin', binaryName), // grandparent/.local-bin/
+  ];
+
+  for (const localPath of possibleLocalPaths) {
+    log.debug(`Looking for local tauri-driver at: ${localPath}`);
+    if (existsSync(localPath)) {
+      log.info(`Using local tauri-driver: ${localPath}`);
+      return localPath;
+    }
   }
 
   // Check common installation paths
