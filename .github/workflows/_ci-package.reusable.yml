@@ -86,9 +86,17 @@ jobs:
           cp /tmp/tauri-fork/target/release/tauri-driver ~/.cargo/bin/
           chmod +x ~/.cargo/bin/tauri-driver
           
+          echo "Overwriting .local-bin/tauri-driver with Linux binary (if exists)..."
+          if [ -f .local-bin/tauri-driver ]; then
+            cp /tmp/tauri-fork/target/release/tauri-driver .local-bin/tauri-driver
+            chmod +x .local-bin/tauri-driver
+            echo "Overwrote .local-bin/tauri-driver with Linux binary"
+          fi
+          
           echo "Verifying installation..."
           which tauri-driver
           tauri-driver --help || true
+          file .local-bin/tauri-driver || true
           
           echo "Cleaning up..."
           rm -rf /tmp/tauri-fork
