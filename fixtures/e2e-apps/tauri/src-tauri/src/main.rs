@@ -224,12 +224,17 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
+    eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init())
-        .setup(|app| {
-            let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
+        .setup(move |app| {
+            eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
 
             if is_splash {
+                // Only create the splash window when splash is enabled
+                // This matches the Electron behavior - main window is created lazily via switch_to_main
                 let _splash = tauri::WebviewWindowBuilder::new(
                     app,
                     "splash",
@@ -242,6 +247,7 @@ fn main() {
                 .transparent(true)
                 .build()
                 .expect("Failed to create splash window");
+                eprintln!("[Tauri-DEBUG] Created splash window only");
             } else {
                 create_main_window(app.handle());
             }
