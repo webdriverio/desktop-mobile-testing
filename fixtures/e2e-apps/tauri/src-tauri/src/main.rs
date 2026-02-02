@@ -195,10 +195,13 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
+    eprintln!("[Tauri-DEBUG] create_main_window called");
     if let Some(existing) = app.get_webview_window("main") {
+        eprintln!("[Tauri-DEBUG] Found existing main window, returning it");
         return existing;
     }
-    tauri::WebviewWindowBuilder::new(
+    eprintln!("[Tauri-DEBUG] Creating new main window");
+    let window = tauri::WebviewWindowBuilder::new(
         app,
         "main",
         tauri::WebviewUrl::App("index.html".into())
@@ -206,13 +209,15 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::We
     .title("Tauri E2E Test App")
     .inner_size(600.0, 400.0)
     .build()
-    .expect("Failed to create main window")
+    .expect("Failed to create main window");
+    eprintln!("[Tauri-DEBUG] Main window created successfully");
+    window
 }
 
 #[tauri::command]
 async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
     if let Some(splash) = app.get_webview_window("splash") {
-        splash.hide().map_err(|e| e.to_string())?;
+        splash.close().map_err(|e| e.to_string())?;
     }
 
     let main = app.get_webview_window("main")
@@ -235,7 +240,7 @@ fn main() {
             if is_splash {
                 // Only create the splash window when splash is enabled
                 // This matches the Electron behavior - main window is created lazily via switch_to_main
-                let _splash = tauri::WebviewWindowBuilder::new(
+                let splash = tauri::WebviewWindowBuilder::new(
                     app,
                     "splash",
                     tauri::WebviewUrl::App("splash.html".into())
@@ -245,9 +250,15 @@ fn main() {
                 .resizable(false)
                 .decorations(false)
                 .transparent(true)
+                .focused(true)
                 .build()
                 .expect("Failed to create splash window");
-                eprintln!("[Tauri-DEBUG] Created splash window only");
+                
+                // Show and focus the splash window explicitly
+                splash.show().expect("Failed to show splash window");
+                splash.set_focus().expect("Failed to focus splash window");
+                
+                eprintln!("[Tauri-DEBUG] Created, showed, and focused splash window");
             } else {
                 create_main_window(app.handle());
             }
