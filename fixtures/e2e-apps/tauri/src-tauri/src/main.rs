@@ -216,15 +216,28 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::We
 
 #[tauri::command]
 async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(splash) = app.get_webview_window("splash") {
-        splash.close().map_err(|e| e.to_string())?;
-    }
-
+    eprintln!("[Tauri-DEBUG] switch_to_main called");
+    
+    // CRITICAL: Create main window FIRST to keep app alive when we close splash
+    // This matches Electron behavior - create main before destroying splash
     let main = app.get_webview_window("main")
-        .unwrap_or_else(|| create_main_window(&app));
-
+        .unwrap_or_else(|| {
+            eprintln!("[Tauri-DEBUG] Main window doesn't exist, creating it");
+            create_main_window(&app)
+        });
+    
+    // NOW close splash (app stays alive because main exists)
+    if let Some(splash) = app.get_webview_window("splash") {
+        eprintln!("[Tauri-DEBUG] Found splash window, closing it");
+        splash.close().map_err(|e| e.to_string())?;
+    } else {
+        eprintln!("[Tauri-DEBUG] Splash window not found");
+    }
+    
+    eprintln!("[Tauri-DEBUG] Showing and focusing main window");
     main.show().map_err(|e| e.to_string())?;
     main.set_focus().map_err(|e| e.to_string())?;
+    eprintln!("[Tauri-DEBUG] switch_to_main completed successfully");
     Ok(())
 }
 
