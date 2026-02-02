@@ -32,6 +32,7 @@ permissions = [
   "wdio:allow-reset-mocks",
   "wdio:allow-restore-mocks",
   "wdio:allow-get-active-window-label",
+  "wdio:allow-get-window-states",
   "wdio:allow-list-windows",
   "wdio:allow-switch-to-main"
 ]
@@ -80,6 +81,11 @@ commands = { allow = ["restore_mocks"], deny = [] }
 identifier = "wdio:allow-get-active-window-label"
 description = "Allow get_active_window_label command"
 commands = { allow = ["get_active_window_label"], deny = [] }
+
+[wdio_allow_get_window_states]
+identifier = "wdio:allow-get-window-states"
+description = "Allow get_window_states command"
+commands = { allow = ["get_window_states"], deny = [] }
 
 [wdio_allow_list_windows]
 identifier = "wdio:allow-list-windows"
