@@ -6,6 +6,16 @@ use crate::models::ExecuteRequest;
 use crate::Result;
 use crate::Error;
 
+/// Window state information for generic window management
+/// Mirrors Electron's window tracking - discover active window without app-specific knowledge
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct WindowState {
+  pub label: String,
+  pub title: String,
+  pub is_visible: bool,
+  pub is_focused: bool,
+}
+
 /// Debug command to verify plugin is working
 #[command]
 pub(crate) async fn debug_plugin<R: Runtime>(_window: WebviewWindow<R>) -> String {
@@ -199,4 +209,26 @@ pub(crate) async fn list_windows<R: Runtime>(
   app: tauri::AppHandle<R>,
 ) -> Result<Vec<String>> {
   Ok(app.webview_windows().keys().cloned().collect())
+}
+
+/// Get detailed state of all windows (for generic window management like Electron)
+#[command]
+pub(crate) async fn get_window_states<R: Runtime>(
+  app: tauri::AppHandle<R>,
+) -> Result<Vec<WindowState>> {
+  let mut states = Vec::new();
+  
+  for (label, window) in app.webview_windows() {
+    let state = WindowState {
+      label: label.clone(),
+      title: window.title().unwrap_or_default(),
+      is_visible: window.is_visible().unwrap_or(false),
+      is_focused: window.is_focused().unwrap_or(false),
+    };
+    log::debug!("[get_window_states] {}: title='{}', visible={}, focused={}", 
+      label, state.title, state.is_visible, state.is_focused);
+    states.push(state);
+  }
+  
+  Ok(states)
 }

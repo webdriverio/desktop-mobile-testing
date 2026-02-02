@@ -4,7 +4,7 @@ import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
-import { clearWindowState, ensureActiveWindowFocus, getCurrentDevtoolsPort } from './window.js';
+import { clearWindowState, ensureActiveWindowFocus } from './window.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -15,7 +15,6 @@ const EXECUTE_PATCHED = Symbol('wdio-tauri-execute-patched');
  */
 export default class TauriWorkerService {
   private browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
-  private activePort?: number;
 
   constructor(_options: TauriServiceOptions, _capabilities: TauriCapabilities) {
     log.debug('TauriWorkerService initialized');
@@ -139,11 +138,8 @@ export default class TauriWorkerService {
     const browser = this.browser as WebdriverIO.Browser;
 
     try {
-      if (!this.activePort) {
-        this.activePort = await getCurrentDevtoolsPort(browser);
-      }
-
-      this.activePort = await ensureActiveWindowFocus(browser, this.activePort, commandName);
+      // Generic window focus detection like Electron - no app-specific knowledge
+      await ensureActiveWindowFocus(browser, commandName);
     } catch (error) {
       log.warn('Failed to ensure window focus before command:', error);
     }

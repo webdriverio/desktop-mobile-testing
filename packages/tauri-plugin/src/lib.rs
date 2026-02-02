@@ -72,7 +72,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::log_frontend,
             commands::debug_plugin,
             commands::get_active_window_label,
-            commands::list_windows
+            commands::list_windows,
+            commands::get_window_states
         ])
         .setup(|app_handle, _api| {
             set_app_handle(app_handle.clone());

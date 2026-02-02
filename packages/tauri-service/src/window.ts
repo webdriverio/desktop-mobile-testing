@@ -10,10 +10,15 @@ interface DevtoolsEndpoint {
   url: string;
 }
 
+interface WindowState {
+  label: string;
+  title: string;
+  is_visible: boolean;
+  is_focused: boolean;
+}
+
 const windowPortMap = new Map<string, number>();
 const lastCommandCache = new Map<string, string>();
-
-const DOM_COMMANDS = ['click', 'keys', 'doubleClick', 'rightClick', 'setValue', 'clearValue', '$', '$$'];
 
 export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promise<string> {
   try {
@@ -56,10 +61,8 @@ export async function getWindowPort(browser: WebdriverIO.Browser, label: string)
     return undefined;
   }
 
-  // Map endpoints by their ID (which corresponds to window label in Tauri)
   for (const endpoint of endpoints) {
     const port = extractPortFromWebSocketUrl(endpoint.webSocketDebuggerUrl);
-    // The endpoint id typically matches the window label (e.g., "main", "secondary")
     windowPortMap.set(endpoint.id, port);
     log.debug(`Mapped window "${endpoint.id}" to port ${port}`);
   }
@@ -84,59 +87,131 @@ export async function getCurrentDevtoolsPort(browser: WebdriverIO.Browser): Prom
   return undefined;
 }
 
-async function switchToWindow(browser: WebdriverIO.Browser, newPort: number): Promise<void> {
-  log.debug(`Switching to window on port ${newPort}`);
-
-  const originalSessionId = browser.sessionId;
+async function switchToWindowByTitle(browser: WebdriverIO.Browser, targetTitle: string): Promise<boolean> {
+  log.debug(`Switching to window with title containing "${targetTitle}"`);
 
   try {
-    await browser.deleteSession();
-    log.debug(`Deleted session ${originalSessionId}`);
+    const handles = await browser.getWindowHandles();
+    log.debug(`Available handles: ${JSON.stringify(handles)}`);
 
-    await browser.newSession({
-      'goog:chromeOptions': {
-        debuggerAddress: `localhost:${newPort}`,
-      },
-    });
-    log.debug(`Created new session on port ${newPort}`);
-  } catch (error) {
-    log.error('Failed to switch window:', error);
-    throw error;
-  }
-}
+    // Try each handle until we find the one with the target title
+    for (const handle of handles) {
+      try {
+        await browser.switchToWindow(handle);
+        const title = await browser.getTitle();
+        log.debug(`Handle ${handle.substring(0, 8)}... has title: "${title}"`);
 
-function requiresWindowFocus(commandName: string): boolean {
-  return DOM_COMMANDS.includes(commandName);
-}
-
-export async function ensureActiveWindowFocus(
-  browser: WebdriverIO.Browser,
-  currentPort: number | undefined,
-  commandName: string,
-): Promise<number | undefined> {
-  if (!currentPort) {
-    const port = await getCurrentDevtoolsPort(browser);
-    return port;
-  }
-
-  if (!requiresWindowFocus(commandName)) {
-    return currentPort;
-  }
-
-  try {
-    const activeLabel = await getActiveWindowLabel(browser);
-    const activePort = await getWindowPort(browser, activeLabel);
-
-    if (activePort && activePort !== currentPort) {
-      log.debug(`Window change detected: ${currentPort} -> ${activePort} (label: "${activeLabel}")`);
-      await switchToWindow(browser, activePort);
-      return activePort;
+        // Check if this is the target window by title
+        if (targetTitle.length > 0 && title.includes(targetTitle)) {
+          log.debug(`Found target window with handle ${handle.substring(0, 8)}...`);
+          return true;
+        }
+      } catch {
+        // Handle might be stale, continue to next
+        log.debug(`Handle ${handle.substring(0, 8)}... is stale, skipping`);
+      }
     }
 
-    return currentPort;
+    log.warn(`Could not find window with title containing "${targetTitle}"`);
+    return false;
+  } catch (error) {
+    log.error('Failed to switch window by title:', error);
+    return false;
+  }
+}
+
+async function getWindowStates(browser: WebdriverIO.Browser): Promise<WindowState[]> {
+  try {
+    const states = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_window_states'));
+    return states as WindowState[];
+  } catch (error) {
+    log.warn('Failed to get window states:', error);
+    return [];
+  }
+}
+
+function findActiveWindow(states: WindowState[]): WindowState | undefined {
+  // Electron logic: return the focused window, or the first visible window
+  // that has focus, or the first visible window if none are focused
+
+  // First, try to find the focused window
+  const focusedWindow = states.find((w) => w.is_focused);
+  if (focusedWindow) {
+    return focusedWindow;
+  }
+
+  // Second, find the first visible window (in case Tauri doesn't track focus)
+  const visibleWindow = states.find((w) => w.is_visible);
+  if (visibleWindow) {
+    return visibleWindow;
+  }
+
+  // Fallback: return the first window (for consistency)
+  return states[0];
+}
+
+/**
+ * Ensure the WebDriver session is focused on the active window
+ * Mirrors Electron's ensureActiveWindowFocus() - completely generic
+ *
+ * @param browser WebdriverIO browser instance
+ * @param commandName Name of the command being executed
+ * @returns Promise that resolves when focus is ensured
+ */
+export async function ensureActiveWindowFocus(browser: WebdriverIO.Browser, commandName: string): Promise<void> {
+  // Only check for focus on certain commands (like Electron)
+  const focusCommands = ['getTitle', 'findElement', 'findElements', '$', '$$', 'elementClick'];
+  if (!focusCommands.includes(commandName)) {
+    return;
+  }
+
+  try {
+    // Get all window states from Tauri (like Electron's puppeteer.targets())
+    const states = await getWindowStates(browser);
+
+    if (states.length === 0) {
+      log.debug('No window states available, skipping focus check');
+      return;
+    }
+
+    log.debug(`Window states: ${JSON.stringify(states)}`);
+
+    // Find the currently active window (focused or visible)
+    const activeWindow = findActiveWindow(states);
+
+    if (!activeWindow) {
+      log.debug('No active window found');
+      return;
+    }
+
+    log.debug(
+      `Active window: ${activeWindow.label} (title: "${activeWindow.title}", visible: ${activeWindow.is_visible}, focused: ${activeWindow.is_focused})`,
+    );
+
+    // Get current browser title to see if we're already on the right window
+    const currentTitle = await browser.getTitle();
+    log.debug(`Current browser title: "${currentTitle}"`);
+
+    // If we're already on the active window, no need to switch
+    if (currentTitle.includes(activeWindow.title) || activeWindow.title.includes(currentTitle)) {
+      log.debug('Already on active window, no switch needed');
+      return;
+    }
+
+    // Switch to the active window
+    log.debug(`[SERVICE] Switching to active window: ${activeWindow.title}`);
+    const switched = await switchToWindowByTitle(browser, activeWindow.title);
+
+    if (switched) {
+      log.debug(`[SERVICE] Successfully switched to active window`);
+      // Verify the switch worked
+      const newTitle = await browser.getTitle();
+      log.debug(`[SERVICE] Title after switch: "${newTitle}"`);
+    } else {
+      log.warn(`[SERVICE] Failed to switch to active window: ${activeWindow.title}`);
+    }
   } catch (error) {
     log.warn('Failed to ensure window focus:', error);
-    return currentPort;
   }
 }
 
