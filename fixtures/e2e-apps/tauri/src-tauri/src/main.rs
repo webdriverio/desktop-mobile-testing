@@ -249,24 +249,8 @@ fn main() {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
 
             if is_splash {
-                // STANDARD TAURI SPLASHSCREEN PATTERN:
-                // Create both windows at startup - main hidden, splash visible
-                
-                // Create main window (hidden initially)
-                let main = tauri::WebviewWindowBuilder::new(
-                    app,
-                    "main",
-                    tauri::WebviewUrl::App("index.html".into())
-                )
-                .title("Tauri E2E Test App")
-                .inner_size(600.0, 400.0)
-                .visible(false)  // Hidden initially
-                .build()
-                .expect("Failed to create main window");
-                
-                eprintln!("[Tauri-DEBUG] Created main window (hidden)");
-                
-                // Create splash window (visible)
+                // 1. SPLASH FIRST - WebDriver MUST connect here (visible + focused)
+                eprintln!("[Tauri-DEBUG] === Creating SPLASH window FIRST ===");
                 let splash = tauri::WebviewWindowBuilder::new(
                     app,
                     "splash",
@@ -277,16 +261,33 @@ fn main() {
                 .resizable(false)
                 .decorations(false)
                 .transparent(true)
-                .focused(true)
+                .focused(true)           // CRITICAL: WebDriver attaches here
                 .build()
                 .expect("Failed to create splash window");
                 
-                // Show and focus splash
-                splash.show().expect("Failed to show splash window");
-                splash.set_focus().expect("Failed to focus splash window");
+                // Show/focus splash explicitly (ensures WebDriver session)
+                splash.show().expect("Failed to show splash");
+                splash.set_focus().expect("Failed to focus splash");
                 
-                eprintln!("[Tauri-DEBUG] Created splash (visible) + main (hidden)");
+                eprintln!("[Tauri-DEBUG] ✓ Splash created and focused");
+
+                // 2. MAIN SECOND - hidden until switch_to_main
+                eprintln!("[Tauri-DEBUG] === Creating MAIN window SECOND (hidden) ===");
+                let _main = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "main",
+                    tauri::WebviewUrl::App("index.html".into())
+                )
+                .title("Tauri E2E Test App")
+                .inner_size(600.0, 400.0)
+                .visible(false)          // HIDDEN until switch_to_main
+                .build()
+                .expect("Failed to create main window");
+                
+                eprintln!("[Tauri-DEBUG] ✓ Main created (hidden). Ready for switch_to_main!");
             } else {
+                // No splash - just main window (unchanged)
+                eprintln!("[Tauri-DEBUG] No splash mode - creating main only");
                 create_main_window(app.handle());
             }
             Ok::<(), Box<dyn std::error::Error>>(())
@@ -308,7 +309,12 @@ fn main() {
             write_clipboard,
             generate_test_logs,
             switch_to_main,
+            // Service window management commands (add these):
+            get_window_states,     // <- Your service needs this
+            get_window_handles,    // <- Generic handles
+            get_window_title,      // <- Title lookup
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
