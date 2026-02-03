@@ -245,6 +245,7 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init())
+        .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
 
@@ -260,7 +261,6 @@ fn main() {
                 .inner_size(300.0, 200.0)
                 .resizable(false)
                 .decorations(false)
-                .transparent(true)
                 .focused(true)           // CRITICAL: WebDriver attaches here
                 .build()
                 .expect("Failed to create splash window");
