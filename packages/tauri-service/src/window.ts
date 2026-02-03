@@ -50,21 +50,26 @@ async function switchToWindowByTitle(browser: WebdriverIO.Browser, targetTitle: 
     const handles = await browser.getWindowHandles();
     log.debug(`Available handles: ${JSON.stringify(handles)}`);
 
-    // Try each handle until we find the one with the target title
+    // Build a mapping from title to handle by checking each window once
+    const titleToHandle = new Map<string, string>();
+
     for (const handle of handles) {
       try {
         await browser.switchToWindow(handle);
         const title = await browser.getTitle();
         log.debug(`Handle ${handle.substring(0, 8)}... has title: "${title}"`);
-
-        // Check if this is the target window by title
-        if (targetTitle.length > 0 && title.includes(targetTitle)) {
-          log.debug(`Found target window with handle ${handle.substring(0, 8)}...`);
-          return true;
-        }
+        titleToHandle.set(title, handle);
       } catch {
-        // Handle might be stale, continue to next
         log.debug(`Handle ${handle.substring(0, 8)}... is stale, skipping`);
+      }
+    }
+
+    // Find the handle with matching title from our cached mapping
+    for (const [title, handle] of titleToHandle.entries()) {
+      if (targetTitle.length > 0 && title.includes(targetTitle)) {
+        log.debug(`Found target window with handle ${handle.substring(0, 8)}...`);
+        await browser.switchToWindow(handle);
+        return true;
       }
     }
 
