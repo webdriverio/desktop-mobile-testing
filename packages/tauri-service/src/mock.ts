@@ -440,6 +440,11 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   wrapperMock.withImplementation = mock.withImplementation.bind(mock);
   wrapperMock.update = mock.update.bind(mock);
 
+  // Bind synchronous mock methods from native-spy
+  wrapperMock.mockName = mock.mockName.bind(mock);
+  wrapperMock.getMockName = mock.getMockName.bind(mock);
+  wrapperMock.getMockImplementation = mock.getMockImplementation.bind(mock);
+
   wrapperMock.__isTauriMock = true;
 
   log.debug(`[${command}] Auto-updating mock wrapper created successfully`);

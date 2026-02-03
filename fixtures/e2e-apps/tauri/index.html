@@ -104,6 +104,13 @@
       console.log('[App] typeof window:', typeof window);
       console.log('[App] window.__TAURI__ available before plugin import:', typeof window.__TAURI__ !== 'undefined');
 
+      // Import and expose native-spy for mocking support
+      // This is required for browser.tauri.mock() to work
+      import { fn as nativeSpyFn } from '@wdio/native-spy';
+
+      window.__native_spy__ = { fn: nativeSpyFn };
+      console.log('[App] window.__native_spy__ exposed:', typeof window.__native_spy__ !== 'undefined');
+
       // Import WebDriverIO Tauri plugin frontend API
       // This provides window.wdioTauri for testing
       import '@wdio/tauri-plugin';

@@ -5675,10 +5675,22 @@
           "markdownDescription": "Enables the execute command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_active_window_label command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-get-active-window-label",
+          "markdownDescription": "Enables the get_active_window_label command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_mock command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:allow-get-mock",
           "markdownDescription": "Enables the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-list-windows",
+          "markdownDescription": "Enables the list_windows command without any pre-configured scope."
         },
         {
           "description": "Enables the log_frontend command without any pre-configured scope.",
@@ -5705,6 +5717,12 @@
           "markdownDescription": "Enables the set_mock command without any pre-configured scope."
         },
         {
+          "description": "Enables the switch_to_main command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-switch-to-main",
+          "markdownDescription": "Enables the switch_to_main command without any pre-configured scope."
+        },
+        {
           "description": "Denies the clear_mocks command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:deny-clear-mocks",
@@ -5723,10 +5741,22 @@
           "markdownDescription": "Denies the execute command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_active_window_label command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-get-active-window-label",
+          "markdownDescription": "Denies the get_active_window_label command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_mock command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:deny-get-mock",
           "markdownDescription": "Denies the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-list-windows",
+          "markdownDescription": "Denies the list_windows command without any pre-configured scope."
         },
         {
           "description": "Denies the log_frontend command without any pre-configured scope.",
@@ -5751,6 +5781,12 @@
           "type": "string",
           "const": "wdio:deny-set-mock",
           "markdownDescription": "Denies the set_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the switch_to_main command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-switch-to-main",
+          "markdownDescription": "Denies the switch_to_main command without any pre-configured scope."
         }
       ]
     },

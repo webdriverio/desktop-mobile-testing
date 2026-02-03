@@ -280,6 +280,9 @@ importers:
       '@tauri-apps/plugin-log':
         specifier: 2.8.0
         version: 2.8.0
+      '@wdio/native-spy':
+        specifier: workspace:*
+        version: link:../../../packages/native-spy
       '@wdio/tauri-plugin':
         specifier: workspace:*
         version: link:../../../packages/tauri-plugin

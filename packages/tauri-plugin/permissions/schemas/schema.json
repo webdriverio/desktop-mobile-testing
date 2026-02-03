@@ -292,6 +292,18 @@
           "markdownDescription": "Denies the execute command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_active_window_label command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-active-window-label",
+          "markdownDescription": "Enables the get_active_window_label command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_active_window_label command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-active-window-label",
+          "markdownDescription": "Denies the get_active_window_label command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_mock command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-mock",
@@ -302,6 +314,18 @@
           "type": "string",
           "const": "deny-get-mock",
           "markdownDescription": "Denies the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-windows",
+          "markdownDescription": "Enables the list_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-windows",
+          "markdownDescription": "Denies the list_windows command without any pre-configured scope."
         },
         {
           "description": "Enables the log_frontend command without any pre-configured scope.",
@@ -350,6 +374,18 @@
           "type": "string",
           "const": "deny-set-mock",
           "markdownDescription": "Denies the set_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the switch_to_main command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-switch-to-main",
+          "markdownDescription": "Enables the switch_to_main command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the switch_to_main command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-switch-to-main",
+          "markdownDescription": "Denies the switch_to_main command without any pre-configured scope."
         },
         {
           "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-log-frontend`\n- `allow-debug-plugin`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`",
