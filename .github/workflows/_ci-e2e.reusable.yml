@@ -84,8 +84,10 @@ jobs:
         run: |
           echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
 
-       - name: Turbo Cache (GitHub Native)
-         uses: rharkor/caching-for-turbo@v1
+      - name: Turbo Cache (GitHub Native)
+        uses: rharkor/caching-for-turbo@v1
+        with:
+          turbo-cache-path: .turbo/cache
 
       # Dynamically generate the Turbo filter for building test applications
       - name: 🪄 Generate Build Filter for Test Apps
