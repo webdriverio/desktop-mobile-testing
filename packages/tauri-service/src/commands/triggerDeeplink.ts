@@ -58,7 +58,7 @@ export function validateDeeplinkUrl(url: string): string {
  *
  * // Linux
  * getPlatformCommand('myapp://test', 'linux');
- * // Returns { command: 'gio', args: ['open', 'myapp://test'] }
+ * // Returns { command: 'xdg-open', args: ['myapp://test'] }
  * ```
  */
 export function getPlatformCommand(url: string, platform: string): { command: string; args: string[] } {
@@ -66,7 +66,7 @@ export function getPlatformCommand(url: string, platform: string): { command: st
     case 'win32':
       return {
         command: 'cmd',
-        args: ['/c', 'start', '', url],
+        args: ['/c', 'start', '', `"${url}"`],
       };
 
     case 'darwin':
@@ -77,8 +77,8 @@ export function getPlatformCommand(url: string, platform: string): { command: st
 
     case 'linux':
       return {
-        command: 'gio',
-        args: ['open', url],
+        command: 'xdg-open',
+        args: [url],
       };
 
     default:
@@ -106,31 +106,23 @@ export function getPlatformCommand(url: string, platform: string): { command: st
 export async function executeDeeplinkCommand(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
-      const fullCommand = `${command} ${args.join(' ')}`;
-      log.info(`Spawning deeplink command: "${fullCommand}"`);
-
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
-        shell: false,
+        shell: process.platform === 'win32',
       });
-
-      const pid = childProcess.pid;
-      log.info(`Deeplink process spawned with PID: ${pid}`);
 
       childProcess.unref();
 
       childProcess.on('error', (error) => {
-        log.error(`Failed to spawn deeplink process (PID ${pid}): ${error.message}`);
         reject(new Error(`Failed to trigger deeplink: ${error.message}`));
       });
 
       process.nextTick(() => {
-        log.info(`Deeplink command spawned successfully: PID ${pid}`);
+        log.debug('Deeplink command spawned successfully');
         resolve();
       });
     } catch (error) {
-      log.error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`);
       reject(new Error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`));
     }
   });
@@ -142,7 +134,7 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
  * This method uses platform-specific commands to open the deeplink URL:
  * - Windows: Uses `cmd /c start` to trigger the deeplink
  * - macOS: Uses `open` command
- * - Linux: Uses `gio open` command (xdg-open doesn't work in CI without browser)
+ * - Linux: Uses `xdg-open` command
  *
  * Unlike Electron, Tauri does not have the same userData directory issues
  * on Windows because it uses WebView2 instead of Chromium/Electron's process model.
@@ -158,19 +150,17 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
  * ```
  */
 export async function triggerDeeplink(this: TauriServiceContext, url: string): Promise<void> {
-  log.info(`triggerDeeplink called with URL: ${url}`);
+  log.debug(`triggerDeeplink called with URL: ${url}`);
 
   const validatedUrl = validateDeeplinkUrl(url);
   const platform = process.platform;
 
-  log.info(`Platform: ${platform}`);
   const { command, args } = getPlatformCommand(validatedUrl, platform);
-  const fullCommand = `${command} ${args.join(' ')}`;
-  log.info(`Full deeplink command: "${fullCommand}"`);
+  log.debug(`Executing deeplink command: ${command} ${args.join(' ')}`);
 
   try {
     await executeDeeplinkCommand(command, args);
-    log.info(`Deeplink triggered successfully: ${validatedUrl}`);
+    log.debug('Deeplink triggered successfully');
   } catch (error) {
     log.error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
