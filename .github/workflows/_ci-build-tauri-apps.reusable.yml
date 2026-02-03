@@ -63,6 +63,13 @@ jobs:
       - name: 🦀 Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: 🦀 Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '.'
+          cache-on-failure: true
+          cache-targets: false
+
       # Install Tauri dependencies on Linux
       - name: 🔧 Fix ARM64 Package Sources (Linux)
         if: runner.os == 'Linux' && runner.arch == 'ARM64'
