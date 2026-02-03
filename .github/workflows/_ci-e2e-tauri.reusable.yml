@@ -214,6 +214,58 @@ jobs:
           echo "::notice::Package build: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
           echo "::notice::Tauri binaries: Using pre-built binaries for ${{ runner.os }}"
 
+      # Setup protocol handlers for deeplink testing
+      # Required for Windows and Linux to properly handle testapp:// protocol
+      - name: 🔗 Setup Protocol Handlers
+        shell: bash
+        run: |
+          echo "=== Protocol Handler Setup ==="
+          echo "Runner OS: $RUNNER_OS"
+          echo "Working directory: $(pwd)"
+          echo "Scenario: ${{ inputs.scenario }}"
+          echo ""
+
+          echo "Setting up protocol handler for: tauri"
+
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "Setting up Windows protocol handler..."
+
+            echo "Checking if src-tauri/target directory exists..."
+            ls -la ./fixtures/e2e-apps/tauri/src-tauri/target/ || echo "src-tauri/target/ not found"
+            echo ""
+
+            powershell -ExecutionPolicy Bypass -File ./fixtures/e2e-apps/tauri/scripts/setup-protocol-handler.ps1
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Error: Protocol handler setup failed for tauri with exit code $EXIT_CODE"
+              exit 1
+            fi
+
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+            echo "Setting up Linux protocol handler..."
+
+            echo "Checking if src-tauri/target directory exists..."
+            ls -la ./fixtures/e2e-apps/tauri/src-tauri/target/ || echo "src-tauri/target/ not found"
+            echo ""
+
+            chmod +x ./fixtures/e2e-apps/tauri/scripts/setup-protocol-handler.sh
+            ./fixtures/e2e-apps/tauri/scripts/setup-protocol-handler.sh
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Error: Protocol handler setup failed for tauri with exit code $EXIT_CODE"
+              exit 1
+            fi
+
+          else
+            echo "macOS: Protocol handlers are registered by the app itself via deep-link configuration"
+            echo "No external setup needed - the app registers on first launch"
+          fi
+
+          echo ""
+          echo "=== Protocol Handler Setup Complete ==="
+
       # Dynamically generate the Tauri test commands to run
       # Uses 'tauri-basic' naming convention to align with Electron's 'builder/forge/script' naming
       - name: 🪄 Generate Tauri Test Execution Plan
