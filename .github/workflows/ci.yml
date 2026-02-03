@@ -40,18 +40,16 @@ jobs:
     with:
       os: 'ubuntu-latest'
 
-  # Run linting after build to use the build artifacts
+  # Run linting after change detection
   lint:
     name: Lint [Linux]
-    needs: [detect-changes, build]
+    needs: [detect-changes]
     uses: ./.github/workflows/_ci-lint.reusable.yml
-    with:
-      cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # Run unit tests after linting to ensure code quality first
+  # Run unit tests in parallel with linting (lint runs independently)
   unit-matrix:
     name: Unit
-    needs: [build, lint]
+    needs: [detect-changes, build]
     strategy:
       fail-fast: false
       matrix:
@@ -120,14 +118,10 @@ jobs:
     with:
       os: 'ubuntu-24.04-arm'
 
-  # Run package tests after unit tests to ensure the package is built correctly
-  # Split Electron and Tauri tests across separate jobs for better parallelization and clarity
-  # Electron apps are built inline on the test runner (faster builds, Turbo caching handles it)
-  # Tauri apps are built separately due to longer build times and system dependencies
-  # Electron package tests are split by module type (CJS/ESM) for better error isolation
+  # Electron package tests run in parallel with linting
   package-electron-matrix:
     name: Package - Electron
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
@@ -220,7 +214,7 @@ jobs:
   # - CentOS Stream 10: WebKitGTK removed by Red Hat due to 200+ CVEs and unsustainable maintenance
   package-tauri-distros:
     name: Package - Tauri (Docker)
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
@@ -240,10 +234,10 @@ jobs:
     with:
       distro: ${{ matrix.distro }}
 
-  # Run build tests outside of the main Linux build job
+  # Run build tests in parallel with linting
   build-matrix:
     name: Build
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
@@ -431,10 +425,10 @@ jobs:
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ''
 
-  # Universal binary verification - Electron only
+  # Universal binary verification - Electron only (runs in parallel with linting)
   package-electron-mac-universal:
     name: Package - Electron [macOS-Universal-Verify]
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     runs-on: macos-latest
     steps:
