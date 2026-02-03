@@ -213,6 +213,18 @@
       } else {
         updateStatus('Tauri API not available - Running in browser mode');
       }
+
+      // Deep link listener for E2E testing
+      window.receivedDeeplinks = [];
+      window.deeplinkCount = 0;
+
+      const { listen } = await import('@tauri-apps/api/event');
+      await listen('deep-link-received', (event) => {
+        const url = event.payload;
+        window.receivedDeeplinks.push(url);
+        window.deeplinkCount++;
+        console.log('[Deeplink] Received:', url);
+      });
     </script>
   </body>
 </html>
