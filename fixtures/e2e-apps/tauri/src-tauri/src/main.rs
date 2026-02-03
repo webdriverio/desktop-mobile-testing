@@ -222,7 +222,7 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
     // Both windows exist, just switch visibility
     
     let main = app.get_webview_window("main")
-        .expect("Main window should exist");
+        .ok_or_else(|| "Main window not found".to_string())?;
     
     // Hide splash (keeps WebDriver session alive)
     if let Some(splash) = app.get_webview_window("splash") {
