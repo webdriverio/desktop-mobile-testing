@@ -5,6 +5,7 @@ import type { EdgeDriverResult } from '../src/edgeDriverManager.js';
 vi.mock('node:child_process', () => ({
   execSync: vi.fn(),
   exec: vi.fn(),
+  execFile: vi.fn(),
 }));
 
 vi.mock('node:fs', () => ({
@@ -213,22 +214,26 @@ describe('Edge Driver Manager', () => {
     });
 
     it('should fail if auto-download disabled and versions mismatch', async () => {
-      const { execAsync } = await import('node:util');
-      const { existsSync } = await import('node:fs');
+      // Use the mocked functions directly without dynamic import
+      const { exec } = await vi.importMock('node:child_process');
+      const { existsSync } = await vi.importMock('node:fs');
 
-      vi.mocked(execAsync)
-        .mockResolvedValueOnce({
-          stdout: 'pv    REG_SZ    143.0.3650.139\n',
-          stderr: '',
-        } as any)
-        .mockResolvedValueOnce({
-          stdout: 'C:\\msedgedriver.exe\n',
-          stderr: '',
-        } as any)
-        .mockResolvedValueOnce({
-          stdout: 'MSEdgeDriver 142.0.0.0\n',
-          stderr: '',
-        } as any);
+      // Mock exec to simulate version detection
+      let execCallCount = 0;
+      vi.mocked(exec).mockImplementation(((_cmd: string, _opts: any, callback: any) => {
+        execCallCount++;
+        if (execCallCount === 1) {
+          // Edge version detection
+          callback?.(null, { stdout: 'pv    REG_SZ    143.0.3650.139\n', stderr: '' });
+        } else if (execCallCount === 2) {
+          // Find driver
+          callback?.(null, { stdout: 'C:\\msedgedriver.exe\n', stderr: '' });
+        } else if (execCallCount === 3) {
+          // Driver version (mismatch)
+          callback?.(null, { stdout: 'MSEdgeDriver 142.0.0.0\n', stderr: '' });
+        }
+        return {} as any;
+      }) as any);
 
       vi.mocked(existsSync).mockReturnValue(true);
 
@@ -239,8 +244,13 @@ describe('Edge Driver Manager', () => {
     });
 
     it('should handle Edge version detection failure gracefully', async () => {
-      const { execAsync } = await import('node:util');
-      vi.mocked(execAsync).mockRejectedValue(new Error('Registry error'));
+      // Use the mocked functions directly
+      const { exec } = await vi.importMock('node:child_process');
+
+      vi.mocked(exec).mockImplementation(((_cmd: string, _opts: any, callback: any) => {
+        callback?.(new Error('Registry error'), { stdout: '', stderr: '' });
+        return {} as any;
+      }) as any);
 
       const result = await ensureMsEdgeDriver();
       expect(result.success).toBe(true); // Don't fail hard
