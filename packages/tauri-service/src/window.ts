@@ -66,7 +66,7 @@ async function switchToWindowByTitle(browser: WebdriverIO.Browser, targetTitle: 
 
     // Find the handle with matching title from our cached mapping
     for (const [title, handle] of titleToHandle.entries()) {
-      if (targetTitle.length > 0 && title.includes(targetTitle)) {
+      if (targetTitle.length > 0 && title.trim() === targetTitle.trim()) {
         log.debug(`Found target window with handle ${handle.substring(0, 8)}...`);
         await browser.switchToWindow(handle);
         return true;
@@ -162,7 +162,7 @@ export async function ensureActiveWindowFocus(browser: WebdriverIO.Browser, comm
     log.debug(`Current browser title: "${currentTitle}"`);
 
     // If we're already on the active window, no need to switch
-    if (currentTitle.includes(activeWindow.title) || activeWindow.title.includes(currentTitle)) {
+    if (currentTitle.trim() === activeWindow.title.trim()) {
       log.debug('Already on active window, no switch needed');
       return;
     }
