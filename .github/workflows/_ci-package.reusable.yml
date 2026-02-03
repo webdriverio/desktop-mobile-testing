@@ -126,11 +126,14 @@ jobs:
             echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
           fi
 
-          # Check for distribution directories (minimal validation)
-          DIST_DIRS=$(find "${{ github.workspace }}" -path "*/dist" -type d | wc -l)
-          if [ "$DIST_DIRS" -lt 1 ]; then
-            echo "::warning::No dist directories found, build extraction may have failed"
-          fi
+           # Check for distribution directories (minimal validation)
+           DIST_DIRS=$(find "${{ github.workspace }}" -path "*/dist" -type d | wc -l)
+           if [ "$DIST_DIRS" -lt 1 ]; then
+             echo "::warning::No dist directories found, build extraction may have failed"
+           fi
+
+      - name: Turbo Cache (GitHub Native)
+        uses: rharkor/caching-for-turbo@v1
 
         # Pack services from downloaded artifacts so --skip-build can use them
         # This creates the .tgz files that the test script expects when --skip-build is used
@@ -243,3 +246,6 @@ jobs:
         if: failure()
         with:
           timeout: '180000'
+
+      - name: Cache Report
+        run: echo "Check turbo summary above for HIT/MISS"
