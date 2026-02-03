@@ -1,119 +1,16 @@
-# Setup script to register the testapp:// protocol handler for E2E testing on Windows
-# This script adds the necessary registry keys for protocol handler support
+# Setup script to register the testapp:// protocol handler for Electron Builder E2E testing on Windows
+# Wrapper for shared setup script
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Setting up testapp:// protocol handler on Windows..."
-
-# Get the script directory and app directory
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $AppDir = Split-Path -Parent $ScriptDir
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $ScriptDir)))
 
-Write-Host "App directory: $AppDir"
+$SharedScript = Join-Path $ProjectRoot "scripts" "protocol-handlers" "setup-protocol-handler.ps1"
 
-# Look for the executable in the expected Windows unpacked directory
-# electron-builder with "target": "dir" creates dist-electron/win-unpacked/
-$SearchPaths = @(
-    "$AppDir\dist-electron\win-unpacked\electron-builder-e2e-app.exe",
-    "$AppDir\dist-electron\win-ia32-unpacked\electron-builder-e2e-app.exe",
-    "$AppDir\dist-electron\win-x64-unpacked\electron-builder-e2e-app.exe",
-    "$AppDir\dist-electron\win-arm64-unpacked\electron-builder-e2e-app.exe"
-)
-
-$AppExecutable = $null
-foreach ($path in $SearchPaths) {
-    if (Test-Path $path) {
-        $AppExecutable = Get-Item $path
-        break
-    }
-}
-
-# Fallback: search recursively if not found in expected locations
-if (-not $AppExecutable) {
-    Write-Host "Searching recursively for executable..."
-    $AppExecutable = Get-ChildItem -Path "$AppDir\dist-electron" -Filter "electron-builder-e2e-app.exe" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-}
-
-if (-not $AppExecutable) {
-    Write-Host "Error: Could not find electron-builder-e2e-app.exe"
-    Write-Host "Searched paths:"
-    foreach ($path in $SearchPaths) {
-        Write-Host "  - $path"
-    }
-    Write-Host "Directory contents:"
-    Get-ChildItem -Path "$AppDir\dist-electron" -ErrorAction SilentlyContinue | Format-Table -AutoSize
-    exit 1
-}
-
-$ExePath = $AppExecutable.FullName
-Write-Host "Found executable: $ExePath"
-
-# Verify the executable exists and is accessible
-if (-not (Test-Path $ExePath)) {
-    Write-Error "Executable path is not accessible: $ExePath"
-    exit 1
-}
-
-# IDEMPOTENCY CHECK: Check if protocol handler is already registered correctly
-$RegistryPath = "HKCU:\Software\Classes\testapp"
-$CommandPath = "$RegistryPath\shell\open\command"
-$ExistingCommand = $null
-
-if (Test-Path $CommandPath) {
-    $ExistingCommand = Get-ItemProperty -Path $CommandPath -Name "(Default)" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty "(Default)"
-}
-
-# Registry path for protocol handler (moved from below to support idempotency check)
-if (-not (Test-Path $ExePath)) {
-    Write-Error "Executable path is not accessible: $ExePath"
-    exit 1
-}
-
-# Define command value
-$CommandValue = "`"$ExePath`" `"%1`""
-
-# Skip if already registered correctly
-if ($ExistingCommand -eq $CommandValue) {
-    Write-Host "Protocol handler already registered correctly, skipping..."
-    exit 0
-}
-
-# Create the protocol registry key
-if (-not (Test-Path $RegistryPath)) {
-    New-Item -Path $RegistryPath -Force | Out-Null
-    Write-Host "Created registry key: $RegistryPath"
-}
-
-# Set the URL Protocol value
-Set-ItemProperty -Path $RegistryPath -Name "(Default)" -Value "URL:testapp Protocol"
-Set-ItemProperty -Path $RegistryPath -Name "URL Protocol" -Value ""
-Write-Host "Set URL Protocol values"
-
-# Create the command registry key
-$CommandPath = "$RegistryPath\shell\open\command"
-if (-not (Test-Path $CommandPath)) {
-    New-Item -Path $CommandPath -Force | Out-Null
-    Write-Host "Created command registry key"
-}
-
-# Set the command to launch the app with the URL
-Set-ItemProperty -Path $CommandPath -Name "(Default)" -Value $CommandValue
-Write-Host "Set command value: $CommandValue"
-
-Write-Host ""
-Write-Host "Registered testapp:// protocol handler"
-Write-Host "Registry key: $RegistryPath"
-Write-Host "Executable: $ExePath"
-
-# Verify registration
-$RegisteredCommand = Get-ItemProperty -Path $CommandPath -Name "(Default)" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty "(Default)"
-if ($RegisteredCommand -eq $CommandValue) {
-    Write-Host "Verification successful: Command registered correctly"
-} else {
-    Write-Warning "Verification failed: Registered command does not match expected value"
-    Write-Host "Expected: $CommandValue"
-    Write-Host "Got: $RegisteredCommand"
-}
-
-Write-Host ""
-Write-Host "Setup complete!"
+& $SharedScript `
+    -AppDir $AppDir `
+    -ExecutableName "electron-builder-e2e-app.exe" `
+    -SearchPaths @("dist-electron\win-unpacked", "dist-electron\win-ia32-unpacked", "dist-electron\win-x64-unpacked", "dist-electron\win-arm64-unpacked") `
+    -AppDisplayName "Electron Builder E2E Test App"
