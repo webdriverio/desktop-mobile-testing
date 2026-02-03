@@ -66,7 +66,7 @@ export function getPlatformCommand(url: string, platform: string): { command: st
     case 'win32':
       return {
         command: 'cmd',
-        args: ['/c', 'start', '', `"${url}"`],
+        args: ['/c', 'start', '', url],
       };
 
     case 'darwin':
@@ -109,7 +109,7 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
-        shell: process.platform === 'win32',
+        shell: false,
       });
 
       childProcess.unref();
