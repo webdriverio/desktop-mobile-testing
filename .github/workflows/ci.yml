@@ -24,6 +24,8 @@ concurrency:
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
   # Detect which services are affected by changes

@@ -42,6 +42,8 @@ on:
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
   # This job runs package tests on multiple Node.js versions and operating systems

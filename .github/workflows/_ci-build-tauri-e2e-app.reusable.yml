@@ -43,6 +43,8 @@ on:
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   TURBO_DAEMON: false
 
 jobs:
@@ -67,6 +69,13 @@ jobs:
 
       - name: 🦀 Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: 🦀 Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '.'
+          cache-on-failure: true
+          cache-targets: false
 
       - name: 🔧 Fix ARM64 Package Sources (Linux)
         if: runner.os == 'Linux' && runner.arch == 'ARM64'
