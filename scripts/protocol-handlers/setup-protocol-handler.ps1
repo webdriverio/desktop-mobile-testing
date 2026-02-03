@@ -28,7 +28,7 @@ Write-Host "App directory: $AppDir"
 # Build full search paths
 $FullSearchPaths = @()
 foreach ($path in $SearchPaths) {
-    $FullSearchPaths += Join-Path $AppDir $path $ExecutableName
+    $FullSearchPaths += Join-Path (Join-Path $AppDir $path) $ExecutableName
 }
 
 $AppExecutable = $null
