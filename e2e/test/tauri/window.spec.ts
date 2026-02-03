@@ -1,19 +1,29 @@
-import { browser } from '@wdio/electron-service';
 import { expect } from '@wdio/globals';
+import { browser } from '@wdio/tauri-service';
 
 describe('application window tests', () => {
   it('should launch the application splash screen window', async () => {
     // Check if splash screen is enabled by checking for the switch button
     const switchButton = await browser.$('.switch-main-window');
-    const hasSwitchButton = switchButton !== null;
+    // Fix: Use isExisting() to properly check if element exists
+    const hasSwitchButton = await switchButton.isExisting();
+
+    // Debug: Log window handles and current state
+    const windowHandles = await browser.getWindowHandles();
+    const currentTitle = await browser.getTitle();
+    console.log('[DEBUG] Window handles:', windowHandles);
+    console.log('[DEBUG] Current window title:', currentTitle);
+    console.log('[DEBUG] hasSwitchButton:', hasSwitchButton);
 
     if (!hasSwitchButton) {
       // Splash is not enabled, verify we're on the main window
-      await expect(browser).toHaveTitle(/Electron.*E2E Test App/);
+      console.log('[DEBUG] Splash not enabled, checking main window title');
+      await expect(browser).toHaveTitle(/Tauri.*E2E Test App/);
       return;
     }
 
     // Splash is enabled, verify we're on splash screen
+    console.log('[DEBUG] Splash enabled, checking splash window title');
     if (browser.isMultiremote) {
       const multi = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       const browserA = multi.getInstance('browserA');
@@ -28,33 +38,47 @@ describe('application window tests', () => {
   it('should switch to the application main window', async () => {
     // Check if splash screen is enabled (has switch button)
     const switchButton = await browser.$('.switch-main-window');
-    const hasSwitchButton = switchButton !== null;
+    // Fix: Use isExisting() to properly check if element exists
+    const hasSwitchButton = await switchButton.isExisting();
 
     if (!hasSwitchButton) {
       // Splash is not enabled, verify we're already on the main window
+      console.log('[DEBUG] Splash not enabled, verifying main window');
       const title = await browser.getTitle();
-      expect(title).toMatch(/Electron.*E2E Test App/);
+      expect(title).toMatch(/Tauri.*E2E Test App/);
       return;
     }
 
     // Splash is enabled, click the switch button
+    console.log('[DEBUG] Splash enabled, clicking switch button');
     if (browser.isMultiremote) {
       const multi = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       const browserA = multi.getInstance('browserA');
       const browserB = multi.getInstance('browserB');
       await (await browserA.$('.switch-main-window')).click();
       await (await browserB.$('.switch-main-window')).click();
-      // Verify the app switched to main window with an Electron E2E test app title
       const titleA = await browserA.getTitle();
       const titleB = await browserB.getTitle();
-      expect(titleA).toMatch(/Electron.*E2E Test App/);
-      expect(titleB).toMatch(/Electron.*E2E Test App/);
+      expect(titleA).toMatch(/Tauri.*E2E Test App/);
+      expect(titleB).toMatch(/Tauri.*E2E Test App/);
     } else {
       const elem = await browser.$('.switch-main-window');
       await elem.click();
-      // Verify the app switched to main window with an Electron E2E test app title
       const title = await browser.getTitle();
-      expect(title).toMatch(/Electron.*E2E Test App/);
+      expect(title).toMatch(/Tauri.*E2E Test App/);
     }
+  });
+
+  it('should list all window labels', async () => {
+    const windows = (await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'))) as string[];
+    expect(Array.isArray(windows)).toBe(true);
+    expect(windows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should get active window label', async () => {
+    const label = (await browser.tauri.execute(({ core }) =>
+      core.invoke('plugin:wdio|get_active_window_label'),
+    )) as string;
+    expect(typeof label).toBe('string');
   });
 });

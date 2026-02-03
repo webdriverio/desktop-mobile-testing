@@ -478,15 +478,15 @@ export default class TauriLaunchService {
       // Generate isolated data directory
       const dataDir = generateDataDirectory(`worker-${cid}`);
 
-      // Set up environment variables for data directory isolation
-      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-      const env = { ...process.env, [envVarName]: dataDir };
-
       // Merge options (global + capability-specific)
       const workerOptions = mergeOptions(this.options, firstCap['wdio:tauriServiceOptions']);
 
+      // Set up environment variables for data directory isolation
+      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+      process.env[envVarName] = dataDir;
+
       // Spawn tauri-driver for this worker
-      await this.startTauriDriverForWorker(cid, port, nativePort, env, workerOptions);
+      await this.startTauriDriverForWorker(cid, port, nativePort, workerOptions);
 
       // Update capabilities with allocated port so WDIO connects to correct port
       // This is critical - the worker needs to know which port to connect to
@@ -668,7 +668,6 @@ export default class TauriLaunchService {
     workerId: string,
     port: number,
     nativePort: number,
-    env: NodeJS.ProcessEnv,
     options?: TauriServiceOptions,
   ): Promise<void> {
     console.log(`[CONSOLE-DEBUG] startTauriDriverForWorker called for worker-${workerId}`);
@@ -698,13 +697,15 @@ export default class TauriLaunchService {
     }
 
     // Extract data directory from env for storage
-    const dataDir = env.XDG_DATA_HOME || env.TAURI_DATA_DIR || '';
+    const dataDir = process.env.XDG_DATA_HOME || process.env.TAURI_DATA_DIR || '';
 
     await new Promise<void>((resolve, reject) => {
+      const spawnEnv = workerOptions.env ? { ...process.env, ...workerOptions.env } : undefined;
+
       const proc = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        env,
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       });
 
       log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
@@ -862,24 +863,17 @@ export default class TauriLaunchService {
     }
 
     return new Promise((resolve, reject) => {
-      // Don't manually set DISPLAY - let tauri-driver inherit from environment
-      // or handle display connection itself. Setting DISPLAY here causes
-      // authorization issues because we don't have matching XAUTHORITY credentials
-      const env = { ...process.env };
-
       if (process.platform === 'linux') {
-        log.info(`Starting tauri-driver (DISPLAY from environment: ${env.DISPLAY || 'not set'})`);
+        log.info(`Starting tauri-driver (DISPLAY from environment: ${process.env.DISPLAY || 'not set'})`);
       }
+
+      const spawnEnv = options.env ? { ...process.env, ...options.env } : undefined;
 
       this.tauriDriverProcess = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        env,
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       });
-
-      // Get options for backend log capture (use first capability's options for single instance)
-      const firstCap = capabilities?.[0];
-      const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
 
       // Use readline for line-buffered log handling (fixes Windows chunking issues)
       setupStreamLogHandler({

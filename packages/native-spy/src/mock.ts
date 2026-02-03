@@ -71,7 +71,7 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   } as Mock<T>;
 
   // Mark as mock function (vitest compatibility)
-  (mockFn as any)._isMockFunction = true;
+  (mockFn as unknown as { _isMockFunction: boolean })._isMockFunction = true;
 
   // Use direct value assignment (NOT getters) - matches vitest's approach
   // This is critical for CDP serialization to work correctly

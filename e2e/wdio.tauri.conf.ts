@@ -122,11 +122,15 @@ switch (envContext.testType) {
   case 'standalone':
     specs = ['./test/tauri/standalone/*.spec.ts'];
     break;
+  case 'window':
+    // Window tests - only window-specific functionality
+    specs = ['./test/tauri/window.spec.ts'];
+    break;
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
-    // Exclude mocking tests for now
-    exclude = ['./test/tauri/mocking.spec.ts'];
+    // Exclude mocking tests and window tests (window tests require splash)
+    exclude = ['./test/tauri/mocking.spec.ts', './test/tauri/window.spec.ts'];
     break;
 }
 
@@ -141,6 +145,7 @@ type TauriCapability = {
   'wdio:tauriServiceOptions': {
     appBinaryPath: string;
     appArgs: string[];
+    env?: Record<string, string>;
     captureBackendLogs?: boolean;
     captureFrontendLogs?: boolean;
     backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
@@ -164,7 +169,12 @@ type StandardCapabilities = TauriCapability[];
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
 if (envContext.isMultiremote) {
-  // Tauri multiremote configuration
+  // Tauri multiremote configuration - create base env for tauri-driver
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+
   // The service automatically handles data directory isolation for multiremote instances
   capabilities = {
     browserA: {
@@ -178,6 +188,7 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -199,6 +210,7 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -211,7 +223,11 @@ if (envContext.isMultiremote) {
     },
   };
 } else {
-  // Tauri standard configuration
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+
   capabilities = [
     {
       browserName: 'tauri',
@@ -223,6 +239,7 @@ if (envContext.isMultiremote) {
       'wdio:tauriServiceOptions': {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
+        env: baseEnv,
         // Enable log capture for logging tests
         captureBackendLogs: true,
         captureFrontendLogs: true,

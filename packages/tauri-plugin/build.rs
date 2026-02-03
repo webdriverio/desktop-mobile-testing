@@ -35,7 +35,12 @@ const COMMANDS: &[&str] = &[
     "clear_mocks",
     "reset_mocks",
     "restore_mocks",
+    "get_active_window_label",
+    "get_window_states",
+    "list_windows",
+    "switch_to_main",
 ];
+
 
 fn main() {
     tauri_plugin::Builder::new(COMMANDS)

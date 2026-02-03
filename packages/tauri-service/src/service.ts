@@ -4,6 +4,7 @@ import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
+import { clearWindowState, ensureActiveWindowFocus } from './window.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -129,6 +130,21 @@ export default class TauriWorkerService {
     // Pre-test logic if needed
   }
 
+  async beforeCommand(commandName: string, _args: unknown[]): Promise<void> {
+    if (!this.browser || this.browser.isMultiremote) {
+      return;
+    }
+
+    const browser = this.browser as WebdriverIO.Browser;
+
+    try {
+      // Generic window focus detection like Electron - no app-specific knowledge
+      await ensureActiveWindowFocus(browser, commandName);
+    } catch (error) {
+      log.warn('Failed to ensure window focus before command:', error);
+    }
+  }
+
   async afterTest(_test: unknown, _context: unknown, _results: unknown): Promise<void> {
     // Post-test logic if needed
   }
@@ -144,6 +160,7 @@ export default class TauriWorkerService {
    */
   async afterSession(_config: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     log.debug('Cleaning up session...');
+    clearWindowState();
 
     if (!this.browser) {
       log.warn('No browser instance available for session cleanup');
