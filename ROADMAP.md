@@ -5,13 +5,14 @@ This document outlines the planned services and their development sequencing for
 ## Current Services (Available)
 
 ### [@wdio/electron-service](./packages/electron-service) - v10.x
-**Status:** ✅ Stable (migrated from legacy repo)\
+**Status:** 🚧 Pre-release (migrated from legacy repo)\
 **Platforms:** Windows, macOS, Linux\
 [![npm downloads](https://img.shields.io/npm/dm/@wdio/electron-service)](https://npmjs.com/package/@wdio/electron-service)
 
 ### [@wdio/tauri-service](./packages/tauri-service) - v1.x
 **Status:** 🚧 Pre-release\
 **Platforms:** Windows, Linux (macOS via CrabNebula's forked `tauri-driver`)
+[![npm downloads](https://img.shields.io/npm/dm/@wdio/tauri-service)](https://npmjs.com/package/@wdio/tauri-service)
 
 ---
 
