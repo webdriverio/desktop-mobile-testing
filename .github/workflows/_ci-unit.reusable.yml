@@ -68,11 +68,11 @@ jobs:
             echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
           fi
 
-           # Check for distribution directories (minimal validation)
-           DIST_DIRS=$(find "${{ github.workspace }}" -path "*/dist" -type d | wc -l)
-           if [ "$DIST_DIRS" -lt 1 ]; then
-             echo "::warning::No dist directories found, build extraction may have failed"
-           fi
+          # Check for distribution directories (minimal validation)
+          DIST_DIRS=$(find "${{ github.workspace }}" -path "*/dist" -type d | wc -l)
+          if [ "$DIST_DIRS" -lt 1 ]; then
+            echo "::warning::No dist directories found, build extraction may have failed"
+          fi
 
       - name: Turbo Cache (GitHub Native)
         uses: rharkor/caching-for-turbo@v1
