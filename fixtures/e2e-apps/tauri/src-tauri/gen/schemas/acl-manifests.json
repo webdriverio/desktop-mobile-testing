@@ -3444,14 +3444,17 @@
       "identifier": "default",
       "description": "Allows all WebDriverIO plugin commands for testing",
       "permissions": [
-        "allow-execute",
-        "allow-log-frontend",
-        "allow-debug-plugin",
-        "allow-set-mock",
-        "allow-get-mock",
-        "allow-clear-mocks",
-        "allow-reset-mocks",
-        "allow-restore-mocks"
+        "wdio:allow-execute",
+        "wdio:allow-log-frontend",
+        "wdio:allow-debug-plugin",
+        "wdio:allow-set-mock",
+        "wdio:allow-get-mock",
+        "wdio:allow-clear-mocks",
+        "wdio:allow-reset-mocks",
+        "wdio:allow-restore-mocks",
+        "wdio:allow-get-active-window-label",
+        "wdio:allow-list-windows",
+        "wdio:allow-switch-to-main"
       ]
     },
     "permissions": {

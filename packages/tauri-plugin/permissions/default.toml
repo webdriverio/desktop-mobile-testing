@@ -23,52 +23,76 @@
 [default]
 description = "Allows all WebDriverIO plugin commands for testing"
 permissions = [
-  "allow-execute",
-  "allow-log-frontend",
-  "allow-debug-plugin",
-  "allow-set-mock",
-  "allow-get-mock",
-  "allow-clear-mocks",
-  "allow-reset-mocks",
-  "allow-restore-mocks"
+  "wdio:allow-execute",
+  "wdio:allow-log-frontend",
+  "wdio:allow-debug-plugin",
+  "wdio:allow-set-mock",
+  "wdio:allow-get-mock",
+  "wdio:allow-clear-mocks",
+  "wdio:allow-reset-mocks",
+  "wdio:allow-restore-mocks",
+  "wdio:allow-get-active-window-label",
+  "wdio:allow-get-window-states",
+  "wdio:allow-list-windows",
+  "wdio:allow-switch-to-main"
 ]
 
-[allow-execute]
-identifier = "allow-execute"
+[wdio_allow_execute]
+identifier = "wdio:allow-execute"
 description = "Allow executing scripts via the wdio plugin"
-commands = { allow = ["wdio.execute"], deny = [] }
+commands = { allow = ["execute"], deny = [] }
 
-[allow-log-frontend]
-identifier = "allow-log-frontend"
+[wdio_allow_log_frontend]
+identifier = "wdio:allow-log-frontend"
 description = "Allow logging frontend messages to stderr"
-commands = { allow = ["wdio.log_frontend"], deny = [] }
+commands = { allow = ["log_frontend"], deny = [] }
 
-[allow-debug-plugin]
-identifier = "allow-debug-plugin"
+[wdio_allow_debug_plugin]
+identifier = "wdio:allow-debug-plugin"
 description = "Allow debug plugin command"
-commands = { allow = ["wdio.debug_plugin"], deny = [] }
+commands = { allow = ["debug_plugin"], deny = [] }
 
-[allow-set-mock]
-identifier = "allow-set-mock"
+[wdio_allow_set_mock]
+identifier = "wdio:allow-set-mock"
 description = "Allow setting mocks via the wdio plugin"
-commands = { allow = ["wdio.set-mock"], deny = [] }
+commands = { allow = ["set_mock"], deny = [] }
 
-[allow-get-mock]
-identifier = "allow-get-mock"
+[wdio_allow_get_mock]
+identifier = "wdio:allow-get-mock"
 description = "Allow getting mocks via the wdio plugin"
-commands = { allow = ["wdio.get-mock"], deny = [] }
+commands = { allow = ["get_mock"], deny = [] }
 
-[allow-clear-mocks]
-identifier = "allow-clear-mocks"
+[wdio_allow_clear_mocks]
+identifier = "wdio:allow-clear-mocks"
 description = "Allow clearing mocks via the wdio plugin"
-commands = { allow = ["wdio.clear-mocks"], deny = [] }
+commands = { allow = ["clear_mocks"], deny = [] }
 
-[allow-reset-mocks]
-identifier = "allow-reset-mocks"
+[wdio_allow_reset_mocks]
+identifier = "wdio:allow-reset-mocks"
 description = "Allow resetting mocks via the wdio plugin"
-commands = { allow = ["wdio.reset-mocks"], deny = [] }
+commands = { allow = ["reset_mocks"], deny = [] }
 
-[allow-restore-mocks]
-identifier = "allow-restore-mocks"
+[wdio_allow_restore_mocks]
+identifier = "wdio:allow-restore-mocks"
 description = "Allow restoring mocks via the wdio plugin"
-commands = { allow = ["wdio.restore-mocks"], deny = [] }
+commands = { allow = ["restore_mocks"], deny = [] }
+
+[wdio_allow_get_active_window_label]
+identifier = "wdio:allow-get-active-window-label"
+description = "Allow get_active_window_label command"
+commands = { allow = ["get_active_window_label"], deny = [] }
+
+[wdio_allow_get_window_states]
+identifier = "wdio:allow-get-window-states"
+description = "Allow get_window_states command"
+commands = { allow = ["get_window_states"], deny = [] }
+
+[wdio_allow_list_windows]
+identifier = "wdio:allow-list-windows"
+description = "Allow list_windows command"
+commands = { allow = ["list_windows"], deny = [] }
+
+[wdio_allow_switch_to_main]
+identifier = "wdio:allow-switch-to-main"
+description = "Allow switch_to_main command"
+commands = { allow = ["switch_to_main"], deny = [] }
