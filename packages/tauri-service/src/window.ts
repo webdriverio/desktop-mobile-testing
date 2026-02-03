@@ -2,14 +2,6 @@ import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('tauri-service', 'window');
 
-interface DevtoolsEndpoint {
-  webSocketDebuggerUrl: string;
-  type: string;
-  id: string;
-  title: string;
-  url: string;
-}
-
 interface WindowState {
   label: string;
   title: string;
@@ -17,7 +9,6 @@ interface WindowState {
   is_focused: boolean;
 }
 
-const windowPortMap = new Map<string, number>();
 const lastCommandCache = new Map<string, string>();
 
 export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promise<string> {
@@ -38,41 +29,6 @@ export async function listWindowLabels(browser: WebdriverIO.Browser): Promise<st
     log.warn('Failed to list window labels:', error);
     return ['main'];
   }
-}
-
-async function pollDevtoolsEndpoints(): Promise<DevtoolsEndpoint[]> {
-  try {
-    const response = await fetch('http://localhost:9222/json');
-    return (await response.json()) as DevtoolsEndpoint[];
-  } catch (error) {
-    log.warn('Failed to poll devtools endpoints:', error);
-    return [];
-  }
-}
-
-export async function getWindowPort(browser: WebdriverIO.Browser, label: string): Promise<number | undefined> {
-  if (windowPortMap.has(label)) {
-    return windowPortMap.get(label);
-  }
-
-  const endpoints = await pollDevtoolsEndpoints();
-
-  if (endpoints.length === 0) {
-    return undefined;
-  }
-
-  for (const endpoint of endpoints) {
-    const port = extractPortFromWebSocketUrl(endpoint.webSocketDebuggerUrl);
-    windowPortMap.set(endpoint.id, port);
-    log.debug(`Mapped window "${endpoint.id}" to port ${port}`);
-  }
-
-  return windowPortMap.get(label);
-}
-
-function extractPortFromWebSocketUrl(wsUrl: string): number {
-  const match = wsUrl.match(/localhost:(\d+)/);
-  return match ? parseInt(match[1], 10) : 9222;
 }
 
 export async function getCurrentDevtoolsPort(browser: WebdriverIO.Browser): Promise<number | undefined> {
@@ -232,6 +188,5 @@ export function getLastCommand(browser: WebdriverIO.Browser): string | undefined
 }
 
 export function clearWindowState(): void {
-  windowPortMap.clear();
   lastCommandCache.clear();
 }

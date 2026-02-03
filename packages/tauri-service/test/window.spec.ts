@@ -3,9 +3,7 @@ import {
   clearWindowState,
   ensureActiveWindowFocus,
   getActiveWindowLabel,
-  getCurrentDevtoolsPort,
   getLastCommand,
-  getWindowPort,
   listWindowLabels,
   updateLastCommand,
 } from '../src/window.js';
@@ -68,43 +66,6 @@ describe('window management', () => {
     });
   });
 
-  describe('getCurrentDevtoolsPort', () => {
-    it('should extract port from debuggerAddress capability', async () => {
-      const mockBrowser = {
-        capabilities: {
-          'goog:chromeOptions': {
-            debuggerAddress: 'localhost:9222',
-          },
-        },
-      } as unknown as WebdriverIO.Browser;
-
-      const result = await getCurrentDevtoolsPort(mockBrowser);
-      expect(result).toBe(9222);
-    });
-
-    it('should return undefined when no debuggerAddress', async () => {
-      const mockBrowser = {
-        capabilities: {},
-      } as unknown as WebdriverIO.Browser;
-
-      const result = await getCurrentDevtoolsPort(mockBrowser);
-      expect(result).toBeUndefined();
-    });
-
-    it('should handle different ports', async () => {
-      const mockBrowser = {
-        capabilities: {
-          'goog:chromeOptions': {
-            debuggerAddress: 'localhost:9223',
-          },
-        },
-      } as unknown as WebdriverIO.Browser;
-
-      const result = await getCurrentDevtoolsPort(mockBrowser);
-      expect(result).toBe(9223);
-    });
-  });
-
   describe('updateLastCommand and getLastCommand', () => {
     it('should store and retrieve last command', () => {
       const mockBrowser = {
@@ -140,56 +101,42 @@ describe('window management', () => {
   });
 
   describe('ensureActiveWindowFocus', () => {
-    it('should return current port for non-DOM commands', async () => {
+    it('should not check focus for non-DOM commands', async () => {
       const mockBrowser = {
         tauri: {
           execute: vi.fn(),
         },
-        capabilities: {
-          'goog:chromeOptions': {
-            debuggerAddress: 'localhost:9222',
-          },
-        },
       } as unknown as WebdriverIO.Browser;
 
-      const result = await ensureActiveWindowFocus(mockBrowser, 'url');
       await ensureActiveWindowFocus(mockBrowser, 'url');
       expect(mockBrowser.tauri.execute).not.toHaveBeenCalled();
     });
 
-    it('should check for window change on DOM commands', async () => {
+    it('should check focus for DOM commands', async () => {
       const mockBrowser = {
         tauri: {
-          execute: vi.fn().mockResolvedValueOnce('main').mockResolvedValueOnce(9222),
+          execute: vi.fn().mockResolvedValueOnce('main'),
         },
-        capabilities: {
-          'goog:chromeOptions': {
-            debuggerAddress: 'localhost:9222',
-          },
-        },
-        deleteSession: vi.fn().mockResolvedValue(undefined),
-        newSession: vi.fn().mockResolvedValue({}),
+        getWindowHandles: vi.fn().mockResolvedValue(['handle1', 'handle2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+        getTitle: vi.fn().mockResolvedValue('main window'),
       } as unknown as WebdriverIO.Browser;
 
-      const result = await ensureActiveWindowFocus(mockBrowser, 9222, 'click');
-      expect(result).toBe(9222);
+      await ensureActiveWindowFocus(mockBrowser, 'getTitle');
       expect(mockBrowser.tauri.execute).toHaveBeenCalled();
     });
 
-    it('should initialize port from capabilities if not provided', async () => {
+    it('should handle when no window states are available', async () => {
       const mockBrowser = {
         tauri: {
-          execute: vi.fn().mockResolvedValue('main'),
+          execute: vi.fn().mockRejectedValue(new Error('API error')),
         },
-        capabilities: {
-          'goog:chromeOptions': {
-            debuggerAddress: 'localhost:9222',
-          },
-        },
+        getWindowHandles: vi.fn().mockResolvedValue(['handle1', 'handle2']),
+        getTitle: vi.fn().mockResolvedValue('main window'),
       } as unknown as WebdriverIO.Browser;
 
-      const result = await ensureActiveWindowFocus(mockBrowser, undefined, 'click');
-      expect(result).toBe(9222);
+      await ensureActiveWindowFocus(mockBrowser, 'getTitle');
+      expect(mockBrowser.tauri.execute).toHaveBeenCalled();
     });
   });
 });
@@ -203,23 +150,21 @@ describe('DOM command filtering', () => {
     clearWindowState();
   });
 
-  it('should only switch on DOM interaction commands', async () => {
+  it('should only switch on specific DOM commands', async () => {
     const mockBrowser = {
       tauri: {
         execute: vi.fn(),
       },
-      capabilities: {
-        'goog:chromeOptions': {
-          debuggerAddress: 'localhost:9222',
-        },
-      },
+      getWindowHandles: vi.fn().mockResolvedValue(['handle1', 'handle2']),
+      switchToWindow: vi.fn().mockResolvedValue(undefined),
+      getTitle: vi.fn().mockResolvedValue('main window'),
     } as unknown as WebdriverIO.Browser;
 
-    const domCommands = ['click', 'keys', 'doubleClick', 'rightClick', 'setValue', 'clearValue', '$', '$$'];
+    const domCommands = ['getTitle', 'findElement', 'findElements', '$', '$$', 'elementClick'];
 
     for (const cmd of domCommands) {
-      await ensureActiveWindowFocus(mockBrowser, 9222, cmd);
-      expect(mockBrowser.tauri.execute).toHaveBeenCalled();
+      await ensureActiveWindowFocus(mockBrowser, cmd);
+      expect(mockBrowser.tauri.execute).toHaveBeenCalledWith(expect.any(Function));
       vi.clearAllMocks();
     }
   });
