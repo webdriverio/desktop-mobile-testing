@@ -87,8 +87,7 @@ jobs:
        - name: Turbo Cache (GitHub Native)
          uses: rharkor/caching-for-turbo@v1
 
-       # Dynamically generate the Turbo filter for building test applications
-      # This converts the scenario input into Turbo filter syntax
+      # Dynamically generate the Turbo filter for building test applications
       - name: 🪄 Generate Build Filter for Test Apps
         id: gen-build
         uses: actions/github-script@v8
