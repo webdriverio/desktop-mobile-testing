@@ -54,8 +54,29 @@ if (-not (Test-Path $ExePath)) {
     exit 1
 }
 
-# Registry path for protocol handler
+# IDEMPOTENCY CHECK: Check if protocol handler is already registered correctly
 $RegistryPath = "HKCU:\Software\Classes\testapp"
+$CommandPath = "$RegistryPath\shell\open\command"
+$ExistingCommand = $null
+
+if (Test-Path $CommandPath) {
+    $ExistingCommand = Get-ItemProperty -Path $CommandPath -Name "(Default)" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty "(Default)"
+}
+
+# Define command value
+$CommandValue = "`"$ExePath`" `"%1`""
+
+# Skip if already registered correctly
+if ($ExistingCommand -eq $CommandValue) {
+    Write-Host "Protocol handler already registered correctly, skipping..."
+    exit 0
+}
+
+# Registry path for protocol handler (moved from below to support idempotency check)
+if (-not (Test-Path $ExePath)) {
+    Write-Error "Executable path is not accessible: $ExePath"
+    exit 1
+}
 
 # Create the protocol registry key
 if (-not (Test-Path $RegistryPath)) {
@@ -76,7 +97,6 @@ if (-not (Test-Path $CommandPath)) {
 }
 
 # Set the command to launch the app with the URL
-$CommandValue = "`"$ExePath`" `"%1`""
 Set-ItemProperty -Path $CommandPath -Name "(Default)" -Value $CommandValue
 Write-Host "Set command value: $CommandValue"
 

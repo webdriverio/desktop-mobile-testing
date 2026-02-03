@@ -49,9 +49,20 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 
     echo "Found executable: $APP_EXECUTABLE"
 
-    # Verify the executable works
+    # Verify executable works
     if ! "$APP_EXECUTABLE" --version 2>/dev/null; then
         echo "Warning: Executable exists but may not be functional"
+    fi
+
+    # IDEMPOTENCY CHECK: Check if protocol handler is already registered
+    DESKTOP_FILE_BASENAME="electron-forge-testapp.desktop"
+    if command -v xdg-mime &> /dev/null; then
+        CURRENT_HANDLER=$(xdg-mime query default x-scheme-handler/testapp 2>/dev/null || echo "")
+        if [ "$CURRENT_HANDLER" = "$DESKTOP_FILE_BASENAME" ]; then
+            echo "Protocol handler already registered correctly (handler: $CURRENT_HANDLER), skipping..."
+            exit 0
+        fi
+        echo "Current handler: $CURRENT_HANDLER, will update to: $DESKTOP_FILE_BASENAME"
     fi
 
     # Create .desktop file for protocol handler
