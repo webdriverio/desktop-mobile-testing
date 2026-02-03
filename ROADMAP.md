@@ -11,7 +11,7 @@ This document outlines the planned services and their development sequencing for
 
 ### [@wdio/tauri-service](./packages/tauri-service) - v1.x
 **Status:** 🚧 Pre-release\
-**Platforms:** Windows, Linux (macOS via CrabNebula's forked `tauri-driver`)
+**Platforms:** Windows, Linux (macOS via CrabNebula's forked `tauri-driver`)\
 [![npm downloads](https://img.shields.io/npm/dm/@wdio/tauri-service)](https://npmjs.com/package/@wdio/tauri-service)
 
 ---
