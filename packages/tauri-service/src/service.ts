@@ -130,7 +130,7 @@ export default class TauriWorkerService {
     // Pre-test logic if needed
   }
 
-  async beforeCommand(commandName: string, args: unknown[]): Promise<void> {
+  async beforeCommand(commandName: string, _args: unknown[]): Promise<void> {
     if (!this.browser || this.browser.isMultiremote) {
       return;
     }
