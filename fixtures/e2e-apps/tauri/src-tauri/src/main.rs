@@ -249,6 +249,21 @@ fn main() {
         .setup(move |app| {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
 
+            // Register deeplink protocol at runtime (Linux/Windows only)
+            // This is needed for development/testing when the protocol handler
+            // hasn't been registered by the installer
+            #[cfg(any(target_os = "linux", target_os = "windows"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+
+                // Register all schemes from config (testapp://)
+                if let Err(e) = app.deep_link().register_all() {
+                    eprintln!("[Tauri-DEBUG] Failed to register deep link protocols: {}", e);
+                } else {
+                    eprintln!("[Tauri-DEBUG] Successfully registered deep link protocols from config");
+                }
+            }
+
             if is_splash {
                 // 1. SPLASH FIRST - WebDriver MUST connect here (visible + focused)
                 eprintln!("[Tauri-DEBUG] === Creating SPLASH window FIRST ===");

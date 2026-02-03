@@ -26,6 +26,11 @@
     "tauri-driver": {
       "port": 4444,
       "args": []
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["testapp"]
+      }
     }
   },
   "bundle": {

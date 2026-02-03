@@ -215,16 +215,36 @@
       }
 
       // Deep link listener for E2E testing
+      // Using official @tauri-apps/plugin-deep-link API
       window.receivedDeeplinks = [];
       window.deeplinkCount = 0;
 
-      const { listen } = await import('@tauri-apps/api/event');
-      await listen('deep-link-received', (event) => {
-        const url = event.payload;
-        window.receivedDeeplinks.push(url);
-        window.deeplinkCount++;
-        console.log('[Deeplink] Received:', url);
-      });
+      try {
+        const { onOpenUrl, getCurrent } = await import('@tauri-apps/plugin-deep-link');
+
+        // Check if app was launched with a deep link
+        const startUrls = await getCurrent();
+        if (startUrls && startUrls.length > 0) {
+          console.log('[Deeplink] App launched with deep links:', startUrls);
+          startUrls.forEach(url => {
+            window.receivedDeeplinks.push(url);
+            window.deeplinkCount++;
+          });
+        }
+
+        // Listen for deep links while app is running
+        await onOpenUrl((urls) => {
+          console.log('[Deeplink] Received:', urls);
+          urls.forEach(url => {
+            window.receivedDeeplinks.push(url);
+            window.deeplinkCount++;
+          });
+        });
+
+        console.log('[Deeplink] Listener setup complete');
+      } catch (error) {
+        console.error('[Deeplink] Failed to setup deep link listener:', error);
+      }
     </script>
   </body>
 </html>
