@@ -241,7 +241,7 @@ driverProvider: 'crabnebula'  // Enable macOS support
 
 **Default:** `'official'`
 
-**Note:** CrabNebula driver requires a subscription and API key for macOS. See [Platform Support](./platform-support.md) for details.
+**Note:** 🔬 CrabNebula driver requires a paid subscription and API key. This option is experimental and untested. See [Platform Support](./platform-support.md) for details.
 
 ---
 

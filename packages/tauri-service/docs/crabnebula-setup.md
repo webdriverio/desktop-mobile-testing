@@ -1,16 +1,20 @@
 # CrabNebula Setup Guide
 
+> 🔬 **Experimental Feature**: This CrabNebula integration has not been tested due to API key access limitations. The implementation is based on CrabNebula documentation and may not function as expected.
+
 This guide walks you through setting up CrabNebula's tauri-driver for macOS testing support.
 
 ## Overview
 
 CrabNebula provides a fork of the official tauri-driver that adds macOS support via a proprietary WebDriver implementation. This enables WebdriverIO testing on macOS, which is not possible with the official driver.
 
+**Note**: This integration is experimental and has not been verified. If you have API key access and test this feature, please report your findings to help improve the documentation.
+
 ## Prerequisites
 
 Before you begin, you'll need:
 
-1. A **CrabNebula account** with an API key (contact [CrabNebula](https://crabnebula.dev) for access)
+1. A **CrabNebula account** with an API key (contact [CrabNebula](https://crabnebula.dev) for access - requires paid subscription)
 2. A **Tauri v2 application** with the automation plugin installed
 3. **Node.js 18+** and **Rust toolchain** installed
 

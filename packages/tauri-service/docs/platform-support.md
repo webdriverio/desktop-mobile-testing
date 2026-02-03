@@ -8,7 +8,7 @@ Complete guide to platform-specific requirements, limitations, and WebDriver set
 |----------|-----------|-----------|-------|-------|
 | **Windows** | ✅ Yes | Microsoft Edge WebDriver | Auto-managed | Stable, fully tested |
 | **Linux** | ✅ Yes | WebKitWebDriver | Manual install | Full feature support |
-| **macOS** | ✅ Yes (via CrabNebula) | CrabNebula WebDriver | NPM packages | Requires subscription |
+| **macOS** | 🔬 Experimental | CrabNebula WebDriver | API key required, untested |
 
 ## Windows
 
@@ -278,7 +278,9 @@ sudo apt-get install webkit2gtk-driver
 
 ## macOS
 
-### Supported via CrabNebula ✅ (Requires Subscription)
+> 🔬 **Experimental Feature**: macOS testing support via CrabNebula is experimental and has not been tested. This integration requires a paid CrabNebula API key which is not available for testing purposes. Features documented here are based on CrabNebula documentation and may not function as expected.
+
+### Supported via CrabNebula 🔬 (Experimental)
 
 macOS testing is supported through [CrabNebula](https://crabnebula.dev)'s `@crabnebula/tauri-driver` package. This is a fork of the official tauri-driver that adds macOS support via a proprietary WebDriver implementation.
 
@@ -440,7 +442,7 @@ describe('Platform-specific features', () => {
 
 - **Windows** - Fully supported with auto-managed Edge WebDriver ✅
 - **Linux** - Fully supported with manual WebKitWebDriver setup ✅
-- **macOS** - Not supported, building only ❌
+- **macOS** - Experimental (CrabNebula, untested) 🔬
 
 Choose Windows or Linux for automated testing, or use Docker containers for consistent cross-platform testing.
 
