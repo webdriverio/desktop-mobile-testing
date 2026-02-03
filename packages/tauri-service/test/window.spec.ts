@@ -152,7 +152,7 @@ describe('window management', () => {
         },
       } as unknown as WebdriverIO.Browser;
 
-      const result = await ensureActiveWindowFocus(mockBrowser, 9222, 'url');
+      const result = await ensureActiveWindowFocus(mockBrowser, 'url');
       expect(result).toBe(9222);
       expect(mockBrowser.tauri.execute).not.toHaveBeenCalled();
     });
