@@ -77,12 +77,12 @@ jobs:
           cache_key_prefix: wdio-desktop-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
-       # Display build information if available
-       - name: 📊 Show Build Information
-         if: inputs.build_id != '' && inputs.artifact_size != ''
-         shell: bash
-         run: |
-           echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
+      # Display build information if available
+      - name: 📊 Show Build Information
+        if: inputs.build_id != '' && inputs.artifact_size != ''
+        shell: bash
+        run: |
+          echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
 
        - name: Turbo Cache (GitHub Native)
          uses: rharkor/caching-for-turbo@v1
