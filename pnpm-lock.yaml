@@ -272,7 +272,7 @@ importers:
   fixtures/e2e-apps/tauri:
     dependencies:
       '@tauri-apps/api':
-        specifier: ^2.10.1
+        specifier: ^2.10.0
         version: 2.10.1
       '@tauri-apps/plugin-fs':
         specifier: ^2.4.5
@@ -588,7 +588,7 @@ importers:
   fixtures/package-tests/tauri-app:
     dependencies:
       '@tauri-apps/api':
-        specifier: ^2.10.1
+        specifier: ^2.10.0
         version: 2.10.1
       '@tauri-apps/plugin-fs':
         specifier: ^2.4.5

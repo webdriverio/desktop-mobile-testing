@@ -3444,12 +3444,18 @@
       "identifier": "default",
       "description": "Allows all WebDriverIO plugin commands for testing",
       "permissions": [
-        "allow-execute",
-        "allow-set-mock",
-        "allow-get-mock",
-        "allow-clear-mocks",
-        "allow-reset-mocks",
-        "allow-restore-mocks"
+        "wdio:allow-execute",
+        "wdio:allow-log-frontend",
+        "wdio:allow-debug-plugin",
+        "wdio:allow-set-mock",
+        "wdio:allow-get-mock",
+        "wdio:allow-clear-mocks",
+        "wdio:allow-reset-mocks",
+        "wdio:allow-restore-mocks",
+        "wdio:allow-get-active-window-label",
+        "wdio:allow-get-window-states",
+        "wdio:allow-list-windows",
+        "wdio:allow-switch-to-main"
       ]
     },
     "permissions": {
@@ -3458,15 +3464,40 @@
         "description": "Enables the clear_mocks command without any pre-configured scope.",
         "commands": { "allow": ["clear_mocks"], "deny": [] }
       },
+      "allow-debug-plugin": {
+        "identifier": "allow-debug-plugin",
+        "description": "Enables the debug_plugin command without any pre-configured scope.",
+        "commands": { "allow": ["debug_plugin"], "deny": [] }
+      },
       "allow-execute": {
         "identifier": "allow-execute",
         "description": "Enables the execute command without any pre-configured scope.",
         "commands": { "allow": ["execute"], "deny": [] }
       },
+      "allow-get-active-window-label": {
+        "identifier": "allow-get-active-window-label",
+        "description": "Enables the get_active_window_label command without any pre-configured scope.",
+        "commands": { "allow": ["get_active_window_label"], "deny": [] }
+      },
       "allow-get-mock": {
         "identifier": "allow-get-mock",
         "description": "Enables the get_mock command without any pre-configured scope.",
         "commands": { "allow": ["get_mock"], "deny": [] }
+      },
+      "allow-get-window-states": {
+        "identifier": "allow-get-window-states",
+        "description": "Enables the get_window_states command without any pre-configured scope.",
+        "commands": { "allow": ["get_window_states"], "deny": [] }
+      },
+      "allow-list-windows": {
+        "identifier": "allow-list-windows",
+        "description": "Enables the list_windows command without any pre-configured scope.",
+        "commands": { "allow": ["list_windows"], "deny": [] }
+      },
+      "allow-log-frontend": {
+        "identifier": "allow-log-frontend",
+        "description": "Enables the log_frontend command without any pre-configured scope.",
+        "commands": { "allow": ["log_frontend"], "deny": [] }
       },
       "allow-reset-mocks": {
         "identifier": "allow-reset-mocks",
@@ -3483,20 +3514,50 @@
         "description": "Enables the set_mock command without any pre-configured scope.",
         "commands": { "allow": ["set_mock"], "deny": [] }
       },
+      "allow-switch-to-main": {
+        "identifier": "allow-switch-to-main",
+        "description": "Enables the switch_to_main command without any pre-configured scope.",
+        "commands": { "allow": ["switch_to_main"], "deny": [] }
+      },
       "deny-clear-mocks": {
         "identifier": "deny-clear-mocks",
         "description": "Denies the clear_mocks command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["clear_mocks"] }
+      },
+      "deny-debug-plugin": {
+        "identifier": "deny-debug-plugin",
+        "description": "Denies the debug_plugin command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["debug_plugin"] }
       },
       "deny-execute": {
         "identifier": "deny-execute",
         "description": "Denies the execute command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["execute"] }
       },
+      "deny-get-active-window-label": {
+        "identifier": "deny-get-active-window-label",
+        "description": "Denies the get_active_window_label command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["get_active_window_label"] }
+      },
       "deny-get-mock": {
         "identifier": "deny-get-mock",
         "description": "Denies the get_mock command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["get_mock"] }
+      },
+      "deny-get-window-states": {
+        "identifier": "deny-get-window-states",
+        "description": "Denies the get_window_states command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["get_window_states"] }
+      },
+      "deny-list-windows": {
+        "identifier": "deny-list-windows",
+        "description": "Denies the list_windows command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["list_windows"] }
+      },
+      "deny-log-frontend": {
+        "identifier": "deny-log-frontend",
+        "description": "Denies the log_frontend command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["log_frontend"] }
       },
       "deny-reset-mocks": {
         "identifier": "deny-reset-mocks",
@@ -3512,6 +3573,11 @@
         "identifier": "deny-set-mock",
         "description": "Denies the set_mock command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["set_mock"] }
+      },
+      "deny-switch-to-main": {
+        "identifier": "deny-switch-to-main",
+        "description": "Denies the switch_to_main command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["switch_to_main"] }
       }
     },
     "permission_sets": {},
