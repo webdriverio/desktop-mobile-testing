@@ -131,19 +131,27 @@ async function getWindowStates(browser: WebdriverIO.Browser): Promise<WindowStat
 }
 
 function findActiveWindow(states: WindowState[]): WindowState | undefined {
-  // Electron logic: return the focused window, or the first visible window
-  // that has focus, or the first visible window if none are focused
+  // For testing, the "active" window is the one that should receive interactions.
+  // Priority: 1) Visible AND focused, 2) Visible, 3) Focused, 4) First available
+  // This handles platform differences (Windows webview2 vs Linux WebKit)
 
-  // First, try to find the focused window
-  const focusedWindow = states.find((w) => w.is_focused);
-  if (focusedWindow) {
-    return focusedWindow;
+  // First, try to find a window that is BOTH visible AND focused
+  const visibleAndFocusedWindow = states.find((w) => w.is_visible && w.is_focused);
+  if (visibleAndFocusedWindow) {
+    return visibleAndFocusedWindow;
   }
 
-  // Second, find the first visible window (in case Tauri doesn't track focus)
+  // Second, find the first VISIBLE window (prioritize visibility over focus)
+  // This is critical for Windows where focused window may not be visible initially
   const visibleWindow = states.find((w) => w.is_visible);
   if (visibleWindow) {
     return visibleWindow;
+  }
+
+  // Third, find any focused window (even if not visible - fallback)
+  const focusedWindow = states.find((w) => w.is_focused);
+  if (focusedWindow) {
+    return focusedWindow;
   }
 
   // Fallback: return the first window (for consistency)
