@@ -227,17 +227,14 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_deep_links(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+async fn get_deep_links(_app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let links = DEEP_LINKS.lock().map_err(|e| e.to_string())?.clone();
     log_deep_link(&format!("get_deep_links called, returning {} links", links.len()));
     Ok(links)
 }
 
 fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let deep_links = {
-        let links = DEEP_LINKS.lock().map_err(|e| e.to_string()).unwrap_or_default();
-        links.clone()
-    };
+    let deep_links = DEEP_LINKS.lock().map(|guard| guard.clone()).unwrap_or_default();
 
     if !deep_links.is_empty() {
         log_deep_link(&format!("Emitting {} deep links to frontend", deep_links.len()));
@@ -332,7 +329,7 @@ fn main() {
                 drop(deep_links_guard);
 
                 // Emit deep links to frontend
-                emit_deep_links(app);
+                emit_deep_links(&app.handle());
             }
 
             // Register deeplink protocol at runtime (Linux/Windows only)
