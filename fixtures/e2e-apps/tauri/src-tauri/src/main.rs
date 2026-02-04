@@ -312,6 +312,21 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init())
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            // Forward deep links from second instance to the running instance
+            for arg in args {
+                if arg.starts_with("testapp://") {
+                    log_deep_link(&format!("Single-instance forwarding deeplink: {}", arg));
+                    // Add to deep links collection
+                    if let Ok(mut links) = DEEP_LINKS.lock() {
+                        links.push(arg.clone());
+                    }
+                    // Emit to frontend
+                    let _ = app.emit("deeplink-received", &arg);
+                    log_deep_link(&format!("Emitted deeplink to frontend: {}", arg));
+                }
+            }
+        }))
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
