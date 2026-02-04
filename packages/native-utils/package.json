@@ -38,7 +38,7 @@
     "lint": "biome check ."
   },
   "dependencies": {
-    "@electron/packager": "^19.0.1",
+    "@electron/packager": "^19.0.2",
     "@wdio/logger": "catalog:default",
     "debug": "^4.4.3",
     "deepmerge-ts": "^7.1.5",
