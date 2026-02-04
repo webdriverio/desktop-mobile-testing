@@ -329,25 +329,68 @@ jobs:
         run: |
           echo "=== Manual Protocol Handler Test ==="
           echo "This tests if the protocol handler routes to the app correctly"
-          
+          echo ""
+
+          # Clear old debug log
+          rm -f /tmp/tauri-deep-link-debug.log
+          echo "Cleared /tmp/tauri-deep-link-debug.log"
+          echo ""
+
+          # Verify protocol handler is registered
+          echo "Protocol handler registration:"
+          xdg-mime query default x-scheme-handler/testapp 2>/dev/null || echo "No handler registered"
+          echo ""
+
+          # Verify desktop file exists
+          DESKTOP_FILE="$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop"
+          if [ -f "$DESKTOP_FILE" ]; then
+            echo "Desktop file contents:"
+            cat "$DESKTOP_FILE"
+          else
+            echo "WARNING: Desktop file not found at $DESKTOP_FILE"
+          fi
+          echo ""
+
           # Launch app in background with a test deep link (wrap with xvfb-run for GTK display)
+          echo "Launching app with testapp://manual-test..."
           timeout 5 xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
             ./fixtures/e2e-apps/tauri/src-tauri/target/release/tauri-e2e-app testapp://manual-test 2>&1 &
-          APP_PID=$!
-          
+          LAUNCH_PID=$!
+          echo "Launched with PID: $LAUNCH_PID"
+
           sleep 2
-          
+          echo ""
+
+          # Check if app is running
+          if ps -p $LAUNCH_PID > /dev/null 2>&1; then
+            echo "App is running (PID $LAUNCH_PID)"
+          else
+            echo "WARNING: App (PID $LAUNCH_PID) is no longer running"
+          fi
+          echo ""
+
           # Test protocol routing - use gio open which respects x-scheme-handler mime types
           # (xdg-open fails in CI because it tries to use a web browser)
-          echo "Running: gio open testapp://ci-debug-test"
-          gio open "testapp://ci-debug-test" 2>&1 || echo "gio open failed with exit code: $?"
-          
+          echo "Testing protocol routing with: gio open testapp://ci-debug-test"
+          gio open "testapp://ci-debug-test" 2>&1
+          GIO_EXIT=$?
+          echo "gio open exit code: $GIO_EXIT"
+          echo ""
+
           sleep 2
-          
+
+          # Show debug log if it exists
+          if [ -f /tmp/tauri-deep-link-debug.log ]; then
+            echo "Deep link debug log contents:"
+            cat /tmp/tauri-deep-link-debug.log
+          else
+            echo "No deep link debug log found"
+          fi
+          echo ""
+
           # Cleanup
-          kill $APP_PID 2>/dev/null || true
-          
-          echo "Manual test complete - check logs for [Deeplink] messages"
+          kill $LAUNCH_PID 2>/dev/null || true
+          echo "Manual test complete"
 
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
       # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
@@ -377,6 +420,14 @@ jobs:
         run: |
           echo "=== Tauri App Process Info ==="
           ps aux | grep tauri || echo "No tauri processes found"
+
+          echo ""
+          echo "=== Deep Link Debug Log ==="
+          if [ -f /tmp/tauri-deep-link-debug.log ]; then
+            cat /tmp/tauri-deep-link-debug.log
+          else
+            echo "No deep link debug log found at /tmp/tauri-deep-link-debug.log"
+          fi
 
           echo ""
           echo "=== System Logs (last 50 lines) ==="

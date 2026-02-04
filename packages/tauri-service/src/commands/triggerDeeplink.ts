@@ -77,8 +77,8 @@ export function getPlatformCommand(url: string, platform: string): { command: st
 
     case 'linux':
       return {
-        command: 'xdg-open',
-        args: [url],
+        command: 'gio',
+        args: ['open', url],
       };
 
     default:
@@ -106,23 +106,31 @@ export function getPlatformCommand(url: string, platform: string): { command: st
 export async function executeDeeplinkCommand(command: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
+      const fullCommand = `${command} ${args.join(' ')}`;
+      log.info(`Spawning deeplink command: "${fullCommand}"`);
+
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
         shell: false,
       });
 
+      const pid = childProcess.pid;
+      log.info(`Deeplink process spawned with PID: ${pid}`);
+
       childProcess.unref();
 
       childProcess.on('error', (error) => {
+        log.error(`Failed to spawn deeplink process (PID ${pid}): ${error.message}`);
         reject(new Error(`Failed to trigger deeplink: ${error.message}`));
       });
 
       process.nextTick(() => {
-        log.debug('Deeplink command spawned successfully');
+        log.info(`Deeplink command spawned successfully: PID ${pid}`);
         resolve();
       });
     } catch (error) {
+      log.error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`);
       reject(new Error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`));
     }
   });
@@ -150,17 +158,19 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
  * ```
  */
 export async function triggerDeeplink(this: TauriServiceContext, url: string): Promise<void> {
-  log.debug(`triggerDeeplink called with URL: ${url}`);
+  log.info(`triggerDeeplink called with URL: ${url}`);
 
   const validatedUrl = validateDeeplinkUrl(url);
   const platform = process.platform;
 
+  log.info(`Platform: ${platform}`);
   const { command, args } = getPlatformCommand(validatedUrl, platform);
-  log.debug(`Executing deeplink command: ${command} ${args.join(' ')}`);
+  const fullCommand = `${command} ${args.join(' ')}`;
+  log.info(`Full deeplink command: "${fullCommand}"`);
 
   try {
     await executeDeeplinkCommand(command, args);
-    log.debug('Deeplink triggered successfully');
+    log.info(`Deeplink triggered successfully: ${validatedUrl}`);
   } catch (error) {
     log.error(`Failed to trigger deeplink: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
