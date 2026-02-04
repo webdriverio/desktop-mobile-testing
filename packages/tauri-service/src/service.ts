@@ -2,6 +2,7 @@ import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { filterLogFile } from './logParser.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 import { clearWindowState, ensureActiveWindowFocus } from './window.js';
@@ -150,7 +151,25 @@ export default class TauriWorkerService {
   }
 
   async after(_results: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
-    // Cleanup if needed
+    // Filter console wrapper noise from log files
+    const { join } = await import('node:path');
+    const { existsSync, readdirSync } = await import('node:fs');
+
+    const logDir = join(process.cwd(), 'e2e', 'logs');
+    if (existsSync(logDir)) {
+      try {
+        const files = readdirSync(logDir).filter((f) => f.endsWith('.log'));
+        for (const file of files) {
+          const logPath = join(logDir, file);
+          const linesRemoved = await filterLogFile(logPath);
+          if (linesRemoved > 0) {
+            log.debug(`Filtered ${linesRemoved} noise lines from ${file}`);
+          }
+        }
+      } catch {
+        // Silently ignore log filtering errors
+      }
+    }
   }
 
   /**
@@ -252,10 +271,10 @@ export default class TauriWorkerService {
   private patchBrowserExecute(browser: WebdriverIO.Browser): void {
     interface PatchedBrowser extends WebdriverIO.Browser {
       [EXECUTE_PATCHED]?: boolean;
+      _wdioConsoleWrapperLogged?: boolean;
     }
     const patchedBrowser = browser as PatchedBrowser;
     if (patchedBrowser[EXECUTE_PATCHED]) {
-      log.debug('browser.execute already patched, skipping');
       return;
     }
 
@@ -291,6 +310,8 @@ export default class TauriWorkerService {
     });
 
     patchedBrowser[EXECUTE_PATCHED] = true;
-    log.debug('browser.execute() patched with console forwarding');
+    // Note: Logging here will appear in WebDriver logs as COMMAND executeScript
+    // The full wrapper script is still passed to WebDriver, but post-processing
+    // filters will clean up the noise from log files
   }
 }

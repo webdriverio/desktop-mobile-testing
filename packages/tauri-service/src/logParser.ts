@@ -201,3 +201,62 @@ export function parseLogLines(lines: string): ParsedLog[] {
 
   return parsed;
 }
+
+/**
+ * Patterns to filter out from log files (noise patterns)
+ * These are verbose console wrapper script lines that clutter logs
+ */
+const LOG_NOISE_PATTERNS = [
+  /, <object>\)/, // <object> placeholders from executeScript DATA
+  /wdio:console-wrapped/, // Console wrapper script markers
+  /CONSOLE_WRAPPED/, // Console wrapper state definition
+  /var\s+LogLevel\s*=\s*\{/, // Console wrapper log level object
+  /function\s+forward\s*\(\s*level,/, // Console wrapper forward function
+  /Object\.defineProperty\s*\(\s*console,/, // Console wrapper property overrides
+];
+
+/**
+ * Check if a log line should be filtered out as noise
+ */
+function isNoiseLine(line: string): boolean {
+  return LOG_NOISE_PATTERNS.some((pattern) => pattern.test(line));
+}
+
+/**
+ * Filter noise patterns from a log file content
+ * This is used to clean up log files after tests complete
+ */
+export function filterLogContent(content: string): string {
+  const lines = content.split('\n');
+  const filteredLines: string[] = [];
+
+  for (const line of lines) {
+    if (!isNoiseLine(line)) {
+      filteredLines.push(line);
+    }
+  }
+
+  return filteredLines.join('\n');
+}
+
+/**
+ * Filter noise from a log file and write the result
+ * Returns the number of lines removed
+ */
+export async function filterLogFile(inputPath: string, outputPath?: string): Promise<number> {
+  const fs = await import('node:fs');
+
+  if (!fs.existsSync(inputPath)) {
+    return 0;
+  }
+
+  const content = fs.readFileSync(inputPath, 'utf-8');
+  const filtered = filterLogContent(content);
+
+  const targetPath = outputPath ?? inputPath;
+  fs.writeFileSync(targetPath, filtered);
+
+  const inputLines = content.split('\n').length;
+  const outputLines = filtered.split('\n').length;
+  return inputLines - outputLines;
+}
