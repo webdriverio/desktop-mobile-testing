@@ -315,9 +315,17 @@ fn main() {
     let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
     eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_wdio::init())
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+    // Conditionally enable single-instance plugin (only for deeplink tests)
+    // This prevents conflicts when multiple workers run in parallel for other test types
+    let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok();
+    log_deep_link(&format!("Single-instance plugin enabled: {}", enable_single_instance));
+
+    let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_wdio::init());
+
+    // Add single-instance plugin only when explicitly enabled (deeplink tests)
+    if enable_single_instance {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // Forward deep links from second instance to the running instance
             for arg in args {
                 if arg.starts_with("testapp://") {
@@ -331,7 +339,10 @@ fn main() {
                     log_deep_link(&format!("Emitted deeplink to frontend: {}", arg));
                 }
             }
-        }))
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
