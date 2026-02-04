@@ -323,23 +323,24 @@ jobs:
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
       # DEBUG: Manual xdg-open test to diagnose deep link routing
-      - name: 🧪 Manual Deep Link Test
+      - name: 🧪 Manual Protocol Handler Test
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          echo "=== Manual xdg-open Test ==="
+          echo "=== Manual Protocol Handler Test ==="
           echo "This tests if the protocol handler routes to the app correctly"
           
-           # Launch app in background with a test deep link (wrap with xvfb-run for GTK display)
+          # Launch app in background with a test deep link (wrap with xvfb-run for GTK display)
           timeout 5 xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
             ./fixtures/e2e-apps/tauri/src-tauri/target/release/tauri-e2e-app testapp://manual-test 2>&1 &
           APP_PID=$!
           
           sleep 2
           
-          # Test xdg-open
-          echo "Running: xdg-open testapp://ci-debug-test"
-          xdg-open "testapp://ci-debug-test" 2>&1 || echo "xdg-open failed with exit code: $?"
+          # Test protocol routing - use gio open which respects x-scheme-handler mime types
+          # (xdg-open fails in CI because it tries to use a web browser)
+          echo "Running: gio open testapp://ci-debug-test"
+          gio open "testapp://ci-debug-test" 2>&1 || echo "gio open failed with exit code: $?"
           
           sleep 2
           
