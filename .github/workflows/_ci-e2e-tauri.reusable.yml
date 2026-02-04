@@ -26,7 +26,7 @@ on:
         required: true
         type: string
       test-type:
-        description: 'Test type (standard, window, multiremote, standalone, deeplink)'
+        description: 'Test type (standard, multiremote, standalone)'
         type: string
         default: 'standard'
       build_id:
@@ -323,97 +323,30 @@ jobs:
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
       # DEBUG: Manual xdg-open test to diagnose deep link routing
-      - name: 🧪 Manual Protocol Handler Test
+      - name: 🧪 Manual Deep Link Test
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          echo "=== Manual Protocol Handler Test ==="
+          echo "=== Manual xdg-open Test ==="
           echo "This tests if the protocol handler routes to the app correctly"
-          echo ""
-
-          # Clear old debug log
-          rm -f /tmp/tauri-deep-link-debug.log
-          echo "Cleared /tmp/tauri-deep-link-debug.log"
-          echo ""
-
-          # Verify protocol handler is registered
-          echo "Protocol handler registration:"
-          xdg-mime query default x-scheme-handler/testapp 2>/dev/null || echo "No handler registered"
-          echo ""
-
-          # Verify desktop file exists
-          DESKTOP_FILE="$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop"
-          if [ -f "$DESKTOP_FILE" ]; then
-            echo "Desktop file contents:"
-            cat "$DESKTOP_FILE"
-          else
-            echo "WARNING: Desktop file not found at $DESKTOP_FILE"
-          fi
-          echo ""
-
-          # Launch app in background with a test deep link (wrap with xvfb-run for GTK display)
-          echo "Launching app with testapp://manual-test..."
+          
+           # Launch app in background with a test deep link (wrap with xvfb-run for GTK display)
           timeout 5 xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
             ./fixtures/e2e-apps/tauri/src-tauri/target/release/tauri-e2e-app testapp://manual-test 2>&1 &
-          LAUNCH_PID=$!
-          echo "Launched with PID: $LAUNCH_PID"
-
+          APP_PID=$!
+          
           sleep 2
-          echo ""
-
-          # Check if app is running
-          if ps -p $LAUNCH_PID > /dev/null 2>&1; then
-            echo "App is running (PID $LAUNCH_PID)"
-          else
-            echo "WARNING: App (PID $LAUNCH_PID) is no longer running"
-          fi
-          echo ""
-
-          # Test protocol routing - use gio open which respects x-scheme-handler mime types
-          # (xdg-open fails in CI because it tries to use a web browser)
-          echo "Testing protocol routing with: gio open testapp://ci-debug-test"
-          gio open "testapp://ci-debug-test" 2>&1
-          GIO_EXIT=$?
-          echo "gio open exit code: $GIO_EXIT"
-          echo ""
-
+          
+          # Test xdg-open
+          echo "Running: xdg-open testapp://ci-debug-test"
+          xdg-open "testapp://ci-debug-test" 2>&1 || echo "xdg-open failed with exit code: $?"
+          
           sleep 2
-
-          # Show debug log if it exists
-          if [ -f /tmp/tauri-deep-link-debug.log ]; then
-            echo "Deep link debug log contents:"
-            cat /tmp/tauri-deep-link-debug.log
-          else
-            echo "No deep link debug log found"
-          fi
-          echo ""
-
+          
           # Cleanup
-          kill $LAUNCH_PID 2>/dev/null || true
-          echo "Manual test complete"
-
-      # Cleanup any lingering processes from previous test runs
-      - name: 🧹 Cleanup Lingering Processes (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "Cleaning up any lingering tauri-driver or app processes..."
-          # Kill tauri-driver processes
-          Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          # Kill any tauri app processes
-          Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          Write-Host "Windows cleanup complete"
-
-      - name: 🧹 Cleanup Lingering Processes (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          echo "Cleaning up any lingering tauri-driver or app processes..."
-          # Kill tauri-driver processes
-          pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
-          # Kill any tauri app processes
-          pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
-          echo "Unix cleanup complete"
+          kill $APP_PID 2>/dev/null || true
+          
+          echo "Manual test complete - check logs for [Deeplink] messages"
 
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
       # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
@@ -436,29 +369,6 @@ jobs:
             pnpm run ${{ steps.gen-test.outputs.result }}
           fi
 
-      # Cleanup processes after tests complete
-      - name: 🧹 Post-Test Cleanup (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "Cleaning up test processes..."
-          # Kill tauri-driver processes
-          Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          # Kill any tauri app processes
-          Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          Write-Host "Post-test Windows cleanup complete"
-
-      - name: 🧹 Post-Test Cleanup (Unix)
-        if: always() && runner.os != 'Windows'
-        shell: bash
-        run: |
-          echo "Cleaning up test processes..."
-          # Kill tauri-driver processes
-          pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
-          # Kill any tauri app processes
-          pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
-          echo "Post-test Unix cleanup complete"
-
       # Show System Logs
       - name: 🔍 Show System Logs
         if: always()
@@ -466,14 +376,6 @@ jobs:
         run: |
           echo "=== Tauri App Process Info ==="
           ps aux | grep tauri || echo "No tauri processes found"
-
-          echo ""
-          echo "=== Deep Link Debug Log ==="
-          if [ -f /tmp/tauri-deep-link-debug.log ]; then
-            cat /tmp/tauri-deep-link-debug.log
-          else
-            echo "No deep link debug log found at /tmp/tauri-deep-link-debug.log"
-          fi
 
           echo ""
           echo "=== System Logs (last 50 lines) ==="
@@ -492,7 +394,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-tauri-logs-${{ inputs.os }}-${{ github.run_id }}-${{ inputs.scenario }}-${{ inputs.test-type }}
+          name: e2e-tauri-logs-${{ inputs.os }}-${{ inputs.scenario }}-${{ inputs.test-type }}
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn

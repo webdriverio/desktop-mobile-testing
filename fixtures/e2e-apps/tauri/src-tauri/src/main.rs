@@ -3,50 +3,6 @@
 // E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::sync::Mutex;
-use once_cell::sync::Lazy;
-
-static DEEP_LINKS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
-static DEEP_LINK_LOG: Lazy<Option<Mutex<std::fs::File>>> = Lazy::new(|| {
-    let log_path = std::env::temp_dir().join("tauri-deep-link-debug.log");
-    let _ = std::fs::remove_file(&log_path); // Clear log on startup
-    match OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
-        Ok(file) => Some(Mutex::new(file)),
-        Err(e) => {
-            eprintln!("[DEEP-LINK-DEBUG] Failed to open log file at {:?}: {}", log_path, e);
-            None
-        }
-    }
-});
-
-fn log_deep_link(message: &str) {
-    let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
-    let pid = std::process::id();
-    let log_line = format!("[{}] [PID {}] {}\n", timestamp, pid, message);
-    eprintln!("[DEEP-LINK-DEBUG] {}", message);
-    if let Some(ref log) = *DEEP_LINK_LOG {
-        if let Ok(mut file) = log.lock() {
-            let _ = file.write_all(log_line.as_bytes());
-        }
-    }
-}
-
-fn collect_deep_links_from_args() -> Vec<String> {
-    let mut deep_links = Vec::new();
-    for arg in std::env::args().skip(1) {
-        if arg.starts_with("testapp://") {
-            deep_links.push(arg.clone());
-        }
-    }
-    deep_links
-}
-
 use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter, Manager};
 use serde::{Serialize, Deserialize};
 use sysinfo::System;
@@ -238,37 +194,6 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-async fn get_deep_links(_app: tauri::AppHandle) -> Result<Vec<String>, String> {
-    let links = DEEP_LINKS.lock().map_err(|e| e.to_string())?.clone();
-    eprintln!("🔍 get_deep_links() called - returning {} links: {:?}", links.len(), links);
-    log_deep_link(&format!("get_deep_links called, returning {} links: {:?}", links.len(), links));
-    Ok(links)
-}
-
-fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
-    let deep_links = DEEP_LINKS.lock().map(|guard| guard.clone()).unwrap_or_default();
-
-    if !deep_links.is_empty() {
-        eprintln!("📤 emit_deep_links() called - emitting {} deep links to frontend", deep_links.len());
-        log_deep_link(&format!("Emitting {} deep links to frontend", deep_links.len()));
-        for link in &deep_links {
-            match app.emit("deeplink-received", link) {
-                Ok(_) => {
-                    eprintln!("  ✓ Emitted: {}", link);
-                    log_deep_link(&format!("Emitted deep link: {}", link));
-                },
-                Err(e) => {
-                    eprintln!("  ✗ ERROR emitting {}: {}", link, e);
-                    log_deep_link(&format!("ERROR emitting deep link {}: {}", link, e));
-                }
-            }
-        }
-    } else {
-        log_deep_link("emit_deep_links() called but no deep links to emit");
-    }
-}
-
 fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
     eprintln!("[Tauri-DEBUG] create_main_window called");
     if let Some(existing) = app.get_webview_window("main") {
@@ -315,155 +240,19 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
-    log_deep_link(&format!("App starting with {} args", std::env::args().count()));
-    log_deep_link(&format!("CI mode: {}", std::env::var("CI").unwrap_or_else(|_| "not set".to_string())));
-
     // DEBUG: Print ALL args to diagnose deep link routing
     let all_args: Vec<String> = std::env::args().collect();
     eprintln!("[DEEPLINK-DEBUG] All args: {:?}", all_args);
-    log_deep_link(&format!("CLI args: {:?}", all_args));
-
-    // Check for deep link URLs in args
-    for (i, arg) in all_args.iter().enumerate() {
-        if arg.starts_with("testapp://") {
-            eprintln!("[DEEPLINK-DEBUG] Found deep link at index {}: {}", i, arg);
-            log_deep_link(&format!("DEEP-LINK-RECEIVED-VIA-CLI: {} (index {})", arg, i));
-        }
-    }
+    eprintln!("[DEEPLINK-DEBUG] CI={}", std::env::var("CI").unwrap_or_default());
 
     let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
     eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
 
-    // Conditionally enable single-instance plugin (only for deeplink tests)
-    // This prevents conflicts when multiple workers run in parallel for other test types
-    let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok();
-    log_deep_link(&format!("Single-instance plugin enabled: {}", enable_single_instance));
-
-    let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_wdio::init());
-
-    // Add single-instance plugin only when explicitly enabled (deeplink tests)
-    if enable_single_instance {
-        log_deep_link("Initializing single-instance plugin...");
-        eprintln!("======================================");
-        eprintln!("SINGLE-INSTANCE PLUGIN ENABLED");
-        eprintln!("======================================");
-
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            eprintln!("");
-            eprintln!("╔════════════════════════════════════════════════════════════════╗");
-            eprintln!("║ SINGLE-INSTANCE CALLBACK TRIGGERED!                           ║");
-            eprintln!("╚════════════════════════════════════════════════════════════════╝");
-            eprintln!("  Second instance attempted to start");
-            eprintln!("  CWD: {:?}", cwd);
-            eprintln!("  Args count: {}", args.len());
-            eprintln!("  Args: {:?}", args);
-            eprintln!("");
-
-            log_deep_link(&format!("🔔 Single-instance callback triggered! Args: {:?}, CWD: {:?}", args, cwd));
-
-            // Forward deep links from second instance to the running instance
-            let mut deeplink_count = 0;
-            for (i, arg) in args.iter().enumerate() {
-                log_deep_link(&format!("  Processing arg[{}]: {}", i, arg));
-                if arg.starts_with("testapp://") {
-                    deeplink_count += 1;
-                    eprintln!("  ✓ Found deeplink at arg[{}]: {}", i, arg);
-                    log_deep_link(&format!("🔗 Single-instance forwarding deeplink: {}", arg));
-
-                    // Add to deep links collection
-                    if let Ok(mut links) = DEEP_LINKS.lock() {
-                        links.push(arg.clone());
-                        log_deep_link(&format!("  ✓ Added to DEEP_LINKS collection (total: {})", links.len()));
-                    }
-
-                    // Emit to frontend
-                    match app.emit("deeplink-received", arg) {
-                        Ok(_) => {
-                            eprintln!("  ✓ Emitted deeplink event to frontend: {}", arg);
-                            log_deep_link(&format!("✅ Successfully emitted deeplink to frontend: {}", arg));
-                        },
-                        Err(e) => {
-                            eprintln!("  ✗ ERROR emitting deeplink: {}", e);
-                            log_deep_link(&format!("❌ ERROR emitting deeplink: {}", e));
-                        }
-                    }
-                } else {
-                    log_deep_link(&format!("  ⊘ Arg does not start with testapp://, skipping: {}", arg));
-                }
-            }
-
-            eprintln!("");
-            if deeplink_count > 0 {
-                eprintln!("  Summary: Forwarded {} deeplink(s) to running instance", deeplink_count);
-            } else {
-                eprintln!("  Summary: No deeplinks found in args");
-            }
-            eprintln!("╚════════════════════════════════════════════════════════════════╝");
-            eprintln!("");
-        }));
-
-        log_deep_link("Single-instance plugin initialized successfully");
-        eprintln!("✓ Single-instance plugin registered");
-        eprintln!("  Waiting for second instance attempts...");
-        eprintln!("======================================");
-    }
-
-    builder
+    tauri::Builder::default()
+        .plugin(tauri_plugin_wdio::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
-            log_deep_link("Tauri setup() called");
-
-            // Collect deep links from CLI args at startup
-            let cli_deep_links = collect_deep_links_from_args();
-            if !cli_deep_links.is_empty() {
-                eprintln!("");
-                eprintln!("🔗 Found {} deep links in CLI args at startup:", cli_deep_links.len());
-                log_deep_link(&format!("Found {} deep links in CLI args", cli_deep_links.len()));
-                let mut deep_links_guard = DEEP_LINKS.lock().unwrap();
-                for link in &cli_deep_links {
-                    eprintln!("  - {}", link);
-                    deep_links_guard.push(link.clone());
-                    log_deep_link(&format!("Collected deep link: {}", link));
-                }
-                drop(deep_links_guard);
-
-                eprintln!("  Emitting to frontend...");
-                // Emit deep links to frontend
-                emit_deep_links(&app.handle());
-                eprintln!("");
-            } else {
-                log_deep_link("No deep links found in CLI args at startup");
-            }
-
-            // Register deeplink protocol at runtime (Linux/Windows only)
-            // This is needed for development/testing when the protocol handler
-            // hasn't been registered by the installer
-            #[cfg(any(target_os = "linux", target_os = "windows"))]
-            {
-                use tauri_plugin_deep_link::DeepLinkExt;
-
-                // Get CURRENT binary path for debugging
-                let binary_path = std::env::current_exe()
-                    .expect("Failed to get current binary path");
-                log_deep_link(&format!("Current binary path: {:?}", binary_path));
-
-                // Register protocol - the plugin automatically uses current binary
-                // This fixes CI path mismatches where register_all() points to wrong binary
-                match app.deep_link().register("testapp") {
-                    Ok(_) => {
-                        eprintln!("[Tauri-DEBUG] Successfully registered testapp protocol");
-                        log_deep_link("✓ Registered testapp protocol");
-                    }
-                    Err(e) => {
-                        eprintln!("[Tauri-DEBUG] Protocol registration failed (non-fatal): {}", e);
-                        log_deep_link(&format!("Protocol registration note: {}. Deep links still work via CLI args.", e));
-                    }
-                }
-
-                log_deep_link("Deep links arrive via CLI args on Linux (receiver not used)");
-            }
 
             // Register deeplink protocol at runtime (Linux/Windows only)
             // This is needed for development/testing when the protocol handler
@@ -540,7 +329,6 @@ fn main() {
             write_clipboard,
             generate_test_logs,
             switch_to_main,
-            get_deep_links,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

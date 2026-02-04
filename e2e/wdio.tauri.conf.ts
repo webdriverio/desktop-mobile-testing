@@ -115,11 +115,9 @@ const { envContext, appBinaryPath } = context;
 // Configure specs based on test type
 let specs: string[] = [];
 let exclude: string[] = [];
-let maxInstances = 5;
 switch (envContext.testType) {
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
-    maxInstances = 1;
     break;
   case 'standalone':
     specs = ['./test/tauri/standalone/*.spec.ts'];
@@ -128,16 +126,11 @@ switch (envContext.testType) {
     // Window tests - only window-specific functionality
     specs = ['./test/tauri/window.spec.ts'];
     break;
-  case 'deeplink':
-    // Deeplink tests require single-instance mode and sequential execution
-    specs = ['./test/tauri/deeplink.spec.ts'];
-    maxInstances = 1;
-    break;
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
-    // Exclude mocking tests, window tests (require splash), and deeplink tests (require single-instance)
-    exclude = ['./test/tauri/mocking.spec.ts', './test/tauri/window.spec.ts', './test/tauri/deeplink.spec.ts'];
+    // Exclude mocking tests and window tests (window tests require splash)
+    exclude = ['./test/tauri/mocking.spec.ts', './test/tauri/window.spec.ts'];
     break;
 }
 
@@ -234,9 +227,6 @@ if (envContext.isMultiremote) {
   if (envContext.isSplashEnabled) {
     baseEnv.ENABLE_SPLASH_WINDOW = 'true';
   }
-  if (envContext.testType === 'deeplink') {
-    baseEnv.ENABLE_SINGLE_INSTANCE = 'true';
-  }
 
   capabilities = [
     {
@@ -270,10 +260,10 @@ export const config = {
   exclude,
   // Auto-detection: maxInstances > 1 enables per-worker drivers for parallel execution
   // Each worker gets its own tauri-driver process on a unique port
-  maxInstances, // Use computed maxInstances based on test type
+  maxInstances: envContext.isMultiremote ? 1 : 5, // Allow 5 parallel workers in standard mode
   capabilities,
-  // Use dynamic port allocation (0 = find available port) to prevent port conflicts in CI
-  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 0 }),
+  // Connect to tauri-driver instead of spawning a browser driver
+  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
   logLevel: 'info',
   bail: 0,
   baseUrl: '',
