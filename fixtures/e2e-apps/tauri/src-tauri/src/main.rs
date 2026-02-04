@@ -3,6 +3,7 @@ use std::io::Write;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
+static DEEP_LINKS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
 static DEEP_LINK_LOG: Lazy<Mutex<std::fs::File>> = Lazy::new(|| {
     let path = "/tmp/tauri-deep-link-debug.log";
     let _ = std::fs::remove_file(path); // Clear log on startup
@@ -22,6 +23,16 @@ fn log_deep_link(message: &str) {
     if let Ok(mut file) = DEEP_LINK_LOG.lock() {
         let _ = file.write_all(log_line.as_bytes());
     }
+}
+
+fn collect_deep_links_from_args() -> Vec<String> {
+    let mut deep_links = Vec::new();
+    for arg in std::env::args().skip(1) {
+        if arg.starts_with("testapp://") {
+            deep_links.push(arg.clone());
+        }
+    }
+    deep_links
 }
 
 use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter, Manager};
@@ -215,6 +226,28 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn get_deep_links(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let links = DEEP_LINKS.lock().map_err(|e| e.to_string())?.clone();
+    log_deep_link(&format!("get_deep_links called, returning {} links", links.len()));
+    Ok(links)
+}
+
+fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let deep_links = {
+        let links = DEEP_LINKS.lock().map_err(|e| e.to_string()).unwrap_or_default();
+        links.clone()
+    };
+
+    if !deep_links.is_empty() {
+        log_deep_link(&format!("Emitting {} deep links to frontend", deep_links.len()));
+        for link in &deep_links {
+            let _ = app.emit("deeplink-received", link);
+            log_deep_link(&format!("Emitted deep link: {}", link));
+        }
+    }
+}
+
 fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
     eprintln!("[Tauri-DEBUG] create_main_window called");
     if let Some(existing) = app.get_webview_window("main") {
@@ -287,6 +320,21 @@ fn main() {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
             log_deep_link("Tauri setup() called");
 
+            // Collect deep links from CLI args at startup
+            let cli_deep_links = collect_deep_links_from_args();
+            if !cli_deep_links.is_empty() {
+                log_deep_link(&format!("Found {} deep links in CLI args", cli_deep_links.len()));
+                let mut deep_links_guard = DEEP_LINKS.lock().unwrap();
+                for link in &cli_deep_links {
+                    deep_links_guard.push(link.clone());
+                    log_deep_link(&format!("Collected deep link: {}", link));
+                }
+                drop(deep_links_guard);
+
+                // Emit deep links to frontend
+                emit_deep_links(app);
+            }
+
             // Register deeplink protocol at runtime (Linux/Windows only)
             // This is needed for development/testing when the protocol handler
             // hasn't been registered by the installer
@@ -294,18 +342,16 @@ fn main() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
 
-                // Register all schemes from config (testapp://)
+                // Try to register, but don't fail if it errors (e.g., directory doesn't exist in CI)
                 if let Err(e) = app.deep_link().register_all() {
-                    eprintln!("[Tauri-DEBUG] Failed to register deep link protocols: {}", e);
-                    log_deep_link(&format!("ERROR: Failed to register deep link protocols: {}", e));
+                    eprintln!("[Tauri-DEBUG] register_all() failed (non-fatal): {}", e);
+                    log_deep_link(&format!("register_all() note: {}. Deep links still work via CLI args.", e));
                 } else {
-                    eprintln!("[Tauri-DEBUG] Successfully registered deep link protocols from config");
-                    log_deep_link("Successfully registered deep link protocols");
+                    eprintln!("[Tauri-DEBUG] Successfully registered deep link protocols");
+                    log_deep_link("register_all() succeeded");
                 }
 
-                // NOTE: On Linux, deep links arrive via CLI args (not via receiver)
-                // The CLI arg parsing at startup handles this - see below
-                log_deep_link("Deep links will arrive via CLI args on Linux");
+                log_deep_link("Deep links arrive via CLI args on Linux (receiver not used)");
             }
 
             if is_splash {
@@ -368,6 +414,7 @@ fn main() {
             write_clipboard,
             generate_test_logs,
             switch_to_main,
+            get_deep_links,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
