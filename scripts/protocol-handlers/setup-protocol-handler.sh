@@ -95,20 +95,20 @@ EOF
 
     echo "Created .desktop file: $DESKTOP_FILE"
 
-    # Update desktop database
+    # Update desktop database (with timeout to prevent hanging)
     if command -v update-desktop-database &> /dev/null; then
-        update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+        timeout 10 update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || echo "Warning: update-desktop-database timed out or failed"
     else
         echo "Warning: update-desktop-database not found, skipping"
     fi
 
-    # Register the protocol handler
+    # Register the protocol handler (with timeout to prevent hanging)
     if command -v xdg-mime &> /dev/null; then
-        xdg-mime default "${DESKTOP_FILE_BASENAME}.desktop" x-scheme-handler/${PROTOCOL_NAME}
+        timeout 10 xdg-mime default "${DESKTOP_FILE_BASENAME}.desktop" x-scheme-handler/${PROTOCOL_NAME}
         echo "Registered ${PROTOCOL_NAME}:// protocol handler"
 
         # Verify registration
-        HANDLER=$(xdg-mime query default x-scheme-handler/${PROTOCOL_NAME})
+        HANDLER=$(timeout 10 xdg-mime query default x-scheme-handler/${PROTOCOL_NAME})
         echo "Current handler for ${PROTOCOL_NAME}://: $HANDLER"
     else
         echo "Error: xdg-mime not found, cannot register protocol handler"

@@ -1,7 +1,28 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-// NOTE: This also detaches stdout/stderr in release mode on Windows, preventing log capture.
-// E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
+
+static DEEP_LINK_LOG: Lazy<Mutex<std::fs::File>> = Lazy::new(|| {
+    let path = "/tmp/tauri-deep-link-debug.log";
+    let _ = std::fs::remove_file(path); // Clear log on startup
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .expect("Failed to open deep link debug log");
+    Mutex::new(file)
+});
+
+fn log_deep_link(message: &str) {
+    let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
+    let pid = std::process::id();
+    let log_line = format!("[{}] [PID {}] {}\n", timestamp, pid, message);
+    eprintln!("[DEEP-LINK-DEBUG] {}", message);
+    if let Ok(mut file) = DEEP_LINK_LOG.lock() {
+        let _ = file.write_all(log_line.as_bytes());
+    }
+}
 
 use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter, Manager};
 use serde::{Serialize, Deserialize};
@@ -240,10 +261,21 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    log_deep_link(&format!("App starting with {} args", std::env::args().count()));
+    log_deep_link(&format!("CI mode: {}", std::env::var("CI").unwrap_or_else(|_| "not set".to_string())));
+
     // DEBUG: Print ALL args to diagnose deep link routing
     let all_args: Vec<String> = std::env::args().collect();
     eprintln!("[DEEPLINK-DEBUG] All args: {:?}", all_args);
-    eprintln!("[DEEPLINK-DEBUG] CI={}", std::env::var("CI").unwrap_or_default());
+    log_deep_link(&format!("CLI args: {:?}", all_args));
+
+    // Check for deep link URLs in args
+    for (i, arg) in all_args.iter().enumerate() {
+        if arg.starts_with("testapp://") {
+            eprintln!("[DEEPLINK-DEBUG] Found deep link at index {}: {}", i, arg);
+            log_deep_link(&format!("DEEP-LINK-RECEIVED-VIA-CLI: {} (index {})", arg, i));
+        }
+    }
 
     let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
     eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
@@ -253,6 +285,7 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
+            log_deep_link("Tauri setup() called");
 
             // Register deeplink protocol at runtime (Linux/Windows only)
             // This is needed for development/testing when the protocol handler
@@ -264,9 +297,15 @@ fn main() {
                 // Register all schemes from config (testapp://)
                 if let Err(e) = app.deep_link().register_all() {
                     eprintln!("[Tauri-DEBUG] Failed to register deep link protocols: {}", e);
+                    log_deep_link(&format!("ERROR: Failed to register deep link protocols: {}", e));
                 } else {
                     eprintln!("[Tauri-DEBUG] Successfully registered deep link protocols from config");
+                    log_deep_link("Successfully registered deep link protocols");
                 }
+
+                // NOTE: On Linux, deep links arrive via CLI args (not via receiver)
+                // The CLI arg parsing at startup handles this - see below
+                log_deep_link("Deep links will arrive via CLI args on Linux");
             }
 
             if is_splash {
