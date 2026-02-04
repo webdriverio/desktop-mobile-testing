@@ -26,7 +26,7 @@ on:
         required: true
         type: string
       test-type:
-        description: 'Test type (standard, multiremote, standalone)'
+        description: 'Test type (standard, window, multiremote, standalone, deeplink)'
         type: string
         default: 'standard'
       build_id:
