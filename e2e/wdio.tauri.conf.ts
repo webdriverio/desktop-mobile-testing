@@ -264,7 +264,7 @@ export const config = {
   capabilities,
   // Connect to tauri-driver instead of spawning a browser driver
   ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
-  logLevel: 'debug',
+  logLevel: 'info',
   bail: 0,
   baseUrl: '',
   waitforTimeout: 10000,
