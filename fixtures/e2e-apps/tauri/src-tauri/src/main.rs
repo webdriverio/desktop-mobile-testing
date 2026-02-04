@@ -1,3 +1,8 @@
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// NOTE: This also detaches stdout/stderr in release mode on Windows, preventing log capture.
+// E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::sync::Mutex;
