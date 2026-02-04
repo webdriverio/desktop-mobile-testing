@@ -222,7 +222,8 @@
       console.log('[Deeplink] Initialized: count=0, receivedDeeplinks=[]');
 
       try {
-        const { invoke, listen } = await import('@tauri-apps/api/core');
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { listen } = await import('@tauri-apps/api/event');
 
         // Listen for deep link events from backend (Linux CLI args)
         console.log('[Deeplink] Setting up deeplink-received event listener...');
