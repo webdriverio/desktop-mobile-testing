@@ -266,6 +266,39 @@ jobs:
           echo ""
           echo "=== Protocol Handler Setup Complete ==="
 
+      # DEBUG: Verify protocol registration after setup
+      - name: 🔍 Verify Protocol Registration
+        if: runner.os != 'macOS'
+        shell: bash
+        run: |
+          echo "=== Protocol Registration Verification ==="
+
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            echo "Linux: Checking xdg-mime registration..."
+            xdg-mime query default x-scheme-handler/testapp || echo "WARNING: No handler registered for testapp://"
+            
+            echo ""
+            echo "Checking .desktop file..."
+            if [ -f "$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop" ]; then
+              echo "✅ Desktop file exists:"
+              cat "$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop"
+            else
+              echo "❌ Desktop file NOT found at ~/.local/share/applications/tauri-e2e-app-testapp.desktop"
+            fi
+            
+            echo ""
+            echo "Checking desktop database..."
+            update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+            
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            echo "Windows: Checking registry..."
+            reg query "HKCR\testapp" 2>nul || echo "❌ Protocol NOT registered in HKCR\testapp"
+            reg query "HKCR\testapp\shell\open\command" 2>nul || echo "❌ Command key NOT found"
+          fi
+
+          echo ""
+          echo "=== Protocol Verification Complete ==="
+
       # Dynamically generate the Tauri test commands to run
       # Uses 'tauri-basic' naming convention to align with Electron's 'builder/forge/script' naming
       - name: 🪄 Generate Tauri Test Execution Plan
@@ -289,6 +322,32 @@ jobs:
             };
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
+      # DEBUG: Manual xdg-open test to diagnose deep link routing
+      - name: 🧪 Manual Deep Link Test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "=== Manual xdg-open Test ==="
+          echo "This tests if the protocol handler routes to the app correctly"
+          
+           # Launch app in background with a test deep link (wrap with xvfb-run for GTK display)
+          timeout 5 xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
+            ./fixtures/e2e-apps/tauri/src-tauri/target/release/tauri-e2e-app testapp://manual-test 2>&1 &
+          APP_PID=$!
+          
+          sleep 2
+          
+          # Test xdg-open
+          echo "Running: xdg-open testapp://ci-debug-test"
+          xdg-open "testapp://ci-debug-test" 2>&1 || echo "xdg-open failed with exit code: $?"
+          
+          sleep 2
+          
+          # Cleanup
+          kill $APP_PID 2>/dev/null || true
+          
+          echo "Manual test complete - check logs for [Deeplink] messages"
+
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
       # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
       # tauri-driver launches apps during session creation, needs display in launcher context
@@ -310,19 +369,11 @@ jobs:
             pnpm run ${{ steps.gen-test.outputs.result }}
           fi
 
-      # Show Rust debug logs
-      - name: 🔍 Show Rust Debug Logs
+      # Show System Logs
+      - name: 🔍 Show System Logs
         if: always()
         shell: bash
         run: |
-          echo "=== Rust Debug Log ==="
-          if [ -f /tmp/tauri-debug.log ]; then
-            cat /tmp/tauri-debug.log
-          else
-            echo "No Rust debug log found at /tmp/tauri-debug.log"
-          fi
-
-          echo ""
           echo "=== Tauri App Process Info ==="
           ps aux | grep tauri || echo "No tauri processes found"
 

@@ -218,12 +218,17 @@
       // Using official @tauri-apps/plugin-deep-link API
       window.receivedDeeplinks = [];
       window.deeplinkCount = 0;
+      console.log('[Deeplink] Initialized: count=0, receivedDeeplinks=[]');
 
       try {
+        console.log('[Deeplink] Importing @tauri-apps/plugin-deep-link...');
         const { onOpenUrl, getCurrent } = await import('@tauri-apps/plugin-deep-link');
+        console.log('[Deeplink] Plugin imported successfully');
 
         // Check if app was launched with a deep link
+        console.log('[Deeplink] Calling getCurrent()...');
         const startUrls = await getCurrent();
+        console.log('[Deeplink] getCurrent() returned:', startUrls);
         if (startUrls && startUrls.length > 0) {
           console.log('[Deeplink] App launched with deep links:', startUrls);
           startUrls.forEach(url => {
@@ -233,15 +238,16 @@
         }
 
         // Listen for deep links while app is running
+        console.log('[Deeplink] Registering onOpenUrl listener...');
         await onOpenUrl((urls) => {
-          console.log('[Deeplink] Received:', urls);
+          console.log('[Deeplink] Received via onOpenUrl:', urls);
           urls.forEach(url => {
             window.receivedDeeplinks.push(url);
             window.deeplinkCount++;
           });
         });
 
-        console.log('[Deeplink] Listener setup complete');
+        console.log('[Deeplink] Listener setup complete. Current count:', window.deeplinkCount);
       } catch (error) {
         console.error('[Deeplink] Failed to setup deep link listener:', error);
       }

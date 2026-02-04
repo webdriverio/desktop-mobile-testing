@@ -240,6 +240,11 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    // DEBUG: Print ALL args to diagnose deep link routing
+    let all_args: Vec<String> = std::env::args().collect();
+    eprintln!("[DEEPLINK-DEBUG] All args: {:?}", all_args);
+    eprintln!("[DEEPLINK-DEBUG] CI={}", std::env::var("CI").unwrap_or_default());
+
     let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
     eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
 
