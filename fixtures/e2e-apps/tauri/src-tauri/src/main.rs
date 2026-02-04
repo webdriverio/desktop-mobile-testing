@@ -260,7 +260,6 @@ fn main() {
                 .inner_size(300.0, 200.0)
                 .resizable(false)
                 .decorations(false)
-                .transparent(true)
                 .focused(true)           // CRITICAL: WebDriver attaches here
                 .build()
                 .expect("Failed to create splash window");
