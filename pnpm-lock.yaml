@@ -25,8 +25,8 @@ catalogs:
       specifier: ^9.20.0
       version: 9.23.3
     '@wdio/types':
-      specifier: 9.20.0
-      version: 9.20.0
+      specifier: 9.23.3
+      version: 9.23.3
     '@wdio/xvfb':
       specifier: ^9.20.0
       version: 9.23.3
@@ -155,7 +155,7 @@ importers:
         version: link:../packages/native-types
       '@wdio/types':
         specifier: 'catalog:'
-        version: 9.20.0
+        version: 9.23.3
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -787,7 +787,7 @@ importers:
         version: 4.0.18(vitest@4.0.18(@types/node@25.2.0)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       '@wdio/types':
         specifier: catalog:default
-        version: 9.20.0
+        version: 9.23.3
       builder-util:
         specifier: ^26.3.4
         version: 26.4.1
@@ -851,7 +851,7 @@ importers:
         version: 9.23.0(expect-webdriverio@5.6.4)(webdriverio@9.23.3(puppeteer-core@24.37.0))
       '@wdio/types':
         specifier: catalog:default
-        version: 9.20.0
+        version: 9.23.3
       builder-util:
         specifier: ^26.3.4
         version: 26.4.1
@@ -973,7 +973,7 @@ importers:
         version: 9.23.3
       '@wdio/types':
         specifier: catalog:default
-        version: 9.20.0
+        version: 9.23.3
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
