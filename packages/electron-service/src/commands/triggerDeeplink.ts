@@ -5,6 +5,46 @@ import { createLogger } from '@wdio/native-utils';
 const log = createLogger('electron-service', 'service');
 
 /**
+ * Escapes a URL for safe use in cmd.exe with shell: true.
+ * Properly handles both backslashes and double quotes according to Windows
+ * command-line parsing rules (2n+1 backslashes before a quote).
+ *
+ * @param url - The URL to escape
+ * @returns The escaped URL wrapped in double quotes
+ */
+function escapeUrlForCmd(url: string): string {
+  let result = '';
+  let backslashCount = 0;
+
+  for (let i = 0; i < url.length; i++) {
+    const char = url[i];
+
+    if (char === '\\') {
+      backslashCount++;
+    } else if (char === '"') {
+      // For a run of n backslashes followed by a ": output 2n + 1 backslashes followed by "
+      result += '\\'.repeat(backslashCount * 2 + 1) + '"';
+      backslashCount = 0;
+    } else {
+      // For a run of n backslashes not followed by a quote: output n backslashes unchanged
+      if (backslashCount > 0) {
+        result += '\\'.repeat(backslashCount);
+        backslashCount = 0;
+      }
+      result += char;
+    }
+  }
+
+  // Handle any trailing backslashes
+  if (backslashCount > 0) {
+    result += '\\'.repeat(backslashCount);
+  }
+
+  // Wrap the entire argument in double quotes
+  return `"${result}"`;
+}
+
+/**
  * Context interface for the triggerDeeplink command.
  * Provides access to service configuration and state.
  */
@@ -117,10 +157,10 @@ export function getPlatformCommand(
       }
       // Windows: Use cmd /c start to trigger the deeplink
       // The empty quoted string after 'start' is the window title (required)
-      // URL must be quoted to handle special characters like & in query strings
+      // URL is escaped and quoted to handle special characters like & in query strings
       return {
         command: 'cmd',
-        args: ['/c', 'start', '""', `"${url}"`],
+        args: ['/c', 'start', '""', escapeUrlForCmd(url)],
       };
 
     case 'darwin': {
