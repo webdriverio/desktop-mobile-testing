@@ -247,7 +247,7 @@ async function testExample(
     const packagesToInstall: string[] = [packages.utilsPath, packages.spyPath];
 
     // Add @wdio/utils override if the tarball exists
-    const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.23.0.tgz');
+    const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.23.3.tgz');
     if (existsSync(wdioUtilsTarball)) {
       overrides['@wdio/utils'] = `file:${wdioUtilsTarball}`;
       packagesToInstall.push(wdioUtilsTarball);
