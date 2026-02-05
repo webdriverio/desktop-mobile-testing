@@ -73,8 +73,9 @@ if (Test-Path $CommandPath) {
     $ExistingCommand = Get-ItemProperty -Path $CommandPath -Name "(Default)" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty "(Default)"
 }
 
-# Define command value
-$CommandValue = "`"$ExePath`" `"%1`""
+# Define command value with environment variable for single-instance mode
+# Use cmd /c to set ENABLE_SINGLE_INSTANCE before launching the app
+$CommandValue = "cmd /c `"set ENABLE_SINGLE_INSTANCE=true && `"`"$ExePath`"`" `"%1`"`""
 
 # Skip if already registered correctly
 if ($ExistingCommand -eq $CommandValue) {

@@ -86,7 +86,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 [Desktop Entry]
 Name=$APP_DISPLAY_NAME
 Comment=Test application for protocol handler E2E tests
-Exec=$APP_EXECUTABLE %u
+Exec=env ENABLE_SINGLE_INSTANCE=true $APP_EXECUTABLE %u
 Terminal=false
 Type=Application
 Categories=Utility;
