@@ -1,5 +1,6 @@
 import { browser } from '@wdio/electron-service';
 import { expect } from '@wdio/globals';
+import { createDeeplinkHelpers } from '../../lib/deeplink.js';
 
 // Global type declarations for deeplink testing
 declare global {
@@ -7,35 +8,17 @@ declare global {
   var deeplinkCount: number;
 }
 
-/**
- * Helper: Clear deeplink state in the Electron app
- */
-async function clearDeeplinkState() {
-  await browser.electron.execute(() => {
-    globalThis.receivedDeeplinks = [];
-    globalThis.deeplinkCount = 0;
-  });
-}
-
-/**
- * Helper: Wait for a specific number of deeplinks to be received
- */
-async function waitForDeeplink(expectedCount = 1, timeoutMsg = 'App did not receive the deeplink') {
-  await browser.waitUntil(
-    async () => {
-      const count = await browser.electron.execute(() => globalThis.deeplinkCount);
-      return count >= expectedCount;
-    },
-    {
-      timeout: 30000, // 30 seconds - protocol handler invocation can be slow on CI
-      timeoutMsg,
-    },
-  );
-}
+const { clearDeeplinkState, waitForDeeplink, waitForDeeplinkStability } = createDeeplinkHelpers(() => browser.electron);
 
 describe('Deeplink Testing (browser.electron.triggerDeeplink)', () => {
   beforeEach(async () => {
     await clearDeeplinkState();
+  });
+
+  afterEach(async () => {
+    // Wait for any pending protocol handler invocations to settle
+    // This prevents deeplinks from one test bleeding into the next
+    await waitForDeeplinkStability();
   });
 
   describe('Basic Deeplink Functionality', () => {

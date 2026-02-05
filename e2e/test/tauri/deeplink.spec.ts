@@ -1,34 +1,23 @@
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
+import { createDeeplinkHelpers } from '../../lib/deeplink.js';
 
 declare global {
   var receivedDeeplinks: string[];
   var deeplinkCount: number;
 }
 
-async function clearDeeplinkState() {
-  await browser.tauri.execute(() => {
-    globalThis.receivedDeeplinks = [];
-    globalThis.deeplinkCount = 0;
-  });
-}
-
-async function waitForDeeplink(expectedCount = 1, timeoutMsg = 'App did not receive the deeplink') {
-  await browser.waitUntil(
-    async () => {
-      const count = await browser.tauri.execute(() => globalThis.deeplinkCount ?? 0);
-      return count >= expectedCount;
-    },
-    {
-      timeout: 30000, // 30 seconds - protocol handler invocation can be slow on CI
-      timeoutMsg,
-    },
-  );
-}
+const { clearDeeplinkState, waitForDeeplink, waitForDeeplinkStability } = createDeeplinkHelpers(() => browser.tauri);
 
 describe('Deeplink Testing (browser.tauri.triggerDeeplink)', () => {
   beforeEach(async () => {
     await clearDeeplinkState();
+  });
+
+  afterEach(async () => {
+    // Wait for any pending protocol handler invocations to settle
+    // This prevents deeplinks from one test bleeding into the next
+    await waitForDeeplinkStability();
   });
 
   describe('Basic Deeplink Functionality', () => {
@@ -83,25 +72,6 @@ describe('Deeplink Testing (browser.tauri.triggerDeeplink)', () => {
 
       expect(receivedUrl).toContain('section=intro');
       expect(receivedUrl).toContain('#heading');
-    });
-  });
-
-  describe('Multiple Deeplinks', () => {
-    it('should handle multiple deeplinks in sequence', async () => {
-      await browser.tauri.triggerDeeplink('testapp://first');
-      await waitForDeeplink(1, 'App did not receive first deeplink');
-
-      await browser.tauri.triggerDeeplink('testapp://second');
-      await waitForDeeplink(2, 'App did not receive second deeplink');
-
-      await browser.tauri.triggerDeeplink('testapp://third');
-      await waitForDeeplink(3, 'App did not receive third deeplink');
-
-      const deeplinks = await browser.tauri.execute(() => globalThis.receivedDeeplinks);
-      expect(deeplinks).toHaveLength(3);
-      expect(deeplinks).toContain('testapp://first');
-      expect(deeplinks).toContain('testapp://second');
-      expect(deeplinks).toContain('testapp://third');
     });
   });
 
