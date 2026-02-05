@@ -50,7 +50,7 @@ export function validateDeeplinkUrl(url: string): string {
  * ```ts
  * // Windows
  * getPlatformCommand('myapp://test', 'win32');
- * // Returns { command: 'cmd', args: ['/c', 'start', '""', '"myapp://test"'] }
+ * // Returns { command: 'cmd', args: ['/c', 'start', '', 'myapp://test'] }
  *
  * // macOS
  * getPlatformCommand('myapp://test', 'darwin');
@@ -58,7 +58,7 @@ export function validateDeeplinkUrl(url: string): string {
  *
  * // Linux
  * getPlatformCommand('myapp://test', 'linux');
- * // Returns { command: 'xdg-open', args: ['myapp://test'] }
+ * // Returns { command: 'gio', args: ['open', 'myapp://test'] }
  * ```
  */
 export function getPlatformCommand(url: string, platform: string): { command: string; args: string[] } {
@@ -142,7 +142,7 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
  * This method uses platform-specific commands to open the deeplink URL:
  * - Windows: Uses `cmd /c start` to trigger the deeplink
  * - macOS: Uses `open` command
- * - Linux: Uses `xdg-open` command
+ * - Linux: Uses `gio open` command (xdg-open doesn't work in CI without browser)
  *
  * Unlike Electron, Tauri does not have the same userData directory issues
  * on Windows because it uses WebView2 instead of Chromium/Electron's process model.
