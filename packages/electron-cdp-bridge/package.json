@@ -44,11 +44,11 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
-    "@types/node": "^25.0.3",
+    "@types/node": "^25.2.1",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.0.16",
     "cross-env": "^10.1.0",
-    "devtools-protocol": "^0.0.1565416",
+    "devtools-protocol": "^0.0.1579878",
     "get-port": "^7.1.0",
     "nock": "^14.0.10",
     "shx": "^0.4.0",
