@@ -3,46 +3,6 @@ import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('tauri-service', 'triggerDeeplink');
 
-/**
- * Escapes a URL for safe use in cmd.exe with shell: true.
- * Properly handles both backslashes and double quotes according to Windows
- * command-line parsing rules (2n+1 backslashes before a quote).
- *
- * @param url - The URL to escape
- * @returns The escaped URL wrapped in double quotes
- */
-function escapeUrlForCmd(url: string): string {
-  let result = '';
-  let backslashCount = 0;
-
-  for (let i = 0; i < url.length; i++) {
-    const char = url[i];
-
-    if (char === '\\') {
-      backslashCount++;
-    } else if (char === '"') {
-      // For a run of n backslashes followed by a ": output 2n + 1 backslashes followed by "
-      result += '\\'.repeat(backslashCount * 2 + 1) + '"';
-      backslashCount = 0;
-    } else {
-      // For a run of n backslashes not followed by a quote: output n backslashes unchanged
-      if (backslashCount > 0) {
-        result += '\\'.repeat(backslashCount);
-        backslashCount = 0;
-      }
-      result += char;
-    }
-  }
-
-  // Handle any trailing backslashes
-  if (backslashCount > 0) {
-    result += '\\'.repeat(backslashCount);
-  }
-
-  // Wrap the entire argument in double quotes
-  return `"${result}"`;
-}
-
 interface TauriServiceContext {
   browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
 }
@@ -106,7 +66,7 @@ export function getPlatformCommand(url: string, platform: string): { command: st
     case 'win32':
       return {
         command: 'cmd',
-        args: ['/c', 'start', '', escapeUrlForCmd(url)],
+        args: ['/c', 'start', '', url],
       };
 
     case 'darwin':
@@ -152,7 +112,6 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
-        shell: process.platform === 'win32',
       });
 
       const pid = childProcess.pid;
