@@ -39,7 +39,7 @@ describe('triggerDeeplink Command', () => {
     it('should generate Windows command', () => {
       const result = getPlatformCommand('myapp://test', 'win32');
       expect(result.command).toBe('cmd');
-      expect(result.args).toEqual(['/c', 'start', '""', '"myapp://test"']);
+      expect(result.args).toEqual(['/c', 'start', '', 'myapp://test']);
     });
 
     it('should generate macOS command', () => {
@@ -50,8 +50,8 @@ describe('triggerDeeplink Command', () => {
 
     it('should generate Linux command', () => {
       const result = getPlatformCommand('myapp://test', 'linux');
-      expect(result.command).toBe('xdg-open');
-      expect(result.args).toEqual(['myapp://test']);
+      expect(result.command).toBe('gio');
+      expect(result.args).toEqual(['open', 'myapp://test']);
     });
 
     it('should handle URLs with query parameters', () => {
