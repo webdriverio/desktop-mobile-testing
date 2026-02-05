@@ -5,12 +5,45 @@ This document outlines the planned services and their development sequencing for
 ## Current Services (Available)
 
 ### [@wdio/electron-service](./packages/electron-service) - v10.x
-**Status:** ✅ Stable (migrated from legacy repo)\
-**Platforms:** Windows, macOS, Linux
+**Status:** 🚧 Pre-release (migrated from legacy repo)\
+**Platforms:** Windows, macOS, Linux\
+[![npm downloads](https://img.shields.io/npm/dm/@wdio/electron-service)](https://npmjs.com/package/@wdio/electron-service)
 
 ### [@wdio/tauri-service](./packages/tauri-service) - v1.x
 **Status:** 🚧 Pre-release\
-**Platforms:** Windows, Linux (macOS via CrabNebula's forked `tauri-driver`)
+**Platforms:** Windows, Linux (macOS via CrabNebula's forked `tauri-driver`)\
+[![npm downloads](https://img.shields.io/npm/dm/@wdio/tauri-service)](https://npmjs.com/package/@wdio/tauri-service)
+
+---
+
+## Framework Compatibility Analysis
+
+The table below quantifies the key factors used to prioritise and sequence planned services. GitHub stars serve as a proxy for ecosystem size and developer interest; automation driver maturity indicates how production-ready the underlying test infrastructure is; and pattern reuse scores how much existing service code can be directly leveraged. Stars are approximate as of early 2026.
+
+| Framework | Type | GitHub Stars | Automation Driver | Driver Maturity | Pattern Reuse vs Existing Services | Key Dependencies | Relative Integration Complexity |
+|---|---|---|---|---|---|---|---|
+| **Electron** *(existing)* | Desktop | ~120k | Chrome DevTools Protocol (CDP) | ✅ Proven | — | Chromium, Node.js | — |
+| **Tauri** *(existing)* | Desktop | ~100k | tauri-driver + CDP | ✅ Proven | — | Wry, Rust toolchain | — |
+| **React Native** | Mobile | ~121k | Appium (XCUITest / UiAutomator2) | ✅ Proven | Establishes mobile scaffold | Appium server stability, XCUITest / UiAutomator2 | Medium |
+| **Flutter** | Mobile | ~175k | Appium Flutter Driver | ✅ Production-ready | Reuses React Native mobile scaffold | Appium Flutter Driver maintenance, Dart VM | Medium |
+| **Ionic / Capacitor** | Mobile | ~52k / ~15k | Appium WebView context switching | ✅ Proven | Reuses mobile scaffold; pure WebView — zero new complexity | Appium server, native WebView availability | Low |
+| **Dioxus** | Desktop | ~34k | Wry webview → CDP (shared with Tauri) | 🟡 Emerging | High — same Wry/CDP patterns as Tauri service | Wry maturity, Dioxus desktop stability | Low–Medium |
+| **Neutralino** | Desktop | ~7.9k | System webview → CDP (devtools endpoint) | 🟡 Emerging | Medium — similar endpoint detection to Electron service | System webview (WebView2 / WebKitGTK) | Low |
+| **Dioxus Mobile** | Mobile | *(same repo)* | Cargo Mobile 2 — experimental | 🔴 Early-stage | Reuses mobile scaffold + Dioxus desktop learnings | Cargo Mobile 2 maturity, platform bridge stability | High |
+| **React Native Desktop** | Desktop | *(same repo)* | Less mature than mobile counterpart | 🟡 Emerging | Leverages Phase 2 mobile experience | React Native Desktop renderer maturity | Medium–High |
+
+### Frameworks excluded and why
+
+| Framework | Reason for exclusion |
+|---|---|
+| NW.js | Declining popularity, overlaps with Electron |
+| Cordova / PhoneGap | Deprecated (2020), replaced by Capacitor |
+| Qt / QML | Native rendering — no WebDriver fit |
+| .NET MAUI | Native UI, platform-specific drivers required |
+| Blazor | Standard web needs no service; Hybrid WebView context switching unreliable |
+| Wails | Go webview, no established automation patterns |
+
+---
 
 ## Planned Services
 
@@ -90,7 +123,7 @@ This document outlines the planned services and their development sequencing for
 - Web-based architecture
 
 **Technical approach:**
-- System webview automation via ChromeDriver CDP  
+- System webview automation via ChromeDriver CDP
 - `neutralinojs --enable-inspector` launch integration
 - Electron service patterns (devtools endpoint detection)
 - Standard WebdriverIO parallelization

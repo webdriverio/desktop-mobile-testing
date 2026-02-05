@@ -198,6 +198,29 @@ export interface TauriServiceOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -230,6 +253,29 @@ export interface TauriServiceGlobalOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**

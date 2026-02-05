@@ -1,6 +1,6 @@
 import { exec, execSync, spawn } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriServiceOptions } from './types.js';
@@ -73,6 +73,65 @@ export function findTauriDriver(): string | undefined {
 }
 
 /**
+ * Find a binary in node_modules
+ * Searches common locations where npm packages install binaries
+ *
+ * @param packageName - The npm package name (e.g., '@crabnebula/tauri-driver')
+ * @param binaryName - The binary name without extension (e.g., 'tauri-driver')
+ * @returns The path to the binary if found, undefined otherwise
+ */
+function findBinaryInNodeModules(packageName: string, binaryName: string): string | undefined {
+  const isWindows = process.platform === 'win32';
+
+  // Check local node_modules .bin directory
+  const localBinPaths = isWindows
+    ? [
+        join(process.cwd(), 'node_modules', '.bin', `${binaryName}.cmd`),
+        join(process.cwd(), 'node_modules', '.bin', `${binaryName}.exe`),
+      ]
+    : [join(process.cwd(), 'node_modules', '.bin', binaryName)];
+
+  for (const path of localBinPaths) {
+    if (existsSync(path)) {
+      log.debug(`Found ${binaryName} at: ${path}`);
+      return path;
+    }
+  }
+
+  // Try to resolve via require.resolve
+  try {
+    const pkgPath = require.resolve(`${packageName}/package.json`);
+    const binDir = join(dirname(pkgPath), 'bin');
+    const fullBinaryName = isWindows ? `${binaryName}.exe` : binaryName;
+    const binPath = join(binDir, fullBinaryName);
+    if (existsSync(binPath)) {
+      log.debug(`Found ${binaryName} via require.resolve: ${binPath}`);
+      return binPath;
+    }
+  } catch {
+    // Package not found
+  }
+
+  return undefined;
+}
+
+/**
+ * Find @crabnebula/tauri-driver in node_modules
+ * Searches common locations where npm packages install binaries
+ */
+export function findCrabNebulaDriver(): string | undefined {
+  return findBinaryInNodeModules('@crabnebula/tauri-driver', 'tauri-driver');
+}
+
+/**
+ * Check if test-runner-backend is available
+ * Required for CrabNebula macOS testing
+ */
+export function findTestRunnerBackend(): string | undefined {
+  return findBinaryInNodeModules('@crabnebula/test-runner-backend', 'test-runner-backend');
+}
+
+/**
  * Install tauri-driver via cargo
  * Installs to the default cargo bin directory (~/.cargo/bin or %USERPROFILE%\.cargo\bin)
  */
@@ -139,8 +198,49 @@ export async function installTauriDriver(): Promise<string> {
 
 /**
  * Ensure tauri-driver is available, installing if necessary
+ * Supports both official (cargo) and CrabNebula (npm) drivers
  */
 export async function ensureTauriDriver(options: TauriServiceOptions): Promise<DriverInstallResult> {
+  const provider = options.driverProvider ?? 'official';
+
+  // Handle CrabNebula provider
+  if (provider === 'crabnebula') {
+    // Check for explicit path first
+    if (options.crabnebulaDriverPath) {
+      if (existsSync(options.crabnebulaDriverPath)) {
+        return {
+          success: true,
+          path: options.crabnebulaDriverPath,
+          method: 'found',
+        };
+      }
+      return {
+        success: false,
+        path: options.crabnebulaDriverPath,
+        method: 'found',
+        error: `CrabNebula driver not found at: ${options.crabnebulaDriverPath}`,
+      };
+    }
+
+    // Auto-detect from node_modules
+    const detectedPath = findCrabNebulaDriver();
+    if (detectedPath) {
+      return {
+        success: true,
+        path: detectedPath,
+        method: 'found',
+      };
+    }
+
+    return {
+      success: false,
+      path: '',
+      method: 'found',
+      error: '@crabnebula/tauri-driver not found. Install with: npm install -D @crabnebula/tauri-driver',
+    };
+  }
+
+  // Official driver provider (default)
   // Check if explicitly provided
   if (options.tauriDriverPath) {
     if (existsSync(options.tauriDriverPath)) {
