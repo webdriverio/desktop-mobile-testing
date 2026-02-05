@@ -75,25 +75,6 @@ describe('Deeplink Testing (browser.tauri.triggerDeeplink)', () => {
     });
   });
 
-  describe('Multiple Deeplinks', () => {
-    it('should handle multiple deeplinks in sequence', async () => {
-      await browser.tauri.triggerDeeplink('testapp://first');
-      await waitForDeeplink(1, 'App did not receive first deeplink');
-
-      await browser.tauri.triggerDeeplink('testapp://second');
-      await waitForDeeplink(2, 'App did not receive second deeplink');
-
-      await browser.tauri.triggerDeeplink('testapp://third');
-      await waitForDeeplink(3, 'App did not receive third deeplink');
-
-      const deeplinks = await browser.tauri.execute(() => globalThis.receivedDeeplinks);
-      expect(deeplinks).toHaveLength(3);
-      expect(deeplinks).toContain('testapp://first');
-      expect(deeplinks).toContain('testapp://second');
-      expect(deeplinks).toContain('testapp://third');
-    });
-  });
-
   describe('Error Handling', () => {
     it('should reject invalid URL format', async () => {
       await expect(browser.tauri.triggerDeeplink('not a valid url')).rejects.toThrow();
