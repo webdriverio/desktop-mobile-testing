@@ -128,6 +128,7 @@ switch (envContext.testType) {
     specs = ['./test/electron/deeplink.spec.ts'];
     break;
   default:
+    // Standard tests - core functionality without specialized test modes
     specs = [
       './test/electron/api.spec.ts',
       './test/electron/application.spec.ts',
@@ -135,10 +136,8 @@ switch (envContext.testType) {
       './test/electron/interaction.spec.ts',
       './test/electron/logging.spec.ts',
     ];
-    // Only include deeplink tests in standard binary mode (not in deeplink-specific runs)
-    if (!envContext.isScript) {
-      specs.push('./test/electron/deeplink.spec.ts');
-    }
+    // Deeplink tests are excluded from standard suite - they run only in dedicated deeplink variant
+    // (protocol handlers require special setup and single-instance mode)
     break;
 }
 
