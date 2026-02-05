@@ -66,7 +66,7 @@ export function getPlatformCommand(url: string, platform: string): { command: st
     case 'win32':
       return {
         command: 'cmd',
-        args: ['/c', 'start', '', url],
+        args: ['/c', 'start', '', `"${url}"`],
       };
 
     case 'darwin':
