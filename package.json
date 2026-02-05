@@ -64,6 +64,7 @@
     "test:unit": "turbo run test:unit",
     "update:packages": "tsx ./scripts/update-packages.ts",
     "typecheck": "turbo run typecheck",
+    "update:tauri": "tsx ./scripts/update-tauri-version.ts",
     "update:all": "pnpm catalog:update --default && pnpm catalog:update --next && pnpm up -iLr"
   },
   "devDependencies": {

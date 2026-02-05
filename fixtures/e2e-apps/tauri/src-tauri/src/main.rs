@@ -217,24 +217,24 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::We
 #[tauri::command]
 async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
     eprintln!("[Tauri-DEBUG] switch_to_main called");
-    
+
     // Standard Tauri splashscreen transition:
     // Both windows exist, just switch visibility
-    
+
     let main = app.get_webview_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
-    
+
     // Hide splash (keeps WebDriver session alive)
     if let Some(splash) = app.get_webview_window("splash") {
         eprintln!("[Tauri-DEBUG] Hiding splash window");
         splash.hide().map_err(|e| e.to_string())?;
     }
-    
+
     // Show and focus main
     eprintln!("[Tauri-DEBUG] Showing main window");
     main.show().map_err(|e| e.to_string())?;
     main.set_focus().map_err(|e| e.to_string())?;
-    
+
     eprintln!("[Tauri-DEBUG] switch_to_main completed - session stays valid!");
     Ok(())
 }
@@ -260,15 +260,14 @@ fn main() {
                 .inner_size(300.0, 200.0)
                 .resizable(false)
                 .decorations(false)
-                .transparent(true)
                 .focused(true)           // CRITICAL: WebDriver attaches here
                 .build()
                 .expect("Failed to create splash window");
-                
+
                 // Show/focus splash explicitly (ensures WebDriver session)
                 splash.show().expect("Failed to show splash");
                 splash.set_focus().expect("Failed to focus splash");
-                
+
                 eprintln!("[Tauri-DEBUG] ✓ Splash created and focused");
 
                 // 2. MAIN SECOND - hidden until switch_to_main
@@ -283,7 +282,7 @@ fn main() {
                 .visible(false)          // HIDDEN until switch_to_main
                 .build()
                 .expect("Failed to create main window");
-                
+
                 eprintln!("[Tauri-DEBUG] ✓ Main created (hidden). Ready for switch_to_main!");
             } else {
                 // No splash - just main window (unchanged)
