@@ -272,8 +272,8 @@ export const config = {
   // Each worker gets its own tauri-driver process on a unique port
   maxInstances, // Use computed maxInstances based on test type
   capabilities,
-  // Connect to tauri-driver instead of spawning a browser driver
-  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
+  // Use dynamic port allocation (0 = find available port) to prevent port conflicts in CI
+  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 0 }),
   logLevel: 'info',
   bail: 0,
   baseUrl: '',
