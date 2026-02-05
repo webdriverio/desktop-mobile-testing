@@ -65,7 +65,7 @@
     "electron-to-chromium": "^1.5.267",
     "fast-copy": "^4.0.2",
     "get-port": "^7.1.0",
-    "puppeteer-core": "^24.37.0",
+    "puppeteer-core": "^24.37.1",
     "read-package-up": "^11.0.0",
     "recast": "^0.23.9",
     "tinyspy": "^4.0.4",
