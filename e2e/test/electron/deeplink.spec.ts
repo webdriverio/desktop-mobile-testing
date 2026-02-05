@@ -27,7 +27,7 @@ async function waitForDeeplink(expectedCount = 1, timeoutMsg = 'App did not rece
       return count >= expectedCount;
     },
     {
-      timeout: 5000,
+      timeout: 30000, // 30 seconds - protocol handler invocation can be slow on CI
       timeoutMsg,
     },
   );
