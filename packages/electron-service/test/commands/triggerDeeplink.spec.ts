@@ -180,19 +180,19 @@ describe('getPlatformCommand', () => {
     it('should return correct command for Linux', () => {
       const result = getPlatformCommand('myapp://test', 'linux');
       expect(result).toEqual({
-        command: 'xdg-open',
-        args: ['myapp://test'],
+        command: 'gio',
+        args: ['open', 'myapp://test'],
       });
     });
 
     it('should not require appBinaryPath for Linux', () => {
       const result = getPlatformCommand('myapp://test', 'linux', undefined);
-      expect(result.command).toBe('xdg-open');
+      expect(result.command).toBe('gio');
     });
 
     it('should handle URLs with query parameters', () => {
       const result = getPlatformCommand('myapp://test?foo=bar', 'linux');
-      expect(result.args).toEqual(['myapp://test?foo=bar']);
+      expect(result.args).toEqual(['open', 'myapp://test?foo=bar']);
     });
   });
 
@@ -459,8 +459,8 @@ describe('triggerDeeplink', () => {
 
       // Verify that spawn was called with userData appended
       const spawnCall = mockSpawn.mock.calls[0];
-      expect(spawnCall[1][0]).toContain('userData=');
-      expect(spawnCall[1][0]).toContain(encodeURIComponent('/tmp/user-data'));
+      expect(spawnCall[1][1]).toContain('userData=');
+      expect(spawnCall[1][1]).toContain(encodeURIComponent('/tmp/user-data'));
     });
   });
 
@@ -561,8 +561,8 @@ describe('triggerDeeplink', () => {
       await triggerDeeplink.call(mockContext, 'myapp://test?foo=bar');
 
       expect(mockSpawn).toHaveBeenCalledWith(
-        'xdg-open',
-        ['myapp://test?foo=bar'],
+        'gio',
+        ['open', 'myapp://test?foo=bar'],
         expect.objectContaining({
           detached: true,
           stdio: 'ignore',

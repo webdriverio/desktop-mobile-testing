@@ -126,7 +126,7 @@ On Windows, when a protocol URL is opened, the OS launches the registered applic
 ### Linux
 
 **Behavior:**
-- Uses `xdg-open` command to trigger the deeplink
+- Uses `gio open` command to trigger the deeplink
 - Automatically appends the test instance's `userData` directory as a query parameter (like Windows)
 - Cannot use script-based apps (`appEntryPoint`) - requires packaged binary
 

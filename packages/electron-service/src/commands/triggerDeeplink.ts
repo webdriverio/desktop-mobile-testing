@@ -99,7 +99,7 @@ export function appendUserDataDir(url: string, userDataDir: string): string {
  *
  * // Linux
  * getPlatformCommand('myapp://test', 'linux');
- * // Returns { command: 'xdg-open', args: ['myapp://test'] }
+ * // Returns { command: 'gio', args: ['open', 'myapp://test'] }
  * ```
  */
 export function getPlatformCommand(
@@ -147,10 +147,10 @@ export function getPlatformCommand(
     }
 
     case 'linux':
-      // Linux: Use xdg-open command
+      // Linux: Use gio open command
       return {
-        command: 'xdg-open',
-        args: [url],
+        command: 'gio',
+        args: ['open', url],
       };
 
     default:
