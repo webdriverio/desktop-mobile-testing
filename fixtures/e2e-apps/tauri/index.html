@@ -232,6 +232,8 @@
           console.log('[Deeplink] Received via event:', url);
           window.receivedDeeplinks.push(url);
           window.deeplinkCount++;
+          console.log(`[Deeplink] Updated count: ${window.deeplinkCount}, array length: ${window.receivedDeeplinks.length}`);
+          console.log(`[Deeplink] globalThis.deeplinkCount check: ${globalThis.deeplinkCount}`);
         });
 
         // Get any deep links that were passed at startup via CLI

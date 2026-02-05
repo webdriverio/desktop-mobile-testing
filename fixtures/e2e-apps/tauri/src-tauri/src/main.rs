@@ -241,7 +241,8 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn get_deep_links(_app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let links = DEEP_LINKS.lock().map_err(|e| e.to_string())?.clone();
-    log_deep_link(&format!("get_deep_links called, returning {} links", links.len()));
+    eprintln!("🔍 get_deep_links() called - returning {} links: {:?}", links.len(), links);
+    log_deep_link(&format!("get_deep_links called, returning {} links: {:?}", links.len(), links));
     Ok(links)
 }
 
@@ -249,11 +250,22 @@ fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     let deep_links = DEEP_LINKS.lock().map(|guard| guard.clone()).unwrap_or_default();
 
     if !deep_links.is_empty() {
+        eprintln!("📤 emit_deep_links() called - emitting {} deep links to frontend", deep_links.len());
         log_deep_link(&format!("Emitting {} deep links to frontend", deep_links.len()));
         for link in &deep_links {
-            let _ = app.emit("deeplink-received", link);
-            log_deep_link(&format!("Emitted deep link: {}", link));
+            match app.emit("deeplink-received", link) {
+                Ok(_) => {
+                    eprintln!("  ✓ Emitted: {}", link);
+                    log_deep_link(&format!("Emitted deep link: {}", link));
+                },
+                Err(e) => {
+                    eprintln!("  ✗ ERROR emitting {}: {}", link, e);
+                    log_deep_link(&format!("ERROR emitting deep link {}: {}", link, e));
+                }
+            }
         }
+    } else {
+        log_deep_link("emit_deep_links() called but no deep links to emit");
     }
 }
 
@@ -333,30 +345,68 @@ fn main() {
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
     if enable_single_instance {
         log_deep_link("Initializing single-instance plugin...");
+        eprintln!("======================================");
+        eprintln!("SINGLE-INSTANCE PLUGIN ENABLED");
+        eprintln!("======================================");
+
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            log_deep_link(&format!("Single-instance callback triggered! Args: {:?}, CWD: {:?}", args, cwd));
-            
+            eprintln!("");
+            eprintln!("╔════════════════════════════════════════════════════════════════╗");
+            eprintln!("║ SINGLE-INSTANCE CALLBACK TRIGGERED!                           ║");
+            eprintln!("╚════════════════════════════════════════════════════════════════╝");
+            eprintln!("  Second instance attempted to start");
+            eprintln!("  CWD: {:?}", cwd);
+            eprintln!("  Args count: {}", args.len());
+            eprintln!("  Args: {:?}", args);
+            eprintln!("");
+
+            log_deep_link(&format!("🔔 Single-instance callback triggered! Args: {:?}, CWD: {:?}", args, cwd));
+
             // Forward deep links from second instance to the running instance
-            for arg in &args {
-                log_deep_link(&format!("Processing arg: {}", arg));
+            let mut deeplink_count = 0;
+            for (i, arg) in args.iter().enumerate() {
+                log_deep_link(&format!("  Processing arg[{}]: {}", i, arg));
                 if arg.starts_with("testapp://") {
-                    log_deep_link(&format!("Single-instance forwarding deeplink: {}", arg));
+                    deeplink_count += 1;
+                    eprintln!("  ✓ Found deeplink at arg[{}]: {}", i, arg);
+                    log_deep_link(&format!("🔗 Single-instance forwarding deeplink: {}", arg));
+
                     // Add to deep links collection
                     if let Ok(mut links) = DEEP_LINKS.lock() {
                         links.push(arg.clone());
-                        log_deep_link(&format!("Added to DEEP_LINKS collection"));
+                        log_deep_link(&format!("  ✓ Added to DEEP_LINKS collection (total: {})", links.len()));
                     }
+
                     // Emit to frontend
                     match app.emit("deeplink-received", arg) {
-                        Ok(_) => log_deep_link(&format!("Successfully emitted deeplink to frontend: {}", arg)),
-                        Err(e) => log_deep_link(&format!("ERROR emitting deeplink: {}", e)),
+                        Ok(_) => {
+                            eprintln!("  ✓ Emitted deeplink event to frontend: {}", arg);
+                            log_deep_link(&format!("✅ Successfully emitted deeplink to frontend: {}", arg));
+                        },
+                        Err(e) => {
+                            eprintln!("  ✗ ERROR emitting deeplink: {}", e);
+                            log_deep_link(&format!("❌ ERROR emitting deeplink: {}", e));
+                        }
                     }
                 } else {
-                    log_deep_link(&format!("Arg does not start with testapp://, skipping: {}", arg));
+                    log_deep_link(&format!("  ⊘ Arg does not start with testapp://, skipping: {}", arg));
                 }
             }
+
+            eprintln!("");
+            if deeplink_count > 0 {
+                eprintln!("  Summary: Forwarded {} deeplink(s) to running instance", deeplink_count);
+            } else {
+                eprintln!("  Summary: No deeplinks found in args");
+            }
+            eprintln!("╚════════════════════════════════════════════════════════════════╝");
+            eprintln!("");
         }));
+
         log_deep_link("Single-instance plugin initialized successfully");
+        eprintln!("✓ Single-instance plugin registered");
+        eprintln!("  Waiting for second instance attempts...");
+        eprintln!("======================================");
     }
 
     builder
@@ -368,16 +418,23 @@ fn main() {
             // Collect deep links from CLI args at startup
             let cli_deep_links = collect_deep_links_from_args();
             if !cli_deep_links.is_empty() {
+                eprintln!("");
+                eprintln!("🔗 Found {} deep links in CLI args at startup:", cli_deep_links.len());
                 log_deep_link(&format!("Found {} deep links in CLI args", cli_deep_links.len()));
                 let mut deep_links_guard = DEEP_LINKS.lock().unwrap();
                 for link in &cli_deep_links {
+                    eprintln!("  - {}", link);
                     deep_links_guard.push(link.clone());
                     log_deep_link(&format!("Collected deep link: {}", link));
                 }
                 drop(deep_links_guard);
 
+                eprintln!("  Emitting to frontend...");
                 // Emit deep links to frontend
                 emit_deep_links(&app.handle());
+                eprintln!("");
+            } else {
+                log_deep_link("No deep links found in CLI args at startup");
             }
 
             // Register deeplink protocol at runtime (Linux/Windows only)
