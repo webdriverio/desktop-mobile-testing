@@ -50,7 +50,7 @@ export function validateDeeplinkUrl(url: string): string {
  * ```ts
  * // Windows
  * getPlatformCommand('myapp://test', 'win32');
- * // Returns { command: 'cmd', args: ['/c', 'start', '""', '"myapp://test"'] }
+ * // Returns { command: 'cmd', args: ['/c', 'start', '', 'myapp://test'] }
  *
  * // macOS
  * getPlatformCommand('myapp://test', 'darwin');
