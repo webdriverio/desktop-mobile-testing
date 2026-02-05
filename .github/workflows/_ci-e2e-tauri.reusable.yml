@@ -392,6 +392,24 @@ jobs:
           kill $LAUNCH_PID 2>/dev/null || true
           echo "Manual test complete"
 
+      # Cleanup any lingering processes from previous test runs
+      - name: 🧹 Cleanup Lingering Processes
+        shell: bash
+        run: |
+          echo "Cleaning up any lingering tauri-driver or app processes..."
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # Kill tauri-driver processes
+            taskkill //F //IM tauri-driver.exe //T 2>/dev/null || echo "No tauri-driver processes found"
+            # Kill any tauri app processes
+            taskkill //F //IM tauri-e2e-app.exe //T 2>/dev/null || echo "No tauri-e2e-app processes found"
+          else
+            # Kill tauri-driver processes
+            pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
+            # Kill any tauri app processes
+            pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
+          fi
+          echo "Cleanup complete"
+
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
       # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
       # tauri-driver launches apps during session creation, needs display in launcher context
@@ -412,6 +430,25 @@ jobs:
           else
             pnpm run ${{ steps.gen-test.outputs.result }}
           fi
+
+      # Cleanup processes after tests complete
+      - name: 🧹 Post-Test Cleanup
+        if: always()
+        shell: bash
+        run: |
+          echo "Cleaning up test processes..."
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            # Kill tauri-driver processes
+            taskkill //F //IM tauri-driver.exe //T 2>/dev/null || echo "No tauri-driver processes found"
+            # Kill any tauri app processes
+            taskkill //F //IM tauri-e2e-app.exe //T 2>/dev/null || echo "No tauri-e2e-app processes found"
+          else
+            # Kill tauri-driver processes
+            pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
+            # Kill any tauri app processes
+            pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
+          fi
+          echo "Post-test cleanup complete"
 
       # Show System Logs
       - name: 🔍 Show System Logs
