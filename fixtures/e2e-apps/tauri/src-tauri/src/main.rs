@@ -9,15 +9,20 @@ use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 static DEEP_LINKS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
-static DEEP_LINK_LOG: Lazy<Mutex<std::fs::File>> = Lazy::new(|| {
-    let path = "/tmp/tauri-deep-link-debug.log";
-    let _ = std::fs::remove_file(path); // Clear log on startup
-    let file = OpenOptions::new()
+static DEEP_LINK_LOG: Lazy<Option<Mutex<std::fs::File>>> = Lazy::new(|| {
+    let log_path = std::env::temp_dir().join("tauri-deep-link-debug.log");
+    let _ = std::fs::remove_file(&log_path); // Clear log on startup
+    match OpenOptions::new()
         .create(true)
         .append(true)
-        .open(path)
-        .expect("Failed to open deep link debug log");
-    Mutex::new(file)
+        .open(&log_path)
+    {
+        Ok(file) => Some(Mutex::new(file)),
+        Err(e) => {
+            eprintln!("[DEEP-LINK-DEBUG] Failed to open log file at {:?}: {}", log_path, e);
+            None
+        }
+    }
 });
 
 fn log_deep_link(message: &str) {
@@ -25,8 +30,10 @@ fn log_deep_link(message: &str) {
     let pid = std::process::id();
     let log_line = format!("[{}] [PID {}] {}\n", timestamp, pid, message);
     eprintln!("[DEEP-LINK-DEBUG] {}", message);
-    if let Ok(mut file) = DEEP_LINK_LOG.lock() {
-        let _ = file.write_all(log_line.as_bytes());
+    if let Some(ref log) = *DEEP_LINK_LOG {
+        if let Ok(mut file) = log.lock() {
+            let _ = file.write_all(log_line.as_bytes());
+        }
     }
 }
 
@@ -325,21 +332,31 @@ fn main() {
 
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
     if enable_single_instance {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+        log_deep_link("Initializing single-instance plugin...");
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            log_deep_link(&format!("Single-instance callback triggered! Args: {:?}, CWD: {:?}", args, cwd));
+            
             // Forward deep links from second instance to the running instance
-            for arg in args {
+            for arg in &args {
+                log_deep_link(&format!("Processing arg: {}", arg));
                 if arg.starts_with("testapp://") {
                     log_deep_link(&format!("Single-instance forwarding deeplink: {}", arg));
                     // Add to deep links collection
                     if let Ok(mut links) = DEEP_LINKS.lock() {
                         links.push(arg.clone());
+                        log_deep_link(&format!("Added to DEEP_LINKS collection"));
                     }
                     // Emit to frontend
-                    let _ = app.emit("deeplink-received", &arg);
-                    log_deep_link(&format!("Emitted deeplink to frontend: {}", arg));
+                    match app.emit("deeplink-received", arg) {
+                        Ok(_) => log_deep_link(&format!("Successfully emitted deeplink to frontend: {}", arg)),
+                        Err(e) => log_deep_link(&format!("ERROR emitting deeplink: {}", e)),
+                    }
+                } else {
+                    log_deep_link(&format!("Arg does not start with testapp://, skipping: {}", arg));
                 }
             }
         }));
+        log_deep_link("Single-instance plugin initialized successfully");
     }
 
     builder
@@ -370,13 +387,22 @@ fn main() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
 
-                // Try to register, but don't fail if it errors (e.g., directory doesn't exist in CI)
-                if let Err(e) = app.deep_link().register_all() {
-                    eprintln!("[Tauri-DEBUG] register_all() failed (non-fatal): {}", e);
-                    log_deep_link(&format!("register_all() note: {}. Deep links still work via CLI args.", e));
-                } else {
-                    eprintln!("[Tauri-DEBUG] Successfully registered deep link protocols");
-                    log_deep_link("register_all() succeeded");
+                // Get CURRENT binary path for debugging
+                let binary_path = std::env::current_exe()
+                    .expect("Failed to get current binary path");
+                log_deep_link(&format!("Current binary path: {:?}", binary_path));
+
+                // Register protocol - the plugin automatically uses current binary
+                // This fixes CI path mismatches where register_all() points to wrong binary
+                match app.deep_link().register("testapp") {
+                    Ok(_) => {
+                        eprintln!("[Tauri-DEBUG] Successfully registered testapp protocol");
+                        log_deep_link("✓ Registered testapp protocol");
+                    }
+                    Err(e) => {
+                        eprintln!("[Tauri-DEBUG] Protocol registration failed (non-fatal): {}", e);
+                        log_deep_link(&format!("Protocol registration note: {}. Deep links still work via CLI args.", e));
+                    }
                 }
 
                 log_deep_link("Deep links arrive via CLI args on Linux (receiver not used)");
