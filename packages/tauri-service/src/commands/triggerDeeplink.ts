@@ -50,7 +50,7 @@ export function validateDeeplinkUrl(url: string): string {
  * ```ts
  * // Windows
  * getPlatformCommand('myapp://test', 'win32');
- * // Returns { command: 'cmd', args: ['/c', 'start', '', 'myapp://test'] }
+ * // Returns { command: 'rundll32.exe', args: ['url.dll,FileProtocolHandler', 'myapp://test'] }
  *
  * // macOS
  * getPlatformCommand('myapp://test', 'darwin');
@@ -65,8 +65,8 @@ export function getPlatformCommand(url: string, platform: string): { command: st
   switch (platform) {
     case 'win32':
       return {
-        command: 'cmd',
-        args: ['/c', 'start', '', url],
+        command: 'rundll32.exe',
+        args: ['url.dll,FileProtocolHandler', url],
       };
 
     case 'darwin':
@@ -139,7 +139,7 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
  * Triggers a deeplink to the Tauri application for testing protocol handlers.
  *
  * This method uses platform-specific commands to open the deeplink URL:
- * - Windows: Uses `cmd /c start` to trigger the deeplink
+ * - Windows: Uses `rundll32.exe url.dll,FileProtocolHandler` to trigger the deeplink
  * - macOS: Uses `open` command
  * - Linux: Uses `xdg-open` command
  *

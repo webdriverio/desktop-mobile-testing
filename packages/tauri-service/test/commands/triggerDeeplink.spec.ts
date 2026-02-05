@@ -38,8 +38,8 @@ describe('triggerDeeplink Command', () => {
   describe('getPlatformCommand', () => {
     it('should generate Windows command', () => {
       const result = getPlatformCommand('myapp://test', 'win32');
-      expect(result.command).toBe('cmd');
-      expect(result.args).toEqual(['/c', 'start', '', 'myapp://test']);
+      expect(result.command).toBe('rundll32.exe');
+      expect(result.args).toEqual(['url.dll,FileProtocolHandler', 'myapp://test']);
     });
 
     it('should generate macOS command', () => {

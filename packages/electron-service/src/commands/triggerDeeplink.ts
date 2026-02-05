@@ -91,7 +91,7 @@ export function appendUserDataDir(url: string, userDataDir: string): string {
  * ```ts
  * // Windows
  * getPlatformCommand('myapp://test', 'win32', 'C:\\app.exe');
- * // Returns { command: 'cmd', args: ['/c', 'start', '', 'myapp://test'] }
+ * // Returns { command: 'rundll32.exe', args: ['url.dll,FileProtocolHandler', 'myapp://test'] }
  *
  * // macOS
  * getPlatformCommand('myapp://test', 'darwin');
@@ -115,11 +115,11 @@ export function getPlatformCommand(
             'Please set appBinaryPath in your wdio:electronServiceOptions.',
         );
       }
-      // Windows: Use cmd /c start to trigger the deeplink
-      // The empty quoted string after 'start' is the window title (required)
+      // Windows: Use rundll32 to trigger the deeplink via ShellExecuteEx
+      // This avoids cmd.exe shell interpretation of URL metacharacters (e.g. &)
       return {
-        command: 'cmd',
-        args: ['/c', 'start', '""', url],
+        command: 'rundll32.exe',
+        args: ['url.dll,FileProtocolHandler', url],
       };
 
     case 'darwin': {
