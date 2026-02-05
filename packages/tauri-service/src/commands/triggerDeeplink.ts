@@ -112,7 +112,7 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
-        shell: false,
+        shell: process.platform === 'win32',
       });
 
       const pid = childProcess.pid;

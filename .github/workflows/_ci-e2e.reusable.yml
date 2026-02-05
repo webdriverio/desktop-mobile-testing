@@ -113,7 +113,7 @@ jobs:
         shell: bash
         run: |
           echo "=== Protocol Handler Setup ==="
-          echo "Runner OS: $RUNNER_OS"
+          echo "Runner OS: ${{ runner.os }}"
           echo "Working directory: $(pwd)"
           echo "Scenario: ${{ inputs.scenario }}"
           echo ""
@@ -130,7 +130,7 @@ jobs:
           for APP in "${APPS[@]}"; do
             echo "Setting up protocol handler for: $APP"
 
-            if [ "$RUNNER_OS" == "Windows" ]; then
+            if [ "${{ runner.os }}" == "Windows" ]; then
               echo "Setting up Windows protocol handler..."
 
               if [ "$APP" == "electron-builder" ]; then
@@ -150,7 +150,7 @@ jobs:
                 exit 1
               fi
 
-            elif [ "$RUNNER_OS" == "Linux" ]; then
+            elif [ "${{ runner.os }}" == "Linux" ]; then
               echo "Setting up Linux protocol handler..."
 
               if [ "$APP" == "electron-builder" ]; then

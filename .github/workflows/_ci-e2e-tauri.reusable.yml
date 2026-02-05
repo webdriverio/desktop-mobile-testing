@@ -220,14 +220,14 @@ jobs:
         shell: bash
         run: |
           echo "=== Protocol Handler Setup ==="
-          echo "Runner OS: $RUNNER_OS"
+          echo "Runner OS: ${{ runner.os }}"
           echo "Working directory: $(pwd)"
           echo "Scenario: ${{ inputs.scenario }}"
           echo ""
 
           echo "Setting up protocol handler for: tauri"
 
-          if [ "$RUNNER_OS" == "Windows" ]; then
+          if [ "${{ runner.os }}" == "Windows" ]; then
             echo "Setting up Windows protocol handler..."
 
             echo "Checking if src-tauri/target directory exists..."
@@ -242,7 +242,7 @@ jobs:
               exit 1
             fi
 
-          elif [ "$RUNNER_OS" == "Linux" ]; then
+          elif [ "${{ runner.os }}" == "Linux" ]; then
             echo "Setting up Linux protocol handler..."
 
             echo "Checking if src-tauri/target directory exists..."
@@ -273,7 +273,7 @@ jobs:
         run: |
           echo "=== Protocol Registration Verification ==="
 
-          if [ "$RUNNER_OS" == "Linux" ]; then
+          if [ "${{ runner.os }}" == "Linux" ]; then
             echo "Linux: Checking xdg-mime registration..."
             xdg-mime query default x-scheme-handler/testapp || echo "WARNING: No handler registered for testapp://"
             
@@ -290,7 +290,7 @@ jobs:
             echo "Checking desktop database..."
             update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
             
-          elif [ "$RUNNER_OS" == "Windows" ]; then
+          elif [ "${{ runner.os }}" == "Windows" ]; then
             echo "Windows: Checking registry..."
             reg query "HKCR\testapp" 2>nul || echo "❌ Protocol NOT registered in HKCR\testapp"
             reg query "HKCR\testapp\shell\open\command" 2>nul || echo "❌ Command key NOT found"
