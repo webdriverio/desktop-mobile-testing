@@ -120,6 +120,13 @@ switch (envContext.testType) {
   case 'standalone':
     specs = ['./test/electron/standalone/api.spec.ts'];
     break;
+  case 'deeplink':
+    // Deeplink tests require binary mode (protocol handlers require packaged apps)
+    if (envContext.isScript) {
+      throw new Error('Deeplink tests require binary mode (packaged app). Script mode is not supported.');
+    }
+    specs = ['./test/electron/deeplink.spec.ts'];
+    break;
   default:
     specs = [
       './test/electron/api.spec.ts',
@@ -128,7 +135,7 @@ switch (envContext.testType) {
       './test/electron/interaction.spec.ts',
       './test/electron/logging.spec.ts',
     ];
-    // Only include deeplink tests in binary mode (protocol handlers require packaged apps)
+    // Only include deeplink tests in standard binary mode (not in deeplink-specific runs)
     if (!envContext.isScript) {
       specs.push('./test/electron/deeplink.spec.ts');
     }

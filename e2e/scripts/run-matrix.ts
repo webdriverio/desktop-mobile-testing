@@ -60,6 +60,11 @@ function generateTestVariants(): TestVariant[] {
         // Tauri apps are always binary
         const binary = framework === 'tauri' || app !== 'script';
 
+        // Skip deeplink tests for script mode - deeplink requires packaged apps
+        if (testType === 'deeplink' && !binary) {
+          continue;
+        }
+
         variants.push({
           framework,
           app,
