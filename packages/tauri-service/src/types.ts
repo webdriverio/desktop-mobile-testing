@@ -70,6 +70,8 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
 export interface TauriServiceGlobalOptions extends BaseTauriServiceGlobalOptions {
   /**
    * Environment variables to pass to the spawned tauri-driver process
+   */
+  env?: Record<string, string>;
   /**
    * Automatically install tauri-driver if not found
    * @default false

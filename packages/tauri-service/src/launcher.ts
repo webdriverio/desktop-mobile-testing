@@ -718,16 +718,7 @@ export default class TauriLaunchService {
     nativePort: number,
     options?: TauriServiceOptions,
   ): Promise<void> {
-    console.log(`[CONSOLE-DEBUG] startTauriDriverForWorker called for worker-${workerId}`);
-    // Ensure driver is available
     const workerOptions = options ?? mergeOptions(this.options, undefined);
-    console.log(
-      `[CONSOLE-DEBUG] Worker options: captureFrontendLogs=${workerOptions.captureFrontendLogs}, captureBackendLogs=${workerOptions.captureBackendLogs}`,
-    );
-    log.debug(`[worker-${workerId}] Worker options: ${JSON.stringify(workerOptions, null, 2)}`);
-    log.debug(
-      `[worker-${workerId}] captureFrontendLogs: ${workerOptions.captureFrontendLogs}, captureBackendLogs: ${workerOptions.captureBackendLogs}`,
-    );
     const driverResult = await ensureTauriDriver(workerOptions);
     if (!driverResult.success) {
       throw new Error(driverResult.error || 'Failed to find tauri-driver');
@@ -1144,6 +1135,7 @@ export default class TauriLaunchService {
       await new Promise((r) => setTimeout(r, 250));
     }
     log.warn(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
+    throw new Error(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
   }
 
   /**
@@ -1188,6 +1180,7 @@ export default class TauriLaunchService {
       await new Promise((r) => setTimeout(r, 250));
     }
     log.warn(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
+    throw new Error(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
   }
 
   /**
