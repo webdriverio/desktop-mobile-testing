@@ -9,7 +9,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const ROOT_DIR = join(__dirname, '..');
-const PUPPETEER_DIR = join(ROOT_DIR, '..', 'puppeteer');
 const WEBDRIVERIO_DIR = join(ROOT_DIR, '..', 'webdriverio');
 const TMP_DIR = '/tmp';
 
@@ -33,43 +32,17 @@ function runCommand(command: string, cwd?: string) {
 }
 
 /**
- * Update puppeteer browsers package
- */
-function updatePuppeteerBrowsers() {
-  console.log('🔧 Updating @puppeteer/browsers...');
-
-  const browsersDir = join(PUPPETEER_DIR, 'packages', 'browsers');
-  const libDir = join(browsersDir, 'lib');
-
-  // Check if built version exists
-  if (!existsSync(libDir)) {
-    throw new Error('@puppeteer/browsers is not built. Please build it first with: cd ../puppeteer && pnpm build');
-  }
-
-  console.log('📦 Repackaging @puppeteer/browsers...');
-
-  // Package it (uses existing built version)
-  runCommand(`npm pack --pack-destination ${TMP_DIR}`, browsersDir);
-
-  // Get the actual packed filename (it includes version)
-  const packOutput = execSync('npm pack --dry-run', { cwd: browsersDir, encoding: 'utf8' });
-  const packMatch = packOutput.match(/puppeteer-browsers-[\d.]+\.tgz/);
-  if (!packMatch) {
-    throw new Error('Could not determine packed filename from npm pack output');
-  }
-  const packedFile = packMatch[0];
-
-  // Copy to workspace
-  runCommand(`cp ${TMP_DIR}/${packedFile} ${ROOT_DIR}/`);
-
-  console.log('✅ @puppeteer/browsers repackaged\n');
-}
-
-/**
  * Update wdio-utils package
  */
 function updateWdioUtils() {
   console.log('🔧 Updating @wdio/utils...');
+
+  // Build dependencies first
+  console.log('  🔨 Compiling @wdio/types (dependency)...');
+  runCommand('pnpm exec tsx ./infra/compiler/src/index.ts -p @wdio/types', WEBDRIVERIO_DIR);
+
+  console.log('  🔨 Compiling @wdio/logger (dependency)...');
+  runCommand('pnpm exec tsx ./infra/compiler/src/index.ts -p @wdio/logger', WEBDRIVERIO_DIR);
 
   // Build wdio-utils
   console.log('  🔨 Compiling wdio-utils...');
@@ -144,13 +117,11 @@ async function main() {
   try {
     console.log('📦 Updating all packages...\n');
 
-    updatePuppeteerBrowsers();
     updateWdioUtils();
     updateWorkspace();
 
     console.log('🎉 All packages updated successfully!');
     console.log('\n📋 Summary:');
-    console.log('- @puppeteer/browsers: Enhanced with Electron fallback sources');
     console.log('- @wdio/utils: Updated to detect electron usage and use fallback sources');
     console.log('- Workspace: Updated with new package versions');
     console.log('\n🚀 Ready for ARM64 CI testing!');

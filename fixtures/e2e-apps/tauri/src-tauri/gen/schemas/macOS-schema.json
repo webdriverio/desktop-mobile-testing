@@ -5651,28 +5651,10 @@
           "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
         },
         {
-          "description": "Allows the log command\n#### This default permission set includes:\n\n- `allow-log`",
-          "type": "string",
-          "const": "log:default",
-          "markdownDescription": "Allows the log command\n#### This default permission set includes:\n\n- `allow-log`"
-        },
-        {
-          "description": "Enables the log command without any pre-configured scope.",
-          "type": "string",
-          "const": "log:allow-log",
-          "markdownDescription": "Enables the log command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the log command without any pre-configured scope.",
-          "type": "string",
-          "const": "log:deny-log",
-          "markdownDescription": "Denies the log command without any pre-configured scope."
-        },
-        {
-          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`",
+          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `wdio:allow-execute`\n- `wdio:allow-log-frontend`\n- `wdio:allow-debug-plugin`\n- `wdio:allow-set-mock`\n- `wdio:allow-get-mock`\n- `wdio:allow-clear-mocks`\n- `wdio:allow-reset-mocks`\n- `wdio:allow-restore-mocks`\n- `wdio:allow-get-active-window-label`\n- `wdio:allow-get-window-states`\n- `wdio:allow-list-windows`\n- `wdio:allow-switch-to-main`",
           "type": "string",
           "const": "wdio:default",
-          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `allow-execute`\n- `allow-set-mock`\n- `allow-get-mock`\n- `allow-clear-mocks`\n- `allow-reset-mocks`\n- `allow-restore-mocks`"
+          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `wdio:allow-execute`\n- `wdio:allow-log-frontend`\n- `wdio:allow-debug-plugin`\n- `wdio:allow-set-mock`\n- `wdio:allow-get-mock`\n- `wdio:allow-clear-mocks`\n- `wdio:allow-reset-mocks`\n- `wdio:allow-restore-mocks`\n- `wdio:allow-get-active-window-label`\n- `wdio:allow-get-window-states`\n- `wdio:allow-list-windows`\n- `wdio:allow-switch-to-main`"
         },
         {
           "description": "Enables the clear_mocks command without any pre-configured scope.",
@@ -5681,16 +5663,46 @@
           "markdownDescription": "Enables the clear_mocks command without any pre-configured scope."
         },
         {
+          "description": "Enables the debug_plugin command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-debug-plugin",
+          "markdownDescription": "Enables the debug_plugin command without any pre-configured scope."
+        },
+        {
           "description": "Enables the execute command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:allow-execute",
           "markdownDescription": "Enables the execute command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_active_window_label command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-get-active-window-label",
+          "markdownDescription": "Enables the get_active_window_label command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_mock command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:allow-get-mock",
           "markdownDescription": "Enables the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_window_states command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-get-window-states",
+          "markdownDescription": "Enables the get_window_states command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-list-windows",
+          "markdownDescription": "Enables the list_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the log_frontend command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-log-frontend",
+          "markdownDescription": "Enables the log_frontend command without any pre-configured scope."
         },
         {
           "description": "Enables the reset_mocks command without any pre-configured scope.",
@@ -5711,10 +5723,22 @@
           "markdownDescription": "Enables the set_mock command without any pre-configured scope."
         },
         {
+          "description": "Enables the switch_to_main command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:allow-switch-to-main",
+          "markdownDescription": "Enables the switch_to_main command without any pre-configured scope."
+        },
+        {
           "description": "Denies the clear_mocks command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:deny-clear-mocks",
           "markdownDescription": "Denies the clear_mocks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the debug_plugin command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-debug-plugin",
+          "markdownDescription": "Denies the debug_plugin command without any pre-configured scope."
         },
         {
           "description": "Denies the execute command without any pre-configured scope.",
@@ -5723,10 +5747,34 @@
           "markdownDescription": "Denies the execute command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_active_window_label command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-get-active-window-label",
+          "markdownDescription": "Denies the get_active_window_label command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_mock command without any pre-configured scope.",
           "type": "string",
           "const": "wdio:deny-get-mock",
           "markdownDescription": "Denies the get_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_window_states command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-get-window-states",
+          "markdownDescription": "Denies the get_window_states command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-list-windows",
+          "markdownDescription": "Denies the list_windows command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the log_frontend command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-log-frontend",
+          "markdownDescription": "Denies the log_frontend command without any pre-configured scope."
         },
         {
           "description": "Denies the reset_mocks command without any pre-configured scope.",
@@ -5745,6 +5793,12 @@
           "type": "string",
           "const": "wdio:deny-set-mock",
           "markdownDescription": "Denies the set_mock command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the switch_to_main command without any pre-configured scope.",
+          "type": "string",
+          "const": "wdio:deny-switch-to-main",
+          "markdownDescription": "Denies the switch_to_main command without any pre-configured scope."
         }
       ]
     },

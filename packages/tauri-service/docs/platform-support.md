@@ -8,7 +8,7 @@ Complete guide to platform-specific requirements, limitations, and WebDriver set
 |----------|-----------|-----------|-------|-------|
 | **Windows** | ✅ Yes | Microsoft Edge WebDriver | Auto-managed | Stable, fully tested |
 | **Linux** | ✅ Yes | WebKitWebDriver | Manual install | Full feature support |
-| **macOS** | ❌ No | None | N/A | WKWebView driver not available |
+| **macOS** | 🔬 Experimental | CrabNebula WebDriver | API key required, untested |
 
 ## Windows
 
@@ -278,17 +278,57 @@ sudo apt-get install webkit2gtk-driver
 
 ## macOS
 
-### Not Supported ❌
+> 🔬 **Experimental Feature**: macOS testing support via CrabNebula is experimental and has not been tested. This integration requires a paid CrabNebula API key which is not available for testing purposes. Features documented here are based on CrabNebula documentation and may not function as expected.
 
-WebdriverIO testing of Tauri apps is **not supported on macOS** due to:
+### Supported via CrabNebula 🔬 (Experimental)
 
-1. **WKWebView limitation** - Apple's WKWebView (used by Tauri on macOS) doesn't provide a WebDriver interface
-2. **No driver available** - No equivalent to msedgedriver or webkit2gtk-driver for WKWebView
-3. **Architectural constraint** - This is a fundamental limitation of Apple's WebView
+macOS testing is supported through [CrabNebula](https://crabnebula.dev)'s `@crabnebula/tauri-driver` package. This is a fork of the official tauri-driver that adds macOS support via a proprietary WebDriver implementation.
+
+#### Requirements
+
+1. **CrabNebula Account** with API key
+2. **tauri-plugin-automation** installed in your Tauri app
+3. **@crabnebula/tauri-driver** npm package
+4. **@crabnebula/test-runner-backend** npm package (for local testing)
+
+#### Setup
+
+1. Install CrabNebula packages:
+   ```bash
+   npm install -D @crabnebula/tauri-driver @crabnebula/test-runner-backend
+   ```
+
+2. Add the automation plugin to your Tauri app:
+   ```bash
+   cd src-tauri && cargo add tauri-plugin-automation
+   ```
+
+3. Register the plugin in your Rust code (debug builds only):
+   ```rust
+   let mut builder = tauri::Builder::default();
+   #[cfg(debug_assertions)]
+   {
+     builder = builder.plugin(tauri_plugin_automation::init());
+   }
+   ```
+
+4. Set your API key:
+   ```bash
+   export CN_API_KEY="your-api-key"
+   ```
+
+5. Configure WebdriverIO:
+   ```typescript
+   services: [['@wdio/tauri-service', {
+     driverProvider: 'crabnebula',
+   }]]
+   ```
+
+See the [CrabNebula documentation](https://docs.crabnebula.dev/tauri/webdriver/) for more details.
 
 ### Alternatives for macOS
 
-If you need to test on macOS, consider:
+If you cannot use CrabNebula, consider:
 
 1. **UI Testing Framework**
    - Use XCTest (Apple's native testing framework)
@@ -315,7 +355,7 @@ npm install
 npm run tauri build
 ```
 
-But you cannot **test** them with WebdriverIO.
+Testing requires either CrabNebula (see above) or an alternative approach.
 
 ### Example CI Configuration
 
@@ -402,7 +442,7 @@ describe('Platform-specific features', () => {
 
 - **Windows** - Fully supported with auto-managed Edge WebDriver ✅
 - **Linux** - Fully supported with manual WebKitWebDriver setup ✅
-- **macOS** - Not supported, building only ❌
+- **macOS** - Experimental (CrabNebula, untested) 🔬
 
 Choose Windows or Linux for automated testing, or use Docker containers for consistent cross-platform testing.
 
