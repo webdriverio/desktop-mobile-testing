@@ -281,6 +281,15 @@ export default class TauriLaunchService {
       }
     }
 
+    // Ensure tauri-driver is installed before any workers start.
+    // This prevents a race condition where parallel workers all try to
+    // cargo-install tauri-driver simultaneously, causing "Access is denied" errors on Windows.
+    const driverResult = await ensureTauriDriver(mergedOptions);
+    if (!driverResult.success) {
+      throw new Error(driverResult.error || 'Failed to find or install tauri-driver');
+    }
+    log.info(`tauri-driver ready: ${driverResult.path} (${driverResult.method})`);
+
     // Auto-detect per-worker mode based on maxInstances
     // When maxInstances > 1, enable per-worker spawning for parallelism
     // When maxInstances === 1, use single shared driver for optimal performance
