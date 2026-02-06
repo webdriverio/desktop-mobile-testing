@@ -31,12 +31,7 @@
       }
     ]
   },
-  "plugins": {
-    "tauri-driver": {
-      "port": 4444,
-      "args": []
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": false,
     "targets": [],

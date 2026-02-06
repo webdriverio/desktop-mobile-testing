@@ -272,8 +272,8 @@ export const config = {
   // Each worker gets its own tauri-driver process on a unique port
   maxInstances, // Use computed maxInstances based on test type
   capabilities,
-  // Use dynamic port allocation (0 = find available port) to prevent port conflicts in CI
-  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 0 }),
+  // Port and hostname are set dynamically by the tauri-service in onPrepare
+  // Do not set port here - WDIO's detectBackend converts port: 0 to port: 4444
   logLevel: 'info',
   bail: 0,
   baseUrl: '',
