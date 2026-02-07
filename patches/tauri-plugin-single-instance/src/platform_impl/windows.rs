@@ -242,16 +242,31 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
         }
 
         WM_COPYDATA => {
+            eprintln!("[SINGLE-INSTANCE] WM_COPYDATA received!");
             let cds_ptr = lparam as *const COPYDATASTRUCT;
+            eprintln!(
+                "[SINGLE-INSTANCE] COPYDATASTRUCT dwData: {}",
+                (*cds_ptr).dwData
+            );
+            eprintln!(
+                "[SINGLE-INSTANCE] Expected dwData: {}",
+                WMCOPYDATA_SINGLE_INSTANCE_DATA
+            );
             if (*cds_ptr).dwData == WMCOPYDATA_SINGLE_INSTANCE_DATA {
+                eprintln!("[SINGLE-INSTANCE] Data matches! Processing...");
                 let userdata = UserData::<R>::from_hwnd(hwnd);
 
                 let data = CStr::from_ptr((*cds_ptr).lpData as _).to_string_lossy();
+                eprintln!("[SINGLE-INSTANCE] Raw data received: {}", data);
                 let mut s = data.split('|');
                 let cwd = s.next().unwrap();
-                let args = s.map(|s| s.to_string()).collect();
+                let args: Vec<String> = s.map(|s| s.to_string()).collect();
+                eprintln!("[SINGLE-INSTANCE] Parsed - CWD: {}, Args: {:?}", cwd, args);
 
                 userdata.run_callback(args, cwd.to_string());
+                eprintln!("[SINGLE-INSTANCE] Callback executed successfully");
+            } else {
+                eprintln!("[SINGLE-INSTANCE] Data does not match expected dwData - ignoring");
             }
             1
         }
