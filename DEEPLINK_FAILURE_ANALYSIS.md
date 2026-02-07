@@ -275,3 +275,195 @@ From the successful logs:
 - **Single-instance plugin patch**: ✅ Applied and working (but not solving the actual problem)
 - **Test execution**: ❌ Still failing with "Chrome instance exited"
 - **Root cause**: ❌ Not yet identified - need more logging/investigation
+
+---
+
+# Phase 2: Ghost Process Discovery and Fix
+
+## Updated Problem Summary (Post-Investigation)
+
+The deeplink E2E tests fail on Windows CI. The root cause is a **ghost Tauri app process** that holds the single-instance mutex and IPC window, interfering with both WebDriver session creation and deeplink delivery.
+
+Linux tests are unaffected because the single-instance plugin uses D-Bus (not Windows mutexes/windows) and has no ghost process issue.
+
+## Updated Architecture
+
+```
+WDIO Test Runner
+  └─ tauri-driver (port X)           ← spawned by launcher.ts
+       └─ msedgedriver (port X+1)    ← spawned by tauri-driver
+            └─ tauri-e2e-app.exe     ← spawned by msedgedriver
+
+Protocol Handler (deeplink trigger):
+  rundll32.exe url.dll,FileProtocolHandler testapp://...
+    └─ cmd /c "set ENABLE_SINGLE_INSTANCE=true && tauri-e2e-app.exe testapp://..."
+       └─ tauri-e2e-app.exe          ← launched by OS, NOT a child of tauri-driver
+```
+
+Key env vars:
+- `TAURI_WEBVIEW_AUTOMATION=true` — set by tauri-driver's `webdriver.rs` on msedgedriver's env, propagated to app. **NOT set** for protocol-handler-launched instances.
+- `ENABLE_SINGLE_INSTANCE=true` — set in `wdio:tauriServiceOptions.env` for deeplink tests, AND in the Windows registry command for protocol handler launches.
+
+## Root Cause: Ghost Process
+
+A ghost `tauri-e2e-app.exe` process exists on the Windows CI runner before the test starts. It holds:
+- Named mutex: `com.tauri.basic-sim`
+- IPC window: class `com.tauri.basic-sic`, name `com.tauri.basic-siw`
+
+### Ghost Process Origin
+
+The exact origin is not definitively identified. Candidates:
+1. **GitHub Actions runner reuse** between jobs within the same workflow run
+2. **A previous job that was retried/cancelled** leaving orphaned processes
+3. **msedgedriver detaching from tauri-driver's Job Object** — tauri-driver uses `limit_kill_on_job_close()` but this may not always cascade correctly
+
+The CI cleanup step (`Get-Process -Name "tauri-e2e-app" | Stop-Process`) runs before the test, but the ghost survives. Adding `msedgedriver` to cleanup (commit e6da9ce) provides defense-in-depth but may not fully solve the timing issue.
+
+**Evidence the ghost is real**: In the `deeplink-tauri 5` logs, 738 `[WDIO-FRONTEND]` log lines appear starting at 11:40:31.265Z — **before** tauri-driver even spawns at 11:40:32.328Z. These are from a running Tauri app's WebView2 frontend.
+
+### How the Ghost Causes Two Distinct Failures
+
+#### Failure 1: "Chrome instance exited" (session creation)
+
+Without the fix, ALL app instances launched by msedgedriver detect `ERROR_ALREADY_EXISTS` (error 183) from the ghost's mutex. Since they don't have `--type=` args (not WebView2 child processes), they take the normal second-instance path:
+1. `FindWindowW` → finds ghost's IPC window (e.g., `hwnd=0x40050`)
+2. `SendMessageW(WM_COPYDATA)` → sends args to ghost
+3. `process::exit(0)` — **app exits before WebView2 initializes**
+
+msedgedriver sees the Chrome/WebView2 process exit and reports "Chrome instance exited". WDIO retries, msedgedriver launches another instance, same thing. After 4 retries, session creation fails.
+
+#### Failure 2: "App did not receive the deeplink" (deeplink delivery)
+
+After fixing session creation (by checking `TAURI_WEBVIEW_AUTOMATION`), the WebDriver-managed app starts successfully and creates its own IPC window (e.g., `hwnd=0x10488`). But now **two** IPC windows exist with the same class/name:
+- Ghost: `hwnd=0x40050`
+- Ours: `hwnd=0x10488`
+
+When `rundll32` triggers the protocol handler, the OS launches a new app instance (without `TAURI_WEBVIEW_AUTOMATION`). It calls `FindWindowW` which returns the **ghost's** window first (Z-order dependent). The deeplink data is sent to the ghost, which silently discards it. Our app never receives it.
+
+## Fix Implementation
+
+### Fix 1: Take over as primary under WebDriver automation
+
+In `patches/tauri-plugin-single-instance/src/platform_impl/windows.rs`:
+
+When `ERROR_ALREADY_EXISTS` is detected AND `TAURI_WEBVIEW_AUTOMATION` env var is set, the app continues as primary instance instead of exiting. This works because:
+- WebDriver-managed instances have `TAURI_WEBVIEW_AUTOMATION=true` (from tauri-driver)
+- Protocol handler instances do NOT (launched by OS directly)
+
+### Fix 2: Kill the ghost process
+
+When taking over as primary under WebDriver automation, the plugin now:
+1. `FindWindowW` — locates the ghost's IPC window
+2. `GetWindowThreadProcessId` — gets the ghost's PID
+3. `OpenProcess(PROCESS_TERMINATE)` + `TerminateProcess` — kills the ghost
+4. `sleep(500ms)` — waits for the OS to destroy the ghost's window
+5. Creates our own IPC window (now the only one)
+
+This ensures protocol-handler-launched instances find **our** window, not the ghost's.
+
+```rust
+if std::env::var("TAURI_WEBVIEW_AUTOMATION").is_ok() {
+    eprintln!("[SINGLE-INSTANCE] WebDriver automation detected - taking over as primary instance");
+    unsafe {
+        let ghost_hwnd = FindWindowW(class_name.as_ptr(), window_name.as_ptr());
+        if !ghost_hwnd.is_null() {
+            let mut ghost_pid: u32 = 0;
+            GetWindowThreadProcessId(ghost_hwnd, &mut ghost_pid);
+            if ghost_pid != 0 && ghost_pid != std::process::id() {
+                let hprocess = OpenProcess(PROCESS_TERMINATE, 0, ghost_pid);
+                if !hprocess.is_null() {
+                    TerminateProcess(hprocess, 1);
+                    CloseHandle(hprocess);
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                }
+            }
+        }
+    }
+    true // become primary
+}
+```
+
+### Fix 3: CI cleanup includes msedgedriver (defense-in-depth)
+
+Added `msedgedriver` to both pre-test and post-test Windows cleanup steps in `_ci-e2e-tauri.reusable.yml`. This reduces the chance of ghost processes surviving between test runs.
+
+## Investigation Timeline
+
+### Phase 1: Initial attempts (incorrect theory)
+- **Theory**: WebView2 child processes (with `--type=` args) trigger single-instance exit
+- **Fix**: Added `is_webview2_child_process()` check
+- **Result**: No effect — test app instances don't have `--type=` args
+
+### Phase 2: Enhanced logging
+Added `[SINGLE-INSTANCE]`, `[DEEP-LINK-DEBUG]`, `[DEEP-LINK-PLUGIN]` logging
+- Patched both single-instance and deep-link plugins with debug output
+- **Key finding**: App exits in single-instance plugin setup (during `run()`), BEFORE Tauri's `setup()` callback
+
+### Phase 3: Ghost process identified (deeplink-tauri 5 logs)
+- ALL 4 app instances see `ERROR_ALREADY_EXISTS` (error 183) on first launch
+- ALL find the same window `hwnd=0x40050` and exit
+- 738 WDIO-FRONTEND logs from a pre-existing Tauri app running before the test
+
+### Phase 4: TAURI_WEBVIEW_AUTOMATION fix
+- Session creation: **FIXED** (Session ID: c4e2a43c79dd39ce83989bbc368327c2)
+- Deeplink delivery: **STILL FAILING** — "App did not receive the deeplink within 5 seconds"
+- Root cause: ghost's IPC window intercepts deeplink data
+
+### Phase 5: Ghost process termination (current)
+- Added `TerminateProcess` call to kill the ghost when detected under WebDriver automation
+- Added msedgedriver to CI cleanup
+- **Result**: Ghost is killed successfully (logs show "Found ghost window hwnd=0x401e8, pid=5364 → Terminating ghost process pid=5364")
+- **But**: Deeplinks still fail to arrive at the app
+
+### Phase 6: Debugging deeplink delivery (latest)
+
+**Current Status** (from `deeplink-tauri-ghostbusters` logs):
+- ✅ Ghost process killed successfully
+- ✅ Session created successfully (Session ID: 220c6392912b04a010af76e2a60f8927)
+- ✅ App creates IPC window (`hwnd=0x301c2`)
+- ❌ Deeplink tests still fail: "App did not receive the deeplink within 5 seconds"
+
+**Key Finding**: The single-instance callback is **NEVER triggered** during the test. No logs show "SINGLE-INSTANCE CALLBACK TRIGGERED!" after the initial app launch.
+
+**Investigation**:
+1. Protocol handler launches `rundll32.exe url.dll,FileProtocolHandler testapp://...` successfully
+2. rundll32 spawns with PIDs (6504, 3776, 856, 6944, etc.)
+3. **BUT**: No new tauri-e2e-app instances appear in logs
+4. The app instances launched by protocol handler are **detached processes** - not captured by tauri-driver
+
+**Hypothesis**: The protocol handler is either:
+1. Not actually launching the app (registry issue)
+2. Launching the app but it's crashing immediately
+3. Launching the app but the WM_COPYDATA message isn't being received
+
+**Debugging Added**:
+1. CI step to check for ghost processes before cleanup (`tasklist | findstr tauri-e2e-app`)
+2. Enhanced WM_COPYDATA logging in single-instance plugin:
+   - Log when WM_COPYDATA message is received
+   - Log dwData values (received vs expected)
+   - Log raw data and parsed arguments
+   - Track callback execution
+
+**Next Steps**:
+1. Run CI with enhanced logging to see if WM_COPYDATA messages are received
+2. Check if protocol handler registry is correct
+3. Consider adding file-based logging for detached processes (since tauri-driver can't capture their output)
+4. Verify the `testapp://` protocol is properly registered in Windows registry
+
+## Files Involved
+
+- `patches/tauri-plugin-single-instance/src/platform_impl/windows.rs` — Single-instance mutex/IPC logic (main fix)
+- `scripts/protocol-handlers/setup-protocol-handler.ps1` — Windows registry protocol handler setup
+- `.github/workflows/_ci-e2e-tauri.reusable.yml` — CI workflow with cleanup steps and ghost detection
+- `fixtures/e2e-apps/tauri/src-tauri/src/main.rs` — App initialization, plugin registration
+- `e2e/wdio.tauri.conf.ts` — WDIO config, deeplink uses `maxInstances=1` + `ENABLE_SINGLE_INSTANCE=true`
+
+## Current Status (Latest)
+
+- **Build**: ✅ Builds successfully on both Windows and Linux
+- **Session creation**: ✅ Fixed (TAURI_WEBVIEW_AUTOMATION bypass + ghost termination)
+- **Deeplink delivery**: ⏳ Debugging in progress - WM_COPYDATA messages not being received
+- **Linux tests**: ✅ Pass (sporadic logging test failure is unrelated)
+- **Standard Windows tests**: ✅ Unaffected (don't use ENABLE_SINGLE_INSTANCE)
+- **Ghost detection**: ✅ Added CI step to detect ghost processes before cleanup
+- **Enhanced logging**: ✅ Added detailed WM_COPYDATA logging to diagnose message delivery
