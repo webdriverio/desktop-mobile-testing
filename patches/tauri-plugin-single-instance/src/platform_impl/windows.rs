@@ -63,21 +63,13 @@ fn log_to_file(msg: &str) {
             }
         }
     }
-        }
+
+    if let Some(mut file) = log_file {
+        use std::io::Write;
+        let _ = file.write_all(log_line.as_bytes());
+        let _ = file.flush();
     }
-
-    use std::io::Write;
-    let mut file = match std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
-        Ok(f) => f,
-        Err(_) => return, // Silently fail if we can't open the file
-    };
-
-    let _ = file.write_all(log_line.as_bytes());
-    let _ = file.flush();
+}
 }
 
 struct MutexHandle(isize);
