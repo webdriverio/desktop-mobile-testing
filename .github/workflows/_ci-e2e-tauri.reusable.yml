@@ -456,7 +456,7 @@ jobs:
       # tauri-driver launches apps during session creation, needs display in launcher context
       # This skips rebuilding Tauri apps since we downloaded pre-built binaries
       - name: 🧪 Execute Tauri E2E Tests
-        shell: bash
+        shell: pwsh
         working-directory: e2e
         env:
           # Enable Rust backtraces for debugging Tauri/GTK issues
@@ -464,13 +464,63 @@ jobs:
           # Disable AT-SPI accessibility bus warnings
           NO_AT_BRIDGE: '1'
         run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
+          if ($env:RUNNER_OS -eq "Linux") {
             # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit
-            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" `
               pnpm run ${{ steps.gen-test.outputs.result }}
-          else
+          } else {
+            # Start ghost process monitor in background for Windows
+            if ($env:RUNNER_OS -eq "Windows") {
+              Write-Host "=== Starting Ghost Process Monitor in background ==="
+              $monitorJob = Start-Job -ScriptBlock {
+                $logFile = "$env:TEMP\ghost-process-monitor.log"
+                "Ghost Process Monitor Started at $(Get-Date)" | Out-File -FilePath $logFile
+                
+                # Check every 5 seconds
+                while ($true) {
+                  Start-Sleep -Seconds 5
+                  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                  $processes = Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue
+                  
+                  if ($processes) {
+                    $msg = "[$timestamp] Found $($processes.Count) tauri-e2e-app process(es):"
+                    $msg | Out-File -FilePath $logFile -Append
+                    foreach ($proc in $processes) {
+                      $procInfo = "  PID: $($proc.Id), StartTime: $($proc.StartTime), Parent: $($proc.Parent.ProcessName)"
+                      $procInfo | Out-File -FilePath $logFile -Append
+                    }
+                  }
+                  
+                  $msedgeProcs = Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue
+                  if ($msedgeProcs) {
+                    "[$timestamp] Found $($msedgeProcs.Count) msedgedriver process(es)" | Out-File -FilePath $logFile -Append
+                  }
+                }
+              }
+              Write-Host "Ghost process monitor started with Job ID: $($monitorJob.Id)"
+            }
+            
+            # Run the actual tests
             pnpm run ${{ steps.gen-test.outputs.result }}
-          fi
+            $testExitCode = $LASTEXITCODE
+            
+            # Stop the monitor and show results
+            if ($env:RUNNER_OS -eq "Windows" -and $monitorJob) {
+              Write-Host ""
+              Write-Host "=== Stopping Ghost Process Monitor ==="
+              Stop-Job -Job $monitorJob
+              Remove-Job -Job $monitorJob
+              
+              $logFile = "$env:TEMP\ghost-process-monitor.log"
+              if (Test-Path $logFile) {
+                Write-Host ""
+                Write-Host "Ghost Process Monitor Log:"
+                Get-Content -Path $logFile
+              }
+            }
+            
+            exit $testExitCode
+          }
 
       # DEBUG: Check for ghost processes before cleanup
       - name: 🔍 Check for Ghost Processes (Windows)

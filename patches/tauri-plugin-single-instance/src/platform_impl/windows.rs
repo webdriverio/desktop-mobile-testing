@@ -60,6 +60,18 @@ fn is_webview2_child_process() -> bool {
 }
 
 pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin<R> {
+    // Log immediately on init - this should appear for ALL instances including second instances
+    let args: Vec<String> = std::env::args().collect();
+    eprintln!("[SINGLE-INSTANCE] ===============================================");
+    eprintln!("[SINGLE-INSTANCE] SINGLE-INSTANCE PLUGIN INITIALIZING");
+    eprintln!("[SINGLE-INSTANCE] PID: {}", std::process::id());
+    eprintln!("[SINGLE-INSTANCE] Args: {:?}", args);
+    eprintln!(
+        "[SINGLE-INSTANCE] TAURI_WEBVIEW_AUTOMATION: {:?}",
+        std::env::var("TAURI_WEBVIEW_AUTOMATION")
+    );
+    eprintln!("[SINGLE-INSTANCE] ===============================================");
+
     plugin::Builder::new("single-instance")
         .setup(|app, _api| {
             eprintln!("[SINGLE-INSTANCE] Plugin setup starting");
@@ -164,13 +176,25 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                                 lpData: bytes.as_ptr() as _,
                             };
 
-                            SendMessageW(hwnd, WM_COPYDATA, 0, &cds as *const _ as _);
-                            eprintln!("[SINGLE-INSTANCE] Sent data to first instance, exiting...");
+                            eprintln!("[SINGLE-INSTANCE] Calling SendMessageW with WM_COPYDATA...");
+                            eprintln!("[SINGLE-INSTANCE] Target hwnd: {:?}", hwnd);
+                            eprintln!("[SINGLE-INSTANCE] Data being sent: {}", data);
+                            let result = SendMessageW(hwnd, WM_COPYDATA, 0, &cds as *const _ as _);
+                            eprintln!("[SINGLE-INSTANCE] SendMessageW returned: {}", result);
+                            if result == 0 {
+                                eprintln!("[SINGLE-INSTANCE] WARNING: SendMessageW returned 0, message may not have been processed");
+                            } else {
+                                eprintln!("[SINGLE-INSTANCE] SendMessageW succeeded, data sent to first instance");
+                            }
+                            eprintln!("[SINGLE-INSTANCE] Exiting second instance...");
 
                             app.cleanup_before_exit();
                             std::process::exit(0);
                         } else {
-                            eprintln!("[SINGLE-INSTANCE] WARNING: Could not find first instance window!");
+                            eprintln!("[SINGLE-INSTANCE] ERROR: FindWindowW returned NULL - could not find first instance window!");
+                            eprintln!("[SINGLE-INSTANCE] Window class: {:?}", class_name);
+                            eprintln!("[SINGLE-INSTANCE] Window name: {:?}", window_name);
+                            eprintln!("[SINGLE-INSTANCE] Last error: {:?}", unsafe { GetLastError() });
                         }
                     }
                     // Window not found - fall through to become primary
