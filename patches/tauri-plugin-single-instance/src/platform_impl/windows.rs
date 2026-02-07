@@ -88,52 +88,72 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                 last_error
             );
 
-            if last_error == ERROR_ALREADY_EXISTS {
+            // Determine whether we should become the primary instance.
+            // There are three scenarios when ERROR_ALREADY_EXISTS:
+            //   1. WebView2 child process (--type= arg) → skip entirely
+            //   2. WebDriver automation (TAURI_WEBVIEW_AUTOMATION) → take over as primary
+            //      (the existing mutex is from a stale/ghost process; WebDriver manages lifecycle)
+            //   3. Normal second instance → forward data to primary and exit
+            let become_primary = if last_error == ERROR_ALREADY_EXISTS {
                 eprintln!("[SINGLE-INSTANCE] ERROR_ALREADY_EXISTS - another instance is running");
-                // Don't exit if this is a WebView2 child process - let it continue
-                // so WebDriver can establish the session properly
+
                 if is_webview2_child_process() {
                     eprintln!("[SINGLE-INSTANCE] WebView2 child process detected, allowing to continue");
-                    // Release the mutex handle we opened (we don't own it)
                     unsafe { CloseHandle(hmutex) };
-                    // Return Ok to allow the child process to continue
                     return Ok(());
                 }
-                
-                eprintln!("[SINGLE-INSTANCE] This is a second instance, looking for first instance window...");
 
-                unsafe {
-                    let hwnd = FindWindowW(class_name.as_ptr(), window_name.as_ptr());
-                    
-                    eprintln!("[SINGLE-INSTANCE] FindWindowW returned hwnd={:?}", hwnd);
+                if std::env::var("TAURI_WEBVIEW_AUTOMATION").is_ok() {
+                    // Running under WebDriver automation (tauri-driver sets this env var).
+                    // The stale mutex is from a ghost process that the CI cleanup didn't
+                    // fully terminate. We must become the primary instance so that:
+                    //   - WebDriver can create a session (app doesn't exit)
+                    //   - Deep link triggers from protocol handlers are forwarded to us
+                    eprintln!("[SINGLE-INSTANCE] WebDriver automation detected - taking over as primary instance");
+                    eprintln!("[SINGLE-INSTANCE] (stale mutex from ghost process will be superseded)");
+                    true
+                } else {
+                    eprintln!("[SINGLE-INSTANCE] This is a second instance, looking for first instance window...");
 
-                    if !hwnd.is_null() {
-                        eprintln!("[SINGLE-INSTANCE] Found first instance window, sending data...");
-                        let cwd = std::env::current_dir().unwrap_or_default();
-                        let cwd = cwd.to_str().unwrap_or_default();
+                    unsafe {
+                        let hwnd = FindWindowW(class_name.as_ptr(), window_name.as_ptr());
 
-                        let args = std::env::args().collect::<Vec<String>>().join("|");
+                        eprintln!("[SINGLE-INSTANCE] FindWindowW returned hwnd={:?}", hwnd);
 
-                        let data = format!("{cwd}|{args}\0",);
+                        if !hwnd.is_null() {
+                            eprintln!("[SINGLE-INSTANCE] Found first instance window, sending data...");
+                            let cwd = std::env::current_dir().unwrap_or_default();
+                            let cwd = cwd.to_str().unwrap_or_default();
 
-                        let bytes = data.as_bytes();
-                        let cds = COPYDATASTRUCT {
-                            dwData: WMCOPYDATA_SINGLE_INSTANCE_DATA,
-                            cbData: bytes.len() as _,
-                            lpData: bytes.as_ptr() as _,
-                        };
+                            let args = std::env::args().collect::<Vec<String>>().join("|");
 
-                        SendMessageW(hwnd, WM_COPYDATA, 0, &cds as *const _ as _);
-                        eprintln!("[SINGLE-INSTANCE] Sent data to first instance, exiting...");
+                            let data = format!("{cwd}|{args}\0",);
 
-                        app.cleanup_before_exit();
-                        std::process::exit(0);
-                    } else {
-                        eprintln!("[SINGLE-INSTANCE] WARNING: Could not find first instance window!");
+                            let bytes = data.as_bytes();
+                            let cds = COPYDATASTRUCT {
+                                dwData: WMCOPYDATA_SINGLE_INSTANCE_DATA,
+                                cbData: bytes.len() as _,
+                                lpData: bytes.as_ptr() as _,
+                            };
+
+                            SendMessageW(hwnd, WM_COPYDATA, 0, &cds as *const _ as _);
+                            eprintln!("[SINGLE-INSTANCE] Sent data to first instance, exiting...");
+
+                            app.cleanup_before_exit();
+                            std::process::exit(0);
+                        } else {
+                            eprintln!("[SINGLE-INSTANCE] WARNING: Could not find first instance window!");
+                        }
                     }
+                    // Window not found - fall through to become primary
+                    true
                 }
             } else {
                 eprintln!("[SINGLE-INSTANCE] No existing mutex found - this is the FIRST instance");
+                true
+            };
+
+            if become_primary {
                 app.manage(MutexHandle(hmutex as _));
 
                 let userdata = UserData {
@@ -144,7 +164,7 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                 let hwnd = create_event_target_window::<R>(&class_name, &window_name, userdata);
                 eprintln!("[SINGLE-INSTANCE] Event target window created: hwnd={:?}", hwnd);
                 app.manage(TargetWindowHandle(hwnd as _));
-                eprintln!("[SINGLE-INSTANCE] First instance setup complete - mutex and window created");
+                eprintln!("[SINGLE-INSTANCE] Primary instance setup complete - mutex and window created");
             }
 
             eprintln!("[SINGLE-INSTANCE] Plugin setup completed successfully");
