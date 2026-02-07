@@ -270,11 +270,14 @@ fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 }
 
 fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
+    log_deep_link("create_main_window() called");
     eprintln!("[Tauri-DEBUG] create_main_window called");
     if let Some(existing) = app.get_webview_window("main") {
+        log_deep_link("Found existing main window, returning it");
         eprintln!("[Tauri-DEBUG] Found existing main window, returning it");
         return existing;
     }
+    log_deep_link("No existing window found, creating new main window...");
     eprintln!("[Tauri-DEBUG] Creating new main window");
     let window = tauri::WebviewWindowBuilder::new(
         app,
@@ -285,6 +288,7 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::We
     .inner_size(600.0, 400.0)
     .build()
     .expect("Failed to create main window");
+    log_deep_link("Main window created successfully");
     eprintln!("[Tauri-DEBUG] Main window created successfully");
     window
 }
@@ -315,8 +319,11 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    log_deep_link(&format!("=== APP STARTING ==="));
+    log_deep_link(&format!("PID: {}", std::process::id()));
     log_deep_link(&format!("App starting with {} args", std::env::args().count()));
     log_deep_link(&format!("CI mode: {}", std::env::var("CI").unwrap_or_else(|_| "not set".to_string())));
+    log_deep_link(&format!("Working directory: {:?}", std::env::current_dir()));
 
     // DEBUG: Print ALL args to diagnose deep link routing
     let all_args: Vec<String> = std::env::args().collect();
@@ -333,11 +340,13 @@ fn main() {
 
     let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
     eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
+    log_deep_link(&format!("ENABLE_SPLASH_WINDOW={}", is_splash));
 
     // Conditionally enable single-instance plugin (only for deeplink tests)
     // This prevents conflicts when multiple workers run in parallel for other test types
     let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok();
-    log_deep_link(&format!("Single-instance plugin enabled: {}", enable_single_instance));
+    log_deep_link(&format!("ENABLE_SINGLE_INSTANCE={}", enable_single_instance));
+    log_deep_link(&format!("Single-instance plugin will be enabled: {}", enable_single_instance));
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init());
@@ -409,11 +418,14 @@ fn main() {
         eprintln!("======================================");
     }
 
+    log_deep_link("Building Tauri app...");
+    
     builder
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
+            log_deep_link("=== TAURI SETUP STARTING ===");
             eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
-            log_deep_link("Tauri setup() called");
+            log_deep_link(&format!("Setup called, is_splash={}", is_splash));
 
             // Collect deep links from CLI args at startup
             let cli_deep_links = collect_deep_links_from_args();
@@ -467,6 +479,7 @@ fn main() {
 
             if is_splash {
                 // 1. SPLASH FIRST - WebDriver MUST connect here (visible + focused)
+                log_deep_link("Creating SPLASH window (ENABLE_SPLASH_WINDOW=true)");
                 eprintln!("[Tauri-DEBUG] === Creating SPLASH window FIRST ===");
                 let splash = tauri::WebviewWindowBuilder::new(
                     app,
@@ -486,8 +499,10 @@ fn main() {
                 splash.set_focus().expect("Failed to focus splash");
 
                 eprintln!("[Tauri-DEBUG] ✓ Splash created and focused");
+                log_deep_link("Splash window created and focused successfully");
 
                 // 2. MAIN SECOND - hidden until switch_to_main
+                log_deep_link("Creating MAIN window (hidden)");
                 eprintln!("[Tauri-DEBUG] === Creating MAIN window SECOND (hidden) ===");
                 let _main = tauri::WebviewWindowBuilder::new(
                     app,
@@ -501,11 +516,15 @@ fn main() {
                 .expect("Failed to create main window");
 
                 eprintln!("[Tauri-DEBUG] ✓ Main created (hidden). Ready for switch_to_main!");
+                log_deep_link("Main window created (hidden) successfully");
             } else {
                 // No splash - just main window (unchanged)
+                log_deep_link("No splash mode - creating main window only");
                 eprintln!("[Tauri-DEBUG] No splash mode - creating main only");
                 create_main_window(app.handle());
+                log_deep_link("Main window created successfully");
             }
+            log_deep_link("=== TAURI SETUP COMPLETED SUCCESSFULLY ===");
             Ok::<(), Box<dyn std::error::Error>>(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -529,5 +548,7 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    
+    log_deep_link("=== APP EXITED ===");
 }
 

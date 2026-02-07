@@ -61,6 +61,8 @@ fn is_webview2_child_process() -> bool {
 pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin<R> {
     plugin::Builder::new("single-instance")
         .setup(|app, _api| {
+            eprintln!("[SINGLE-INSTANCE] Plugin setup starting");
+
             #[allow(unused_mut)]
             let mut id = app.config().identifier.clone();
             #[cfg(feature = "semver")]
@@ -73,23 +75,40 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
             let window_name = encode_wide(format!("{id}-siw"));
             let mutex_name = encode_wide(format!("{id}-sim"));
 
+            eprintln!("[SINGLE-INSTANCE] Mutex name: {id}-sim");
+            eprintln!("[SINGLE-INSTANCE] Window name: {id}-siw");
+            eprintln!("[SINGLE-INSTANCE] Class name: {id}-sic");
+
             let hmutex =
                 unsafe { CreateMutexW(std::ptr::null(), true.into(), mutex_name.as_ptr()) };
 
-            if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+            let last_error = unsafe { GetLastError() };
+            eprintln!(
+                "[SINGLE-INSTANCE] CreateMutexW returned, last_error={}",
+                last_error
+            );
+
+            if last_error == ERROR_ALREADY_EXISTS {
+                eprintln!("[SINGLE-INSTANCE] ERROR_ALREADY_EXISTS - another instance is running");
                 // Don't exit if this is a WebView2 child process - let it continue
                 // so WebDriver can establish the session properly
                 if is_webview2_child_process() {
+                    eprintln!("[SINGLE-INSTANCE] WebView2 child process detected, allowing to continue");
                     // Release the mutex handle we opened (we don't own it)
                     unsafe { CloseHandle(hmutex) };
                     // Return Ok to allow the child process to continue
                     return Ok(());
                 }
+                
+                eprintln!("[SINGLE-INSTANCE] This is a second instance, looking for first instance window...");
 
                 unsafe {
                     let hwnd = FindWindowW(class_name.as_ptr(), window_name.as_ptr());
+                    
+                    eprintln!("[SINGLE-INSTANCE] FindWindowW returned hwnd={:?}", hwnd);
 
                     if !hwnd.is_null() {
+                        eprintln!("[SINGLE-INSTANCE] Found first instance window, sending data...");
                         let cwd = std::env::current_dir().unwrap_or_default();
                         let cwd = cwd.to_str().unwrap_or_default();
 
@@ -105,12 +124,16 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                         };
 
                         SendMessageW(hwnd, WM_COPYDATA, 0, &cds as *const _ as _);
+                        eprintln!("[SINGLE-INSTANCE] Sent data to first instance, exiting...");
 
                         app.cleanup_before_exit();
                         std::process::exit(0);
+                    } else {
+                        eprintln!("[SINGLE-INSTANCE] WARNING: Could not find first instance window!");
                     }
                 }
             } else {
+                eprintln!("[SINGLE-INSTANCE] No existing mutex found - this is the FIRST instance");
                 app.manage(MutexHandle(hmutex as _));
 
                 let userdata = UserData {
@@ -119,9 +142,12 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                 };
                 let userdata = Box::into_raw(Box::new(userdata));
                 let hwnd = create_event_target_window::<R>(&class_name, &window_name, userdata);
+                eprintln!("[SINGLE-INSTANCE] Event target window created: hwnd={:?}", hwnd);
                 app.manage(TargetWindowHandle(hwnd as _));
+                eprintln!("[SINGLE-INSTANCE] First instance setup complete - mutex and window created");
             }
 
+            eprintln!("[SINGLE-INSTANCE] Plugin setup completed successfully");
             Ok(())
         })
         .on_event(|app, event| {
@@ -133,14 +159,23 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
 }
 
 pub fn destroy<R: Runtime, M: Manager<R>>(manager: &M) {
+    eprintln!("[SINGLE-INSTANCE] Destroy called - cleaning up mutex and window");
     if let Some(hmutex) = manager.try_state::<MutexHandle>() {
+        eprintln!("[SINGLE-INSTANCE] Releasing mutex");
         unsafe {
             ReleaseMutex(hmutex.0 as _);
             CloseHandle(hmutex.0 as _);
         }
+        eprintln!("[SINGLE-INSTANCE] Mutex released and handle closed");
+    } else {
+        eprintln!("[SINGLE-INSTANCE] No mutex found to release");
     }
     if let Some(hwnd) = manager.try_state::<TargetWindowHandle>() {
+        eprintln!("[SINGLE-INSTANCE] Destroying event target window");
         unsafe { DestroyWindow(hwnd.0 as _) };
+        eprintln!("[SINGLE-INSTANCE] Event target window destroyed");
+    } else {
+        eprintln!("[SINGLE-INSTANCE] No event target window found to destroy");
     }
 }
 
