@@ -362,11 +362,14 @@ fn main() {
     eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
     log_deep_link(&format!("ENABLE_SPLASH_WINDOW={}", is_splash));
 
-    // Conditionally enable single-instance plugin (only for deeplink tests)
-    // This prevents conflicts when multiple workers run in parallel for other test types
-    let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok();
-    log_deep_link(&format!("ENABLE_SINGLE_INSTANCE={}", enable_single_instance));
-    log_deep_link(&format!("Single-instance plugin will be enabled: {}", enable_single_instance));
+    // Enable single-instance plugin when explicitly requested (deeplink tests via WDIO env)
+    // OR when launched as a protocol handler (args contain testapp:// URL).
+    // The latter case handles Windows protocol-handler launches where cmd /c "set ..."
+    // env var propagation is unreliable — detecting the URL in args is more robust.
+    let has_deeplink_arg = std::env::args().any(|a| a.starts_with("testapp://"));
+    let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok() || has_deeplink_arg;
+    log_deep_link(&format!("ENABLE_SINGLE_INSTANCE env={}, has_deeplink_arg={}, enabled={}",
+        std::env::var("ENABLE_SINGLE_INSTANCE").is_ok(), has_deeplink_arg, enable_single_instance));
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init());

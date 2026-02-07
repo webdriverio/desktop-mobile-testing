@@ -681,14 +681,58 @@ The deep-link plugin emits events **locally** during plugin initialization, but 
 **Recommended Next Step:**
 Implement Option 1 - move deeplink CLI handling from deep-link plugin to single-instance callback on Windows. This ensures the single-instance mechanism (which works correctly) handles all deeplink forwarding.
 
+### Phase 10: Root Cause Identified — ENABLE_SINGLE_INSTANCE Not Set for Detached Processes
+
+**The Missing Piece:**
+
+Re-examining the evidence with the plugin registration order in main.rs:
+
+```
+Line 372: tauri_plugin_wdio::init()           ← always
+Line 378: tauri_plugin_single_instance::init() ← conditional on ENABLE_SINGLE_INSTANCE
+Line 444: tauri_plugin_deep_link::init()       ← always
+```
+
+Single-instance is registered **BEFORE** deep-link. If ENABLE_SINGLE_INSTANCE were set, the detached processes would:
+1. Load single-instance plugin → detect mutex → send WM_COPYDATA → `process::exit(0)`
+2. **Never reach** deep-link plugin at line 444
+
+But the evidence shows 18 PIDs reaching the deep-link plugin and only 2 reaching single-instance. This means **ENABLE_SINGLE_INSTANCE is NOT set** for the 16 detached processes. Without it, the single-instance plugin is never loaded, and the process falls through to deep-link, emits events locally (to itself), then exits because it has no windows.
+
+**Why the env var isn't propagated:**
+
+The registry command is:
+```
+cmd /c "set ENABLE_SINGLE_INSTANCE=true && ""C:\path\app.exe"" "%1""
+```
+
+This `cmd /c "set ... && ..."` pattern with nested quoting and `%1` substitution is fragile on Windows. The `set` command may not propagate to the child process as expected, especially when `%1` contains special characters or when Windows URL dispatch doesn't go through the command template as expected.
+
+**Fix Applied:**
+
+Instead of relying on the fragile `cmd /c set` env var propagation, the app now auto-detects protocol handler launches by checking for `testapp://` URLs in args:
+
+```rust
+// In main.rs, line 369-370
+let has_deeplink_arg = std::env::args().any(|a| a.starts_with("testapp://"));
+let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok() || has_deeplink_arg;
+```
+
+This way:
+- **Primary instance** (WDIO): gets `ENABLE_SINGLE_INSTANCE=true` via env → works as before
+- **Detached processes**: always have `testapp://...` in args → single-instance enabled → detect mutex → send WM_COPYDATA → exit
+
+No architectural changes needed. The existing plugin order and single-instance callback already handle deeplink forwarding correctly — they just weren't being reached.
+
+**Also removed**: Manual Protocol Handler Test step from CI workflow (was Linux-only debug step, no longer needed).
+
 ## Current Status (Latest)
 
 - **Build**: ✅ Builds successfully on both Windows and Linux
 - **Session creation**: ✅ Fixed (TAURI_WEBVIEW_AUTOMATION bypass + ghost termination)
-- **Deeplink delivery**: ❌ **Root cause identified** - Windows detached processes exit before single-instance plugin
+- **Deeplink delivery**: 🔧 **Fix applied** - Auto-detect protocol handler via args, bypassing unreliable env var
 - **Linux tests**: ✅ Pass (D-Bus mechanism works correctly)
 - **Standard Windows tests**: ✅ Unaffected (don't use ENABLE_SINGLE_INSTANCE)
 - **Ghost detection**: ✅ Added CI step to detect ghost processes before cleanup
-- **Enhanced logging**: ✅ Aggressive logging revealed platform behavior differences
-- **Log analysis**: ✅ Confirmed Windows detached processes don't reach single-instance plugin
+- **Root cause**: ✅ **Identified** - `ENABLE_SINGLE_INSTANCE` env var not propagated by `cmd /c set` to detached processes
 - **Platform behavior**: ✅ Clarified Windows vs Linux differences
