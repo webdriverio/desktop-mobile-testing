@@ -44,12 +44,12 @@ fn log_to_file(msg: &str) {
     // Also log to file in wdio logs directory
     // Try multiple possible locations for the logs directory
     let log_paths = [
-        std::path::PathBuf::from("logs\\single-instance"),
-        std::path::PathBuf::from("..\\logs\\single-instance"),
-        std::path::PathBuf::from("..\\..\\logs\\single-instance"),
-        std::path::PathBuf::from("C:\\temp\\single-instance-logs"),
+        std::path::PathBuf::from("logs"),
+        std::path::PathBuf::from("..\\logs"),
+        std::path::PathBuf::from("..\\..\\logs"),
+        std::path::PathBuf::from("C:\\temp"),
     ];
-
+    
     let mut log_file = None;
     for log_dir in &log_paths {
         if std::fs::create_dir_all(log_dir).is_ok() {
@@ -57,11 +57,12 @@ fn log_to_file(msg: &str) {
             if let Ok(file) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open(&log_path)
-            {
+                .open(&log_path) {
                 log_file = Some(file);
                 break;
             }
+        }
+    }
         }
     }
 

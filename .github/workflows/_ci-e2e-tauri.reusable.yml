@@ -580,9 +580,9 @@ jobs:
           
           # Check multiple possible log locations
           $logPaths = @(
-            "logs\single-instance\single-instance-debug.log",
-            "e2e\logs\single-instance\single-instance-debug.log",
-            "C:\temp\single-instance-logs\single-instance-debug.log"
+            "logs\single-instance-debug.log",
+            "e2e\logs\single-instance-debug.log",
+            "C:\temp\single-instance-debug.log"
           )
           
           $foundLog = $false
