@@ -105,15 +105,21 @@ fn is_webview2_child_process() -> bool {
 pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin<R> {
     // Log immediately on init - this should appear for ALL instances including second instances
     let args: Vec<String> = std::env::args().collect();
-    log_to_file(&format!("[SINGLE-INSTANCE] ==============================================="));
-    log_to_file(&format!("[SINGLE-INSTANCE] SINGLE-INSTANCE PLUGIN INITIALIZING"));
+    log_to_file(&format!(
+        "[SINGLE-INSTANCE] ==============================================="
+    ));
+    log_to_file(&format!(
+        "[SINGLE-INSTANCE] SINGLE-INSTANCE PLUGIN INITIALIZING"
+    ));
     log_to_file(&format!("[SINGLE-INSTANCE] PID: {}", std::process::id()));
     log_to_file(&format!("[SINGLE-INSTANCE] Args: {:?}", args));
     eprintln!(
         "[SINGLE-INSTANCE] TAURI_WEBVIEW_AUTOMATION: {:?}",
         std::env::var("TAURI_WEBVIEW_AUTOMATION")
     );
-    log_to_file(&format!("[SINGLE-INSTANCE] ==============================================="));
+    log_to_file(&format!(
+        "[SINGLE-INSTANCE] ==============================================="
+    ));
 
     plugin::Builder::new("single-instance")
         .setup(|app, _api| {
@@ -237,7 +243,7 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                             log_to_file(&format!("[SINGLE-INSTANCE] ERROR: FindWindowW returned NULL - could not find first instance window!"));
                             log_to_file(&format!("[SINGLE-INSTANCE] Window class: {:?}", class_name));
                             log_to_file(&format!("[SINGLE-INSTANCE] Window name: {:?}", window_name));
-                            log_to_file(&format!("[SINGLE-INSTANCE] Last error: {:?}", unsafe { GetLastError()) });
+                            log_to_file(&format!("[SINGLE-INSTANCE] Last error: {:?}", unsafe { GetLastError() }));
                         }
                     }
                     // Window not found - fall through to become primary
@@ -274,14 +280,18 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
 }
 
 pub fn destroy<R: Runtime, M: Manager<R>>(manager: &M) {
-    log_to_file(&format!("[SINGLE-INSTANCE] Destroy called - cleaning up mutex and window"));
+    log_to_file(&format!(
+        "[SINGLE-INSTANCE] Destroy called - cleaning up mutex and window"
+    ));
     if let Some(hmutex) = manager.try_state::<MutexHandle>() {
         log_to_file(&format!("[SINGLE-INSTANCE] Releasing mutex"));
         unsafe {
             ReleaseMutex(hmutex.0 as _);
             CloseHandle(hmutex.0 as _);
         }
-        log_to_file(&format!("[SINGLE-INSTANCE] Mutex released and handle closed"));
+        log_to_file(&format!(
+            "[SINGLE-INSTANCE] Mutex released and handle closed"
+        ));
     } else {
         log_to_file(&format!("[SINGLE-INSTANCE] No mutex found to release"));
     }
@@ -290,7 +300,9 @@ pub fn destroy<R: Runtime, M: Manager<R>>(manager: &M) {
         unsafe { DestroyWindow(hwnd.0 as _) };
         log_to_file(&format!("[SINGLE-INSTANCE] Event target window destroyed"));
     } else {
-        log_to_file(&format!("[SINGLE-INSTANCE] No event target window found to destroy"));
+        log_to_file(&format!(
+            "[SINGLE-INSTANCE] No event target window found to destroy"
+        ));
     }
 }
 
@@ -328,12 +340,17 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
                 let mut s = data.split('|');
                 let cwd = s.next().unwrap();
                 let args: Vec<String> = s.map(|s| s.to_string()).collect();
-                log_to_file(&format!("[SINGLE-INSTANCE] Parsed - CWD: {}, Args: {:?}", cwd, args));
+                log_to_file(&format!(
+                    "[SINGLE-INSTANCE] Parsed - CWD: {}, Args: {:?}",
+                    cwd, args
+                ));
 
                 userdata.run_callback(args, cwd.to_string());
                 log_to_file(&format!("[SINGLE-INSTANCE] Callback executed successfully"));
             } else {
-                log_to_file(&format!("[SINGLE-INSTANCE] Data does not match expected dwData - ignoring"));
+                log_to_file(&format!(
+                    "[SINGLE-INSTANCE] Data does not match expected dwData - ignoring"
+                ));
             }
             1
         }
