@@ -41,10 +41,28 @@ fn log_to_file(msg: &str) {
     // Always log to stderr
     eprintln!("{}", msg);
 
-    // Also log to file
-    let log_path = std::path::PathBuf::from("C:\\temp\\single-instance-debug.log");
-    if let Some(parent) = log_path.parent() {
-        let _ = std::fs::create_dir_all(parent);
+    // Also log to file in wdio logs directory
+    // Try multiple possible locations for the logs directory
+    let log_paths = [
+        std::path::PathBuf::from("logs\\single-instance"),
+        std::path::PathBuf::from("..\\logs\\single-instance"),
+        std::path::PathBuf::from("..\\..\\logs\\single-instance"),
+        std::path::PathBuf::from("C:\\temp\\single-instance-logs"),
+    ];
+
+    let mut log_file = None;
+    for log_dir in &log_paths {
+        if std::fs::create_dir_all(log_dir).is_ok() {
+            let log_path = log_dir.join("single-instance-debug.log");
+            if let Ok(file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_path)
+            {
+                log_file = Some(file);
+                break;
+            }
+        }
     }
 
     use std::io::Write;

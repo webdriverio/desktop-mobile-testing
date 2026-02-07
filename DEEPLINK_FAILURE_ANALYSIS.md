@@ -450,6 +450,47 @@ Added `[SINGLE-INSTANCE]`, `[DEEP-LINK-DEBUG]`, `[DEEP-LINK-PLUGIN]` logging
 3. Consider adding file-based logging for detached processes (since tauri-driver can't capture their output)
 4. Verify the `testapp://` protocol is properly registered in Windows registry
 
+### Phase 7: Ghost Process Monitor Results
+
+**Ghost Process Monitor Output** (from latest CI run):
+The monitor revealed the full timeline of process creation:
+
+**WebDriver-Managed Instances:**
+- **14:45:31** - PID 6560 (Parent: msedgedriver) ← Initial WebDriver instance
+- **14:49:31** - PID 9508 (Parent: msedgedriver) ← Replacement after ghost-busting
+
+**Detached/Orphaned Processes** (launched by protocol handler, empty parent PID):
+- **14:45:37** - PID 6428
+- **14:46:08** - PID 7440
+- **14:46:39** - PID 2468
+- **14:47:10** - PID 6280
+- **14:47:41** - PID 9576
+- **14:48:17** - PID 10116
+- **14:48:48** - PID 10912
+- **14:49:19** - PID 10668
+- **14:49:33** - PID 5160
+- **14:50:04** - PID 6392
+- **14:50:35** - PID 10936
+- **14:51:06** - PID 8972
+- **14:51:37** - PID 10488
+- **14:52:13** - PID 9876
+- **14:52:44** - PID 10300
+- **14:53:15** - PID 11592
+
+**Key Findings:**
+1. **16 detached processes** created throughout the test run (every ~30 seconds)
+2. **All have empty parent PIDs** - confirming they are orphaned processes
+3. **Protocol handler IS working** - it's successfully launching app instances
+4. **Processes accumulate over time** - from 1 to 17 total processes
+5. **File-based logging added** - logs now written to `C:\temp\single-instance-debug.log` for detached processes
+
+**Current Status:**
+- Ghost process detection and termination: ✅ Working
+- Session creation: ✅ Fixed
+- Protocol handler launching instances: ✅ Confirmed
+- Deeplink delivery: ⏳ Still debugging - need to check file-based logs
+- File-based logging: ✅ Implemented for detached process debugging
+
 ## Files Involved
 
 - `patches/tauri-plugin-single-instance/src/platform_impl/windows.rs` — Single-instance mutex/IPC logic (main fix)
@@ -467,3 +508,5 @@ Added `[SINGLE-INSTANCE]`, `[DEEP-LINK-DEBUG]`, `[DEEP-LINK-PLUGIN]` logging
 - **Standard Windows tests**: ✅ Unaffected (don't use ENABLE_SINGLE_INSTANCE)
 - **Ghost detection**: ✅ Added CI step to detect ghost processes before cleanup
 - **Enhanced logging**: ✅ Added detailed WM_COPYDATA logging to diagnose message delivery
+- **Ghost process monitor**: ✅ Background monitor tracks process creation during tests
+- **File-based logging**: ✅ All logs now written to wdio logs directory for artifact collection

@@ -472,8 +472,16 @@ jobs:
             # Start ghost process monitor in background for Windows
             if ($env:RUNNER_OS -eq "Windows") {
               Write-Host "=== Starting Ghost Process Monitor in background ==="
+              
+              # Create logs directory if it doesn't exist
+              $logsDir = "..\logs\ghost-monitor"
+              if (!(Test-Path $logsDir)) {
+                New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+              }
+              
               $monitorJob = Start-Job -ScriptBlock {
-                $logFile = "$env:TEMP\ghost-process-monitor.log"
+                param($logsDir)
+                $logFile = Join-Path $logsDir "ghost-process-monitor.log"
                 "Ghost Process Monitor Started at $(Get-Date)" | Out-File -FilePath $logFile
                 
                 # Check every 5 seconds
@@ -496,8 +504,10 @@ jobs:
                     "[$timestamp] Found $($msedgeProcs.Count) msedgedriver process(es)" | Out-File -FilePath $logFile -Append
                   }
                 }
-              }
+              } -ArgumentList $logsDir
+              
               Write-Host "Ghost process monitor started with Job ID: $($monitorJob.Id)"
+              Write-Host "Monitor log will be saved to: $logsDir\ghost-process-monitor.log"
             }
             
             # Run the actual tests
@@ -511,11 +521,14 @@ jobs:
               Stop-Job -Job $monitorJob
               Remove-Job -Job $monitorJob
               
-              $logFile = "$env:TEMP\ghost-process-monitor.log"
+              $logsDir = "..\logs\ghost-monitor"
+              $logFile = Join-Path $logsDir "ghost-process-monitor.log"
               if (Test-Path $logFile) {
                 Write-Host ""
                 Write-Host "Ghost Process Monitor Log:"
                 Get-Content -Path $logFile
+                Write-Host ""
+                Write-Host "Log file saved to: $logFile"
               }
             }
             
@@ -572,16 +585,34 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "=== Single-Instance Debug Log ==="
-          $logPath = "C:\temp\single-instance-debug.log"
-          if (Test-Path $logPath) {
-            Write-Host "Found debug log at: $logPath"
+          
+          # Check multiple possible log locations
+          $logPaths = @(
+            "logs\single-instance\single-instance-debug.log",
+            "e2e\logs\single-instance\single-instance-debug.log",
+            "C:\temp\single-instance-logs\single-instance-debug.log"
+          )
+          
+          $foundLog = $false
+          foreach ($logPath in $logPaths) {
+            if (Test-Path $logPath) {
+              Write-Host "✅ Found debug log at: $logPath"
+              Write-Host ""
+              Write-Host "Log contents:"
+              Get-Content -Path $logPath -Tail 100
+              Write-Host ""
+              Write-Host "Log file size: $((Get-Item $logPath).Length) bytes"
+              $foundLog = $true
+              break
+            }
+          }
+          
+          if (-not $foundLog) {
+            Write-Host "❌ Debug log not found in any of the expected locations:"
+            foreach ($logPath in $logPaths) {
+              Write-Host "  - $logPath"
+            }
             Write-Host ""
-            Write-Host "Log contents:"
-            Get-Content -Path $logPath -Tail 100
-            Write-Host ""
-            Write-Host "Log file size: $((Get-Item $logPath).Length) bytes"
-          } else {
-            Write-Host "❌ Debug log not found at: $logPath"
             Write-Host "This may indicate that no detached processes were launched"
           }
           Write-Host "=== End Single-Instance Debug Log ==="
