@@ -473,15 +473,8 @@ jobs:
             if ($env:RUNNER_OS -eq "Windows") {
               Write-Host "=== Starting Ghost Process Monitor in background ==="
               
-              # Create logs directory if it doesn't exist
-              $logsDir = "..\logs\ghost-monitor"
-              if (!(Test-Path $logsDir)) {
-                New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
-              }
-              
               $monitorJob = Start-Job -ScriptBlock {
-                param($logsDir)
-                $logFile = Join-Path $logsDir "ghost-process-monitor.log"
+                $logFile = "..\logs\ghost-process-monitor.log"
                 "Ghost Process Monitor Started at $(Get-Date)" | Out-File -FilePath $logFile
                 
                 # Check every 5 seconds
@@ -504,10 +497,10 @@ jobs:
                     "[$timestamp] Found $($msedgeProcs.Count) msedgedriver process(es)" | Out-File -FilePath $logFile -Append
                   }
                 }
-              } -ArgumentList $logsDir
+              }
               
               Write-Host "Ghost process monitor started with Job ID: $($monitorJob.Id)"
-              Write-Host "Monitor log will be saved to: $logsDir\ghost-process-monitor.log"
+              Write-Host "Monitor log will be saved to: ..\logs\ghost-process-monitor.log"
             }
             
             # Run the actual tests
@@ -521,8 +514,7 @@ jobs:
               Stop-Job -Job $monitorJob
               Remove-Job -Job $monitorJob
               
-              $logsDir = "..\logs\ghost-monitor"
-              $logFile = Join-Path $logsDir "ghost-process-monitor.log"
+              $logFile = "..\logs\ghost-process-monitor.log"
               if (Test-Path $logFile) {
                 Write-Host ""
                 Write-Host "Ghost Process Monitor Log:"
