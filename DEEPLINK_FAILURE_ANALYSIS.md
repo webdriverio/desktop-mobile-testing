@@ -571,3 +571,124 @@ Investigate how the protocol handler launches the app and whether it's bypassing
 
 ### Investigation 3: Check for Crashes Before Single-Instance Plugin
 Determine if detached processes are crashing during Tauri initialization before the single-instance plugin is reached.
+
+### Phase 9: Aggressive Logging Results & Platform Behavior Clarification
+
+**Analysis of `e2e-tauri-logs-windows-latest-21786353656-tauri-basic-deeplink`:**
+
+**Critical Discovery - Platform Behavior Differences:**
+
+| Platform | Single-Instance Mechanism | Process Behavior | Status |
+|----------|---------------------------|------------------|---------|
+| **Linux** | D-Bus | Second instance stays alive to make synchronous D-Bus call | ✅ **Works** |
+| **Windows** | Named Mutex + IPC Window | Detached process exits before single-instance plugin runs | ❌ **Broken** |
+
+**Windows-Specific Problem Identified:**
+
+**The Emergency Debug Logging Revealed:**
+- ✅ **5 emergency logs** - ALL from PID 880 (WebDriver-managed instance)
+- ❌ **0 emergency logs** from other 16 detached processes
+- ✅ **18 total PIDs** in deep-link debug log
+- ❌ **Only 2 PIDs** in single-instance debug log (2672, 880)
+
+**Root Cause Confirmed:**
+
+**Windows detached processes launched by protocol handler:**
+1. ✅ Launch via `cmd /c "set ENABLE_SINGLE_INSTANCE=true && app.exe %1"`
+2. ✅ Tauri initializes plugins (deep-link plugin runs during setup)
+3. ✅ Deep-link plugin parses deeplink and emits `deep-link://new-url` event locally
+4. ❌ **App exits BEFORE main() is called** - No emergency logs from detached processes
+5. ❌ **Single-instance plugin never runs** - No mutex detection, no WM_COPYDATA
+6. ❌ **Event lost** - Emitted to self, but app exits immediately
+
+**Why Linux Works but Windows Doesn't:**
+
+**Linux D-Bus Flow:**
+```
+Second Instance → Tauri Init → Single-Instance Plugin → D-Bus Call → Exit
+                                    ↑
+                              (Synchronous, blocks until complete)
+```
+
+**Windows Mutex Flow (Broken):**
+```
+Detached Process → Tauri Init → Deep-Link Plugin → Emit Event → Exit
+                                     ↓
+                              (Async, app exits before single-instance)
+```
+
+**The Critical Timing Issue:**
+
+On Windows, the detached process:
+- Has no window or event loop
+- Exits immediately after Tauri plugin initialization
+- Deep-link plugin emits event, but single-instance plugin hasn't run yet
+- Process terminates before forwarding deeplink to primary instance
+
+**Key Evidence:**
+```
+Deep-link log shows 18 PIDs successfully emitting events:
+[PID:552] Emit result: Ok(())
+[PID:9012] Emit result: Ok(())
+...
+
+Single-instance log shows ONLY 2 PIDs:
+[PID:2672] No existing mutex found - this is the FIRST instance
+[PID:880] ERROR_ALREADY_EXISTS - WebDriver automation detected
+
+MISSING: No "This is a second instance" logs from detached processes!
+```
+
+**Platform-Specific Language Clarification:**
+
+| Term | Windows | Linux |
+|------|---------|-------|
+| **Process Type** | "Detached process" (launched by `cmd /c`, no parent) | "Second instance" (normal child process) |
+| **Communication** | WM_COPYDATA (Windows messages) | D-Bus (system message bus) |
+| **Lifetime** | Exits immediately after plugin init | Stays alive for D-Bus call |
+| **Problem** | Exits before single-instance mechanism | Works correctly |
+
+**The Fundamental Issue:**
+
+The deep-link plugin emits events **locally** during plugin initialization, but on Windows:
+1. Detached processes have no frontend to receive the event
+2. They exit before the single-instance plugin can forward the event
+3. The primary instance never receives the deeplink
+
+**Solution Approaches:**
+
+**Option 1: Move deeplink handling to single-instance callback**
+- Remove CLI arg processing from deep-link plugin on Windows
+- Let single-instance callback handle all deeplink forwarding
+- Pros: Uses existing working mechanism
+- Cons: Changes plugin behavior
+
+**Option 2: Delay exit in deep-link plugin (Windows only)**
+- Add small delay after emitting event to allow single-instance to run
+- Pros: Simple change
+- Cons: Hacky, timing-dependent
+
+**Option 3: Have deep-link plugin use single-instance directly**
+- Check for existing instance and send WM_COPYDATA before emitting locally
+- Pros: Fixes at source
+- Cons: Duplicates single-instance logic
+
+**Option 4: Change protocol handler to not use `cmd /c`**
+- Launch app directly instead of through cmd.exe
+- Pros: May change process lifecycle
+- Cons: May break other things
+
+**Recommended Next Step:**
+Implement Option 1 - move deeplink CLI handling from deep-link plugin to single-instance callback on Windows. This ensures the single-instance mechanism (which works correctly) handles all deeplink forwarding.
+
+## Current Status (Latest)
+
+- **Build**: ✅ Builds successfully on both Windows and Linux
+- **Session creation**: ✅ Fixed (TAURI_WEBVIEW_AUTOMATION bypass + ghost termination)
+- **Deeplink delivery**: ❌ **Root cause identified** - Windows detached processes exit before single-instance plugin
+- **Linux tests**: ✅ Pass (D-Bus mechanism works correctly)
+- **Standard Windows tests**: ✅ Unaffected (don't use ENABLE_SINGLE_INSTANCE)
+- **Ghost detection**: ✅ Added CI step to detect ghost processes before cleanup
+- **Enhanced logging**: ✅ Aggressive logging revealed platform behavior differences
+- **Log analysis**: ✅ Confirmed Windows detached processes don't reach single-instance plugin
+- **Platform behavior**: ✅ Clarified Windows vs Linux differences
