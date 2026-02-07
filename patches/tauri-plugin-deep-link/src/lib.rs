@@ -20,6 +20,8 @@ fn init_deep_link<R: Runtime>(
     app: &AppHandle<R>,
     api: PluginApi<R, Option<config::Config>>,
 ) -> crate::Result<DeepLink<R>> {
+    eprintln!("[DEEP-LINK-PLUGIN] init_deep_link called");
+    
     #[cfg(target_os = "android")]
     {
         let _api = api;
@@ -72,13 +74,16 @@ fn init_deep_link<R: Runtime>(
 
     #[cfg(desktop)]
     {
+        eprintln!("[DEEP-LINK-PLUGIN] Desktop platform detected");
         let args = std::env::args();
         let deep_link = DeepLink {
             app: app.clone(),
             current: Default::default(),
             config: api.config().clone(),
         };
+        eprintln!("[DEEP-LINK-PLUGIN] Handling CLI arguments");
         deep_link.handle_cli_arguments(args);
+        eprintln!("[DEEP-LINK-PLUGIN] init_deep_link completed");
 
         Ok(deep_link)
     }
@@ -528,6 +533,7 @@ impl<R: Runtime> DeepLink<R> {
 
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
+    eprintln!("[DEEP-LINK-PLUGIN] Initializing deep-link plugin");
     Builder::new("deep-link")
         .invoke_handler(tauri::generate_handler![
             commands::get_current,
@@ -536,7 +542,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
             commands::is_registered
         ])
         .setup(|app, api| {
-            app.manage(init_deep_link(app, api)?);
+            eprintln!("[DEEP-LINK-PLUGIN] Setup starting");
+            let deep_link = init_deep_link(app, api)?;
+            eprintln!("[DEEP-LINK-PLUGIN] init_deep_link completed successfully");
+            app.manage(deep_link);
+            eprintln!("[DEEP-LINK-PLUGIN] Setup completed successfully");
             Ok(())
         })
         .on_event(|_app, _event| {
