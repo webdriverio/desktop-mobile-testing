@@ -491,6 +491,53 @@ The monitor revealed the full timeline of process creation:
 - Deeplink delivery: ⏳ Still debugging - need to check file-based logs
 - File-based logging: ✅ Implemented for detached process debugging
 
+### Phase 8: Log Analysis Results
+
+**Analysis of `e2e-tauri-logs-windows-latest-21783939424-tauri-basic-deeplink`:**
+
+**✅ What's Working:**
+1. **Protocol handler launches 18 detached processes successfully** (PIDs: 4968, 5292, 6668, 8200, etc.)
+2. **Deep-link plugin receives and parses deeplinks correctly:**
+   - `testapp://simple/` → Parsed, scheme matches, event emitted: `Ok(())`
+   - `testapp://open/file/path` → Parsed, scheme matches, event emitted: `Ok(())`
+   - All 8 deeplinks processed successfully by detached processes
+3. **Single-instance plugin initializes** for WebDriver-managed app (PID 5292)
+4. **File-based logging working** - both `deep-link-debug.log` and `single-instance-debug.log` captured
+
+**❌ What's NOT Working:**
+1. **Single-instance callback NEVER triggered** - No "SINGLE-INSTANCE CALLBACK TRIGGERED!" logs
+2. **Detached processes don't reach single-instance plugin** - Only 2 instances in single-instance log (PID 4968 and 5292)
+3. **WebDriver-managed app doesn't receive deeplink events** - Events emitted but lost
+
+**🔍 Root Cause Identified:**
+The detached processes launched by protocol handler:
+1. ✅ Launch successfully
+2. ✅ Initialize deep-link plugin
+3. ✅ Parse deeplinks and emit `deep-link://new-url` events locally
+4. ❌ **NEVER trigger single-instance callback** - No WM_COPYDATA sent
+5. ❌ **Exit immediately** - Events lost
+
+**The Critical Gap:**
+- Detached processes emit events locally (to themselves)
+- They should detect mutex → find window → send WM_COPYDATA → exit
+- **But they skip the single-instance mechanism entirely**
+- WebDriver app (PID 5292) never receives the deeplinks
+
+**Key Evidence:**
+```
+Single-instance log shows ONLY:
+- PID 4968: "No existing mutex found - this is the FIRST instance"
+- PID 5292: "ERROR_ALREADY_EXISTS... WebDriver automation detected"
+
+MISSING: No "This is a second instance" or "FindWindowW" logs from other 16 processes!
+```
+
+**Hypotheses:**
+1. Detached processes exit before reaching single-instance plugin
+2. Detached processes crash during Tauri initialization
+3. Protocol handler launches app in a way that bypasses single-instance
+4. Timing issue - mutex/window not visible to detached processes
+
 ## Files Involved
 
 - `patches/tauri-plugin-single-instance/src/platform_impl/windows.rs` — Single-instance mutex/IPC logic (main fix)
@@ -510,3 +557,17 @@ The monitor revealed the full timeline of process creation:
 - **Enhanced logging**: ✅ Added detailed WM_COPYDATA logging to diagnose message delivery
 - **Ghost process monitor**: ✅ Background monitor tracks process creation during tests
 - **File-based logging**: ✅ All logs now written to wdio logs directory for artifact collection
+- **Log analysis**: ✅ Identified that detached processes skip single-instance mechanism
+
+## Next Steps
+
+Based on Phase 8 findings, three critical investigations needed:
+
+### Investigation 1: Add Aggressive Logging to Catch Detached Process Failures
+Add logging at every step of the detached process lifecycle to identify where they're failing to reach the single-instance plugin.
+
+### Investigation 2: Check Protocol Handler Launch Method
+Investigate how the protocol handler launches the app and whether it's bypassing the normal initialization path.
+
+### Investigation 3: Check for Crashes Before Single-Instance Plugin
+Determine if detached processes are crashing during Tauri initialization before the single-instance plugin is reached.

@@ -319,11 +319,31 @@ async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    // IMMEDIATE LOG: Before anything else, log that we're starting
+    eprintln!("[EMERGENCY-DEBUG] === MAIN() ENTRY POINT ===");
+    eprintln!("[EMERGENCY-DEBUG] PID: {}", std::process::id());
+    eprintln!("[EMERGENCY-DEBUG] Args: {:?}", std::env::args().collect::<Vec<_>>());
+    eprintln!("[EMERGENCY-DEBUG] ENABLE_SINGLE_INSTANCE: {:?}", std::env::var("ENABLE_SINGLE_INSTANCE"));
+    eprintln!("[EMERGENCY-DEBUG] TAURI_WEBVIEW_AUTOMATION: {:?}", std::env::var("TAURI_WEBVIEW_AUTOMATION"));
+    
+    // Set up panic handler to catch crashes
+    std::panic::set_hook(Box::new(|info| {
+        eprintln!("[EMERGENCY-DEBUG] === PANIC OCCURRED ===");
+        eprintln!("[EMERGENCY-DEBUG] Panic info: {}", info);
+        log_deep_link(&format!("PANIC: {}", info));
+    }));
+    
     log_deep_link(&format!("=== APP STARTING ==="));
     log_deep_link(&format!("PID: {}", std::process::id()));
     log_deep_link(&format!("App starting with {} args", std::env::args().count()));
     log_deep_link(&format!("CI mode: {}", std::env::var("CI").unwrap_or_else(|_| "not set".to_string())));
     log_deep_link(&format!("Working directory: {:?}", std::env::current_dir()));
+    log_deep_link(&format!("ENABLE_SINGLE_INSTANCE env: {:?}", std::env::var("ENABLE_SINGLE_INSTANCE")));
+    log_deep_link(&format!("TAURI_WEBVIEW_AUTOMATION env: {:?}", std::env::var("TAURI_WEBVIEW_AUTOMATION")));
+    
+    // Check if we're being launched by protocol handler (cmd /c)
+    let parent_process = std::env::var("_").unwrap_or_default();
+    log_deep_link(&format!("Parent process indicator: {}", parent_process));
 
     // DEBUG: Print ALL args to diagnose deep link routing
     let all_args: Vec<String> = std::env::args().collect();
@@ -549,6 +569,7 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
     
-    log_deep_link("=== APP EXITED ===");
+    log_deep_link("=== APP EXITED NORMALLY ===");
+    eprintln!("[EMERGENCY-DEBUG] === APP EXITED NORMALLY ===");
 }
 
