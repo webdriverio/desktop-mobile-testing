@@ -16,13 +16,14 @@ use windows_sys::Win32::{
     System::{
         DataExchange::COPYDATASTRUCT,
         LibraryLoader::GetModuleHandleW,
-        Threading::{CreateMutexW, ReleaseMutex},
+        Threading::{CreateMutexW, OpenProcess, ReleaseMutex, TerminateProcess, PROCESS_TERMINATE},
     },
     UI::WindowsAndMessaging::{
         self as w32wm, CreateWindowExW, DefWindowProcW, DestroyWindow, FindWindowW,
-        RegisterClassExW, SendMessageW, CREATESTRUCTW, GWLP_USERDATA, GWL_STYLE,
-        WINDOW_LONG_PTR_INDEX, WM_COPYDATA, WM_CREATE, WM_DESTROY, WNDCLASSEXW, WS_EX_LAYERED,
-        WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED, WS_POPUP, WS_VISIBLE,
+        GetWindowThreadProcessId, RegisterClassExW, SendMessageW, CREATESTRUCTW, GWLP_USERDATA,
+        GWL_STYLE, WINDOW_LONG_PTR_INDEX, WM_COPYDATA, WM_CREATE, WM_DESTROY, WNDCLASSEXW,
+        WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPED,
+        WS_POPUP, WS_VISIBLE,
     },
 };
 
@@ -110,7 +111,34 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                     //   - WebDriver can create a session (app doesn't exit)
                     //   - Deep link triggers from protocol handlers are forwarded to us
                     eprintln!("[SINGLE-INSTANCE] WebDriver automation detected - taking over as primary instance");
-                    eprintln!("[SINGLE-INSTANCE] (stale mutex from ghost process will be superseded)");
+
+                    // Kill the ghost process that holds the stale mutex/window.
+                    // If we don't, FindWindowW from protocol-handler-launched instances
+                    // may find the ghost's IPC window instead of ours, sending deeplink
+                    // data to the wrong process.
+                    unsafe {
+                        let ghost_hwnd = FindWindowW(class_name.as_ptr(), window_name.as_ptr());
+                        if !ghost_hwnd.is_null() {
+                            let mut ghost_pid: u32 = 0;
+                            GetWindowThreadProcessId(ghost_hwnd, &mut ghost_pid);
+                            eprintln!("[SINGLE-INSTANCE] Found ghost window hwnd={:?}, pid={}", ghost_hwnd, ghost_pid);
+                            if ghost_pid != 0 && ghost_pid != std::process::id() {
+                                let hprocess = OpenProcess(PROCESS_TERMINATE, 0, ghost_pid);
+                                if !hprocess.is_null() {
+                                    eprintln!("[SINGLE-INSTANCE] Terminating ghost process pid={}", ghost_pid);
+                                    TerminateProcess(hprocess, 1);
+                                    CloseHandle(hprocess);
+                                    // Wait briefly for the ghost's window to be destroyed by the OS
+                                    std::thread::sleep(std::time::Duration::from_millis(500));
+                                } else {
+                                    eprintln!("[SINGLE-INSTANCE] Could not open ghost process pid={}", ghost_pid);
+                                }
+                            }
+                        } else {
+                            eprintln!("[SINGLE-INSTANCE] No ghost window found (ghost may have already exited)");
+                        }
+                    }
+
                     true
                 } else {
                     eprintln!("[SINGLE-INSTANCE] This is a second instance, looking for first instance window...");
