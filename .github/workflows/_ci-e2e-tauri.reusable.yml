@@ -566,6 +566,26 @@ jobs:
           Write-Host ""
           Write-Host "=== Ghost Process Check Complete ==="
 
+      # Collect single-instance debug log
+      - name: 📋 Collect Single-Instance Debug Log (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "=== Single-Instance Debug Log ==="
+          $logPath = "C:\temp\single-instance-debug.log"
+          if (Test-Path $logPath) {
+            Write-Host "Found debug log at: $logPath"
+            Write-Host ""
+            Write-Host "Log contents:"
+            Get-Content -Path $logPath -Tail 100
+            Write-Host ""
+            Write-Host "Log file size: $((Get-Item $logPath).Length) bytes"
+          } else {
+            Write-Host "❌ Debug log not found at: $logPath"
+            Write-Host "This may indicate that no detached processes were launched"
+          }
+          Write-Host "=== End Single-Instance Debug Log ==="
+
       # Cleanup processes after tests complete
       - name: 🧹 Post-Test Cleanup (Windows)
         if: always() && runner.os == 'Windows'
