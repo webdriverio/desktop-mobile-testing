@@ -397,9 +397,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Write-Host "Cleaning up any lingering tauri-driver or app processes..."
+          Write-Host "Cleaning up any lingering tauri-driver, msedgedriver, or app processes..."
           # Kill tauri-driver processes
           Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          # Kill msedgedriver processes (may hold child app processes via Job Object)
+          Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           # Kill any tauri app processes
           Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           Write-Host "Windows cleanup complete"
@@ -444,6 +446,8 @@ jobs:
           Write-Host "Cleaning up test processes..."
           # Kill tauri-driver processes
           Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          # Kill msedgedriver processes
+          Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           # Kill any tauri app processes
           Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           Write-Host "Post-test Windows cleanup complete"
