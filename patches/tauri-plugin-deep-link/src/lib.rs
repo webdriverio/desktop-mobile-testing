@@ -13,6 +13,47 @@ mod error;
 
 pub use error::{Error, Result};
 
+/// Log to both stderr and a file for debugging detached processes
+fn log_to_file(msg: &str) {
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let pid = std::process::id();
+    let log_line = format!("[{}] [PID:{}] {}\n", timestamp, pid, msg);
+
+    // Always log to stderr
+    eprintln!("{}", msg);
+
+    // Also log to file in wdio logs directory
+    let log_paths = [
+        std::path::PathBuf::from("logs"),
+        std::path::PathBuf::from("..\\logs"),
+        std::path::PathBuf::from("..\\..\\logs"),
+        std::path::PathBuf::from("C:\\temp"),
+    ];
+
+    let mut log_file = None;
+    for log_dir in &log_paths {
+        if std::fs::create_dir_all(log_dir).is_ok() {
+            let log_path = log_dir.join("deep-link-debug.log");
+            if let Ok(file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&log_path) {
+                log_file = Some(file);
+                break;
+            }
+        }
+    }
+
+    if let Some(mut file) = log_file {
+        use std::io::Write;
+        let _ = file.write_all(log_line.as_bytes());
+        let _ = file.flush();
+    }
+}
+
 #[cfg(target_os = "android")]
 const PLUGIN_IDENTIFIER: &str = "app.tauri.deep_link";
 
@@ -20,7 +61,7 @@ fn init_deep_link<R: Runtime>(
     app: &AppHandle<R>,
     api: PluginApi<R, Option<config::Config>>,
 ) -> crate::Result<DeepLink<R>> {
-    eprintln!("[DEEP-LINK-PLUGIN] init_deep_link called");
+    log_to_file("[DEEP-LINK-PLUGIN] init_deep_link called");
     
     #[cfg(target_os = "android")]
     {
@@ -74,16 +115,16 @@ fn init_deep_link<R: Runtime>(
 
     #[cfg(desktop)]
     {
-        eprintln!("[DEEP-LINK-PLUGIN] Desktop platform detected");
+        log_to_file("[DEEP-LINK-PLUGIN] Desktop platform detected");
         let args = std::env::args();
         let deep_link = DeepLink {
             app: app.clone(),
             current: Default::default(),
             config: api.config().clone(),
         };
-        eprintln!("[DEEP-LINK-PLUGIN] Handling CLI arguments");
+        log_to_file("[DEEP-LINK-PLUGIN] Handling CLI arguments");
         deep_link.handle_cli_arguments(args);
-        eprintln!("[DEEP-LINK-PLUGIN] init_deep_link completed");
+        log_to_file("[DEEP-LINK-PLUGIN] init_deep_link completed");
 
         Ok(deep_link)
     }
@@ -166,6 +207,7 @@ mod imp {
 
 #[cfg(not(target_os = "android"))]
 mod imp {
+    use crate::log_to_file;
     use std::sync::Mutex;
     #[cfg(target_os = "linux")]
     use std::{
@@ -201,29 +243,56 @@ mod imp {
         pub fn handle_cli_arguments<S: AsRef<str>, I: Iterator<Item = S>>(&self, mut args: I) {
             use tauri::Emitter;
 
+            log_to_file("[DEEP-LINK-PLUGIN] handle_cli_arguments called");
+
             let Some(config) = &self.config else {
+                log_to_file("[DEEP-LINK-PLUGIN] No config found, returning");
                 return;
             };
 
+            log_to_file("[DEEP-LINK-PLUGIN] Config found, checking platform");
+
             if cfg!(windows) || cfg!(target_os = "linux") {
-                args.next(); // bin name
+                log_to_file("[DEEP-LINK-PLUGIN] Processing arguments for Windows/Linux");
+                
+                let bin_name = args.next(); // bin name
+                let bin_name_str = bin_name.map(|s| s.as_ref().to_string()).unwrap_or_default();
+                log_to_file(&format!("[DEEP-LINK-PLUGIN] Binary name: {}", bin_name_str));
+                
                 let arg = args.next();
+                let arg_str = arg.as_ref().map(|s| s.as_ref().to_string()).unwrap_or_default();
+                log_to_file(&format!("[DEEP-LINK-PLUGIN] First argument: {}", arg_str));
 
                 let maybe_deep_link = args.next().is_none(); // single argument
+                log_to_file(&format!("[DEEP-LINK-PLUGIN] Is single argument (maybe deep link): {}", maybe_deep_link));
+
                 if !maybe_deep_link {
+                    log_to_file("[DEEP-LINK-PLUGIN] Not a single argument, returning");
                     return;
                 }
 
                 if let Some(url) = arg.and_then(|arg| arg.as_ref().parse::<url::Url>().ok()) {
+                    log_to_file(&format!("[DEEP-LINK-PLUGIN] Parsed URL: {}", url));
+                    log_to_file(&format!("[DEEP-LINK-PLUGIN] URL scheme: {}", url.scheme()));
+                    
                     if config.desktop.contains_scheme(&url.scheme().to_string()) {
+                        log_to_file("[DEEP-LINK-PLUGIN] Scheme matches config! Emitting deep-link://new-url event");
                         let mut current = self.current.lock().unwrap();
                         current.replace(vec![url.clone()]);
-                        let _ = self.app.emit("deep-link://new-url", vec![url]);
+                        let emit_result = self.app.emit("deep-link://new-url", vec![url.clone()]);
+                        log_to_file(&format!("[DEEP-LINK-PLUGIN] Emit result: {:?}", emit_result));
                     } else if cfg!(debug_assertions) {
+                        log_to_file(&format!("[DEEP-LINK-PLUGIN] Scheme '{}' does not match any configured scheme", url.scheme()));
                         tracing::warn!("argument {url} does not match any configured deep link scheme; skipping it");
                     }
+                } else {
+                    log_to_file("[DEEP-LINK-PLUGIN] Could not parse argument as URL");
                 }
+            } else {
+                log_to_file("[DEEP-LINK-PLUGIN] Not Windows/Linux, skipping CLI argument processing");
             }
+            
+            log_to_file("[DEEP-LINK-PLUGIN] handle_cli_arguments completed");
         }
 
         /// Get the current URLs that triggered the deep link. Use this on app load to check whether your app was started via a deep link.
@@ -533,7 +602,7 @@ impl<R: Runtime> DeepLink<R> {
 
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
-    eprintln!("[DEEP-LINK-PLUGIN] Initializing deep-link plugin");
+    log_to_file("[DEEP-LINK-PLUGIN] Initializing deep-link plugin");
     Builder::new("deep-link")
         .invoke_handler(tauri::generate_handler![
             commands::get_current,
@@ -542,11 +611,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R, Option<config::Config>> {
             commands::is_registered
         ])
         .setup(|app, api| {
-            eprintln!("[DEEP-LINK-PLUGIN] Setup starting");
+            log_to_file("[DEEP-LINK-PLUGIN] Setup starting");
             let deep_link = init_deep_link(app, api)?;
-            eprintln!("[DEEP-LINK-PLUGIN] init_deep_link completed successfully");
+            log_to_file("[DEEP-LINK-PLUGIN] init_deep_link completed successfully");
             app.manage(deep_link);
-            eprintln!("[DEEP-LINK-PLUGIN] Setup completed successfully");
+            log_to_file("[DEEP-LINK-PLUGIN] Setup completed successfully");
             Ok(())
         })
         .on_event(|_app, _event| {
