@@ -530,8 +530,12 @@ jobs:
           Write-Host "=== Checking for Ghost Processes ==="
           Write-Host ""
           Write-Host "Running tasklist to find tauri-e2e-app processes..."
-          tasklist | findstr tauri-e2e-app
-          if ($LASTEXITCODE -eq 0) {
+          $null = tasklist | findstr tauri-e2e-app
+          # Reset exit code so it doesn't fail the step
+          $global:LASTEXITCODE = 0
+          
+          $tauriProcs = Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue
+          if ($tauriProcs) {
             Write-Host ""
             Write-Host "⚠️  WARNING: Found tauri-e2e-app processes still running!"
             Write-Host ""
@@ -539,7 +543,7 @@ jobs:
             tasklist /FI "IMAGENAME eq tauri-e2e-app.exe" /V
             Write-Host ""
             Write-Host "Parent process tree:"
-            Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | ForEach-Object {
+            $tauriProcs | ForEach-Object {
               $proc = $_
               Write-Host "PID: $($proc.Id), Parent PID: $($proc.Parent.Id), StartTime: $($proc.StartTime)"
             }
@@ -548,8 +552,12 @@ jobs:
           }
           Write-Host ""
           Write-Host "Also checking for msedgedriver processes..."
-          tasklist | findstr msedgedriver
-          if ($LASTEXITCODE -eq 0) {
+          $null = tasklist | findstr msedgedriver
+          # Reset exit code so it doesn't fail the step
+          $global:LASTEXITCODE = 0
+          
+          $msedgeProcs = Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue
+          if ($msedgeProcs) {
             Write-Host "⚠️  WARNING: Found msedgedriver processes still running!"
             tasklist /FI "IMAGENAME eq msedgedriver.exe" /V
           } else {
