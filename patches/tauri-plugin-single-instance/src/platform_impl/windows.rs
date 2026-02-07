@@ -105,19 +105,19 @@ fn is_webview2_child_process() -> bool {
 pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin<R> {
     // Log immediately on init - this should appear for ALL instances including second instances
     let args: Vec<String> = std::env::args().collect();
-    log_to_file("[SINGLE-INSTANCE] ===============================================");
-    log_to_file("[SINGLE-INSTANCE] SINGLE-INSTANCE PLUGIN INITIALIZING");
-    log_to_file("[SINGLE-INSTANCE] PID: {}", std::process::id());
-    log_to_file("[SINGLE-INSTANCE] Args: {:?}", args);
+    log_to_file(&format!("[SINGLE-INSTANCE] ==============================================="));
+    log_to_file(&format!("[SINGLE-INSTANCE] SINGLE-INSTANCE PLUGIN INITIALIZING"));
+    log_to_file(&format!("[SINGLE-INSTANCE] PID: {}", std::process::id()));
+    log_to_file(&format!("[SINGLE-INSTANCE] Args: {:?}", args));
     eprintln!(
         "[SINGLE-INSTANCE] TAURI_WEBVIEW_AUTOMATION: {:?}",
         std::env::var("TAURI_WEBVIEW_AUTOMATION")
     );
-    log_to_file("[SINGLE-INSTANCE] ===============================================");
+    log_to_file(&format!("[SINGLE-INSTANCE] ==============================================="));
 
     plugin::Builder::new("single-instance")
         .setup(|app, _api| {
-            log_to_file("[SINGLE-INSTANCE] Plugin setup starting");
+            log_to_file(&format!("[SINGLE-INSTANCE] Plugin setup starting"));
 
             #[allow(unused_mut)]
             let mut id = app.config().identifier.clone();
@@ -131,9 +131,9 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
             let window_name = encode_wide(format!("{id}-siw"));
             let mutex_name = encode_wide(format!("{id}-sim"));
 
-            log_to_file("[SINGLE-INSTANCE] Mutex name: {id}-sim");
-            log_to_file("[SINGLE-INSTANCE] Window name: {id}-siw");
-            log_to_file("[SINGLE-INSTANCE] Class name: {id}-sic");
+            log_to_file(&format!("[SINGLE-INSTANCE] Mutex name: {id}-sim"));
+            log_to_file(&format!("[SINGLE-INSTANCE] Window name: {id}-siw"));
+            log_to_file(&format!("[SINGLE-INSTANCE] Class name: {id}-sic"));
 
             let hmutex =
                 unsafe { CreateMutexW(std::ptr::null(), true.into(), mutex_name.as_ptr()) };
@@ -151,10 +151,10 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
             //      (the existing mutex is from a stale/ghost process; WebDriver manages lifecycle)
             //   3. Normal second instance → forward data to primary and exit
             let become_primary = if last_error == ERROR_ALREADY_EXISTS {
-                log_to_file("[SINGLE-INSTANCE] ERROR_ALREADY_EXISTS - another instance is running");
+                log_to_file(&format!("[SINGLE-INSTANCE] ERROR_ALREADY_EXISTS - another instance is running"));
 
                 if is_webview2_child_process() {
-                    log_to_file("[SINGLE-INSTANCE] WebView2 child process detected, allowing to continue");
+                    log_to_file(&format!("[SINGLE-INSTANCE] WebView2 child process detected, allowing to continue"));
                     unsafe { CloseHandle(hmutex) };
                     return Ok(());
                 }
@@ -165,7 +165,7 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                     // fully terminate. We must become the primary instance so that:
                     //   - WebDriver can create a session (app doesn't exit)
                     //   - Deep link triggers from protocol handlers are forwarded to us
-                    log_to_file("[SINGLE-INSTANCE] WebDriver automation detected - taking over as primary instance");
+                    log_to_file(&format!("[SINGLE-INSTANCE] WebDriver automation detected - taking over as primary instance"));
 
                     // Kill the ghost process that holds the stale mutex/window.
                     // If we don't, FindWindowW from protocol-handler-launched instances
@@ -176,35 +176,35 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                         if !ghost_hwnd.is_null() {
                             let mut ghost_pid: u32 = 0;
                             GetWindowThreadProcessId(ghost_hwnd, &mut ghost_pid);
-                            log_to_file("[SINGLE-INSTANCE] Found ghost window hwnd={:?}, pid={}", ghost_hwnd, ghost_pid);
+                            log_to_file(&format!("[SINGLE-INSTANCE] Found ghost window hwnd={:?}, pid={}", ghost_hwnd, ghost_pid));
                             if ghost_pid != 0 && ghost_pid != std::process::id() {
                                 let hprocess = OpenProcess(PROCESS_TERMINATE, 0, ghost_pid);
                                 if !hprocess.is_null() {
-                                    log_to_file("[SINGLE-INSTANCE] Terminating ghost process pid={}", ghost_pid);
+                                    log_to_file(&format!("[SINGLE-INSTANCE] Terminating ghost process pid={}", ghost_pid));
                                     TerminateProcess(hprocess, 1);
                                     CloseHandle(hprocess);
                                     // Wait briefly for the ghost's window to be destroyed by the OS
                                     std::thread::sleep(std::time::Duration::from_millis(500));
                                 } else {
-                                    log_to_file("[SINGLE-INSTANCE] Could not open ghost process pid={}", ghost_pid);
+                                    log_to_file(&format!("[SINGLE-INSTANCE] Could not open ghost process pid={}", ghost_pid));
                                 }
                             }
                         } else {
-                            log_to_file("[SINGLE-INSTANCE] No ghost window found (ghost may have already exited)");
+                            log_to_file(&format!("[SINGLE-INSTANCE] No ghost window found (ghost may have already exited)"));
                         }
                     }
 
                     true
                 } else {
-                    log_to_file("[SINGLE-INSTANCE] This is a second instance, looking for first instance window...");
+                    log_to_file(&format!("[SINGLE-INSTANCE] This is a second instance, looking for first instance window..."));
 
                     unsafe {
                         let hwnd = FindWindowW(class_name.as_ptr(), window_name.as_ptr());
 
-                        log_to_file("[SINGLE-INSTANCE] FindWindowW returned hwnd={:?}", hwnd);
+                        log_to_file(&format!("[SINGLE-INSTANCE] FindWindowW returned hwnd={:?}", hwnd));
 
                         if !hwnd.is_null() {
-                            log_to_file("[SINGLE-INSTANCE] Found first instance window, sending data...");
+                            log_to_file(&format!("[SINGLE-INSTANCE] Found first instance window, sending data..."));
                             let cwd = std::env::current_dir().unwrap_or_default();
                             let cwd = cwd.to_str().unwrap_or_default();
 
@@ -219,32 +219,32 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                                 lpData: bytes.as_ptr() as _,
                             };
 
-                            log_to_file("[SINGLE-INSTANCE] Calling SendMessageW with WM_COPYDATA...");
-                            log_to_file("[SINGLE-INSTANCE] Target hwnd: {:?}", hwnd);
-                            log_to_file("[SINGLE-INSTANCE] Data being sent: {}", data);
+                            log_to_file(&format!("[SINGLE-INSTANCE] Calling SendMessageW with WM_COPYDATA..."));
+                            log_to_file(&format!("[SINGLE-INSTANCE] Target hwnd: {:?}", hwnd));
+                            log_to_file(&format!("[SINGLE-INSTANCE] Data being sent: {}", data));
                             let result = SendMessageW(hwnd, WM_COPYDATA, 0, &cds as *const _ as _);
-                            log_to_file("[SINGLE-INSTANCE] SendMessageW returned: {}", result);
+                            log_to_file(&format!("[SINGLE-INSTANCE] SendMessageW returned: {}", result));
                             if result == 0 {
-                                log_to_file("[SINGLE-INSTANCE] WARNING: SendMessageW returned 0, message may not have been processed");
+                                log_to_file(&format!("[SINGLE-INSTANCE] WARNING: SendMessageW returned 0, message may not have been processed"));
                             } else {
-                                log_to_file("[SINGLE-INSTANCE] SendMessageW succeeded, data sent to first instance");
+                                log_to_file(&format!("[SINGLE-INSTANCE] SendMessageW succeeded, data sent to first instance"));
                             }
-                            log_to_file("[SINGLE-INSTANCE] Exiting second instance...");
+                            log_to_file(&format!("[SINGLE-INSTANCE] Exiting second instance..."));
 
                             app.cleanup_before_exit();
                             std::process::exit(0);
                         } else {
-                            log_to_file("[SINGLE-INSTANCE] ERROR: FindWindowW returned NULL - could not find first instance window!");
-                            log_to_file("[SINGLE-INSTANCE] Window class: {:?}", class_name);
-                            log_to_file("[SINGLE-INSTANCE] Window name: {:?}", window_name);
-                            log_to_file("[SINGLE-INSTANCE] Last error: {:?}", unsafe { GetLastError() });
+                            log_to_file(&format!("[SINGLE-INSTANCE] ERROR: FindWindowW returned NULL - could not find first instance window!"));
+                            log_to_file(&format!("[SINGLE-INSTANCE] Window class: {:?}", class_name));
+                            log_to_file(&format!("[SINGLE-INSTANCE] Window name: {:?}", window_name));
+                            log_to_file(&format!("[SINGLE-INSTANCE] Last error: {:?}", unsafe { GetLastError()) });
                         }
                     }
                     // Window not found - fall through to become primary
                     true
                 }
             } else {
-                log_to_file("[SINGLE-INSTANCE] No existing mutex found - this is the FIRST instance");
+                log_to_file(&format!("[SINGLE-INSTANCE] No existing mutex found - this is the FIRST instance"));
                 true
             };
 
@@ -257,12 +257,12 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
                 };
                 let userdata = Box::into_raw(Box::new(userdata));
                 let hwnd = create_event_target_window::<R>(&class_name, &window_name, userdata);
-                log_to_file("[SINGLE-INSTANCE] Event target window created: hwnd={:?}", hwnd);
+                log_to_file(&format!("[SINGLE-INSTANCE] Event target window created: hwnd={:?}", hwnd));
                 app.manage(TargetWindowHandle(hwnd as _));
-                log_to_file("[SINGLE-INSTANCE] Primary instance setup complete - mutex and window created");
+                log_to_file(&format!("[SINGLE-INSTANCE] Primary instance setup complete - mutex and window created"));
             }
 
-            log_to_file("[SINGLE-INSTANCE] Plugin setup completed successfully");
+            log_to_file(&format!("[SINGLE-INSTANCE] Plugin setup completed successfully"));
             Ok(())
         })
         .on_event(|app, event| {
@@ -274,23 +274,23 @@ pub fn init<R: Runtime>(callback: Box<SingleInstanceCallback<R>>) -> TauriPlugin
 }
 
 pub fn destroy<R: Runtime, M: Manager<R>>(manager: &M) {
-    log_to_file("[SINGLE-INSTANCE] Destroy called - cleaning up mutex and window");
+    log_to_file(&format!("[SINGLE-INSTANCE] Destroy called - cleaning up mutex and window"));
     if let Some(hmutex) = manager.try_state::<MutexHandle>() {
-        log_to_file("[SINGLE-INSTANCE] Releasing mutex");
+        log_to_file(&format!("[SINGLE-INSTANCE] Releasing mutex"));
         unsafe {
             ReleaseMutex(hmutex.0 as _);
             CloseHandle(hmutex.0 as _);
         }
-        log_to_file("[SINGLE-INSTANCE] Mutex released and handle closed");
+        log_to_file(&format!("[SINGLE-INSTANCE] Mutex released and handle closed"));
     } else {
-        log_to_file("[SINGLE-INSTANCE] No mutex found to release");
+        log_to_file(&format!("[SINGLE-INSTANCE] No mutex found to release"));
     }
     if let Some(hwnd) = manager.try_state::<TargetWindowHandle>() {
-        log_to_file("[SINGLE-INSTANCE] Destroying event target window");
+        log_to_file(&format!("[SINGLE-INSTANCE] Destroying event target window"));
         unsafe { DestroyWindow(hwnd.0 as _) };
-        log_to_file("[SINGLE-INSTANCE] Event target window destroyed");
+        log_to_file(&format!("[SINGLE-INSTANCE] Event target window destroyed"));
     } else {
-        log_to_file("[SINGLE-INSTANCE] No event target window found to destroy");
+        log_to_file(&format!("[SINGLE-INSTANCE] No event target window found to destroy"));
     }
 }
 
@@ -309,7 +309,7 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
         }
 
         WM_COPYDATA => {
-            log_to_file("[SINGLE-INSTANCE] WM_COPYDATA received!");
+            log_to_file(&format!("[SINGLE-INSTANCE] WM_COPYDATA received!"));
             let cds_ptr = lparam as *const COPYDATASTRUCT;
             eprintln!(
                 "[SINGLE-INSTANCE] COPYDATASTRUCT dwData: {}",
@@ -320,20 +320,20 @@ unsafe extern "system" fn single_instance_window_proc<R: Runtime>(
                 WMCOPYDATA_SINGLE_INSTANCE_DATA
             );
             if (*cds_ptr).dwData == WMCOPYDATA_SINGLE_INSTANCE_DATA {
-                log_to_file("[SINGLE-INSTANCE] Data matches! Processing...");
+                log_to_file(&format!("[SINGLE-INSTANCE] Data matches! Processing..."));
                 let userdata = UserData::<R>::from_hwnd(hwnd);
 
                 let data = CStr::from_ptr((*cds_ptr).lpData as _).to_string_lossy();
-                log_to_file("[SINGLE-INSTANCE] Raw data received: {}", data);
+                log_to_file(&format!("[SINGLE-INSTANCE] Raw data received: {}", data));
                 let mut s = data.split('|');
                 let cwd = s.next().unwrap();
                 let args: Vec<String> = s.map(|s| s.to_string()).collect();
-                log_to_file("[SINGLE-INSTANCE] Parsed - CWD: {}, Args: {:?}", cwd, args);
+                log_to_file(&format!("[SINGLE-INSTANCE] Parsed - CWD: {}, Args: {:?}", cwd, args));
 
                 userdata.run_callback(args, cwd.to_string());
-                log_to_file("[SINGLE-INSTANCE] Callback executed successfully");
+                log_to_file(&format!("[SINGLE-INSTANCE] Callback executed successfully"));
             } else {
-                log_to_file("[SINGLE-INSTANCE] Data does not match expected dwData - ignoring");
+                log_to_file(&format!("[SINGLE-INSTANCE] Data does not match expected dwData - ignoring"));
             }
             1
         }
