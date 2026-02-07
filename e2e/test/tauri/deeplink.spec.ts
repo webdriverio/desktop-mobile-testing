@@ -26,7 +26,8 @@ describe('Deeplink Testing (browser.tauri.triggerDeeplink)', () => {
       await waitForDeeplink(1, 'App did not receive the deeplink within 5 seconds');
 
       const deeplinks = await browser.tauri.execute(() => globalThis.receivedDeeplinks);
-      expect(deeplinks).toContain('testapp://simple');
+      // Windows URL normalization may add trailing slash (testapp://simple → testapp://simple/)
+      expect(deeplinks[0]).toMatch(/^testapp:\/\/simple\/?$/);
     });
 
     it('should handle deeplinks with paths', async () => {
@@ -109,7 +110,8 @@ describe('Deeplink Testing (browser.tauri.triggerDeeplink)', () => {
       await waitForDeeplink(1, 'App did not receive minimal deeplink');
 
       const deeplinks = await browser.tauri.execute(() => globalThis.receivedDeeplinks);
-      expect(deeplinks).toContain('testapp://');
+      // Windows URL normalization may add trailing slash (testapp:// → testapp:///)
+      expect(deeplinks[0]).toMatch(/^testapp:\/\/\/?$/);
     });
 
     it('should handle URLs with empty parameter values', async () => {
