@@ -49,7 +49,7 @@ fn log_to_file(msg: &str) {
         std::path::PathBuf::from("..\\..\\logs"),
         std::path::PathBuf::from("C:\\temp"),
     ];
-    
+
     let mut log_file = None;
     for log_dir in &log_paths {
         if std::fs::create_dir_all(log_dir).is_ok() {
@@ -57,7 +57,8 @@ fn log_to_file(msg: &str) {
             if let Ok(file) = std::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open(&log_path) {
+                .open(&log_path)
+            {
                 log_file = Some(file);
                 break;
             }
@@ -69,7 +70,6 @@ fn log_to_file(msg: &str) {
         let _ = file.write_all(log_line.as_bytes());
         let _ = file.flush();
     }
-}
 }
 
 struct MutexHandle(isize);
