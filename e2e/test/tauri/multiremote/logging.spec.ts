@@ -1,8 +1,8 @@
-import { expect, multiremotebrowser } from '@wdio/globals';
+import { expect, multiRemoteBrowser } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
 import url from 'node:url';
-import { assertLogContains, findLogEntries, readWdioLogs } from '../helpers/logging.js';
+import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -12,7 +12,7 @@ function getMultiremoteLogDir() {
 
 describe('Tauri Log Integration - Multiremote', () => {
   it('should capture backend logs per instance with instance ID', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -22,12 +22,15 @@ describe('Tauri Log Integration - Multiremote', () => {
       browserB.tauri.execute(({ core }) => core.invoke('generate_test_logs')),
     ]);
 
-    // Wait longer for logs to be captured and written
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for logs to be captured
+    const logDir = getMultiremoteLogDir();
+    const logsCaptured = await waitForLog(logDir, /\[Tauri:Backend:(browserA|browserB)\].*INFO level log/i, 10000);
+    if (!logsCaptured) {
+      throw new Error('Backend logs not captured within timeout');
+    }
 
     // Verify logs were captured with correct prefixes and instance IDs
     // For multiremote tests, logs go to logs/multiremote-tauri/
-    const logDir = getMultiremoteLogDir();
     console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
     const logs = readWdioLogs(logDir);
 
@@ -48,7 +51,7 @@ describe('Tauri Log Integration - Multiremote', () => {
   });
 
   it('should capture frontend logs per instance', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -66,10 +69,14 @@ describe('Tauri Log Integration - Multiremote', () => {
     ]);
 
     // Wait for logs to be captured
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const logDir = getMultiremoteLogDir();
+    const logsCaptured = await waitForLog(logDir, markerA, 10000);
+    if (!logsCaptured) {
+      throw new Error('Frontend logs not captured within timeout');
+    }
 
     // Verify frontend logs were captured (without instance ID prefix for now)
-    const logDir = getMultiremoteLogDir();
+    console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
     const logs = readWdioLogs(logDir);
 
     if (!logs) {
@@ -84,7 +91,7 @@ describe('Tauri Log Integration - Multiremote', () => {
   });
 
   it('should capture logs independently per instance', async () => {
-    const multi = multiremotebrowser as unknown as WebdriverIO.MultiRemoteBrowser;
+    const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
 
@@ -97,10 +104,13 @@ describe('Tauri Log Integration - Multiremote', () => {
     ]);
 
     // Wait for logs to be captured
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    const logDir = getMultiremoteLogDir();
+    const logsCaptured = await waitForLog(logDir, /\[Tauri:Backend:browserA\]/, 10000);
+    if (!logsCaptured) {
+      throw new Error('Logs not captured within timeout');
+    }
 
     // Verify both types of logs are captured
-    const logDir = getMultiremoteLogDir();
     const logs = readWdioLogs(logDir);
 
     if (!logs) {

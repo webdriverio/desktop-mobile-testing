@@ -1,6 +1,6 @@
 import type { OfficialArch } from '@electron/packager';
 import type { ForgeConfig as ElectronForgeConfig } from '@electron-forge/shared-types';
-import type { Mock, fn as vitestFn } from '@vitest/spy';
+import type { Mock, fn as vitestFn } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { ArchType } from 'builder-util';
 import type * as Electron from 'electron';
@@ -70,6 +70,37 @@ export interface ElectronServiceAPI {
    * Checks that a given parameter is an Electron mock function. If you are using TypeScript, it will also narrow down its type.
    */
   isMockFunction: (fn: unknown) => fn is ElectronMockInstance;
+  /**
+   * Trigger a deeplink to the Electron application for testing protocol handlers.
+   *
+   * On Windows, this automatically appends the test instance's user-data-dir to ensure
+   * the deeplink reaches the correct instance. On macOS and Linux, it works transparently.
+   *
+   * The app must implement protocol handler registration via `app.setAsDefaultProtocolClient()`
+   * and single instance lock via `app.requestSingleInstanceLock()`. On Windows, the app must
+   * also parse the userData query parameter and call `app.setPath('userData', userDataDir)`
+   * early in startup.
+   *
+   * @param url - The deeplink URL to trigger (e.g., 'myapp://test')
+   * @returns a Promise that resolves when the deeplink has been triggered
+   * @throws Error if appBinaryPath is not configured (Windows only)
+   * @throws Error if the URL is invalid or uses http/https/file protocols
+   *
+   * @example
+   * ```ts
+   * // Trigger a simple deeplink
+   * await browser.electron.triggerDeeplink('myapp://open?path=/test');
+   *
+   * // Wait for app to process the deeplink
+   * await browser.waitUntil(async () => {
+   *   const openedPath = await browser.electron.execute(() => {
+   *     return globalThis.lastOpenedPath;
+   *   });
+   *   return openedPath === '/test';
+   * });
+   * ```
+   */
+  triggerDeeplink: (url: string) => Promise<void>;
 }
 
 /**
@@ -103,11 +134,58 @@ export interface ElectronServiceOptions {
    * Calls .mockRestore() on all mocked APIs before each test. This will restore the original API function, the mock will be removed.
    */
   restoreMocks?: boolean;
+  /**
+   * Enable capture of main process console logs via CDP
+   * @default false
+   */
+  captureMainProcessLogs?: boolean;
+  /**
+   * Enable capture of renderer process console logs via CDP
+   * @default false
+   */
+  captureRendererLogs?: boolean;
+  /**
+   * Minimum log level for main process logs
+   * @default 'info'
+   */
+  mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Minimum log level for renderer process logs
+   * @default 'info'
+   */
+  rendererLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Directory for standalone mode logs (when WDIO runner not available)
+   * @default './logs'
+   */
+  logDir?: string;
+  /**
+   * Auto-install AppArmor profiles on Linux systems that require them
+   * @default false
+   */
+  apparmorAutoInstall?: boolean | 'sudo';
+  /**
+   * Path to a custom electron-builder configuration file (relative to project root).
+   * Useful when you have multiple configs (e.g., staging, production) that extend
+   * a common base config.
+   * @example 'config/electron-builder-staging.config.js'
+   */
+  electronBuilderConfig?: string;
 }
 
 export type ElectronServiceGlobalOptions = Pick<
   ElectronServiceOptions,
-  'clearMocks' | 'resetMocks' | 'restoreMocks'
+  | 'clearMocks'
+  | 'resetMocks'
+  | 'restoreMocks'
+  | 'captureMainProcessLogs'
+  | 'captureRendererLogs'
+  | 'mainProcessLogLevel'
+  | 'rendererLogLevel'
+  | 'logDir'
+  | 'appBinaryPath'
+  | 'appEntryPoint'
+  | 'electronBuilderConfig'
 > & {
   rootDir?: string;
   /**
@@ -140,6 +218,7 @@ export type ElectronType = typeof Electron;
 export type ElectronInterface = keyof ElectronType;
 
 export type BuilderConfig = {
+  extends?: string | string[] | null;
   productName?: string;
   directories?: { output?: string };
   executableName?: string;
@@ -240,40 +319,59 @@ interface ElectronMockContext extends MockContext {
 }
 
 export interface ElectronMockInstance extends Omit<Mock, MockOverride> {
-  mockImplementation(fn: AbstractFn): Promise<ElectronMock>;
-  mockImplementationOnce(fn: AbstractFn): Promise<ElectronMock>;
-  mockReturnValue(obj: unknown): Promise<ElectronMock>;
-  mockReturnValueOnce(obj: unknown): Promise<ElectronMock>;
-  mockResolvedValue(obj: unknown): Promise<ElectronMock>;
-  mockResolvedValueOnce(obj: unknown): Promise<ElectronMock>;
-  mockRejectedValue(obj: unknown): Promise<ElectronMock>;
-  mockRejectedValueOnce(obj: unknown): Promise<ElectronMock>;
-  mockClear(): Promise<ElectronMock>;
-  mockReset(): Promise<ElectronMock>;
-  mockRestore(): Promise<ElectronMock>;
+  mockImplementation(fn: AbstractFn): Promise<ElectronFunctionMock>;
+  mockImplementationOnce(fn: AbstractFn): Promise<ElectronFunctionMock>;
+  mockReturnValue(obj: unknown): Promise<ElectronFunctionMock>;
+  mockReturnValueOnce(obj: unknown): Promise<ElectronFunctionMock>;
+  mockResolvedValue(obj: unknown): Promise<ElectronFunctionMock>;
+  mockResolvedValueOnce(obj: unknown): Promise<ElectronFunctionMock>;
+  mockRejectedValue(obj: unknown): Promise<ElectronFunctionMock>;
+  mockRejectedValueOnce(obj: unknown): Promise<ElectronFunctionMock>;
+  mockClear(): Promise<ElectronFunctionMock>;
+  mockReset(): Promise<ElectronFunctionMock>;
+  mockRestore(): Promise<ElectronFunctionMock>;
   mockReturnThis(): Promise<unknown>;
   withImplementation<ReturnValue, InnerArguments extends unknown[]>(
     implFn: AbstractFn,
     callbackFn: (electron: typeof Electron, ...innerArgs: InnerArguments) => ReturnValue,
   ): Promise<unknown>;
-  mockName(name: string): ElectronMock;
+  mockName(name: string): ElectronFunctionMock;
   getMockName(): string;
   getMockImplementation(): AbstractFn;
-  update(): Promise<ElectronMock>;
+  update(): Promise<ElectronFunctionMock>;
   mock: ElectronMockContext;
   __isElectronMock: boolean;
 }
 
-export interface ElectronMock<TArgs extends unknown[] = unknown[], TReturns = unknown> extends ElectronMockInstance {
+/**
+ * Type for class mock - an object with all instance methods as ElectronFunctionMock
+ * and a __constructor mock for tracking instantiation calls.
+ */
+export interface ElectronClassMock {
+  __constructor: ElectronFunctionMock;
+  mockRestore: () => Promise<void>;
+  getMockName: () => string;
+  [methodName: string]: ElectronFunctionMock | (() => Promise<void>) | (() => string);
+}
+
+export interface ElectronFunctionMock<TArgs extends unknown[] = unknown[], TReturns = unknown>
+  extends ElectronMockInstance {
   new (...args: TArgs): TReturns;
   (...args: TArgs): TReturns;
 }
+
+// Union type for any Electron mock (function or class)
+export type ElectronMock = ElectronFunctionMock | ElectronClassMock;
 
 type ElectronServiceCustomCapability = {
   /**
    * custom capabilities to configure the Electron service
    */
   'wdio:electronServiceOptions'?: ElectronServiceOptions;
+  /**
+   * Chromium version for chromedriver fallback sources (automatically set by service)
+   */
+  'wdio:chromiumVersion'?: string;
 };
 
 type ElectronServiceRequestedStandaloneCapabilities = Capabilities.RequestedStandaloneCapabilities &
@@ -286,7 +384,7 @@ export type ElectronServiceCapabilities =
   | ElectronServiceRequestedMultiremoteCapabilities
   | ElectronServiceRequestedMultiremoteCapabilities[];
 
-export type WdioElectronConfig = Options.Testrunner & {
+export type WdioElectronConfig = Omit<Options.Testrunner, 'capabilities'> & {
   capabilities: ElectronServiceCapabilities | ElectronServiceCapabilities[];
 };
 
@@ -299,10 +397,12 @@ export interface ElectronBrowserExtension extends BrowserBase {
    *
    * - {@link ElectronServiceAPI.clearAllMocks `browser.electron.clearAllMocks`} - Clear the Electron API mock functions
    * - {@link ElectronServiceAPI.execute `browser.electron.execute`} - Execute code in the Electron main process context
+   * - {@link ElectronServiceAPI.isMockFunction `browser.electron.isMockFunction`} - Check if a function is an Electron mock
    * - {@link ElectronServiceAPI.mock `browser.electron.mock`} - Mock a function from the Electron API, e.g. `dialog.showOpenDialog`
    * - {@link ElectronServiceAPI.mockAll `browser.electron.mockAll`} - Mock an entire API object of the Electron API, e.g. `app` or `dialog`
    * - {@link ElectronServiceAPI.resetAllMocks `browser.electron.resetAllMocks`} - Reset the Electron API mock functions
    * - {@link ElectronServiceAPI.restoreAllMocks `browser.electron.restoreAllMocks`} - Restore the original Electron API functionality
+   * - {@link ElectronServiceAPI.triggerDeeplink `browser.electron.triggerDeeplink`} - Trigger a deeplink to test protocol handlers
    * - {@link ElectronServiceAPI.windowHandle `browser.electron.windowHandle`} - Get the current window handle
    */
   electron: ElectronServiceAPI;

@@ -1,6 +1,9 @@
 name: Build Electron Package Test Apps
 description: 'Builds Electron package test applications and creates shareable artifacts'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -37,7 +40,7 @@ jobs:
       cache_key: ${{ steps.upload-archive.outputs.cache_key }}
     steps:
       - name: 👷 Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 

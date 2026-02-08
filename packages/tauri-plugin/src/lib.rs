@@ -67,7 +67,14 @@ fn setup_frontend_log_listener<R: Runtime>(app: &tauri::AppHandle<R>) {
 /// Creates the Wdio plugin with default options.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     plugin::Builder::new("wdio")
-        .invoke_handler(tauri::generate_handler![commands::execute, commands::log_frontend, commands::debug_plugin])
+        .invoke_handler(tauri::generate_handler![
+            commands::execute,
+            commands::log_frontend,
+            commands::debug_plugin,
+            commands::get_active_window_label,
+            commands::list_windows,
+            commands::get_window_states
+        ])
         .setup(|app_handle, _api| {
             set_app_handle(app_handle.clone());
 
@@ -85,7 +92,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             drop(initialized);
 
             // Setup frontend log listener
-            setup_frontend_log_listener(&app_handle);
+            setup_frontend_log_listener(app_handle);
 
             #[cfg(desktop)]
             let wdio = desktop::init(app_handle, _api)?;

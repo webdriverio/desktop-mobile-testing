@@ -1,5 +1,8 @@
 name: Release Publish (Reusable)
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -56,6 +59,7 @@ on:
       github_bot_token:
         description: 'GitHub token for authentication'
         required: true
+      # npm_token removed - now using OIDC trusted publishing
       deploy_key:
         description: 'SSH deploy key for pushing to the repository'
         required: true
@@ -73,27 +77,28 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for OIDC trusted publishing
+      contents: write  # Required for pushing commits and tags
     outputs:
       service_release_tag: ${{ steps.collect_tags.outputs.service_release_tag }}
       shared_release_tags: ${{ steps.collect_tags.outputs.shared_release_tags }}
 
     steps:
       - name: Checkout target branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.deploy_key }}
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.26.2
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -124,11 +129,15 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           pnpm config set registry "https://registry.npmjs.org/"
+          # Note: Authentication now handled via OIDC trusted publishing
+          # No token configuration needed - npm will use OIDC tokens automatically
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Configure git to use token authentication for pushes
+          git remote set-url origin https://x-access-token:${{ secrets.github_bot_token }}@github.com/webdriverio/desktop-mobile.git
 
       # PHASE 1: Version shared packages (if changed) with their specific bump types
       - name: Version shared packages

@@ -1,17 +1,21 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
-import type { BinaryPathResult, ElectronServiceOptions } from '@wdio/native-types';
+import type { AppBuildInfo, BinaryPathResult, ElectronServiceOptions } from '@wdio/native-types';
 import type { Capabilities, Options } from '@wdio/types';
 import getPort from 'get-port';
 import nock from 'nock';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import ElectronLaunchService from '../src/launcher.js';
 import { mockProcessProperty, revertProcessProperty } from './helpers.js';
-import { getAppBuildInfo, getBinaryPath, getElectronVersion, getMockLogger } from './mocks/native-utils.js';
 
 let LaunchService: typeof ElectronLaunchService;
 let instance: ElectronLaunchService | undefined;
 let options: ElectronServiceOptions;
+
+// Mocked functions from @wdio/native-utils
+let getBinaryPath: Mock<() => Promise<BinaryPathResult>>;
+let getAppBuildInfo: Mock<() => Promise<AppBuildInfo>>;
+let getElectronVersion: Mock<() => Promise<string>>;
 
 function getFixtureDir(fixtureType: string, fixtureName: string) {
   return path.join(process.cwd(), '..', '..', 'fixtures', fixtureType, fixtureName);
@@ -26,11 +30,41 @@ vi.mock('node:fs/promises', () => {
     },
   };
 });
+// Mock @wdio/native-utils with specific implementations to avoid interfering with vitest internals
 vi.mock('@wdio/native-utils', async () => {
-  const mockUtilsModule = await import('./mocks/native-utils.js');
+  const actual = await vi.importActual('@wdio/native-utils');
+  return {
+    ...actual,
+    getBinaryPath: vi.fn(),
+    getAppBuildInfo: vi.fn(),
+    getElectronVersion: vi.fn(),
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  };
+});
 
-  // Configure the specific mocks needed for launcher tests
-  mockUtilsModule.getBinaryPath.mockResolvedValue({
+// Log mock is included in the main @wdio/native-utils mock above
+
+vi.mock('get-port', async () => {
+  return {
+    default: vi.fn(),
+  };
+});
+
+beforeEach(async () => {
+  mockProcessProperty('platform', 'darwin');
+
+  // Get references to the mocked functions
+  const nativeUtils = await import('@wdio/native-utils');
+  getBinaryPath = nativeUtils.getBinaryPath as Mock<() => Promise<BinaryPathResult>>;
+  getAppBuildInfo = nativeUtils.getAppBuildInfo as Mock<() => Promise<AppBuildInfo>>;
+  getElectronVersion = nativeUtils.getElectronVersion as Mock<() => Promise<string>>;
+  getBinaryPath.mockResolvedValue({
     success: true,
     binaryPath: 'workspace/my-test-app/dist/my-test-app',
     pathGeneration: {
@@ -48,33 +82,18 @@ vi.mock('@wdio/native-utils', async () => {
         },
       ],
     },
-  } as BinaryPathResult);
+  });
 
-  mockUtilsModule.getAppBuildInfo.mockResolvedValue({
+  getAppBuildInfo.mockResolvedValue({
     appName: 'my-test-app',
+    isBuilder: false,
     isForge: true,
     config: {},
   });
 
   // Default getElectronVersion mock - returns a version >= 26 by default
-  mockUtilsModule.getElectronVersion.mockResolvedValue('30.0.0');
+  getElectronVersion.mockResolvedValue('30.0.0');
 
-  return mockUtilsModule;
-});
-
-// Log mock is included in the main @wdio/native-utils mock above
-
-vi.mock('get-port', async () => {
-  return {
-    default: vi.fn(),
-  };
-});
-
-beforeEach(async () => {
-  mockProcessProperty('platform', 'darwin');
-  // Ensure the launcher logger is created before importing the service
-  const { createLogger } = await import('./mocks/native-utils.js');
-  createLogger('electron-service');
   LaunchService = (await import('../src/launcher.js')).default;
   options = {
     appBinaryPath: 'workspace/my-test-app/dist/my-test-app',
@@ -106,6 +125,9 @@ afterEach(() => {
   instance = undefined;
   revertProcessProperty('platform');
   vi.mocked(access).mockReset().mockResolvedValue(undefined);
+  // Note: Not using vi.resetModules() here due to Windows path issues in Vitest 4
+  // See: https://github.com/vitest-dev/vitest/issues/693
+  vi.clearAllMocks();
 });
 
 describe('Electron Launch Service', () => {
@@ -188,6 +210,8 @@ describe('Electron Launch Service', () => {
             binary: '/path/to/chromedriver',
           },
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '114.0.5735.45',
+          'wdio:electronVersion': '25.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -237,9 +261,13 @@ describe('Electron Launch Service', () => {
           },
         ];
         await instance?.onPrepare({} as never, capabilities);
-        const mockLogger = getMockLogger('electron-service');
-        expect(mockLogger?.info).toHaveBeenCalledWith(
-          'Both appEntryPoint and appBinaryPath are set, using appEntryPoint (appBinaryPath ignored)',
+
+        // Verify appEntryPoint is used (in args) and appBinaryPath is ignored
+        expect(capabilities[0]['goog:chromeOptions']?.args).toContain(
+          '--app=./path/to/bundled/electron/main.bundle.js',
+        );
+        expect(capabilities[0]['goog:chromeOptions']?.binary).toBe(
+          path.join(getFixtureDir('package-scenarios', 'no-build-tool'), 'node_modules', '.bin', 'electron'),
         );
       });
 
@@ -385,9 +413,12 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-other-test-app/dist/my-other-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {
             appBinaryPath: 'workspace/my-other-test-app/dist/my-other-test-app',
           },
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -409,6 +440,8 @@ describe('Electron Launch Service', () => {
             windowTypes: ['app', 'webview'],
           },
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': undefined,
+          'wdio:electronVersion': 'some-version',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -439,7 +472,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -470,7 +506,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -501,7 +540,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -536,7 +578,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.82',
+          'wdio:electronVersion': '26.0.0',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -576,7 +621,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -598,7 +646,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -647,7 +698,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/out/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -701,7 +755,10 @@ describe('Electron Launch Service', () => {
             binary: 'workspace/my-test-app/dist/my-test-app',
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -732,7 +789,10 @@ describe('Electron Launch Service', () => {
             binary: path.join(getFixtureDir('package-scenarios', 'no-build-tool'), 'node_modules', '.bin', 'electron'),
             windowTypes: ['app', 'webview'],
           },
+          'wdio:chromedriverOptions': {},
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
         });
       });
@@ -791,8 +851,8 @@ describe('Electron Launch Service', () => {
           ),
         );
 
-        vi.resetModules();
-        vi.clearAllMocks();
+        // Note: Not cleaning up the read-package-up mock to avoid Windows path issues
+        // The mock won't affect other tests since they don't use read-package-up
       });
 
       it('should set the expected capabilities when setting custom chromedriverOptions', async () => {
@@ -809,16 +869,18 @@ describe('Electron Launch Service', () => {
         expect(capabilities[0]).toEqual({
           browserName: 'chrome',
           browserVersion: '116.0.5845.190',
-          'goog:chromeOptions': {
-            args: [],
-            binary: 'workspace/my-test-app/dist/my-test-app',
-            windowTypes: ['app', 'webview'],
-          },
           'wdio:chromedriverOptions': {
             binary: '/path/to/chromedriver',
           },
-          'wdio:electronServiceOptions': {},
+          'goog:chromeOptions': {
+            binary: 'workspace/my-test-app/dist/my-test-app',
+            windowTypes: ['app', 'webview'],
+            args: [],
+          },
+          'wdio:chromiumVersion': '116.0.5845.190',
+          'wdio:electronVersion': '26.2.2',
           'wdio:enforceWebDriverClassic': true,
+          'wdio:electronServiceOptions': {},
         });
       });
 
@@ -839,12 +901,15 @@ describe('Electron Launch Service', () => {
             browserName: 'chrome',
             browserVersion: '116.0.5845.190',
             'goog:chromeOptions': {
-              args: [],
               binary: 'workspace/my-test-app/dist/my-test-app',
               windowTypes: ['app', 'webview'],
+              args: [],
             },
-            'wdio:electronServiceOptions': {},
+            'wdio:chromedriverOptions': {},
+            'wdio:chromiumVersion': '116.0.5845.190',
+            'wdio:electronVersion': '26.2.2',
             'wdio:enforceWebDriverClassic': true,
+            'wdio:electronServiceOptions': {},
           },
         });
       });
@@ -889,12 +954,15 @@ describe('Electron Launch Service', () => {
               browserName: 'chrome',
               browserVersion: '128.0.6613.36',
               'goog:chromeOptions': {
-                args: [],
                 binary: 'workspace/my-test-app/dist/my-test-app',
                 windowTypes: ['app', 'webview'],
+                args: [],
               },
-              'wdio:electronServiceOptions': {},
+              'wdio:chromedriverOptions': {},
+              'wdio:chromiumVersion': '128.0.6613.36',
+              'wdio:electronVersion': '32.0.1',
               'wdio:enforceWebDriverClassic': true,
+              'wdio:electronServiceOptions': {},
             },
           },
           chrome: {
@@ -909,12 +977,15 @@ describe('Electron Launch Service', () => {
                 browserName: 'chrome',
                 browserVersion: '116.0.5845.190',
                 'goog:chromeOptions': {
-                  args: [],
                   binary: 'workspace/my-test-app/dist/my-test-app',
                   windowTypes: ['app', 'webview'],
+                  args: [],
                 },
-                'wdio:electronServiceOptions': {},
+                'wdio:chromedriverOptions': {},
+                'wdio:chromiumVersion': '116.0.5845.190',
+                'wdio:electronVersion': '26.2.2',
                 'wdio:enforceWebDriverClassic': true,
+                'wdio:electronServiceOptions': {},
               },
             },
           },
@@ -966,12 +1037,15 @@ describe('Electron Launch Service', () => {
                 browserName: 'chrome',
                 browserVersion: '128.0.6613.36',
                 'goog:chromeOptions': {
-                  args: [],
                   binary: 'workspace/my-test-app/dist/my-test-app',
                   windowTypes: ['app', 'webview'],
+                  args: [],
                 },
-                'wdio:electronServiceOptions': {},
+                'wdio:chromedriverOptions': {},
+                'wdio:chromiumVersion': '128.0.6613.36',
+                'wdio:electronVersion': '32.0.1',
                 'wdio:enforceWebDriverClassic': true,
+                'wdio:electronServiceOptions': {},
               },
             },
           },
@@ -988,12 +1062,15 @@ describe('Electron Launch Service', () => {
                   browserName: 'chrome',
                   browserVersion: '116.0.5845.190',
                   'goog:chromeOptions': {
-                    args: [],
                     binary: 'workspace/my-test-app/dist/my-test-app',
                     windowTypes: ['app', 'webview'],
+                    args: [],
                   },
-                  'wdio:electronServiceOptions': {},
+                  'wdio:chromedriverOptions': {},
+                  'wdio:chromiumVersion': '116.0.5845.190',
+                  'wdio:electronVersion': '26.2.2',
                   'wdio:enforceWebDriverClassic': true,
+                  'wdio:electronServiceOptions': {},
                 },
               },
             },
@@ -1021,6 +1098,7 @@ describe('Electron Launch Service', () => {
         windowTypes: ['app', 'webview'],
       },
       'wdio:electronServiceOptions': {},
+      'wdio:chromiumVersion': '116.0.5845.190',
       'wdio:enforceWebDriverClassic': true,
     };
 
@@ -1041,6 +1119,7 @@ describe('Electron Launch Service', () => {
           browserName: 'chrome',
           browserVersion: '116.0.5845.190',
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
           'wdio:enforceWebDriverClassic': true,
         };
         const expectedCaps = Object.assign({}, capabilities, {
@@ -1062,6 +1141,7 @@ describe('Electron Launch Service', () => {
             windowTypes: ['app', 'webview'],
           },
           'wdio:electronServiceOptions': {},
+          'wdio:chromiumVersion': '116.0.5845.190',
           'wdio:enforceWebDriverClassic': true,
         };
         const expectedCaps = Object.assign({}, capabilities, {

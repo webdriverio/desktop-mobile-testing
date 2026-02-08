@@ -1,4 +1,4 @@
-import type { Mock } from '@vitest/spy';
+import type { Mock } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { AbstractFn, BrowserBase, MockContext, MockOverride, MockResult } from './shared.js';
 
@@ -131,6 +131,19 @@ export interface TauriServiceAPI {
    * Restore all Tauri API mocks.
    */
   restoreAllMocks: () => Promise<void>;
+
+  /**
+   * Trigger a deeplink to the Tauri application for testing protocol handlers.
+   *
+   * @param url - The deeplink URL to trigger (e.g., 'myapp://open?path=/test')
+   * @returns Promise that resolves when the deeplink has been triggered
+   *
+   * @example
+   * ```js
+   * await browser.tauri.triggerDeeplink('myapp://open?file=test.txt');
+   * ```
+   */
+  triggerDeeplink: (url: string) => Promise<void>;
 }
 
 /**
@@ -185,6 +198,29 @@ export interface TauriServiceOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -217,6 +253,29 @@ export interface TauriServiceGlobalOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -278,6 +337,7 @@ export interface TauriBrowserExtension extends BrowserBase {
    * - {@link TauriServiceAPI.mockAll `browser.tauri.mockAll`} - Mock an entire API object of the Tauri API
    * - {@link TauriServiceAPI.resetAllMocks `browser.tauri.resetAllMocks`} - Reset the Tauri API mock functions
    * - {@link TauriServiceAPI.restoreAllMocks `browser.tauri.restoreAllMocks`} - Restore the original Tauri API functionality
+   * - {@link TauriServiceAPI.triggerDeeplink `browser.tauri.triggerDeeplink`} - Trigger a deeplink for testing protocol handlers
    */
   tauri: TauriServiceAPI;
 }

@@ -283,8 +283,11 @@ describe('getBinaryPath', () => {
     testBuilderBinaryPath({
       platform: 'darwin',
       arch: 'universal',
-      binaryPath: '/path/to/dist/mac-universal/my-app.app/Contents/MacOS/my-app',
-      configObj: { productName: 'my-app' },
+      binaryPath: '/path/to/dist-electron/mac-universal/my-app.app/Contents/MacOS/my-app',
+      configObj: {
+        productName: 'my-app',
+        directories: { output: 'dist-electron' },
+      },
     });
 
     // Test custom output directory configuration
@@ -314,7 +317,7 @@ describe('getBinaryPath', () => {
     testBuilderBinaryPath({
       platform: 'linux',
       arch: 'arm64',
-      binaryPath: '/path/to/dist/linux-unpacked/my-app',
+      binaryPath: '/path/to/dist/linux-arm64-unpacked/my-app',
       configObj: { productName: 'my-app' },
     });
 

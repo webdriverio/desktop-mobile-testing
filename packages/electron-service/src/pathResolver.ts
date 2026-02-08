@@ -1,6 +1,8 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
+import { getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
 import type { NormalizedReadResult } from 'read-package-up';
+import { readPackageUp } from 'read-package-up';
 
 /**
  * Validate that a file path exists and is accessible
@@ -47,8 +49,9 @@ function configureEntryPoint(
   existingAppArgs: string[],
 ): { appBinaryPath: string; appArgs: string[] } {
   const electronBinary = process.platform === 'win32' ? 'electron.CMD' : 'electron';
-  const packageDir = path.dirname(pkg.path);
-  const appBinaryPath = path.join(packageDir, 'node_modules', '.bin', electronBinary);
+  // Normalize pkg.path to ensure consistent path separators across platforms
+  const packageDir = path.dirname(path.normalize(pkg.path));
+  const appBinaryPath = path.normalize(path.join(packageDir, 'node_modules', '.bin', electronBinary));
   const appArgs = [`--app=${appEntryPoint}`, ...existingAppArgs];
   return { appBinaryPath, appArgs };
 }
@@ -171,4 +174,42 @@ export async function resolveAppPaths(options: {
 
   // Neither provided - caller should handle auto-detection
   throw new Error('No paths provided for resolution');
+}
+
+/**
+ * Get Electron binary path for the given app directory
+ * This is a convenience wrapper around native-utils getBinaryPath
+ * @param appDir - Path to the Electron app directory
+ * @returns The path to the Electron binary
+ */
+export async function getElectronBinaryPath(appDir: string): Promise<string> {
+  // Read package.json from app directory
+  const pkgResult = await readPackageUp({ cwd: appDir });
+
+  if (!pkgResult) {
+    throw new Error(`Failed to find package.json in ${appDir}`);
+  }
+
+  const pkg = {
+    packageJson: pkgResult.packageJson,
+    path: pkgResult.path,
+  };
+
+  // Get Electron version and build info
+  const electronVersion = await getElectronVersion(pkg);
+  const appBuildInfo = await getAppBuildInfo(pkg);
+
+  // Get binary path using native-utils
+  const binaryResult = await getBinaryPath(pkgResult.path, appBuildInfo, electronVersion);
+
+  // Extract the actual path string from the result object
+  if (typeof binaryResult === 'string') {
+    return binaryResult;
+  }
+
+  if (!binaryResult.binaryPath) {
+    throw new Error(`Failed to resolve Electron binary path for ${appDir}`);
+  }
+
+  return binaryResult.binaryPath;
 }

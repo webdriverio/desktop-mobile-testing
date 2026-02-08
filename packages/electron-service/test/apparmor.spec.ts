@@ -1,11 +1,31 @@
-import { execSync, spawnSync } from 'node:child_process';
-import fs from 'node:fs';
-import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
-import { applyApparmorWorkaround } from '../src/apparmor.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock dependencies
-vi.mock('node:child_process');
-vi.mock('node:fs');
+// Hoist mock creation before all imports
+const { mockExecSync, mockSpawnSync, mockFs } = vi.hoisted(() => {
+  return {
+    mockExecSync: vi.fn(),
+    mockSpawnSync: vi.fn(),
+    mockFs: {
+      existsSync: vi.fn(),
+      readFileSync: vi.fn(),
+      writeFileSync: vi.fn(),
+    },
+  };
+});
+
+vi.mock('node:child_process', () => ({
+  default: {
+    execSync: mockExecSync,
+    spawnSync: mockSpawnSync,
+  },
+  execSync: mockExecSync,
+  spawnSync: mockSpawnSync,
+}));
+
+vi.mock('node:fs', () => ({
+  default: mockFs,
+}));
+
 vi.mock('@wdio/native-utils', () => ({
   createLogger: vi.fn(() => ({
     debug: vi.fn(),
@@ -15,13 +35,7 @@ vi.mock('@wdio/native-utils', () => ({
   })),
 }));
 
-const mockExecSync = execSync as Mock;
-const mockSpawnSync = spawnSync as Mock;
-const mockFs = {
-  existsSync: fs.existsSync as Mock,
-  readFileSync: fs.readFileSync as Mock,
-  writeFileSync: fs.writeFileSync as Mock,
-};
+import { applyApparmorWorkaround } from '../src/apparmor.js';
 
 describe('apparmor', () => {
   let originalPlatform: string;
@@ -194,7 +208,7 @@ describe('apparmor', () => {
 
       it('should create profile using sudo when not root but sudo available', () => {
         mockGetuid(1000);
-        mockSpawnSync.mockImplementation((command, args) => {
+        mockSpawnSync.mockImplementation(function (command, args) {
           if (command === 'sudo' && args?.[0] === '-n') {
             return { status: 0 }; // sudo available
           }
@@ -230,7 +244,7 @@ describe('apparmor', () => {
 
       it('should skip profile creation when sudo not available and installMode is sudo', () => {
         mockGetuid(1000);
-        mockSpawnSync.mockImplementation((command, args) => {
+        mockSpawnSync.mockImplementation(function (command, args) {
           if (command === 'sudo' && args?.[0] === '-n') {
             return { status: 1 }; // sudo not available
           }
@@ -261,7 +275,7 @@ describe('apparmor', () => {
 
       it('should handle profile creation failure gracefully', () => {
         mockGetuid(0);
-        mockFs.writeFileSync.mockImplementation(() => {
+        mockFs.writeFileSync.mockImplementation(function () {
           throw new Error('Permission denied');
         });
 
@@ -308,7 +322,7 @@ describe('apparmor', () => {
     describe('canUseSudo function behavior', () => {
       beforeEach(() => {
         mockPlatform('linux');
-        mockSpawnSync.mockImplementation((command) => {
+        mockSpawnSync.mockImplementation(function (command) {
           if (command === 'aa-status') {
             return { status: 0 };
           }
@@ -320,7 +334,7 @@ describe('apparmor', () => {
       });
 
       it('should detect available sudo', () => {
-        mockSpawnSync.mockImplementation((command, args) => {
+        mockSpawnSync.mockImplementation(function (command, args) {
           if (command === 'aa-status') {
             return { status: 0 };
           }
@@ -337,7 +351,7 @@ describe('apparmor', () => {
       });
 
       it('should handle sudo command throwing error', () => {
-        mockSpawnSync.mockImplementation((command, args) => {
+        mockSpawnSync.mockImplementation(function (command, args) {
           if (command === 'aa-status') {
             return { status: 0 };
           }
@@ -359,10 +373,10 @@ describe('apparmor', () => {
       });
 
       it('should apply workaround when AppArmor detection throws error', () => {
-        mockSpawnSync.mockImplementation(() => {
+        mockSpawnSync.mockImplementation(function () {
           throw new Error('Command failed');
         });
-        mockFs.existsSync.mockImplementation(() => {
+        mockFs.existsSync.mockImplementation(function () {
           throw new Error('File access failed');
         });
         mockGetuid(0);
@@ -376,7 +390,7 @@ describe('apparmor', () => {
       it('should handle filesystem read errors during AppArmor profile check', () => {
         mockSpawnSync.mockReturnValue({ status: 1 }); // aa-status fails
         mockFs.existsSync.mockReturnValue(true);
-        mockFs.readFileSync.mockImplementation((path) => {
+        mockFs.readFileSync.mockImplementation(function (path) {
           if (path === '/sys/kernel/security/apparmor/profiles') {
             throw new Error('Permission denied');
           }

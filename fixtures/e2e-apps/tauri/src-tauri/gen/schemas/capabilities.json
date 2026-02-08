@@ -1,25 +1,9 @@
 {
   "default": {
     "identifier": "default",
-    "description": "Capability for the main window - includes WebDriverIO plugin permissions for testing",
+    "description": "Default capability - includes core app commands, WDIO plugin, and deep-link permissions",
     "local": true,
-    "windows": ["main"],
-    "permissions": [
-      "core:default",
-      "core:window:default",
-      "core:event:default",
-      "core:path:default",
-      "fs:allow-read",
-      "fs:allow-write",
-      "fs:allow-remove",
-      "fs:allow-exists",
-      "fs:allow-stat",
-      "fs:read-files",
-      "fs:write-files",
-      "fs:read-dirs",
-      "fs:read-meta",
-      { "identifier": "fs:scope", "allow": [{ "path": "$TEMP/**" }, { "path": "/tmp/**" }, { "path": "$HOME/**" }] },
-      "wdio:default"
-    ]
+    "windows": ["splash", "main"],
+    "permissions": ["core:default", "core:window:default", "core:event:default", "deep-link:default", "wdio:default"]
   }
 }

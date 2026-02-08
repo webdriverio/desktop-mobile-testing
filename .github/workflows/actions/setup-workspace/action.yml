@@ -17,8 +17,9 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        cache: 'pnpm'
-        cache-dependency-path: '**/pnpm-lock.yaml'
+        # Temporarily disable cache to ensure fresh tarball is used
+        # cache: 'pnpm'
+        # cache-dependency-path: '**/pnpm-lock.yaml'
 
     - name: 📦 Install Project Dependencies
       shell: bash

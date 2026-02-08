@@ -383,7 +383,7 @@ Document which parts are Electron-specific vs. generalizable.
 ## Reference Materials
 
 ### Source Code
-**Location:** `/Users/sam/Workspace/wdio-desktop-mobile-testing/packages/`
+**Location:** `/Users/sam/Workspace/wdio-desktop-mobile/packages/`
 
 **Packages to Extract From:**
 - `@wdio_electron-utils` - Binary detection, platform utilities

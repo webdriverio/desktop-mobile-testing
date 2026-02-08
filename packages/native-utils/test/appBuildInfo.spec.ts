@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAppBuildInfo } from '../src/appBuildInfo.js';
 import { getConfig as getBuilderConfig } from '../src/config/builder.js';
 import { getConfig as getForgeConfig } from '../src/config/forge.js';
@@ -45,6 +45,11 @@ const forgeConfig = {
 } as const;
 
 describe('getAppBuildInfo()', () => {
+  beforeEach(() => {
+    vi.mocked(getBuilderConfig).mockReset();
+    vi.mocked(getForgeConfig).mockReset();
+  });
+
   describe('package scenarios', () => {
     it('should throw an error when builder is detected but has no config', async () => {
       const pkg = await getFixturePackageJson('config-formats', 'builder-dependency-cjs-config');

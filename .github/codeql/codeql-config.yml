@@ -1,0 +1,20 @@
+# CodeQL configuration file
+# This file specifies which directories to exclude from CodeQL analysis
+
+# Exclude test files and directories from analysis
+paths-ignore:
+  # Test patterns
+  - '**/*.spec.ts'
+  - '**/*.spec.js'
+  - '**/*.spec.mts'
+  - '**/*.spec.cts'
+
+  # Test directories
+  - '**/test/**'
+  - '**/e2e/**'
+
+  # Fixtures
+  - '**/fixtures/**'
+
+  # Coverage and debug output
+  - '**/coverage/**'

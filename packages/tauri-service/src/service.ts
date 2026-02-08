@@ -2,8 +2,10 @@ import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
+import { clearWindowState, ensureActiveWindowFocus } from './window.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -129,6 +131,21 @@ export default class TauriWorkerService {
     // Pre-test logic if needed
   }
 
+  async beforeCommand(commandName: string, _args: unknown[]): Promise<void> {
+    if (!this.browser || this.browser.isMultiremote) {
+      return;
+    }
+
+    const browser = this.browser as WebdriverIO.Browser;
+
+    try {
+      // Generic window focus detection like Electron - no app-specific knowledge
+      await ensureActiveWindowFocus(browser, commandName);
+    } catch (error) {
+      log.warn('Failed to ensure window focus before command:', error);
+    }
+  }
+
   async afterTest(_test: unknown, _context: unknown, _results: unknown): Promise<void> {
     // Post-test logic if needed
   }
@@ -144,6 +161,7 @@ export default class TauriWorkerService {
    */
   async afterSession(_config: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     log.debug('Cleaning up session...');
+    clearWindowState();
 
     if (!this.browser) {
       log.warn('No browser instance available for session cleanup');
@@ -225,6 +243,10 @@ export default class TauriWorkerService {
       restoreAllMocks: async (): Promise<void> => {
         return restoreAllMocks.call({ browser });
       },
+
+      triggerDeeplink: async (url: string): Promise<void> => {
+        return triggerDeeplink.call({ browser }, url);
+      },
     };
   }
 
@@ -233,7 +255,11 @@ export default class TauriWorkerService {
    * This ensures console logs from browser.execute() contexts are captured
    */
   private patchBrowserExecute(browser: WebdriverIO.Browser): void {
-    if ((browser as any)[EXECUTE_PATCHED]) {
+    interface PatchedBrowser extends WebdriverIO.Browser {
+      [EXECUTE_PATCHED]?: boolean;
+    }
+    const patchedBrowser = browser as PatchedBrowser;
+    if (patchedBrowser[EXECUTE_PATCHED]) {
       log.debug('browser.execute already patched, skipping');
       return;
     }
@@ -269,7 +295,7 @@ export default class TauriWorkerService {
       configurable: true,
     });
 
-    (browser as any)[EXECUTE_PATCHED] = true;
+    patchedBrowser[EXECUTE_PATCHED] = true;
     log.debug('browser.execute() patched with console forwarding');
   }
 }

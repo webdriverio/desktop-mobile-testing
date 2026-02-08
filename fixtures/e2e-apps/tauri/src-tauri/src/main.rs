@@ -3,7 +3,22 @@
 // E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter};
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
+
+static DEEP_LINKS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+fn collect_deep_links_from_args() -> Vec<String> {
+    let mut deep_links = Vec::new();
+    for arg in std::env::args().skip(1) {
+        if arg.starts_with("testapp://") {
+            deep_links.push(arg.clone());
+        }
+    }
+    deep_links
+}
+
+use tauri::{PhysicalPosition, PhysicalSize, Window, Emitter, Manager};
 use serde::{Serialize, Deserialize};
 use sysinfo::System;
 use clipboard::{ClipboardProvider, ClipboardContext};
@@ -194,9 +209,146 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn get_deep_links(_app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let links = DEEP_LINKS.lock().map_err(|e| e.to_string())?.clone();
+    Ok(links)
+}
+
+fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let deep_links = DEEP_LINKS.lock().map(|guard| guard.clone()).unwrap_or_default();
+
+    if !deep_links.is_empty() {
+        for link in &deep_links {
+            let _ = app.emit("deeplink-received", link);
+        }
+    }
+}
+
+fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
+    if let Some(existing) = app.get_webview_window("main") {
+        return existing;
+    }
+    let window = tauri::WebviewWindowBuilder::new(
+        app,
+        "main",
+        tauri::WebviewUrl::App("index.html".into())
+    )
+    .title("Tauri E2E Test App")
+    .inner_size(600.0, 400.0)
+    .build()
+    .expect("Failed to create main window");
+    window
+}
+
+#[tauri::command]
+async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
+    let main = app.get_webview_window("main")
+        .ok_or_else(|| "Main window not found".to_string())?;
+
+    // Hide splash (keeps WebDriver session alive)
+    if let Some(splash) = app.get_webview_window("splash") {
+        splash.hide().map_err(|e| e.to_string())?;
+    }
+
+    // Show and focus main
+    main.show().map_err(|e| e.to_string())?;
+    main.set_focus().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_wdio::init())
+    let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
+
+    // Enable single-instance plugin when explicitly requested (deeplink tests via WDIO env)
+    // OR when launched as a protocol handler (args contain testapp:// URL).
+    // The latter case handles Windows protocol-handler launches where cmd /c "set ..."
+    // env var propagation is unreliable — detecting the URL in args is more robust.
+    let has_deeplink_arg = std::env::args().any(|a| a.starts_with("testapp://"));
+    let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok() || has_deeplink_arg;
+
+    let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_wdio::init());
+
+    // Add single-instance plugin only when explicitly enabled (deeplink tests)
+    if enable_single_instance {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            // Forward deep links from second instance to the running instance
+            for arg in args.iter() {
+                if arg.starts_with("testapp://") {
+                    if let Ok(mut links) = DEEP_LINKS.lock() {
+                        links.push(arg.clone());
+                    }
+                    let _ = app.emit("deeplink-received", arg);
+                }
+            }
+        }));
+    }
+
+    builder
+        .plugin(tauri_plugin_deep_link::init())
+        .setup(move |app| {
+            // Collect deep links from CLI args at startup
+            let cli_deep_links = collect_deep_links_from_args();
+            if !cli_deep_links.is_empty() {
+                let mut deep_links_guard = DEEP_LINKS.lock().unwrap();
+                for link in &cli_deep_links {
+                    deep_links_guard.push(link.clone());
+                }
+                drop(deep_links_guard);
+                emit_deep_links(&app.handle());
+            }
+
+            // Register deeplink protocol at runtime (Linux/Windows only)
+            // This is needed for development/testing when the protocol handler
+            // hasn't been registered by the installer
+            #[cfg(any(target_os = "linux", target_os = "windows"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+
+                match app.deep_link().register("testapp") {
+                    Ok(_) => {}
+                    Err(_e) => {
+                        eprintln!("[Tauri] Protocol registration note: {}. Deep links still work via CLI args.", _e);
+                    }
+                }
+            }
+
+            if is_splash {
+                // 1. SPLASH FIRST - WebDriver MUST connect here (visible + focused)
+                let splash = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "splash",
+                    tauri::WebviewUrl::App("splash.html".into())
+                )
+                .title("Splash Screen")
+                .inner_size(300.0, 200.0)
+                .resizable(false)
+                .decorations(false)
+                .focused(true)
+                .build()
+                .expect("Failed to create splash window");
+
+                splash.show().expect("Failed to show splash");
+                splash.set_focus().expect("Failed to focus splash");
+
+                // 2. MAIN SECOND - hidden until switch_to_main
+                let _main = tauri::WebviewWindowBuilder::new(
+                    app,
+                    "main",
+                    tauri::WebviewUrl::App("index.html".into())
+                )
+                .title("Tauri E2E Test App")
+                .inner_size(600.0, 400.0)
+                .visible(false)
+                .build()
+                .expect("Failed to create main window");
+            } else {
+                create_main_window(app.handle());
+            }
+            Ok::<(), Box<dyn std::error::Error>>(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_window_bounds,
             set_window_bounds,
@@ -213,6 +365,8 @@ fn main() {
             read_clipboard,
             write_clipboard,
             generate_test_logs,
+            switch_to_main,
+            get_deep_links,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

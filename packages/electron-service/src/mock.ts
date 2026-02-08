@@ -1,9 +1,10 @@
-import { type Mock, fn as vitestFn } from '@vitest/spy';
+import { type Mock, fn as vitestFn } from '@wdio/native-spy';
 import type {
   AbstractFn,
   ElectronApiFn,
+  ElectronClassMock,
+  ElectronFunctionMock,
   ElectronInterface,
-  ElectronMock,
   ElectronType,
   ExecuteOpts,
 } from '@wdio/native-types';
@@ -16,18 +17,13 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
+
+      // Always restore to the original function from globalThis.originalApi
       const originalApi = globalThis.originalApi as Record<ElectronInterface, ElectronType[ElectronInterface]>;
       const originalApiMethod = originalApi[apiName as keyof typeof originalApi][
         funcName as keyof ElectronType[ElectronInterface]
       ] as ElectronApiFn;
-
-      const target = electronApi[funcName as keyof typeof electronApi] as unknown;
-      if (target && typeof (target as { mockImplementation?: unknown }).mockImplementation === 'function') {
-        (target as Mock).mockImplementation(originalApiMethod);
-      } else {
-        // Fallback: directly restore the original function using Reflect to avoid index signature issues
-        Reflect.set(electronApi as unknown as object, funcName, originalApiMethod as unknown as ElectronApiFn);
-      }
+      Reflect.set(electronApi as unknown as object, funcName, originalApiMethod as unknown as ElectronApiFn);
     },
     apiName,
     funcName,
@@ -35,7 +31,11 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
   );
 }
 
-export async function createMock(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
+export async function createMock(
+  apiName: string,
+  funcName: string,
+  browserContext?: WebdriverIO.Browser,
+): Promise<ElectronFunctionMock> {
   log.debug(`[${apiName}.${funcName}] createMock called - starting mock creation`);
   const outerMock = vitestFn();
   const outerMockImplementation = outerMock.mockImplementation;
@@ -45,7 +45,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
 
   outerMock.mockName(`electron.${apiName}.${funcName}`);
 
-  const mock = outerMock as unknown as ElectronMock;
+  const mock = outerMock as unknown as ElectronFunctionMock;
 
   mock.__isElectronMock = true;
 
@@ -63,7 +63,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
   const wrapperMock = ((...args: unknown[]) => {
     // Delegate to the original mock function
     return (mock as (...args: unknown[]) => unknown)(...args);
-  }) as ElectronMock;
+  }) as ElectronFunctionMock;
 
   // Copy all properties and methods from the original mock to the wrapper
   Object.setPrototypeOf(wrapperMock, Object.getPrototypeOf(mock));
@@ -98,8 +98,13 @@ export async function createMock(apiName: string, funcName: string, browserConte
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
-      const spy = await import('@vitest/spy');
-      const mockFn = spy.fn();
+      const spy = await import('@wdio/native-spy');
+      const mockFn = spy.fn(function (this: unknown) {
+        // Default implementation returns undefined (does not call the original function)
+        // This prevents real dialogs/actions from occurring when mocking
+        // Users can call mockImplementation() to provide custom behavior
+        return undefined;
+      });
 
       // replace target API with mock
       electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
@@ -116,7 +121,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
       (electron, apiName, funcName) => {
         const mockObj = electron[apiName as keyof typeof electron][
           funcName as keyof ElectronType[ElectronInterface]
-        ] as ElectronMock;
+        ] as ElectronFunctionMock;
         return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
       },
       apiName,
@@ -288,6 +293,9 @@ export async function createMock(apiName: string, funcName: string, browserConte
   };
 
   mock.mockReset = async () => {
+    // Store the current mock name to preserve it across reset
+    const currentName = outerMock.getMockName();
+
     // resets inner implementation to an empty function and clears mock history
     await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
       (electron, apiName, funcName) => {
@@ -301,6 +309,9 @@ export async function createMock(apiName: string, funcName: string, browserConte
     );
     outerMockReset();
 
+    // Restore the mock name after reset (Vitest v4 clears it)
+    outerMock.mockName(currentName);
+
     // vitest mockReset doesn't clear mock history so we need to explicitly clear both mocks
     await mock.mockClear();
 
@@ -313,7 +324,7 @@ export async function createMock(apiName: string, funcName: string, browserConte
 
     // clear mocks
     outerMockClear();
-    await mock.mockClear();
+    // Note: inner mock has been replaced with original function, so we don't call mockClear on it
 
     return mock;
   };
@@ -376,4 +387,130 @@ export async function createMock(apiName: string, funcName: string, browserConte
 
   // Return the wrapper instead of the original mock
   return wrapperMock;
+}
+
+/**
+ * Creates a mock for an Electron class (e.g. Tray, BrowserWindow).
+ * Returns a stub instance with all methods as ElectronFunctionMock objects.
+ */
+export async function createClassMock(
+  className: string,
+  browserContext?: WebdriverIO.Browser,
+): Promise<ElectronClassMock> {
+  log.debug(`[${className}] createClassMock called - starting class mock creation`);
+
+  const browserToUse = browserContext || browser;
+
+  // Get class method names from Electron
+  const methodNames = await browserToUse.electron.execute<string[], [string, ExecuteOpts]>(
+    (electron, className) => {
+      const ElectronClass = electron[className as keyof typeof electron] as
+        | (new (
+            ...args: unknown[]
+          ) => unknown)
+        | undefined;
+      if (!ElectronClass || typeof ElectronClass !== 'function') {
+        throw new Error(`electron.${className} is not a class`);
+      }
+      return Object.getOwnPropertyNames(ElectronClass.prototype).filter(
+        (name) => name !== 'constructor' && typeof ElectronClass.prototype[name] === 'function',
+      );
+    },
+    className,
+    { internal: true },
+  );
+
+  log.debug(`[${className}] Found ${methodNames.length} methods: ${methodNames.join(', ')}`);
+
+  // Create stub instance with all methods as ElectronFunctionMock
+  const stubInstance: Record<string, ElectronFunctionMock | (() => Promise<void>)> = {};
+  for (const methodName of methodNames) {
+    log.debug(`[${className}] Creating mock for method: ${methodName}`);
+    stubInstance[methodName] = await createMock(className, methodName, browserToUse);
+  }
+
+  // Create constructor mock for tracking instantiation calls
+  const constructorMock = vitestFn() as unknown as ElectronFunctionMock;
+  constructorMock.mockName(`electron.${className}.__constructor`);
+  (constructorMock as ElectronFunctionMock).__isElectronMock = true;
+
+  // Store original mock state for updates
+  const constructorOriginalMock = (constructorMock as unknown as Mock).mock;
+
+  // Replace the class constructor in Electron
+  await browserToUse.electron.execute<void, [string, ExecuteOpts]>(
+    async (electron, className) => {
+      const spy = await import('@wdio/native-spy');
+      const OriginalClass = electron[className as keyof typeof electron] as new (...args: unknown[]) => unknown;
+
+      // Store original for restoration
+      if (!globalThis.originalApi) {
+        (globalThis as Record<string, unknown>).originalApi = {};
+      }
+      (globalThis.originalApi as Record<string, unknown>)[className] = OriginalClass;
+
+      // Create mock constructor that tracks calls and returns an instance with mocked prototype
+      const MockClass = spy.fn(function (this: unknown, ..._args: unknown[]) {
+        // Call original constructor behavior by setting up prototype chain
+        Object.setPrototypeOf(this, OriginalClass.prototype);
+        return this;
+      }) as unknown as typeof OriginalClass;
+
+      // Copy prototype so instanceof checks and method access work
+      MockClass.prototype = OriginalClass.prototype;
+      Object.setPrototypeOf(MockClass, OriginalClass);
+
+      Reflect.set(electron, className, MockClass);
+    },
+    className,
+    { internal: true },
+  );
+
+  // Add update method to constructor mock to sync call tracking
+  (constructorMock as ElectronFunctionMock).update = async () => {
+    log.debug(`[${className}.__constructor] Starting mock update`);
+    const calls = await browserToUse.electron.execute<unknown[][], [string, ExecuteOpts]>(
+      (electron, className) => {
+        const mockObj = electron[className as keyof typeof electron] as unknown as ElectronFunctionMock;
+        return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
+      },
+      className,
+      { internal: true },
+    );
+
+    // Re-apply calls from electron main process mock to outer one
+    if (constructorOriginalMock.calls.length < calls.length) {
+      calls.forEach((call: unknown[], index: number) => {
+        if (!constructorOriginalMock.calls[index]) {
+          constructorMock.apply(constructorMock, call);
+        }
+      });
+    }
+
+    return constructorMock;
+  };
+
+  stubInstance.__constructor = constructorMock;
+
+  // Add mockRestore to restore the original class
+  stubInstance.mockRestore = async () => {
+    log.debug(`[${className}] Restoring original class`);
+    await browserToUse.electron.execute<void, [string, ExecuteOpts]>(
+      (electron, className) => {
+        const originalApi = globalThis.originalApi as Record<string, unknown>;
+        if (originalApi?.[className]) {
+          Reflect.set(electron, className, originalApi[className]);
+        }
+      },
+      className,
+      { internal: true },
+    );
+  };
+
+  // Add getMockName method for consistency with ElectronMock
+  (stubInstance as ElectronClassMock).getMockName = () => `electron.${className}`;
+
+  log.debug(`[${className}] Class mock created successfully`);
+
+  return stubInstance as ElectronClassMock;
 }

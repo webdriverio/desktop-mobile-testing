@@ -7,7 +7,7 @@ import type {
 } from '@wdio/native-types';
 import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
 
-const log = createLogger('electron-service', 'launcher');
+const log = createLogger('wdio-electron-service', 'launcher');
 
 import type { Capabilities, Options, Services } from '@wdio/types';
 import getPort from 'get-port';
@@ -111,7 +111,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
 
     if (!caps.length) {
       const noElectronCapabilityError = new Error('No Electron browser found in capabilities');
-      log.error(noElectronCapabilityError);
+      log.error(noElectronCapabilityError.message);
       throw noElectronCapabilityError;
     }
 
@@ -128,6 +128,9 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
         const chromiumVersion = await getChromiumVersion(electronVersion);
         log.info(`Found Electron v${electronVersion} with Chromedriver v${chromiumVersion}`);
 
+        (cap as ElectronServiceCapabilities & Record<string, unknown>)['wdio:chromiumVersion'] = chromiumVersion;
+        (cap as ElectronServiceCapabilities & Record<string, unknown>)['wdio:electronVersion'] = electronVersion;
+
         if (Number.parseInt(electronVersion.split('.')[0], 10) < 26 && !cap['wdio:chromedriverOptions']?.binary) {
           const invalidElectronVersionError = new SevereServiceError(
             'Electron version must be 26 or higher for auto-configuration of Chromedriver.  If you want to use an older version of Electron, you must configure Chromedriver manually using the wdio:chromedriverOptions capability',
@@ -141,6 +144,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           appEntryPoint,
           appArgs = ['--no-sandbox'],
           apparmorAutoInstall: capApparmorAutoInstall,
+          electronBuilderConfig,
         } = Object.assign({}, this.#globalOptions, cap[CUSTOM_CAPABILITY_NAME]);
 
         // Use capability-level apparmorAutoInstall if provided, otherwise keep the existing value
@@ -166,7 +170,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           // Neither provided - use auto-detection
           log.info('No app binary specified, attempting to detect one...');
           try {
-            const appBuildInfo = await getAppBuildInfo(pkg);
+            const appBuildInfo = await getAppBuildInfo(pkg, electronBuilderConfig);
 
             try {
               // Use the detailed binary path function for better error handling
@@ -202,7 +206,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
               throw e;
             }
           } catch (e) {
-            log.error(e);
+            log.error(String(e));
             throw new SevereServiceError((e as Error).message);
           }
         }
@@ -223,6 +227,13 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           cap['wdio:chromedriverOptions'] = chromedriverOptions;
         }
 
+        // Force wdio:chromedriverOptions to be set when we have a chromium version
+        // to ensure webdriverio uses the wdio-utils chromedriver setup path
+        if (chromiumVersion && !cap['wdio:chromedriverOptions']) {
+          cap['wdio:chromedriverOptions'] = {};
+          log.info('Electron service: Forced wdio:chromedriverOptions = {} to enable wdio-utils chromedriver setup');
+        }
+
         const browserVersion = chromiumVersion || cap.browserVersion;
         if (browserVersion) {
           cap.browserVersion = browserVersion;
@@ -230,7 +241,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           const invalidBrowserVersionOptsError = new Error(
             'You must install Electron locally, or provide a custom Chromedriver path / browserVersion value for each Electron capability',
           );
-          log.error(invalidBrowserVersionOptsError);
+          log.error(invalidBrowserVersionOptsError.message);
           throw invalidBrowserVersionOptsError;
         }
 

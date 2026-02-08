@@ -75,10 +75,13 @@ export const config = {
   exclude: [],
   maxInstances: 1,
   capabilities,
-  // Connect to tauri-driver (service spawns it)
-  hostname: '127.0.0.1',
-  port: 4444,
-  logLevel: 'debug', // Always use debug for package tests
+  // Connection to tauri-driver is configured dynamically by the service
+  // Do not hardcode port - the service allocates a free port in onPrepare
+  logLevel: process.env.DEBUG ? 'debug' : 'info',
+  logLevels: {
+    webdriver: 'info',
+    '@wdio/tauri-service': 'info',
+  },
   bail: 0,
   baseUrl: '',
   waitforTimeout: 10000,

@@ -1,0 +1,54 @@
+{
+  "name": "@wdio/native-spy",
+  "version": "1.0.0",
+  "description": "Minimal mock function implementation for WebdriverIO Native Desktop Services",
+  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/native-spy",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": [
+      {
+        "import": {
+          "types": "./dist/esm/index.d.ts",
+          "default": "./dist/esm/index.js"
+        },
+        "require": {
+          "types": "./dist/cjs/index.d.ts",
+          "default": "./dist/cjs/index.js"
+        }
+      }
+    ]
+  },
+  "engines": {
+    "node": ">=18 || >=20"
+  },
+  "scripts": {
+    "clean": "shx rm -rf dist coverage .turbo",
+    "build": "tsx ../../scripts/build-package.ts",
+    "dev": "tsx ../../scripts/build-package.ts --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage",
+    "test:dev": "vitest --coverage",
+    "lint": "biome check ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^4.0.16",
+    "shx": "^0.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "files": ["dist", "LICENSE"],
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
+    "directory": "packages/native-spy"
+  }
+}

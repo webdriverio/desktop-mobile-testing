@@ -82,6 +82,7 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
   electronServicePath?: string;
   tauriServicePath?: string;
   utilsPath: string;
+  spyPath: string;
   typesPath?: string;
   cdpBridgePath?: string;
 }> {
@@ -98,6 +99,13 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     }
     execCommand('pnpm pack', utilsDir, 'Packing @wdio/native-utils');
 
+    // Pack native-spy (required for both services)
+    const spyDir = normalize(join(rootDir, 'packages', 'native-spy'));
+    if (!existsSync(spyDir)) {
+      throw new Error(`Spy directory does not exist: ${spyDir}`);
+    }
+    execCommand('pnpm pack', spyDir, 'Packing @wdio/native-spy');
+
     const findTgzFile = (dir: string, prefix: string): string => {
       const files = readdirSync(dir);
       const tgzFile = files.find((f) => f.startsWith(prefix) && f.endsWith('.tgz'));
@@ -108,14 +116,16 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
     };
 
     const utilsPath = findTgzFile(utilsDir, 'wdio-native-utils-');
+    const spyPath = findTgzFile(spyDir, 'wdio-native-spy-');
 
     const result: {
       electronServicePath?: string;
       tauriServicePath?: string;
       utilsPath: string;
+      spyPath: string;
       typesPath?: string;
       cdpBridgePath?: string;
-    } = { utilsPath };
+    } = { utilsPath, spyPath };
 
     // Pack Electron service and dependencies if needed
     if (service === 'electron' || service === 'both') {
@@ -157,6 +167,7 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
 
     log(`📦 Packages packed:`);
     log(`   Utils: ${utilsPath}`);
+    log(`   Spy: ${spyPath}`);
     if (result.electronServicePath) {
       log(`   Electron Service: ${result.electronServicePath}`);
       log(`   Types: ${result.typesPath}`);
@@ -185,6 +196,7 @@ async function testExample(
     electronServicePath?: string;
     tauriServicePath?: string;
     utilsPath: string;
+    spyPath: string;
     typesPath?: string;
     cdpBridgePath?: string;
   },
@@ -207,6 +219,9 @@ async function testExample(
   const tempDir = normalize(join(tmpdir(), `wdio-package-test-${testId}`));
   const packageDir = normalize(join(tempDir, packageName));
 
+  // Define logs directory path for reuse throughout function
+  const logsDir = join(packageDir, 'logs');
+
   try {
     log(`Creating isolated test environment at ${tempDir}`);
     mkdirSync(tempDir, { recursive: true });
@@ -227,8 +242,17 @@ async function testExample(
     // Build overrides and packages to install based on service type
     const overrides: Record<string, string> = {
       '@wdio/native-utils': `file:${packages.utilsPath}`,
+      '@wdio/native-spy': `file:${packages.spyPath}`,
     };
-    const packagesToInstall: string[] = [packages.utilsPath];
+    const packagesToInstall: string[] = [packages.utilsPath, packages.spyPath];
+
+    // Add @wdio/utils override if the tarball exists
+    const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.23.3.tgz');
+    if (existsSync(wdioUtilsTarball)) {
+      overrides['@wdio/utils'] = `file:${wdioUtilsTarball}`;
+      packagesToInstall.push(wdioUtilsTarball);
+      log(`  Adding @wdio/utils override: ${wdioUtilsTarball}`);
+    }
 
     if (service === 'electron') {
       if (!packages.electronServicePath || !packages.typesPath || !packages.cdpBridgePath) {
@@ -260,6 +284,10 @@ async function testExample(
     // Install local packages
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
     execCommand(addCommand, packageDir, `Installing local packages for ${packageName}`);
+
+    // Ensure logs directory exists for WebdriverIO output
+    mkdirSync(logsDir, { recursive: true });
+    log(`✅ Created logs directory: ${logsDir}`);
 
     // For Tauri apps, ensure the plugin is available as a Rust dependency
     // The plugin is a path dependency (../../../../packages/tauri-plugin from src-tauri/Cargo.toml)
@@ -449,11 +477,62 @@ async function testExample(
     execCommand('pnpm test', packageDir, `Running tests for ${packageName}`);
 
     log(`✅ ${packageName} tests passed!`);
+
+    // Preserve logs for CI artifact upload before cleanup
+    log(`🔍 Checking for logs in: ${logsDir}`);
+    if (existsSync(logsDir)) {
+      const allFiles = readdirSync(logsDir);
+      const logFiles = allFiles.filter((f) => f.endsWith('.log'));
+      log(`📋 Found ${logFiles.length} log files: ${logFiles.join(', ')}`);
+
+      if (logFiles.length > 0) {
+        const ciLogsDir = join(rootDir, 'logs', 'package-tests');
+        mkdirSync(ciLogsDir, { recursive: true });
+
+        // Copy logs with package name prefix to avoid conflicts
+        for (const logFile of logFiles) {
+          const srcPath = join(logsDir, logFile);
+          const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
+          cpSync(srcPath, destPath);
+          log(`📋 Preserved log: ${destPath}`);
+        }
+      } else {
+        log(`⚠️  No .log files found in ${logsDir}, found files: ${allFiles.join(', ')}`);
+      }
+    } else {
+      log(`⚠️  Logs directory does not exist: ${logsDir}`);
+    }
   } catch (error) {
     console.error(`❌ Error testing ${packageName}:`);
     if (error instanceof Error) {
       console.error(error.message);
     }
+
+    // Preserve logs even on failure for debugging
+    log(`🔍 Checking for failure logs in: ${logsDir}`);
+    if (existsSync(logsDir)) {
+      const allFiles = readdirSync(logsDir);
+      const logFiles = allFiles.filter((f) => f.endsWith('.log'));
+      log(`📋 Found ${logFiles.length} failure log files: ${logFiles.join(', ')}`);
+
+      if (logFiles.length > 0) {
+        const ciLogsDir = join(rootDir, 'logs', 'package-tests');
+        mkdirSync(ciLogsDir, { recursive: true });
+
+        // Copy logs with package name prefix to avoid conflicts
+        for (const logFile of logFiles) {
+          const srcPath = join(logsDir, logFile);
+          const destPath = join(ciLogsDir, `${packageName}-${logFile}`);
+          cpSync(srcPath, destPath);
+          log(`📋 Preserved failure log: ${destPath}`);
+        }
+      } else {
+        log(`⚠️  No .log files found in ${logsDir}, found files: ${allFiles.join(', ')}`);
+      }
+    } else {
+      log(`⚠️  Logs directory does not exist: ${logsDir}`);
+    }
+
     throw error;
   } finally {
     // Copy logs back to source directory for debugging
@@ -518,6 +597,7 @@ async function main() {
       electronServicePath?: string;
       tauriServicePath?: string;
       utilsPath: string;
+      spyPath: string;
       typesPath?: string;
       cdpBridgePath?: string;
     };
@@ -533,8 +613,10 @@ async function main() {
       };
 
       const utilsDir = normalize(join(rootDir, 'packages', 'native-utils'));
+      const spyDir = normalize(join(rootDir, 'packages', 'native-spy'));
       packages = {
         utilsPath: findTgzFile(utilsDir, 'wdio-native-utils-'),
+        spyPath: findTgzFile(spyDir, 'wdio-native-spy-'),
       };
 
       if (options.service === 'electron' || options.service === 'both') {
@@ -555,6 +637,7 @@ async function main() {
 
       log(`📦 Using existing packages:`);
       log(`   Utils: ${packages.utilsPath}`);
+      log(`   Spy: ${packages.spyPath}`);
       if (packages.electronServicePath) {
         log(`   Electron Service: ${packages.electronServicePath}`);
         log(`   Types: ${packages.typesPath}`);

@@ -64,13 +64,13 @@
       "dependsOn": ["@wdio/electron-service#build", "@wdio/tauri-service#build"]
     },
     "@repo/e2e#test:e2e:electron-builder": {
-      "dependsOn": ["electron-builder-e2e-app#build"]
+      "dependsOn": ["electron-builder-e2e-app#build", "@repo/e2e#protocol-install:electron-builder"]
     },
     "@repo/e2e#test:e2e:electron-forge": {
-      "dependsOn": ["electron-forge-e2e-app#build"]
+      "dependsOn": ["electron-forge-e2e-app#build", "@repo/e2e#protocol-install:electron-forge"]
     },
-    "@repo/e2e#test:e2e:electron-no-binary": {
-      "dependsOn": ["electron-no-binary-e2e-app#build"]
+    "@repo/e2e#test:e2e:electron-script": {
+      "dependsOn": ["electron-script-e2e-app#build"]
     },
     "@repo/e2e#test:e2e-mac-universal:electron-builder": {
       "dependsOn": ["electron-builder-e2e-app#build:mac-universal"]
@@ -78,17 +78,17 @@
     "@repo/e2e#test:e2e-mac-universal:electron-forge": {
       "dependsOn": ["electron-forge-e2e-app#build:mac-universal"]
     },
-    "@repo/e2e#test:e2e:tauri:basic": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
+    "@repo/e2e#test:e2e:tauri-basic": {
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
     },
-    "@repo/e2e#test:e2e:tauri:basic:window": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
+    "@repo/e2e#test:e2e:tauri-basic:window": {
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
     },
-    "@repo/e2e#test:e2e:tauri:basic:multiremote": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
+    "@repo/e2e#test:e2e:tauri-basic:multiremote": {
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
     },
-    "@repo/e2e#test:e2e:tauri:basic:standalone": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build"]
+    "@repo/e2e#test:e2e:tauri-basic:standalone": {
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
     },
     "@wdio/bundler#build": {
       "dependsOn": ["typecheck"],
@@ -117,6 +117,10 @@
       "dependsOn": ["@wdio/native-utils#build", "@wdio/tauri-plugin#build:js", "typecheck"],
       "outputs": ["dist/**"]
     },
+    "@wdio/native-spy#build": {
+      "dependsOn": ["@wdio/bundler#build", "typecheck"],
+      "outputs": ["dist/**"]
+    },
     "electron-builder-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
@@ -125,7 +129,7 @@
       "dependsOn": ["^build"],
       "outputs": ["out/**"]
     },
-    "electron-no-binary-e2e-app#build": {
+    "electron-script-e2e-app#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },

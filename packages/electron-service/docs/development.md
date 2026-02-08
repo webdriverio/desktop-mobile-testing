@@ -114,6 +114,8 @@ Below are the task graphs for the E2Es:
 
 Note: The E2E runner logs are saved per run in the configured `outputDir` and include service namespaces (e.g., `wdio-electron-service:service`). Enable debug output for all namespaces by setting `DEBUG=wdio-electron-service:*`.
 
+All E2E test applications use [electron-vite](https://electron-vite.org) for modern development and building.
+
 ## Testing - Units
 
 Unit tests (using [Vitest](https://vitest.dev/)) can be run via:
@@ -184,14 +186,14 @@ pnpm lint:fix
 
 ## Contributing
 
-Check the issues or [raise a new one](https://github.com/webdriverio/desktop-mobile-testing/issues/new) for discussion:
+Check the issues or [raise a new one](https://github.com/webdriverio/desktop-mobile/issues/new) for discussion:
 
-**[Help Wanted Issues](https://github.com/webdriverio/desktop-mobile-testing/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22help+wanted%22)**
-**[Good First Issues](https://github.com/webdriverio/desktop-mobile-testing/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22)**
+**[Help Wanted Issues](https://github.com/webdriverio/desktop-mobile/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22help+wanted%22)**
+**[Good First Issues](https://github.com/webdriverio/desktop-mobile/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22)**
 
 ## Release
 
-Project maintainers can publish a release or pre-release of the npm package by manually running the [`Manual NPM Publish`](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/release.yml) GitHub workflow. They will choose the release type to trigger a `major` , `minor`, or `patch` release following [Semantic Versioning](https://semver.org/), or a pre-release.
+Project maintainers can publish a release or pre-release of the npm package by manually running the [`Manual NPM Publish`](https://github.com/webdriverio/desktop-mobile/actions/workflows/release.yml) GitHub workflow. They will choose the release type to trigger a `major` , `minor`, or `patch` release following [Semantic Versioning](https://semver.org/), or a pre-release.
 
 For detailed information about our release management process, including milestone structure, labeling system, and workflow, see the [Release Management](./release-management.md) documentation.
 
@@ -207,7 +209,7 @@ Project maintainers can publish releases using GitHub Actions workflows. The pro
 
 ### Publishing Pre-releases
 
-To publish a pre-release, run the [pre-release workflow](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/pre-release.yml):
+To publish a pre-release, run the [pre-release workflow](https://github.com/webdriverio/desktop-mobile/actions/workflows/pre-release.yml):
 
 1. Select the branch:
    - `feature` for next major (automatically resolves to current feature branch, e.g., feature/v9)
@@ -221,7 +223,7 @@ To publish a pre-release, run the [pre-release workflow](https://github.com/webd
 
 ### Publishing Releases
 
-To publish a release, run the [release workflow](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/release.yml):
+To publish a release, run the [release workflow](https://github.com/webdriverio/desktop-mobile/actions/workflows/release.yml):
 
 1. Select the branch:
    - `main` for current stable releases
@@ -250,110 +252,4 @@ When releasing a new major version (e.g., v9.0.0):
 
 ### Maintenance Policy
 
-- Current version (e.g., v8.x) receives all updates
-- Previous version (e.g., v7.x) receives security updates and critical fixes
-- Older versions are not maintained
-
-### Branch Lifecycle
-
-```
-feature/v9 (development) → main (v9.x) → v9.x (maintenance)
-                          main (v8.x) → v8.x (maintenance) → archived
-                                       v7.x (maintenance) → archived
-```
-
-### Backporting Changes
-
-In accordance with the maintenance policy, changes should be backported from the current stable version to the maintenance version. This ensures that critical fixes are available in both versions.
-
-#### Backporting Process Overview
-
-1. **Identify PRs for backporting**: PRs that contain fixes applicable to the maintenance version should be labeled with `backport:requested`
-2. **Run the backport script**: After merging such PRs, run the backport script to cherry-pick changes to the maintenance branch
-3. **Release backported changes**: Create a patch release from the maintenance branch using the release workflow
-
-#### As a Triager
-
-Anyone making a triage or reviewing a PR should label it with `backport:requested` if the changes can be applied to the maintained (previous) version. Generally every PR that would not be a breaking change for the previous version should be considered for backporting. If a change relies on features or code pieces that are only available in the current version, then a backport can still be considered if you feel comfortable making the necessary adjustments. That said, don't feel forced to backport code if the time investment and complexity is too high. Backporting functionality is a reasonable contribution that can be made by any contributor.
-
-#### As a Merger
-
-Once a PR with a `backport:requested` label is merged, you are responsible for backporting the patch to the older version. To do so, pull the latest code from GitHub:
-
-```sh
-git pull
-git fetch --all
-git checkout v7  # Replace with current maintenance branch (e.g., v8.x for v9 active)
-```
-
-Before you can start, you will need to create the file `.env` in the project root with the access token set as `GITHUB_TOKEN` in order to allow the executing script to fetch data about pull requests and set proper labels. Go to your [personal access token](https://github.com/settings/tokens) settings page and generate such a token with only the `public_repo` field enabled. Then copy the token to the `.env` file and run the backport script.
-
-The script will:
-
-1. Automatically determine the active and maintenance versions from package.json
-2. If version detection fails, it will interactively ask you to confirm the versions
-3. Fetch all commits connected with PRs labeled with `backport:requested`
-4. Cherry-pick them into the maintenance branch
-
-To start the process, just execute:
-
-```sh
-pnpm run backport
-```
-
-If during the process a cherry-pick fails, you can always abort and manually troubleshoot. If you are not able to resolve the problem, create an issue in the repo and include the author of that PR. A successful backport of two PRs will look like this:
-
-```
-$ pnpm run backport
-
-> webdriverio-monorepo@ backport /path/to/webdriverio/webdriverio
-> node ./scripts/backport.js
-
-Welcome to the backport script for v7! 🚀
-Will backport changes from v8 to v7
-
-================================================================================
-PR: #904 - ci: workaround for CI on linux
-Author: mato533
-URL: https://github.com/webdriverio/desktop-mobile-testing/pull/904
---------------------------------------------------------------------------------
-✔ Do you want to backport this PR? Yes, I want to backport this PR.
-Backporting sha 94bb9daa9ff24fce172f3fdf6d99ede98984a91e from v8 to v7
-> git cherry-pick -x -m 1 94bb9daa9ff24fce172f3fdf6d99ede98984a91e
-[v7 f5b1393] Merge pull request #904 from webdriverio-community/sm/ci-fix-linux
- Date: Fri Jan 24 10:24:30 2025 +0900
- 1 file changed, 3 insertions(+)
-
-================================================================================
-PR: #908 - ci: add support to release multiple versions
-Author: mato533
-URL: https://github.com/webdriverio/desktop-mobile-testing/pull/908
---------------------------------------------------------------------------------
-✔ Do you want to backport this PR? Yes, I want to backport this PR.
-Backporting sha 7976224f74bd57ebafa38819d05ac4f937c957fe from v8 to v7
-> git cherry-pick -x -m 1 7976224f74bd57ebafa38819d05ac4f937c957fe
-[v7 bef1b08] Merge pull request #908 from webdriverio-community/sm/ci-release
- Author: goosewobbler <432005+goosewobbler@users.noreply.github.com>
- Date: Wed Jan 29 00:13:14 2025 +0000
- 2 files changed, 15 insertions(+), 3 deletions(-)
-
-Successfully backported 2 PRs 👏!
-Please now push them to v7 and make a new v7.x release!
-```
-
-#### Creating a Backport Release
-
-After successfully backporting changes:
-
-1. Push the changes to the maintenance branch
-
-   ```sh
-   git push origin v7  # Replace with current maintenance branch
-   ```
-
-2. Create a patch release using the [release workflow](https://github.com/webdriverio/desktop-mobile-testing/actions/workflows/release.yml):
-   - Select `maintenance` as the branch type
-   - Choose `patch` as the release type
-   - The workflow will automatically detect the current maintenance branch
-
-This ensures that backported changes are properly versioned and released according to the project's maintenance policy.
+This repository does not maintain LTS or maintenance branches. Each major version receives updates only while it is the current stable version on the `main` branch. Users requiring long-term support should pin to specific versions in their package.json.

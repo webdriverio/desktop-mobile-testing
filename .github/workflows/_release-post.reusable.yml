@@ -1,5 +1,8 @@
 name: Release Post (Reusable)
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -35,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

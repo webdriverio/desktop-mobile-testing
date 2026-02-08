@@ -9,9 +9,9 @@ import { getE2EAppDirName } from '../lib/utils.js';
 export const EnvSchema = z.object({
   // Core test configuration
   FRAMEWORK: z.enum(['electron', 'tauri']).default('electron'),
-  APP: z.enum(['builder', 'forge', 'no-binary', 'basic']).default('builder'),
+  APP: z.enum(['builder', 'forge', 'script', 'basic']).default('builder'),
   MODULE_TYPE: z.enum(['cjs', 'esm']).optional().default('esm'),
-  TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone']).default('standard'),
+  TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone', 'deeplink']).default('standard'),
   BINARY: z.enum(['true', 'false']).default('true'),
 
   // Special modes
@@ -26,7 +26,6 @@ export const EnvSchema = z.object({
 
   // App directory override (for testing)
   APP_DIR: z.string().optional(),
-  EXAMPLE_DIR: z.string().optional(),
 });
 
 export type TestEnvironment = z.infer<typeof EnvSchema>;
@@ -57,21 +56,21 @@ export class EnvironmentContext {
     return this.env.FRAMEWORK;
   }
 
-  get app(): 'builder' | 'forge' | 'no-binary' | 'basic' {
+  get app(): 'builder' | 'forge' | 'script' | 'basic' {
     return this.env.APP;
   }
 
-  get platform(): 'builder' | 'forge' | 'no-binary' {
+  get platform(): 'builder' | 'forge' | 'script' {
     // Platform is Electron-specific; for Tauri, 'basic' maps to 'builder' conceptually
-    // but this getter is only used for Electron apps in isNoBinary check
-    return this.env.APP as 'builder' | 'forge' | 'no-binary';
+    // but this getter is only used for Electron apps in isScript check
+    return this.env.APP as 'builder' | 'forge' | 'script';
   }
 
   get moduleType(): 'cjs' | 'esm' {
     return this.env.MODULE_TYPE ?? 'esm';
   }
 
-  get testType(): 'standard' | 'window' | 'multiremote' | 'standalone' {
+  get testType(): 'standard' | 'window' | 'multiremote' | 'standalone' | 'deeplink' {
     return this.env.TEST_TYPE;
   }
 
@@ -79,8 +78,8 @@ export class EnvironmentContext {
     return this.env.BINARY === 'true';
   }
 
-  get isNoBinary(): boolean {
-    return this.platform === 'no-binary' || !this.isBinary;
+  get isScript(): boolean {
+    return this.platform === 'script' || !this.isBinary;
   }
 
   get isMacUniversal(): boolean {
@@ -103,11 +102,7 @@ export class EnvironmentContext {
    * Get the app directory name for this environment
    */
   get appDirName(): string {
-    if (this.env.EXAMPLE_DIR) {
-      return this.env.EXAMPLE_DIR;
-    }
-
-    return getE2EAppDirName(this.framework, this.app, this.isNoBinary);
+    return getE2EAppDirName(this.framework, this.app, this.isScript);
   }
 
   /**
@@ -115,7 +110,7 @@ export class EnvironmentContext {
    */
   get appDirPath(): string {
     const fixturesDir = 'e2e-apps';
-    const appDirName = getE2EAppDirName(this.framework, this.app, this.moduleType, this.isNoBinary);
+    const appDirName = getE2EAppDirName(this.framework, this.app, this.isScript);
     return path.join(process.cwd(), '..', 'fixtures', fixturesDir, appDirName);
   }
 
@@ -129,8 +124,8 @@ export class EnvironmentContext {
         throw new Error(`Tauri framework only supports 'basic' app, got: ${this.app}`);
       }
     } else if (this.framework === 'electron') {
-      if (!['builder', 'forge', 'no-binary'].includes(this.app)) {
-        throw new Error(`Electron framework only supports 'builder', 'forge', and 'no-binary' apps, got: ${this.app}`);
+      if (!['builder', 'forge', 'script'].includes(this.app)) {
+        throw new Error(`Electron framework only supports 'builder', 'forge', and 'script' apps, got: ${this.app}`);
       }
     }
 
@@ -147,9 +142,9 @@ export class EnvironmentContext {
       }
     }
 
-    // No-binary validation (Electron only)
-    if (this.framework === 'electron' && this.app === 'no-binary' && this.isBinary) {
-      throw new Error('no-binary app cannot be used with binary mode');
+    // Script validation (Electron only)
+    if (this.framework === 'electron' && this.app === 'script' && this.isBinary) {
+      throw new Error('script app cannot be used with binary mode');
     }
 
     // Test type validation
@@ -170,7 +165,6 @@ export class EnvironmentContext {
       TEST_TYPE: merged.TEST_TYPE,
       BINARY: merged.BINARY,
       APP_DIR: merged.APP_DIR || '',
-      EXAMPLE_DIR: merged.EXAMPLE_DIR || this.appDirName,
       ...(merged.MAC_UNIVERSAL === 'true' && { MAC_UNIVERSAL: 'true' }),
       ...(merged.ENABLE_SPLASH_WINDOW === 'true' && { ENABLE_SPLASH_WINDOW: 'true' }),
       ...(merged.WDIO_VERBOSE === 'true' && { WDIO_VERBOSE: 'true' }),
@@ -182,7 +176,7 @@ export class EnvironmentContext {
    * Get human-readable description of this environment
    */
   toString(): string {
-    const parts = [this.framework, this.app, this.testType, this.isBinary ? 'binary' : 'no-binary'];
+    const parts = [this.framework, this.app, this.testType, this.isBinary ? 'binary' : 'script'];
 
     if (this.isMacUniversal) parts.push('mac-universal');
     if (this.isSplashEnabled) parts.push('splash');

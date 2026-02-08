@@ -1,4 +1,11 @@
-# @wdio/tauri-plugin
+# WebdriverIO Tauri Plugin
+
+[![tauri-plugin-wdio](https://img.shields.io/badge/tauri--plugin--wdio-FFC131)](https://crates.io/crates/tauri-plugin-wdio)
+[![Version](https://img.shields.io/crates/v/tauri-plugin-wdio?color=28a745&labelColor=1a1a1a)](https://crates.io/crates/tauri-plugin-wdio)
+[![Downloads](https://img.shields.io/crates/dr/tauri-plugin-wdio?color=6f42c1&labelColor=1a1a1a)](https://crates.io/crates/tauri-plugin-wdio)\
+[![@wdio/tauri-plugin](https://img.shields.io/badge/@wdio-tauri--plugin-24C8DB)](https://www.npmjs.com/package/@wdio/tauri-plugin)
+[![npm version](https://img.shields.io/npm/v/@wdio/tauri-plugin)](https://www.npmjs.com/package/@wdio/tauri-plugin)
+[![npm downloads](https://img.shields.io/npm/dw/@wdio/tauri-plugin)](https://www.npmjs.com/package/@wdio/tauri-plugin)
 
 A Tauri v2 plugin providing execute and mocking capabilities for WebDriverIO testing. This plugin enables E2E tests to execute JavaScript code in the frontend context with access to Tauri APIs and mock backend commands for isolated testing.
 

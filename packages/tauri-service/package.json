@@ -3,7 +3,7 @@
   "version": "1.0.0-next.0",
   "description": "WebdriverIO service for testing Tauri applications",
   "author": "WebdriverIO Community",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/tauri-service",
+  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/tauri-service",
   "license": "MIT",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -23,7 +23,7 @@
       "./dist/cjs/index.js"
     ]
   },
-  "files": ["dist", "scripts"],
+  "files": ["dist", "docs", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsx ../../scripts/build-package.ts",
     "build:watch": "tsx ../../scripts/build-package.ts --watch",
@@ -38,10 +38,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@babel/parser": "^7.26.0",
-    "@vitest/spy": "^4.0.4",
+    "@babel/parser": "^7.28.5",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
+    "@wdio/native-spy": "workspace:*",
     "@wdio/native-types": "workspace:*",
     "@wdio/native-utils": "workspace:*",
     "@wdio/spec-reporter": "catalog:default",
@@ -54,9 +54,9 @@
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
-    "@types/node": "^24.7.2",
+    "@types/node": "^25.0.3",
     "typescript": "^5.9.3",
-    "vitest": "^1.3.16"
+    "vitest": "^4.0.16"
   },
   "peerDependencies": {
     "webdriverio": "^8.0.0"
@@ -69,10 +69,10 @@
   "keywords": ["webdriverio", "wdio", "wdio-service", "tauri", "testing", "e2e", "desktop"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
     "directory": "packages/tauri-service"
   },
   "bugs": {
-    "url": "https://github.com/webdriverio/desktop-mobile-testing/issues"
+    "url": "https://github.com/webdriverio/desktop-mobile/issues"
   }
 }

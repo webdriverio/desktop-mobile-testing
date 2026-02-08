@@ -66,10 +66,10 @@ async function getElectronConfigContext(): Promise<ElectronConfigContext> {
   let appEntryPoint: string | undefined;
   let appBinaryPath: string | undefined;
 
-  if (envContext.isNoBinary) {
-    console.log('🔍 Setting up no-binary test with entry point');
+  if (envContext.isScript) {
+    console.log('🔍 Setting up script test with entry point');
 
-    appEntryPoint = join(appPath, 'dist', 'main.js');
+    appEntryPoint = join(appPath, 'dist', 'main', 'index.js');
     console.log(`Using app entry point: ${appEntryPoint}`);
 
     if (!fileExists(appEntryPoint)) {
@@ -120,13 +120,24 @@ switch (envContext.testType) {
   case 'standalone':
     specs = ['./test/electron/standalone/api.spec.ts'];
     break;
+  case 'deeplink':
+    // Deeplink tests require binary mode (protocol handlers require packaged apps)
+    if (envContext.isScript) {
+      throw new Error('Deeplink tests require binary mode (packaged app). Script mode is not supported.');
+    }
+    specs = ['./test/electron/deeplink.spec.ts'];
+    break;
   default:
+    // Standard tests - core functionality without specialized test modes
     specs = [
       './test/electron/api.spec.ts',
       './test/electron/application.spec.ts',
       './test/electron/dom.spec.ts',
       './test/electron/interaction.spec.ts',
+      './test/electron/logging.spec.ts',
     ];
+    // Deeplink tests are excluded from standard suite - they run only in dedicated deeplink variant
+    // (protocol handlers require special setup and single-instance mode)
     break;
 }
 
@@ -137,6 +148,11 @@ type ElectronCapability = {
     appEntryPoint?: string;
     appBinaryPath?: string;
     appArgs: string[];
+    apparmorAutoInstall?: boolean | 'sudo';
+    captureMainProcessLogs?: boolean;
+    captureRendererLogs?: boolean;
+    mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+    rendererLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   };
 };
 
@@ -160,9 +176,13 @@ if (envContext.isMultiremote) {
       capabilities: {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
-          ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
+          ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=A'],
           apparmorAutoInstall: 'sudo',
+          captureMainProcessLogs: true,
+          captureRendererLogs: true,
+          mainProcessLogLevel: 'info',
+          rendererLogLevel: 'info',
         },
       },
     },
@@ -170,9 +190,13 @@ if (envContext.isMultiremote) {
       capabilities: {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
-          ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
+          ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=B'],
           apparmorAutoInstall: 'sudo',
+          captureMainProcessLogs: true,
+          captureRendererLogs: true,
+          mainProcessLogLevel: 'info',
+          rendererLogLevel: 'info',
         },
       },
     },
@@ -183,9 +207,13 @@ if (envContext.isMultiremote) {
     {
       browserName: 'electron',
       'wdio:electronServiceOptions': {
-        ...(envContext.isNoBinary ? { appEntryPoint } : { appBinaryPath }),
+        ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
         appArgs: ['foo', 'bar=baz'],
         apparmorAutoInstall: 'sudo',
+        captureMainProcessLogs: true,
+        captureRendererLogs: true,
+        mainProcessLogLevel: 'info',
+        rendererLogLevel: 'info',
       },
     },
   ];

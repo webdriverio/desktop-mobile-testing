@@ -1,6 +1,9 @@
 name: Tauri E2E Tests
 description: 'Runs Tauri end-to-end tests across different scenarios and test types'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed
@@ -23,7 +26,7 @@ on:
         required: true
         type: string
       test-type:
-        description: 'Test type (standard, multiremote, standalone)'
+        description: 'Test type (standard, window, multiremote, standalone, deeplink)'
         type: string
         default: 'standard'
       build_id:
@@ -57,14 +60,14 @@ jobs:
     name: Tauri E2E Tests
     runs-on: ${{ inputs.os }}
     # Skip Tauri E2E tests on macOS due to WKWebView WebDriver limitations
-    if: inputs.os != 'macos-latest'
+    if: inputs.os != 'macos-latest' && inputs.os != 'macos-15-intel'
     strategy:
       # Continue with other tests even if one fails
       fail-fast: false
     steps:
       # Standard checkout with SSH key for private repositories
       - name: 👷 Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
@@ -77,14 +80,32 @@ jobs:
       # Install Tauri runtime dependencies on Linux (apps are pre-built, only need runtime libs)
       # Minimum requirements per Tauri docs: libwebkit2gtk-4.1-0, libgtk-3-0, libappindicator3-1
       # Additional libraries may be pulled in as transitive dependencies
+      - name: 🔧 Fix ARM64 Package Sources (Linux)
+        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        shell: bash
+        run: |
+          echo "Fixing ARM64 package sources for Ubuntu..."
+          # Add proper arm64 sources for jammy
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-backports main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64-jammy.list > /dev/null
+
+          # Ensure default sources only use amd64
+          sudo sed -i -e 's/^deb http/deb [arch=amd64] http/' /etc/apt/sources.list
+          sudo sed -i -e 's/^deb mirror/deb [arch=amd64] mirror/' /etc/apt/sources.list
+
+          sudo apt-get update
+
       - name: 🦀 Install Tauri Runtime Dependencies (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
           echo "Installing Tauri runtime dependencies for Linux..."
-          sudo tee -a /etc/apt/sources.list > /dev/null <<EOT
-          deb http://archive.ubuntu.com/ubuntu jammy main universe
-          EOT
+          # Only add archive.ubuntu.com for amd64, arm64 sources are handled above
+          if [ "$(uname -m)" != "aarch64" ]; then
+            echo "deb http://archive.ubuntu.com/ubuntu jammy main universe" | sudo tee -a /etc/apt/sources.list > /dev/null
+          fi
           sudo apt-get update
           sudo apt-get --fix-broken install -y || true
 
@@ -118,11 +139,11 @@ jobs:
       - name: 📦 Download Package Build Artifacts
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: wdio-electron-service
-          path: wdio-electron-service-build
+          name: wdio-desktop-mobile
+          path: wdio-desktop-mobile-build
           filename: artifact.zip
-          cache_key_prefix: wdio-electron-build
-          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+          cache_key_prefix: wdio-desktop-build
+          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
       # Download the pre-built Tauri E2E app binary from the OS-specific build job
       # This is much faster than rebuilding Tauri apps for each test type
@@ -193,8 +214,93 @@ jobs:
           echo "::notice::Package build: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
           echo "::notice::Tauri binaries: Using pre-built binaries for ${{ runner.os }}"
 
+      # Setup protocol handlers for deeplink testing
+      # Required for Windows and Linux to properly handle testapp:// protocol
+      - name: 🔗 Setup Protocol Handlers
+        shell: bash
+        run: |
+          echo "=== Protocol Handler Setup ==="
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Working directory: $(pwd)"
+          echo "Scenario: ${{ inputs.scenario }}"
+          echo ""
+
+          echo "Setting up protocol handler for: tauri"
+
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "Setting up Windows protocol handler..."
+
+            echo "Checking if src-tauri/target directory exists..."
+            ls -la ./fixtures/e2e-apps/tauri/src-tauri/target/ || echo "src-tauri/target/ not found"
+            echo ""
+
+            powershell -ExecutionPolicy Bypass -File ./fixtures/e2e-apps/tauri/scripts/setup-protocol-handler.ps1
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Error: Protocol handler setup failed for tauri with exit code $EXIT_CODE"
+              exit 1
+            fi
+
+          elif [ "${{ runner.os }}" == "Linux" ]; then
+            echo "Setting up Linux protocol handler..."
+
+            echo "Checking if src-tauri/target directory exists..."
+            ls -la ./fixtures/e2e-apps/tauri/src-tauri/target/ || echo "src-tauri/target/ not found"
+            echo ""
+
+            chmod +x ./fixtures/e2e-apps/tauri/scripts/setup-protocol-handler.sh
+            ./fixtures/e2e-apps/tauri/scripts/setup-protocol-handler.sh
+            EXIT_CODE=$?
+
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "Error: Protocol handler setup failed for tauri with exit code $EXIT_CODE"
+              exit 1
+            fi
+
+          else
+            echo "macOS: Protocol handlers are registered by the app itself via deep-link configuration"
+            echo "No external setup needed - the app registers on first launch"
+          fi
+
+          echo ""
+          echo "=== Protocol Handler Setup Complete ==="
+
+      # Verify protocol registration after setup
+      - name: 🔍 Verify Protocol Registration
+        if: runner.os != 'macOS'
+        shell: bash
+        run: |
+          echo "=== Protocol Registration Verification ==="
+
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            echo "Linux: Checking xdg-mime registration..."
+            xdg-mime query default x-scheme-handler/testapp || echo "WARNING: No handler registered for testapp://"
+
+            echo ""
+            echo "Checking .desktop file..."
+            if [ -f "$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop" ]; then
+              echo "✅ Desktop file exists:"
+              cat "$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop"
+            else
+              echo "❌ Desktop file NOT found at ~/.local/share/applications/tauri-e2e-app-testapp.desktop"
+            fi
+
+            echo ""
+            echo "Checking desktop database..."
+            update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+
+          elif [ "${{ runner.os }}" == "Windows" ]; then
+            echo "Windows: Checking registry..."
+            reg query "HKCR\testapp" 2>nul || echo "❌ Protocol NOT registered in HKCR\testapp"
+            reg query "HKCR\testapp\shell\open\command" 2>nul || echo "❌ Command key NOT found"
+          fi
+
+          echo ""
+          echo "=== Protocol Verification Complete ==="
+
       # Dynamically generate the Tauri test commands to run
-      # Since we only have one Tauri app (basic), no module type filtering needed
+      # Uses 'tauri-basic' naming convention to align with Electron's 'builder/forge/script' naming
       - name: 🪄 Generate Tauri Test Execution Plan
         id: gen-test
         uses: actions/github-script@v8
@@ -206,7 +312,8 @@ jobs:
                 .split(',')
                 .map((s) => {
                   const scenario = s.trim();
-                  const baseCommand = `test:e2e:tauri:${scenario.replace('tauri-', '')}`;
+                  // Use 'tauri-basic' as the app name (single Tauri app variant)
+                  const baseCommand = `test:e2e:tauri-basic`;
                   return testType !== 'standard'
                     ? `${baseCommand}:${testType}`
                     : baseCommand;
@@ -215,12 +322,32 @@ jobs:
             };
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
+      # Cleanup any lingering processes from previous test runs
+      - name: 🧹 Cleanup Lingering Processes (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "Cleaning up any lingering tauri-driver, msedgedriver, or app processes..."
+          Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Write-Host "Windows cleanup complete"
+
+      - name: 🧹 Cleanup Lingering Processes (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "Cleaning up any lingering tauri-driver or app processes..."
+          pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
+          pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
+          echo "Unix cleanup complete"
+
       # Run the Tauri E2E tests directly with pnpm (bypasses Turbo's dependsOn)
       # On Linux, wrap with xvfb-run so LAUNCHER (where tauri-driver runs) has display access
       # tauri-driver launches apps during session creation, needs display in launcher context
       # This skips rebuilding Tauri apps since we downloaded pre-built binaries
       - name: 🧪 Execute Tauri E2E Tests
-        shell: bash
+        shell: pwsh
         working-directory: e2e
         env:
           # Enable Rust backtraces for debugging Tauri/GTK issues
@@ -228,33 +355,33 @@ jobs:
           # Disable AT-SPI accessibility bus warnings
           NO_AT_BRIDGE: '1'
         run: |
-          if [ "${{ runner.os }}" = "Linux" ]; then
+          if ($env:RUNNER_OS -eq "Linux") {
             # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit
-            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" `
               pnpm run ${{ steps.gen-test.outputs.result }}
-          else
+          } else {
             pnpm run ${{ steps.gen-test.outputs.result }}
-          fi
+          }
 
-      # Show Rust debug logs
-      - name: 🔍 Show Rust Debug Logs
-        if: always()
+      # Cleanup processes after tests complete
+      - name: 🧹 Post-Test Cleanup (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "Cleaning up test processes..."
+          Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Write-Host "Post-test Windows cleanup complete"
+
+      - name: 🧹 Post-Test Cleanup (Unix)
+        if: always() && runner.os != 'Windows'
         shell: bash
         run: |
-          echo "=== Rust Debug Log ==="
-          if [ -f /tmp/tauri-debug.log ]; then
-            cat /tmp/tauri-debug.log
-          else
-            echo "No Rust debug log found at /tmp/tauri-debug.log"
-          fi
-
-          echo ""
-          echo "=== Tauri App Process Info ==="
-          ps aux | grep tauri || echo "No tauri processes found"
-
-          echo ""
-          echo "=== System Logs (last 50 lines) ==="
-          journalctl --no-pager -n 50 || echo "No system logs available"
+          echo "Cleaning up test processes..."
+          pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
+          pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
+          echo "Post-test Unix cleanup complete"
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information
@@ -267,9 +394,9 @@ jobs:
       - name: 📦 Upload Test Logs
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: e2e-tauri-logs-${{ inputs.os }}-${{ inputs.scenario }}-${{ inputs.test-type }}
+          name: e2e-tauri-logs-${{ inputs.os }}-${{ github.run_id }}-${{ inputs.scenario }}-${{ inputs.test-type }}
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn

@@ -1,6 +1,9 @@
 name: E2E Tests
 description: 'Runs end-to-end tests across different scenarios (ESM only)'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed
@@ -19,7 +22,7 @@ on:
         type: string
         default: 'build'
       scenario:
-        description: 'Test scenario (forge, builder, or no-binary)'
+        description: 'Test scenario (forge, builder, or script)'
         required: true
         type: string
       build_id:
@@ -42,7 +45,7 @@ env:
 jobs:
   # This job runs E2E tests for a specific combination of:
   # - Operating system (Linux, Windows, macOS)
-  # - Test scenario (builder, forge, no-binary)
+  # - Test scenario (builder, forge, script)
   # - E2E tests use ESM only (CJS/ESM testing is done in package tests)
   e2e:
     name: E2E Tests
@@ -53,7 +56,7 @@ jobs:
     steps:
       # Standard checkout with SSH key for private repositories
       - name: 👷 Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
@@ -68,11 +71,11 @@ jobs:
       - name: 📦 Download Build Artifacts
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: wdio-electron-service
-          path: wdio-electron-service-build
+          name: wdio-desktop-mobile
+          path: wdio-desktop-mobile-build
           filename: artifact.zip
-          cache_key_prefix: wdio-electron-build
-          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+          cache_key_prefix: wdio-desktop-build
+          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
       # Display build information if available
       - name: 📊 Show Build Information
@@ -103,6 +106,81 @@ jobs:
         shell: bash
         run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
 
+      # Setup protocol handlers for deeplink testing
+      # Required for Windows and Linux to properly handle testapp:// protocol
+      - name: 🔗 Setup Protocol Handlers
+        if: contains(inputs.scenario, 'builder') || contains(inputs.scenario, 'forge')
+        shell: bash
+        run: |
+          echo "=== Protocol Handler Setup ==="
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Working directory: $(pwd)"
+          echo "Scenario: ${{ inputs.scenario }}"
+          echo ""
+
+          # Determine which app(s) to set up based on scenario
+          APPS=()
+          if [[ "${{ inputs.scenario }}" == *"builder"* ]]; then
+            APPS+=("electron-builder")
+          fi
+          if [[ "${{ inputs.scenario }}" == *"forge"* ]]; then
+            APPS+=("electron-forge")
+          fi
+
+          for APP in "${APPS[@]}"; do
+            echo "Setting up protocol handler for: $APP"
+
+            if [ "${{ runner.os }}" == "Windows" ]; then
+              echo "Setting up Windows protocol handler..."
+
+              if [ "$APP" == "electron-builder" ]; then
+                echo "Checking if dist-electron directory exists..."
+                ls -la ./fixtures/e2e-apps/$APP/dist-electron/ || echo "dist-electron/ not found"
+              else
+                echo "Checking if out directory exists..."
+                ls -la ./fixtures/e2e-apps/$APP/out/ || echo "out/ not found"
+              fi
+              echo ""
+
+              powershell -ExecutionPolicy Bypass -File ./fixtures/e2e-apps/$APP/scripts/setup-protocol-handler.ps1
+              EXIT_CODE=$?
+
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "Error: Protocol handler setup failed for $APP with exit code $EXIT_CODE"
+                exit 1
+              fi
+
+            elif [ "${{ runner.os }}" == "Linux" ]; then
+              echo "Setting up Linux protocol handler..."
+
+              if [ "$APP" == "electron-builder" ]; then
+                echo "Checking if dist-electron directory exists..."
+                ls -la ./fixtures/e2e-apps/$APP/dist-electron/ || echo "dist-electron/ not found"
+              else
+                echo "Checking if out directory exists..."
+                ls -la ./fixtures/e2e-apps/$APP/out/ || echo "out/ not found"
+              fi
+              echo ""
+
+              chmod +x ./fixtures/e2e-apps/$APP/scripts/setup-protocol-handler.sh
+              ./fixtures/e2e-apps/$APP/scripts/setup-protocol-handler.sh
+              EXIT_CODE=$?
+
+              if [ $EXIT_CODE -ne 0 ]; then
+                echo "Error: Protocol handler setup failed for $APP with exit code $EXIT_CODE"
+                exit 1
+              fi
+
+            else
+              echo "macOS: Protocol handlers are registered by the app itself via setAsDefaultProtocolClient"
+              echo "No external setup needed - the app registers on first launch"
+            fi
+
+            echo ""
+          done
+
+          echo "=== Protocol Handler Setup Complete ==="
+
       # Dynamically generate the test commands to run
       # This handles both single and multiple scenarios
       - name: 🪄 Generate Test Execution Plan
@@ -126,6 +204,8 @@ jobs:
       # Each test builds its own apps with correct environment context
       - name: 🧪 Execute E2E Tests
         shell: bash
+        env:
+          ENABLE_SPLASH_WINDOW: 'true'
         run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
 
       # Show logs on failure for debugging
@@ -139,9 +219,9 @@ jobs:
       - name: 📦 Upload Test Logs
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ inputs.scenario }}
+          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ github.run_id }}-${{ inputs.scenario }}
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn

@@ -1,4 +1,4 @@
-# Contributing to WebdriverIO Cross-Platform Testing Services
+# Contributing to WebdriverIO Desktop & Mobile Testing Services
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
@@ -19,8 +19,8 @@ Please be respectful and constructive in all interactions. We aim to create a we
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/desktop-mobile-testing.git
-   cd desktop-mobile-testing
+   git clone https://github.com/YOUR_USERNAME/desktop-mobile.git
+   cd desktop-mobile
    ```
 3. Install dependencies:
    ```bash
@@ -199,13 +199,13 @@ describe('MyFeature', () => {
 pnpm test
 
 # Run tests for specific package
-pnpm --filter @wdio/electron-utils test
+pnpm --filter @wdio/electron-service test
 
 # Run tests with coverage
 pnpm test:coverage
 
 # Run tests in watch mode
-pnpm --filter @wdio/electron-utils vitest
+pnpm --filter @wdio/electron-service vitest
 ```
 
 ## Documentation
@@ -279,13 +279,19 @@ When contributing to the Electron service:
 - Test with both Electron Forge and Builder
 - Test with ESM and CJS configurations
 
-### Flutter Service
+### Tauri Service
 
-When contributing to the Flutter service:
+When contributing to the Tauri service:
 
-- Test on all 5 platforms (iOS, Android, Windows, macOS, Linux)
-- Test with Appium Flutter Driver
-- Ensure binary detection works across platforms
+- Maintain backward compatibility with tauri-driver
+- Test on Windows, macOS, and Linux
+- Test with multiremote configurations
+- Ensure plugin communication works correctly
+- Test with various Tauri configuration patterns
+
+### Future Services
+
+When new services are added, contribution guidelines will be updated as necessary.
 
 ### Shared Utilities
 
@@ -294,6 +300,10 @@ When contributing to shared utilities:
 - Keep utilities framework-agnostic
 - Document extension points clearly
 - Consider impact on all services
+
+## Maintenance Policy
+
+This repository does not maintain LTS or backport branches. Only the latest version on `main` receives updates. For details, see [MAINTENANCE.md](./MAINTENANCE.md).
 
 ## Release Process
 
@@ -306,9 +316,9 @@ Maintainers handle releases. The process is:
 
 ## Getting Help
 
-- **Questions**: Ask on [GitHub Discussions](https://github.com/webdriverio/desktop-mobile-testing/discussions)
-- **Bugs**: Report on [GitHub Issues](https://github.com/webdriverio/desktop-mobile-testing/issues)
-- **Security**: Email maintainers privately for security issues
+- **Questions**: Ask on [GitHub Discussions](https://github.com/webdriverio/desktop-mobile/discussions)
+- **Bugs**: Report on [GitHub Issues](https://github.com/webdriverio/desktop-mobile/issues)
+- **Discord**: Join the [WebdriverIO Discord](https://discord.webdriver.io) for real-time support
 
 ## Recognition
 

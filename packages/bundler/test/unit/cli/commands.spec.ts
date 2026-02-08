@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildCommand } from '../../../src/cli/commands.js';
 import { RollupExecutor } from '../../../src/cli/executor.js';
 import { ConfigGenerator } from '../../../src/cli/generator.js';
@@ -36,7 +36,9 @@ describe('buildCommand', () => {
         cjs: {},
       }),
     };
-    vi.mocked(ConfigLoader).mockImplementation(() => mockLoader);
+    vi.mocked(ConfigLoader).mockImplementation(function () {
+      return mockLoader;
+    });
 
     // Mock ConfigGenerator
     mockGenerator = {
@@ -47,16 +49,20 @@ describe('buildCommand', () => {
       }),
       writeConfig: vi.fn().mockResolvedValue(undefined),
     };
-    vi.mocked(ConfigGenerator).mockImplementation(() => mockGenerator);
+    vi.mocked(ConfigGenerator).mockImplementation(function () {
+      return mockGenerator;
+    });
 
     // Mock RollupExecutor
     mockExecutor = {
       executeBuild: vi.fn().mockResolvedValue(undefined),
     };
-    vi.mocked(RollupExecutor).mockImplementation(() => mockExecutor);
+    vi.mocked(RollupExecutor).mockImplementation(function () {
+      return mockExecutor;
+    });
 
     // Mock process.exit
-    processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+    processExitSpy = vi.spyOn(process, 'exit').mockImplementation(function () {
       throw new Error('process.exit called');
     });
   });
@@ -208,9 +214,7 @@ describe('buildCommand', () => {
         cwd: '/test',
       };
 
-      await expect(async () => {
-        await buildCommand(options);
-      }).rejects.toThrow('process.exit called');
+      await expect(buildCommand(options)).rejects.toThrow('process.exit called');
 
       expect(mockLogger.error).toHaveBeenCalledWith('Build failed: Config loading failed');
       expect(processExitSpy).toHaveBeenCalledWith(1);
@@ -224,9 +228,7 @@ describe('buildCommand', () => {
         cwd: '/test',
       };
 
-      await expect(async () => {
-        await buildCommand(options);
-      }).rejects.toThrow('process.exit called');
+      await expect(buildCommand(options)).rejects.toThrow('process.exit called');
 
       expect(mockLogger.error).toHaveBeenCalledWith('Build failed: Config generation failed');
       expect(processExitSpy).toHaveBeenCalledWith(1);
@@ -240,9 +242,7 @@ describe('buildCommand', () => {
         cwd: '/test',
       };
 
-      await expect(async () => {
-        await buildCommand(options);
-      }).rejects.toThrow('process.exit called');
+      await expect(buildCommand(options)).rejects.toThrow('process.exit called');
 
       expect(mockLogger.error).toHaveBeenCalledWith('Build failed: Build execution failed');
       expect(processExitSpy).toHaveBeenCalledWith(1);
@@ -257,9 +257,7 @@ describe('buildCommand', () => {
         exportConfig: true,
       };
 
-      await expect(async () => {
-        await buildCommand(options);
-      }).rejects.toThrow('process.exit called');
+      await expect(buildCommand(options)).rejects.toThrow('process.exit called');
 
       expect(mockLogger.error).toHaveBeenCalledWith('Build failed: Config export failed');
       expect(processExitSpy).toHaveBeenCalledWith(1);

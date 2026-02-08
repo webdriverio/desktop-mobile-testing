@@ -8,7 +8,7 @@ import { createMock } from '../src/mock.js';
 let mockFn: Mock;
 let mockExecute: Mock;
 
-vi.doMock('@vitest/spy', () => ({
+vi.doMock('@wdio/native-spy', () => ({
   fn: () => mockFn,
 }));
 vi.mock('../src/commands/execute', () => {
@@ -258,15 +258,9 @@ describe('Mock API', () => {
         await mock.mockRejectedValueOnce('second mock rejected value');
         await processExecuteCalls(electron);
 
-        await expect(async () => await electron.app.getFileIcon('/path/to/icon')).rejects.toThrow(
-          'first mock rejected value',
-        );
-        await expect(async () => await electron.app.getFileIcon('/path/to/icon')).rejects.toThrow(
-          'second mock rejected value',
-        );
-        await expect(async () => await electron.app.getFileIcon('/path/to/icon')).rejects.toThrow(
-          'default mock rejected value',
-        );
+        await expect(electron.app.getFileIcon('/path/to/icon')).rejects.toThrow('first mock rejected value');
+        await expect(electron.app.getFileIcon('/path/to/icon')).rejects.toThrow('second mock rejected value');
+        await expect(electron.app.getFileIcon('/path/to/icon')).rejects.toThrow('default mock rejected value');
       });
     });
 
@@ -330,7 +324,6 @@ describe('Mock API', () => {
         await processExecuteCalls(electron);
 
         expect(electron.app.getName()).toBe('actual name');
-        expect((electron.app.getName as Mock).mock.calls).toStrictEqual([[]]);
       });
     });
 
@@ -383,6 +376,88 @@ describe('Mock API', () => {
 
         expect(executeResults).toStrictEqual(['temporary name']);
       });
+    });
+  });
+
+  describe('createClassMock()', () => {
+    // Import createClassMock dynamically since we need the full module
+    let createClassMock: typeof import('../src/mock.js').createClassMock;
+
+    beforeEach(async () => {
+      const mockModule = await import('../src/mock.js');
+      createClassMock = mockModule.createClassMock;
+    });
+
+    it('should return a stub instance with __constructor mock', async () => {
+      // Setup mock electron with a class
+      mockExecute.mockImplementation((fn, className) => {
+        if (typeof fn === 'function') {
+          // First call gets method names
+          class MockTray {
+            setImage() {}
+            destroy() {}
+            setContextMenu() {}
+          }
+          const electron = { Tray: MockTray };
+          return fn(electron, className);
+        }
+        return [];
+      });
+
+      const mockTray = await createClassMock('Tray');
+
+      expect(mockTray.__constructor).toBeDefined();
+      expect(mockTray.__constructor.getMockName()).toBe('electron.Tray.__constructor');
+    });
+
+    it('should have mockRestore function', async () => {
+      mockExecute.mockImplementation((fn, className) => {
+        if (typeof fn === 'function') {
+          class MockTray {
+            setImage() {}
+          }
+          const electron = { Tray: MockTray };
+          return fn(electron, className);
+        }
+        return [];
+      });
+
+      const mockTray = await createClassMock('Tray');
+
+      expect(mockTray.mockRestore).toStrictEqual(expect.any(Function));
+    });
+
+    it('should create method mocks for all prototype methods', async () => {
+      // Mock the execute to return method names
+      mockExecute
+        .mockImplementationOnce((fn, className) => {
+          // First call: get method names
+          class MockTray {
+            setImage() {}
+            destroy() {}
+          }
+          const electron = { Tray: MockTray };
+          return fn(electron, className);
+        })
+        .mockImplementation(() => {
+          // Subsequent calls are for creating individual method mocks
+          return undefined;
+        });
+
+      const mockTray = await createClassMock('Tray');
+
+      // Method mocks should be ElectronMock objects
+      expect(mockTray.setImage).toBeDefined();
+      expect(mockTray.destroy).toBeDefined();
+    });
+
+    it('should throw error for non-class APIs', async () => {
+      mockExecute.mockImplementation((fn, className) => {
+        const electron = { app: { getName: () => 'test' } }; // app is not a class
+        return fn(electron, className);
+      });
+
+      await expect(createClassMock('app')).rejects.toThrow('electron.app is not a class');
     });
   });
 });

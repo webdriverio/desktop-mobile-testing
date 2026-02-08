@@ -1,9 +1,20 @@
-use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
 use crate::models::ExecuteRequest;
 use crate::Result;
+use crate::Error;
+
+/// Window state information for generic window management
+/// Mirrors Electron's window tracking - discover active window without app-specific knowledge
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct WindowState {
+  pub label: String,
+  pub title: String,
+  pub is_visible: bool,
+  pub is_focused: bool,
+}
 
 /// Debug command to verify plugin is working
 #[command]
@@ -48,7 +59,7 @@ pub(crate) async fn execute<R: Runtime>(
     let (tx, rx) = mpsc::channel();
 
     // Generate unique event ID for this execution
-    let event_id = format!("wdio-result-{}", Uuid::new_v4().to_string());
+    let event_id = format!("wdio-result-{}", Uuid::new_v4());
     log::trace!("Generated event_id for result: {}", event_id);
 
     let result_tx = tx.clone();
@@ -167,4 +178,57 @@ pub(crate) async fn execute<R: Runtime>(
             )))
         }
     }
+}
+
+/// Get the label of the currently focused/active window
+/// Note: Tauri 2.x doesn't expose window focus state, so this returns
+/// the "main" window if it exists, or the first window in lexicographic order
+#[command]
+pub(crate) async fn get_active_window_label<R: Runtime>(
+  app: tauri::AppHandle<R>,
+) -> Result<String> {
+  let windows = app.webview_windows();
+  if windows.is_empty() {
+    return Err(Error::WindowError("No windows available".to_string()));
+  }
+  // Return the "main" window if it exists for predictable behavior
+  if let Some(main) = windows.get("main") {
+    return Ok(main.label().to_string());
+  }
+  // Otherwise, return the first window in lexicographic order for consistency
+  let mut labels: Vec<_> = windows.keys().collect();
+  labels.sort();
+  let first_label = labels.first()
+    .ok_or_else(|| Error::WindowError("No windows available".to_string()))?;
+  Ok(first_label.to_string())
+}
+
+/// List all window labels in the application
+#[command]
+pub(crate) async fn list_windows<R: Runtime>(
+  app: tauri::AppHandle<R>,
+) -> Result<Vec<String>> {
+  Ok(app.webview_windows().keys().cloned().collect())
+}
+
+/// Get detailed state of all windows (for generic window management like Electron)
+#[command]
+pub(crate) async fn get_window_states<R: Runtime>(
+  app: tauri::AppHandle<R>,
+) -> Result<Vec<WindowState>> {
+  let mut states = Vec::new();
+  
+  for (label, window) in app.webview_windows() {
+    let state = WindowState {
+      label: label.clone(),
+      title: window.title().unwrap_or_default(),
+      is_visible: window.is_visible().unwrap_or(false),
+      is_focused: window.is_focused().unwrap_or(false),
+    };
+    log::debug!("[get_window_states] {}: title='{}', visible={}, focused={}", 
+      label, state.title, state.is_visible, state.is_focused);
+    states.push(state);
+  }
+  
+  Ok(states)
 }

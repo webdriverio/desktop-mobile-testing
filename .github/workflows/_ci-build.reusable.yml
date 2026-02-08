@@ -1,6 +1,9 @@
 name: Build
 description: 'Builds all packages and creates shareable artifacts for testing'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed
@@ -43,7 +46,7 @@ jobs:
     steps:
       # Standard checkout with SSH key for private repositories
       - name: 👷 Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
@@ -76,8 +79,8 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         uses: ./.github/workflows/actions/upload-archive
         with:
-          name: wdio-electron-service
-          output: wdio-electron-service-build/artifact.zip
+          name: wdio-desktop-mobile
+          output: wdio-desktop-mobile-build/artifact.zip
           paths: packages/*/dist packages/*/dist-js
-          cache_key_prefix: wdio-electron-build
+          cache_key_prefix: wdio-desktop-build
           retention_days: '90'

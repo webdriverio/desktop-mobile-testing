@@ -92,6 +92,7 @@ export type MockOverride =
   | 'mockRejectedValueOnce'
   | 'mockClear'
   | 'mockReset'
+  | 'mockRestore'
   | 'mockReturnThis'
   | 'mockName'
   | 'withImplementation'

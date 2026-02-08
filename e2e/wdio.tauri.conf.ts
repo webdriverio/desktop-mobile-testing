@@ -114,23 +114,37 @@ const { envContext, appBinaryPath } = context;
 
 // Configure specs based on test type
 let specs: string[] = [];
-const exclude: string[] = [];
+let exclude: string[] = [];
+let maxInstances = 5;
 switch (envContext.testType) {
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
+    maxInstances = 1;
     break;
   case 'standalone':
     specs = ['./test/tauri/standalone/*.spec.ts'];
     break;
+  case 'window':
+    // Window tests - only window-specific functionality
+    specs = ['./test/tauri/window.spec.ts'];
+    break;
+  case 'deeplink':
+    // Deeplink tests require single-instance mode and sequential execution
+    specs = ['./test/tauri/deeplink.spec.ts'];
+    maxInstances = 1;
+    break;
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
+    // Exclude mocking tests, window tests (require splash), and deeplink tests (require single-instance)
+    exclude = ['./test/tauri/mocking.spec.ts', './test/tauri/window.spec.ts', './test/tauri/deeplink.spec.ts'];
     break;
 }
 
 // Configure capabilities
 type TauriCapability = {
   browserName?: 'tauri';
+  'wdio:enforceWebDriverClassic'?: boolean;
   'tauri:options': {
     application: string;
     args?: string[];
@@ -138,6 +152,7 @@ type TauriCapability = {
   'wdio:tauriServiceOptions': {
     appBinaryPath: string;
     appArgs: string[];
+    env?: Record<string, string>;
     captureBackendLogs?: boolean;
     captureFrontendLogs?: boolean;
     backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
@@ -161,12 +176,18 @@ type StandardCapabilities = TauriCapability[];
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
 if (envContext.isMultiremote) {
-  // Tauri multiremote configuration
+  // Tauri multiremote configuration - create base env for tauri-driver
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+
   // The service automatically handles data directory isolation for multiremote instances
   capabilities = {
     browserA: {
       capabilities: {
         browserName: 'tauri',
+        'wdio:enforceWebDriverClassic': true,
         'tauri:options': {
           application: appBinaryPath,
           args: ['--browser=A'],
@@ -174,6 +195,7 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=A'],
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -187,6 +209,7 @@ if (envContext.isMultiremote) {
     browserB: {
       capabilities: {
         browserName: 'tauri',
+        'wdio:enforceWebDriverClassic': true,
         'tauri:options': {
           application: appBinaryPath,
           args: ['--browser=B'],
@@ -194,6 +217,7 @@ if (envContext.isMultiremote) {
         'wdio:tauriServiceOptions': {
           appBinaryPath: appBinaryPath,
           appArgs: ['--browser=B'],
+          env: baseEnv,
           // Enable log capture for logging tests
           captureBackendLogs: true,
           captureFrontendLogs: true,
@@ -206,10 +230,18 @@ if (envContext.isMultiremote) {
     },
   };
 } else {
-  // Tauri standard configuration
+  const baseEnv: Record<string, string> = {};
+  if (envContext.isSplashEnabled) {
+    baseEnv.ENABLE_SPLASH_WINDOW = 'true';
+  }
+  if (envContext.testType === 'deeplink') {
+    baseEnv.ENABLE_SINGLE_INSTANCE = 'true';
+  }
+
   capabilities = [
     {
       browserName: 'tauri',
+      'wdio:enforceWebDriverClassic': true,
       'tauri:options': {
         application: appBinaryPath,
         args: ['foo', 'bar=baz'],
@@ -217,6 +249,7 @@ if (envContext.isMultiremote) {
       'wdio:tauriServiceOptions': {
         appBinaryPath: appBinaryPath,
         appArgs: ['foo', 'bar=baz'],
+        env: baseEnv,
         // Enable log capture for logging tests
         captureBackendLogs: true,
         captureFrontendLogs: true,
@@ -237,11 +270,11 @@ export const config = {
   exclude,
   // Auto-detection: maxInstances > 1 enables per-worker drivers for parallel execution
   // Each worker gets its own tauri-driver process on a unique port
-  maxInstances: envContext.isMultiremote ? 1 : 5, // Allow 5 parallel workers in standard mode
+  maxInstances, // Use computed maxInstances based on test type
   capabilities,
-  // Connect to tauri-driver instead of spawning a browser driver
-  ...(envContext.isMultiremote ? ({} as Record<string, unknown>) : { hostname: '127.0.0.1', port: 4444 }),
-  logLevel: 'debug',
+  // Port and hostname are set dynamically by the tauri-service in onPrepare
+  // Do not set port here - WDIO's detectBackend converts port: 0 to port: 4444
+  logLevel: 'info',
   bail: 0,
   baseUrl: '',
   waitforTimeout: 10000,

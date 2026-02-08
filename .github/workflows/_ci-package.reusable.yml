@@ -1,6 +1,9 @@
 name: Package
 description: 'Runs package tests across different operating systems'
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # Make this a reusable workflow, no value needed
@@ -43,12 +46,12 @@ env:
 jobs:
   # This job runs package tests on multiple Node.js versions and operating systems
   package:
-    name: Package Tests - ${{ inputs.service == 'electron' && 'Electron' || inputs.service == 'tauri' && 'Tauri' || 'Both' }}
+    name: Package Tests
     runs-on: ${{ inputs.os }}
     steps:
       # Standard checkout with SSH key for private repositories
       - name: 👷 Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
@@ -66,14 +69,24 @@ jobs:
         with:
           components: rustfmt
 
-      # Install WebKit WebDriver for Linux (required by tauri-driver)
-      - name: 🌐 Install WebKit WebDriver (Linux)
+      # Install WebKit WebDriver and GTK/X11 runtime dependencies for Linux (required by tauri-driver)
+      # Note: Build dependencies are handled in the build workflows, we only need runtime libs for testing
+      - name: 🌐 Install WebKit WebDriver and GTK/X11 Runtime Dependencies (Linux)
         if: (inputs.service == 'tauri' || inputs.service == 'both') && runner.os == 'Linux'
         shell: bash
         run: |
-          echo "Installing WebKit WebDriver for Linux..."
+          echo "Installing WebKit WebDriver and GTK/X11 runtime dependencies for Linux..."
           sudo apt-get update
-          sudo apt-get install -y webkit2gtk-driver
+          sudo apt-get install -y \
+            webkit2gtk-driver \
+            libwebkit2gtk-4.1-0 \
+            libgtk-3-0 \
+            libasound2t64 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            xvfb
           # Verify installation
           which WebKitWebDriver || echo "WebKitWebDriver not found in PATH"
           WebKitWebDriver --version || echo "WebKitWebDriver version check failed"
@@ -83,11 +96,11 @@ jobs:
       - name: 📦 Download Build Artifacts
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: wdio-electron-service
-          path: wdio-electron-service-build
+          name: wdio-desktop-mobile
+          path: wdio-desktop-mobile-build
           filename: artifact.zip
-          cache_key_prefix: wdio-electron-build
-          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-electron-build', 'wdio-electron-service', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
+          cache_key_prefix: wdio-desktop-build
+          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
       # Download app binaries if testing services that require pre-built apps
       # The download-archive action extracts to workspace root, preserving directory structure
@@ -97,8 +110,8 @@ jobs:
         if: inputs.service == 'tauri' || inputs.service == 'both'
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-package-app-${{ runner.os }}
-          path: tauri-package-app-${{ runner.os }}
+          name: tauri-package-app-${{ runner.os }}-${{ runner.arch == 'ARM64' && 'ARM64' || 'x64' }}
+          path: tauri-package-app-${{ runner.os }}-${{ runner.arch == 'ARM64' && 'ARM64' || 'x64' }}
           filename: artifact.zip
           cache_key_prefix: tauri-package-app
           exact_cache_key: ${{ inputs.tauri_cache_key || '' }}
@@ -119,22 +132,24 @@ jobs:
             echo "::warning::No dist directories found, build extraction may have failed"
           fi
 
-      # Pack services from downloaded artifacts so --skip-build can use them
-      # This creates the .tgz files that the test script expects when --skip-build is used
+        # Pack services from downloaded artifacts so --skip-build can use them
+        # This creates the .tgz files that the test script expects when --skip-build is used
       - name: 📦 Pack Services from Artifacts
         shell: bash
+        env:
+          SERVICE: ${{ inputs.service }}
         run: |
           echo "Packing services from downloaded artifacts..."
-          # Pack shared dependencies
-          if [ -d "packages/native-utils/dist" ]; then
-            (cd packages/native-utils && pnpm pack)
-          fi
-          if [ -d "packages/native-types/dist" ]; then
-            (cd packages/native-types && pnpm pack)
-          fi
+          # Pack all native-* packages
+          for package in packages/native-*; do
+            if [ -d "$package/dist" ]; then
+              echo "Packing $package..."
+              (cd "$package" && pnpm pack)
+            fi
+          done
 
           # Pack Electron service and dependencies if needed
-          if [ "${{ inputs.service }}" == "electron" ] || [ "${{ inputs.service }}" == "both" ]; then
+          if [ "$SERVICE" == "electron" ] || [ "$SERVICE" == "both" ]; then
             if [ -d "packages/electron-cdp-bridge/dist" ]; then
               (cd packages/electron-cdp-bridge && pnpm pack)
             fi
@@ -143,23 +158,29 @@ jobs:
             fi
           fi
 
-          # Pack Tauri service and plugin if needed
-          if [ "${{ inputs.service }}" == "tauri" ] || [ "${{ inputs.service }}" == "both" ]; then
-            if [ -d "packages/tauri-plugin/dist-js" ]; then
-              (cd packages/tauri-plugin && pnpm pack)
-            fi
-            if [ -d "packages/tauri-service/dist" ]; then
-              (cd packages/tauri-service && pnpm pack)
-            fi
-          fi
+           # Pack Tauri service and plugin if needed
+           if [ "$SERVICE" == "tauri" ] || [ "$SERVICE" == "both" ]; then
+             if [ -d "packages/tauri-plugin/dist-js" ]; then
+               (cd packages/tauri-plugin && pnpm pack)
+             fi
+             if [ -d "packages/tauri-service/dist" ]; then
+               (cd packages/tauri-service && pnpm pack)
+             fi
+           fi
 
       # Run package tests using test-package.ts script
       # All apps are built in isolated environments (Electron always, Tauri if not skipBuild)
       # Tauri uses skipBuild to copy pre-built binaries from separate build jobs
       - name: 🧪 Execute Package Tests
         shell: bash
+        env:
+          # Enable Rust backtraces for debugging Tauri/GTK issues
+          RUST_BACKTRACE: '1'
+          # Disable AT-SPI accessibility bus warnings (same as E2E)
+          NO_AT_BRIDGE: '1'
+          SERVICE: ${{ inputs.service }}
         run: |
-          case "${{ inputs.service }}" in
+          case "$SERVICE" in
             electron)
               echo "Running Electron package tests (apps built in isolated environments)"
               echo "Module type: ${{ inputs.module-type }}"
@@ -171,9 +192,11 @@ jobs:
                 exit 0
               fi
               echo "Running Tauri package tests (using pre-built binaries from separate build job)"
-              if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
-                echo "Using xvfb-run to provide a DISPLAY on Linux"
-                xvfb-run -a pnpm run test:package:tauri -- --skip-build
+              if [[ "${{ inputs.os }}" == "ubuntu-latest" || "${{ inputs.os }}" == "ubuntu-24.04-arm" ]]; then
+                echo "Using xvfb-run to provide a DISPLAY on Linux (${{ inputs.os }})"
+                # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit (same as E2E)
+                xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
+                  pnpm run test:package:tauri -- --skip-build
               else
                 pnpm run test:package:tauri -- --skip-build
               fi
@@ -189,29 +212,28 @@ jobs:
                 # Electron: build in isolated environments (no --skip-build)
                 pnpm run test:package:electron -- --module-type=${{ inputs.module-type }}
                 # Tauri: use --skip-build for pre-built binaries from separate build job
-                if [ "${{ inputs.os }}" == "ubuntu-latest" ]; then
-                  xvfb-run -a pnpm run test:package:tauri -- --skip-build
-                else
+                # Wrap with xvfb-run since tauri-driver runs in launcher (not worker) per wdio.conf.ts comment
+                # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit (same as E2E)
+                xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" \
                   pnpm run test:package:tauri -- --skip-build
-                fi
               fi
               ;;
             *)
-              echo "Invalid service: ${{ inputs.service }}"
+              echo "Invalid service: $SERVICE"
               exit 1
               ;;
           esac
 
-      # Upload logs as artifacts for later analysis
+      # Upload logs as artifacts for later analysis (same as E2E tests)
       # This helps debug issues without cluttering the GitHub Actions console
-      - name: 📦 Upload Test Logs
+      - name: 📦 Upload Package Test Logs
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: package-test-logs-${{ inputs.service }}-${{ inputs.os }}-${{ github.run_id }}
-          path: fixtures/package-tests/**/logs-*/
-          retention-days: 30
+          name: package-test-logs-${{ inputs.os }}-${{ inputs.service }}-${{ inputs.module-type || 'default' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: logs/package-tests/*.log
+          retention-days: 90
           if-no-files-found: warn
 
       # Provide an interactive debugging session on failure

@@ -15,11 +15,23 @@ export type TauriResult<T = unknown> = BaseTauriResult<T>;
  */
 export interface TauriServiceOptions extends BaseTauriServiceOptions {
   /**
+   * Environment variables to pass to the spawned tauri-driver process
+   * These are merged with process.env when spawning the driver
+   */
+  env?: Record<string, string>;
+  /**
    * Automatically install tauri-driver if not found
    * Requires Rust toolchain (cargo) to be installed
    * @default false
    */
   autoInstallTauriDriver?: boolean;
+  /**
+   * Automatically download and configure matching msedgedriver on Windows
+   * Detects Edge version and ensures WebDriver matches to prevent version mismatch errors
+   * Only applies on Windows platform, ignored on Linux/macOS
+   * @default true
+   */
+  autoDownloadEdgeDriver?: boolean;
   /**
    * Log directory for standalone mode
    * Full path where log files should be written
@@ -27,6 +39,29 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    * @default undefined
    */
   logDir?: string;
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -34,10 +69,19 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
  */
 export interface TauriServiceGlobalOptions extends BaseTauriServiceGlobalOptions {
   /**
+   * Environment variables to pass to the spawned tauri-driver process
+   */
+  env?: Record<string, string>;
+  /**
    * Automatically install tauri-driver if not found
    * @default false
    */
   autoInstallTauriDriver?: boolean;
+  /**
+   * Automatically download and configure matching msedgedriver on Windows
+   * @default true
+   */
+  autoDownloadEdgeDriver?: boolean;
 }
 
 /**

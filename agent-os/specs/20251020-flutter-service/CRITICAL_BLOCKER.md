@@ -84,7 +84,7 @@ During research phase for Item #3 (Flutter Service), discovered that **Flutter D
 
 **Cons:**
 - Loses mobile testing capability (Flutter is only mobile option)
-- Repository name "desktop-mobile-testing" becomes misleading
+- Repository name "desktop-mobile" becomes misleading
 - Large Flutter community would benefit from WebdriverIO integration
 
 **Recommendation:** Not recommended - Mobile testing is valuable

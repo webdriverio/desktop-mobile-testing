@@ -16,7 +16,7 @@ interface ServicePackageMap {
 // Service to package directory mapping
 const SERVICE_PACKAGES: Record<string, ServicePackageMap> = {
   electron: {
-    service: ['electron-service', 'electron-cdp-bridge', 'bundler'],
+    service: ['electron-service', 'electron-cdp-bridge'],
     shared: ['native-utils', 'native-types'],
   },
   tauri: {

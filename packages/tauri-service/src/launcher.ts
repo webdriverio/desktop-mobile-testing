@@ -2,12 +2,16 @@ import { type ChildProcess, execSync, spawn } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
+import type { Readable } from 'node:stream';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
-import { ensureTauriDriver, ensureWebKitWebDriver } from './driverManager.js';
+import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
+import { ensureTauriDriver, ensureWebKitWebDriver, findTestRunnerBackend } from './driverManager.js';
+import { ensureMsEdgeDriver } from './edgeDriverManager.js';
 import { forwardLog, type LogLevel } from './logForwarder.js';
-import { parseLogLines } from './logParser.js';
+import { parseLogLine } from './logParser.js';
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
@@ -48,10 +52,80 @@ function mergeOptions(
 }
 
 /**
+ * Options for setting up readline-based log handling
+ */
+interface StreamLogHandlerOptions {
+  stream: Readable | null;
+  streamName: 'stdout' | 'stderr';
+  identifier: string;
+  options: TauriServiceOptions;
+  onStartupDetected?: () => void;
+  onErrorDetected?: (message: string) => void;
+  instanceId?: string;
+}
+
+/**
+ * Set up readline-based log handling for a process stream.
+ * This ensures complete lines are processed, avoiding Windows buffering issues
+ * where partial lines could be received in separate chunks.
+ */
+function setupStreamLogHandler({
+  stream,
+  streamName,
+  identifier,
+  options,
+  onStartupDetected,
+  onErrorDetected,
+  instanceId,
+}: StreamLogHandlerOptions): ReadlineInterface | undefined {
+  if (!stream) return undefined;
+
+  const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+  rl.on('line', (line: string) => {
+    // Log raw output for debugging
+    if (streamName === 'stdout') {
+      log.info(`[STDOUT] ${identifier} line: ${line.substring(0, 200)}`);
+    } else {
+      log.error(`[${identifier}] stderr: ${line}`);
+    }
+
+    // Check for startup messages
+    if (onStartupDetected && (line.includes('tauri-driver started') || line.includes('listening on'))) {
+      log.info(`✅ tauri-driver [${identifier}] started successfully`);
+      onStartupDetected();
+    }
+
+    // Detect bind failure (tauri-driver prints "can not listen" when port is occupied)
+    if (onErrorDetected && line.includes('can not listen')) {
+      onErrorDetected(`tauri-driver [${identifier}] failed to bind: ${line}`);
+    }
+
+    // Parse and forward log
+    const parsedLog = parseLogLine(line);
+    if (parsedLog) {
+      // Forward backend logs
+      if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
+        const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
+        forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
+      }
+      // Forward frontend logs
+      if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
+        const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
+        forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
+      }
+    }
+  });
+
+  return rl;
+}
+
+/**
  * Tauri launcher service
  */
 export default class TauriLaunchService {
   private tauriDriverProcess?: ChildProcess;
+  private testRunnerBackend?: ChildProcess; // CrabNebula backend for macOS
   private appBinaryPath?: string;
   private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
   private instanceOptions: Map<string, TauriServiceOptions> = new Map();
@@ -104,14 +178,25 @@ export default class TauriLaunchService {
       }
     }
 
+    // Determine if using CrabNebula provider
+    const firstCap = Array.isArray(capabilities) ? capabilities[0] : Object.values(capabilities)[0]?.capabilities;
+    const mergedOptions = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
+    const isCrabNebula = mergedOptions.driverProvider === 'crabnebula';
+
     // Check for unsupported platforms
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' && !isCrabNebula) {
       const errorMessage =
-        'Tauri testing is not supported on macOS due to WKWebView WebDriver limitations. ' +
-        'Please run tests on Windows or Linux. ' +
-        'For more information, see: https://v2.tauri.app/develop/tests/webdriver/';
+        'Tauri testing on macOS requires CrabNebula driver. ' +
+        'Set driverProvider: "crabnebula" in your service options, or ' +
+        'run tests on Windows or Linux. ' +
+        'See: https://docs.crabnebula.dev/tauri/webdriver/';
       log.error(errorMessage);
       throw new Error(errorMessage);
+    }
+
+    // For CrabNebula on macOS, validate prerequisites
+    if (process.platform === 'darwin' && isCrabNebula) {
+      await this.validateCrabNebulaPrerequisites(mergedOptions);
     }
 
     // Handle both standard array and multiremote object capabilities
@@ -141,6 +226,39 @@ export default class TauriLaunchService {
       const appBinaryPath = await getTauriBinaryPath(originalAppPath);
       log.debug(`App binary: ${appBinaryPath}`);
 
+      // Ensure Edge WebDriver compatibility on Windows
+      // This checks if msedgedriver matches the WebView2 version in the Tauri binary and downloads if needed
+      // Only runs on Windows; skipped on Linux/macOS
+      const autoDownloadEdgeDriver = this.options.autoDownloadEdgeDriver ?? true; // Default to true
+      if (process.platform === 'win32') {
+        log.debug('Checking Edge WebDriver compatibility...');
+        const edgeDriverResult = await ensureMsEdgeDriver(appBinaryPath, autoDownloadEdgeDriver);
+
+        if (!edgeDriverResult.success) {
+          const errorMsg = edgeDriverResult.error || 'Unknown error checking Edge WebDriver';
+          log.error(`Edge WebDriver check failed: ${errorMsg}`);
+
+          if (!autoDownloadEdgeDriver) {
+            // Only throw if auto-download is disabled - let user fix manually
+            throw new Error(
+              `${errorMsg}\n` +
+                `To auto-fix: set autoDownloadEdgeDriver: true in tauri service options.\n` +
+                `Or manually download from: https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/`,
+            );
+          } else {
+            // Auto-download was enabled but still failed - log warning and continue
+            log.warn(`${errorMsg} - continuing anyway, test may fail with version mismatch`);
+          }
+        } else if (edgeDriverResult.method === 'downloaded') {
+          log.info(
+            `✅ Downloaded msedgedriver ${edgeDriverResult.driverVersion} for WebView2 ${edgeDriverResult.edgeVersion}`,
+          );
+        } else if (edgeDriverResult.method === 'found') {
+          log.info(`✅ Using existing msedgedriver ${edgeDriverResult.driverVersion}`);
+        }
+        break; // Only check once for the first capability
+      }
+
       // Validate app args if provided
       const appArgs = tauriOptions.args || [];
       if (appArgs.length > 0) {
@@ -162,6 +280,15 @@ export default class TauriLaunchService {
         // If we can't get the version, leave it undefined
       }
     }
+
+    // Ensure tauri-driver is installed before any workers start.
+    // This prevents a race condition where parallel workers all try to
+    // cargo-install tauri-driver simultaneously, causing "Access is denied" errors on Windows.
+    const driverResult = await ensureTauriDriver(mergedOptions);
+    if (!driverResult.success) {
+      throw new Error(driverResult.error || 'Failed to find or install tauri-driver');
+    }
+    log.info(`tauri-driver ready: ${driverResult.path} (${driverResult.method})`);
 
     // Auto-detect per-worker mode based on maxInstances
     // When maxInstances > 1, enable per-worker spawning for parallelism
@@ -248,10 +375,22 @@ export default class TauriLaunchService {
       } else {
         // Single driver mode: spawn one shared driver
         log.info('Single driver mode - spawning shared tauri-driver');
-        const port = this.options.tauriDriverPort || 4444;
         const hostname = '127.0.0.1';
 
-        await this.startTauriDriver(capsList);
+        // Dynamically allocate ports to avoid conflicts (e.g. port 4444 occupied on Windows CI)
+        const usedPorts = new Set<number>();
+        const port = await getPort({
+          port: this.options.tauriDriverPort || 4444,
+          host: hostname,
+        });
+        usedPorts.add(port);
+        const nativePort = await getPort({
+          port: 4445,
+          host: hostname,
+          exclude: Array.from(usedPorts),
+        });
+
+        await this.startTauriDriver(port, nativePort, capsList);
 
         // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
         // This is necessary for standalone mode where capabilities are passed directly to remote()
@@ -265,6 +404,22 @@ export default class TauriLaunchService {
               `hostname=${(cap as { hostname?: string }).hostname}`,
           );
         }
+      }
+    }
+
+    // Start test-runner-backend for CrabNebula on macOS
+    if (process.platform === 'darwin' && isCrabNebula) {
+      const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
+      if (manageBackend) {
+        const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
+        const { proc } = await startTestRunnerBackend(backendPort);
+        await waitTestRunnerBackendReady(backendPort);
+
+        this.testRunnerBackend = proc;
+
+        // Set environment variable for tauri-driver
+        process.env.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
+        log.info(`CrabNebula backend ready on port ${backendPort}`);
       }
     }
 
@@ -380,15 +535,15 @@ export default class TauriLaunchService {
       // Generate isolated data directory
       const dataDir = generateDataDirectory(`worker-${cid}`);
 
-      // Set up environment variables for data directory isolation
-      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-      const env = { ...process.env, [envVarName]: dataDir };
-
       // Merge options (global + capability-specific)
       const workerOptions = mergeOptions(this.options, firstCap['wdio:tauriServiceOptions']);
 
+      // Set up environment variables for data directory isolation
+      const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+      process.env[envVarName] = dataDir;
+
       // Spawn tauri-driver for this worker
-      await this.startTauriDriverForWorker(cid, port, nativePort, env, workerOptions);
+      await this.startTauriDriverForWorker(cid, port, nativePort, workerOptions);
 
       // Update capabilities with allocated port so WDIO connects to correct port
       // This is critical - the worker needs to know which port to connect to
@@ -570,19 +725,9 @@ export default class TauriLaunchService {
     workerId: string,
     port: number,
     nativePort: number,
-    env: NodeJS.ProcessEnv,
     options?: TauriServiceOptions,
   ): Promise<void> {
-    console.log(`[CONSOLE-DEBUG] startTauriDriverForWorker called for worker-${workerId}`);
-    // Ensure driver is available
     const workerOptions = options ?? mergeOptions(this.options, undefined);
-    console.log(
-      `[CONSOLE-DEBUG] Worker options: captureFrontendLogs=${workerOptions.captureFrontendLogs}, captureBackendLogs=${workerOptions.captureBackendLogs}`,
-    );
-    log.debug(`[worker-${workerId}] Worker options: ${JSON.stringify(workerOptions, null, 2)}`);
-    log.debug(
-      `[worker-${workerId}] captureFrontendLogs: ${workerOptions.captureFrontendLogs}, captureBackendLogs: ${workerOptions.captureBackendLogs}`,
-    );
     const driverResult = await ensureTauriDriver(workerOptions);
     if (!driverResult.success) {
       throw new Error(driverResult.error || 'Failed to find tauri-driver');
@@ -600,73 +745,54 @@ export default class TauriLaunchService {
     }
 
     // Extract data directory from env for storage
-    const dataDir = env.XDG_DATA_HOME || env.TAURI_DATA_DIR || '';
+    const dataDir = process.env.XDG_DATA_HOME || process.env.TAURI_DATA_DIR || '';
 
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const safeResolve = () => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+      const safeReject = (err: Error) => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      };
+
+      const spawnEnv = workerOptions.env ? { ...process.env, ...workerOptions.env } : undefined;
+
       const proc = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        env,
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       });
 
       log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
       this.perWorkerDrivers.set(workerId, { proc, port, nativePort, dataDir });
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        // Log all stdout for debugging
-        log.info(
-          `[STDOUT] worker-${workerId} received ${output.length} chars, content preview: ${output.substring(0, 200)}`,
-        );
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          log.info(`✅ tauri-driver [worker-${workerId}] started successfully on port ${port}`);
-          resolve();
-        }
-
-        // Parse and forward logs if enabled
-        const parsedLogs = parseLogLines(output);
-        log.info(`[STDOUT] worker-${workerId} parsed ${parsedLogs.length} log lines`);
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (workerOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (workerOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-        }
+      // Use readline for line-buffered log handling (fixes Windows chunking issues)
+      setupStreamLogHandler({
+        stream: proc.stdout,
+        streamName: 'stdout',
+        identifier: `worker-${workerId}`,
+        options: workerOptions,
+        onStartupDetected: () => safeResolve(),
+        onErrorDetected: (msg) => safeReject(new Error(msg)),
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`[worker-${workerId}] stderr: ${output.trim()}`);
-
-        // Parse and forward logs from stderr if enabled
-        const parsedLogs = parseLogLines(output);
-        log.debug(`[worker-${workerId}] Parsed ${parsedLogs.length} log lines from stderr`);
-        for (const parsedLog of parsedLogs) {
-          log.debug(
-            `[worker-${workerId}] Log: source=${parsedLog.source}, level=${parsedLog.level}, message=${parsedLog.message.substring(0, 100)}`,
-          );
-          // Forward backend logs
-          if (workerOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (workerOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (workerOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (workerOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-        }
+      setupStreamLogHandler({
+        stream: proc.stderr,
+        streamName: 'stderr',
+        identifier: `worker-${workerId}`,
+        options: workerOptions,
       });
 
       proc.on('error', (error: Error) => {
         log.error(`❌ Failed to start tauri-driver [worker-${workerId}]: ${error.message}`);
-        reject(error);
+        safeReject(error);
       });
 
       proc.on('exit', (code: number | null, signal: string | null) => {
@@ -680,7 +806,7 @@ export default class TauriLaunchService {
       setTimeout(() => {
         if (!proc.killed) {
           log.warn(`⚠️  tauri-driver [worker-${workerId}] startup timeout, assuming ready`);
-          resolve();
+          safeResolve();
         }
       }, 30000);
     });
@@ -758,6 +884,12 @@ export default class TauriLaunchService {
       // Log writer may not have been initialized
     }
 
+    // Stop test-runner-backend for CrabNebula
+    if (this.testRunnerBackend) {
+      await stopTestRunnerBackend(this.testRunnerBackend);
+      this.testRunnerBackend = undefined;
+    }
+
     // Stop tauri-driver
     await this.stopTauriDriver();
 
@@ -767,7 +899,7 @@ export default class TauriLaunchService {
   /**
    * Start tauri-driver process
    */
-  private async startTauriDriver(capabilities?: TauriCapabilities[]): Promise<void> {
+  private async startTauriDriver(port: number, nativePort: number, capabilities?: TauriCapabilities[]): Promise<void> {
     // Get options for driver management
     const firstCap = capabilities?.[0];
     const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
@@ -783,8 +915,6 @@ export default class TauriLaunchService {
     }
 
     const tauriDriverPath = driverResult.path;
-    const port = this.options.tauriDriverPort || 4444;
-    const nativePort = 4445; // Default native port for single instance
 
     log.debug(`Starting tauri-driver on port ${port} (native port: ${nativePort})`);
 
@@ -799,90 +929,59 @@ export default class TauriLaunchService {
       log.debug(`Using native driver: ${nativeDriverPath}`);
     }
 
-    return new Promise((resolve, reject) => {
-      // Don't manually set DISPLAY - let tauri-driver inherit from environment
-      // or handle display connection itself. Setting DISPLAY here causes
-      // authorization issues because we don't have matching XAUTHORITY credentials
-      const env = { ...process.env };
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const safeResolve = () => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+      const safeReject = (err: Error) => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      };
 
       if (process.platform === 'linux') {
-        log.info(`Starting tauri-driver (DISPLAY from environment: ${env.DISPLAY || 'not set'})`);
+        log.info(`Starting tauri-driver (DISPLAY from environment: ${process.env.DISPLAY || 'not set'})`);
       }
+
+      const spawnEnv = options.env ? { ...process.env, ...options.env } : undefined;
 
       this.tauriDriverProcess = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
-        env,
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       });
 
-      // Get options for backend log capture (use first capability's options for single instance)
-      const firstCap = capabilities?.[0];
-      const options = mergeOptions(this.options, firstCap?.['wdio:tauriServiceOptions']);
-
-      this.tauriDriverProcess.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.debug(`tauri-driver stdout: ${output}`);
-
-        // Check if tauri-driver is ready
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          resolve();
-        }
-
-        // Parse and forward logs if enabled
-        const parsedLogs = parseLogLines(output);
-        let frontendCount = 0;
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-            frontendCount += 1;
-          }
-        }
-        if (options.captureFrontendLogs && frontendCount === 0) {
-          log.debug('No frontend logs detected in tauri-driver stdout chunk');
-        }
+      // Use readline for line-buffered log handling (fixes Windows chunking issues)
+      setupStreamLogHandler({
+        stream: this.tauriDriverProcess.stdout,
+        streamName: 'stdout',
+        identifier: 'tauri-driver',
+        options,
+        onStartupDetected: () => safeResolve(),
+        onErrorDetected: (msg) => safeReject(new Error(msg)),
       });
 
-      this.tauriDriverProcess.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`tauri-driver stderr: ${output}`);
-
-        // Parse and forward logs from stderr if enabled
-        const parsedLogs = parseLogLines(output);
-        let frontendCount = 0;
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage);
-            frontendCount += 1;
-          }
-        }
-        if (options.captureFrontendLogs && frontendCount === 0) {
-          log.debug('No frontend logs detected in tauri-driver stderr chunk');
-        }
+      setupStreamLogHandler({
+        stream: this.tauriDriverProcess.stderr,
+        streamName: 'stderr',
+        identifier: 'tauri-driver',
+        options,
       });
 
       this.tauriDriverProcess.on('error', (error: Error) => {
         log.error(`Failed to start tauri-driver: ${error.message}`);
-        reject(error);
+        safeReject(error);
       });
 
       this.tauriDriverProcess.on('exit', (code: number) => {
         if (code !== 0) {
           log.error(`tauri-driver exited with code ${code}`);
-          reject(new Error(`tauri-driver exited with code ${code}`));
+          safeReject(new Error(`tauri-driver exited with code ${code}`));
         }
       });
 
@@ -890,10 +989,22 @@ export default class TauriLaunchService {
       setTimeout(() => {
         if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
           log.warn('tauri-driver startup timeout, assuming ready');
-          resolve();
+          safeResolve();
         }
       }, 30000);
     });
+
+    // Wait for driver to be ready (matches per-worker and multiremote modes)
+    log.debug(`Waiting for TCP port ${port} to open...`);
+    await this.waitForPortOpen('127.0.0.1', port, 30000);
+    log.debug(`Waiting for HTTP endpoint to be ready...`);
+    await this.waitForHttpReady('127.0.0.1', port, 10000);
+
+    // Verify process is still alive
+    if (this.tauriDriverProcess?.killed) {
+      throw new Error('tauri-driver process died during startup');
+    }
+    log.info(`Driver ready on port ${port} (native port: ${nativePort})`);
   }
 
   /**
@@ -925,6 +1036,20 @@ export default class TauriLaunchService {
     }
 
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const safeResolve = () => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+      const safeReject = (err: Error) => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      };
+
       const proc = spawn(tauriDriverPath, args, {
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: false,
@@ -934,55 +1059,30 @@ export default class TauriLaunchService {
       log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
       this.tauriDriverProcesses.set(instanceId, { proc, port, nativePort });
 
-      const instanceOptions = options ?? mergeOptions(this.options, undefined);
+      const instanceOpts = options ?? mergeOptions(this.options, undefined);
 
-      proc.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.debug(`[${instanceId}] stdout: ${output.trim()}`);
-        if (output.includes('tauri-driver started') || output.includes('listening on')) {
-          log.info(`✅ tauri-driver [${instanceId}] started successfully on port ${port}`);
-          resolve();
-        }
-
-        // Parse and forward logs if enabled
-        const parsedLogs = parseLogLines(output);
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-        }
+      // Use readline for line-buffered log handling (fixes Windows chunking issues)
+      setupStreamLogHandler({
+        stream: proc.stdout,
+        streamName: 'stdout',
+        identifier: instanceId,
+        options: instanceOpts,
+        onStartupDetected: () => safeResolve(),
+        onErrorDetected: (msg) => safeReject(new Error(msg)),
+        instanceId,
       });
 
-      proc.stderr?.on('data', (data: Buffer) => {
-        const output = data.toString();
-        log.error(`[${instanceId}] stderr: ${output.trim()}`);
-
-        // Parse and forward logs from stderr if enabled
-        const parsedLogs = parseLogLines(output);
-        for (const parsedLog of parsedLogs) {
-          // Forward backend logs
-          if (instanceOptions.captureBackendLogs && parsedLog.source !== 'frontend') {
-            const minLevel = (instanceOptions.backendLogLevel ?? 'info') as LogLevel;
-            forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-          // Forward frontend logs (from attachConsole)
-          if (instanceOptions.captureFrontendLogs && parsedLog.source === 'frontend') {
-            const minLevel = (instanceOptions.frontendLogLevel ?? 'info') as LogLevel;
-            forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-          }
-        }
+      setupStreamLogHandler({
+        stream: proc.stderr,
+        streamName: 'stderr',
+        identifier: instanceId,
+        options: instanceOpts,
+        instanceId,
       });
 
       proc.on('error', (error: Error) => {
         log.error(`❌ Failed to start tauri-driver [${instanceId}]: ${error.message}`);
-        reject(error);
+        safeReject(error);
       });
 
       proc.on('exit', (code: number | null, signal: string | null) => {
@@ -996,7 +1096,7 @@ export default class TauriLaunchService {
       setTimeout(() => {
         if (!proc.killed) {
           log.warn(`⚠️  tauri-driver [${instanceId}] startup timeout, assuming ready`);
-          resolve();
+          safeResolve();
         }
       }, 30000);
     });
@@ -1044,6 +1144,7 @@ export default class TauriLaunchService {
       await new Promise((r) => setTimeout(r, 250));
     }
     log.warn(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
+    throw new Error(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
   }
 
   /**
@@ -1088,6 +1189,39 @@ export default class TauriLaunchService {
       await new Promise((r) => setTimeout(r, 250));
     }
     log.warn(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
+    throw new Error(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
+  }
+
+  /**
+   * Validate CrabNebula prerequisites for macOS testing
+   * Checks for CN_API_KEY and test-runner-backend availability
+   */
+  private async validateCrabNebulaPrerequisites(options: TauriServiceOptions): Promise<void> {
+    log.info('Validating CrabNebula prerequisites for macOS...');
+
+    // Check CN_API_KEY
+    if (!process.env.CN_API_KEY) {
+      throw new Error(
+        'CN_API_KEY environment variable is required for CrabNebula macOS testing. ' +
+          'Contact CrabNebula (https://crabnebula.dev) to obtain an API key. ' +
+          'See: https://docs.crabnebula.dev/tauri/webdriver/',
+      );
+    }
+
+    // Check for test-runner-backend if auto-management is enabled
+    const manageBackend = options.crabnebulaManageBackend ?? true;
+    if (manageBackend) {
+      const backendPath = findTestRunnerBackend();
+      if (!backendPath) {
+        throw new Error(
+          '@crabnebula/test-runner-backend not found. ' +
+            'Install with: npm install -D @crabnebula/test-runner-backend',
+        );
+      }
+      log.debug(`Found test-runner-backend at: ${backendPath}`);
+    }
+
+    log.info('✅ CrabNebula prerequisites validated');
   }
 
   /**

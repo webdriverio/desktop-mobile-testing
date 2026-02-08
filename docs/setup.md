@@ -27,8 +27,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/webdriverio/desktop-mobile-testing.git
-cd desktop-mobile-testing
+git clone https://github.com/webdriverio/desktop-mobile.git
+cd desktop-mobile
 ```
 
 ### 2. Install Dependencies
@@ -121,7 +121,7 @@ pnpm --filter wdio-electron-service dev
 ## Monorepo Structure
 
 ```
-desktop-mobile-testing/
+desktop-mobile/
 ├── .github/
 │   └── workflows/          # CI/CD workflows
 ├── packages/               # All packages
@@ -345,8 +345,8 @@ See the [Tauri Plugin README](../packages/tauri-plugin/README.md) for detailed s
 
 ## Getting Help
 
-- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/webdriverio/desktop-mobile-testing/issues)
-- **Discussions**: Ask questions on [GitHub Discussions](https://github.com/webdriverio/desktop-mobile-testing/discussions)
+- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/webdriverio/desktop-mobile/issues)
+- **Discussions**: Ask questions on [GitHub Discussions](https://github.com/webdriverio/desktop-mobile/discussions)
 - **WebdriverIO**: See [WebdriverIO documentation](https://webdriver.io/)
 
 

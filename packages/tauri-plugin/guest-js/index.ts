@@ -520,7 +520,10 @@ function setupBackendLogListener(): void {
         if (!window.wdioTauri) {
           window.wdioTauri = {} as Window['wdioTauri'];
         }
-        const wdioTauri = window.wdioTauri!;
+        const wdioTauri = window.wdioTauri;
+        if (!wdioTauri) {
+          return;
+        }
         wdioTauri.cleanupBackendLogListener = () => {
           if (removeListenerRef) {
             removeListenerRef();
@@ -594,7 +597,10 @@ function setupFrontendLogListener(): void {
         if (!window.wdioTauri) {
           window.wdioTauri = {} as Window['wdioTauri'];
         }
-        const wdioTauri = window.wdioTauri!;
+        const wdioTauri = window.wdioTauri;
+        if (!wdioTauri) {
+          return;
+        }
         wdioTauri.cleanupFrontendLogListener = () => {
           if (removeListenerRef) {
             removeListenerRef();

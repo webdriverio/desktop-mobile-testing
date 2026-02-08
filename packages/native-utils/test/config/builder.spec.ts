@@ -103,4 +103,52 @@ describe('getConfig', () => {
       await expect(() => getConfig(pkg)).rejects.toThrowError(APP_NAME_DETECTION_ERROR);
     });
   });
+
+  describe('extends support', () => {
+    it('should resolve single extends config', async () => {
+      const pkg = await getFixturePackageJson('config-formats', 'builder-extends-single');
+      const config = await getConfig(pkg);
+
+      expect(config).toStrictEqual({
+        appName: 'builder-extends-single',
+        config: {
+          productName: 'builder-extends-single',
+          directories: { output: 'custom-dist' },
+          executableName: 'base-executable',
+        },
+        isBuilder: true,
+        isForge: false,
+      });
+    });
+
+    it('should resolve array extends with proper precedence', async () => {
+      const pkg = await getFixturePackageJson('config-formats', 'builder-extends-array');
+      const config = await getConfig(pkg);
+
+      // override.config.js should override base.config.js output dir
+      // main config productName takes final precedence
+      expect(config?.config.directories?.output).toBe('override-dist');
+      expect(config?.config.executableName).toBe('base-name');
+      expect(config?.config.productName).toBe('builder-extends-array');
+    });
+
+    it('should resolve nested extends chains', async () => {
+      const pkg = await getFixturePackageJson('config-formats', 'builder-extends-nested');
+      const config = await getConfig(pkg);
+
+      expect(config?.config.directories?.output).toBe('grandparent-dist');
+      expect(config?.config.executableName).toBe('parent-name');
+      expect(config?.config.productName).toBe('builder-extends-nested');
+    });
+
+    it('should use custom config path when provided', async () => {
+      const pkg = await getFixturePackageJson('config-formats', 'builder-extends-single');
+      // Pass the complete path to the config file
+      const customConfigPath = path.join(path.dirname(pkg.path), 'electron-builder.config.js');
+      const config = await getConfig(pkg, customConfigPath);
+
+      expect(config?.config.productName).toBe('builder-extends-single');
+      expect(config?.config.executableName).toBe('base-executable');
+    });
+  });
 });

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri Basic App</title>
+    <title>Tauri E2E Test App</title>
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -94,6 +94,7 @@
       <div class="info-section">
         <p>This is a basic Tauri application for WebDriverIO testing.</p>
         <div class="status" id="status">Ready for testing</div>
+        <button id="switch-main-window" class="switch-main-window" style="display:none">Continue to Main</button>
       </div>
     </div>
 
@@ -211,6 +212,45 @@
         updateStatus('Tauri API available - Ready for testing');
       } else {
         updateStatus('Tauri API not available - Running in browser mode');
+      }
+
+      // Deep link listener for E2E testing
+      // On Linux, deep links arrive via CLI args (not via onOpenUrl)
+      // We use the backend's getDeepLinks command and listen for deeplink-received events
+      window.receivedDeeplinks = [];
+      window.deeplinkCount = 0;
+      console.log('[Deeplink] Initialized: count=0, receivedDeeplinks=[]');
+
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const { listen } = await import('@tauri-apps/api/event');
+
+        // Listen for deep link events from backend (Linux CLI args)
+        console.log('[Deeplink] Setting up deeplink-received event listener...');
+        await listen('deeplink-received', (event) => {
+          const url = event.payload;
+          console.log('[Deeplink] Received via event:', url);
+          window.receivedDeeplinks.push(url);
+          window.deeplinkCount++;
+          console.log(`[Deeplink] Updated count: ${window.deeplinkCount}, array length: ${window.receivedDeeplinks.length}`);
+          console.log(`[Deeplink] globalThis.deeplinkCount check: ${globalThis.deeplinkCount}`);
+        });
+
+        // Get any deep links that were passed at startup via CLI
+        console.log('[Deeplink] Calling getDeepLinks()...');
+        const startUrls = await invoke('get_deep_links');
+        console.log('[Deeplink] getDeepLinks() returned:', startUrls);
+        if (startUrls && Array.isArray(startUrls) && startUrls.length > 0) {
+          console.log('[Deeplink] App launched with deep links:', startUrls);
+          startUrls.forEach(url => {
+            window.receivedDeeplinks.push(url);
+            window.deeplinkCount++;
+          });
+        }
+
+        console.log('[Deeplink] Setup complete. Current count:', window.deeplinkCount);
+      } catch (error) {
+        console.error('[Deeplink] Failed to setup deep link listener:', error);
       }
     </script>
   </body>
