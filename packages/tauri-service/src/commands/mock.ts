@@ -51,80 +51,105 @@ export async function mock(this: TauriServiceContext, command: string): Promise<
   }
 }
 
-export async function clearAllMocks(this: TauriServiceContext): Promise<void> {
-  log.debug('clearAllMocks command called');
+export async function clearAllMocks(this: TauriServiceContext, commandPrefix?: string): Promise<void> {
+  log.debug(`clearAllMocks command called${commandPrefix ? ` with prefix: ${commandPrefix}` : ''}`);
   const mocks = mockStore.getMocks();
+  let clearedCount = 0;
 
-  for (const [, mock] of mocks) {
-    await mock.mockClear();
+  for (const [mockName, mock] of mocks) {
+    // Filter by command prefix if provided (mock names are like "tauri.command_name")
+    if (!commandPrefix || mockName.match(new RegExp(`^tauri\\.${commandPrefix}`))) {
+      await mock.mockClear();
+      clearedCount++;
+    }
   }
 
-  log.debug(`clearAllMocks completed - cleared ${mocks.length} mocks`);
+  log.debug(`clearAllMocks completed - cleared ${clearedCount} of ${mocks.length} mocks`);
 }
 
-export async function resetAllMocks(this: TauriServiceContext): Promise<void> {
-  log.debug('resetAllMocks command called');
+export async function resetAllMocks(this: TauriServiceContext, commandPrefix?: string): Promise<void> {
+  log.debug(`resetAllMocks command called${commandPrefix ? ` with prefix: ${commandPrefix}` : ''}`);
   const browserContext = this?.browser || globalThis.browser;
 
   if (!browserContext || browserContext.isMultiremote) {
     throw new Error('resetAllMocks requires a valid browser context');
   }
 
-  // Reset all mocks in the injection script
-  await (browserContext as WebdriverIO.Browser).execute<void, []>(() => {
+  // Reset mocks in the injection script (with prefix filtering if provided)
+  await (browserContext as WebdriverIO.Browser).execute<void, [string | undefined]>((prefix) => {
     // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
     if (window.__wdio_mocks__) {
       // @ts-expect-error - Reset each mock
-      for (const mock of Object.values(window.__wdio_mocks__)) {
-        // @ts-expect-error - mock has mockReset method
-        if (mock && typeof mock.mockReset === 'function') {
+      for (const [commandName, mock] of Object.entries(window.__wdio_mocks__)) {
+        // Filter by prefix if provided
+        if (!prefix || commandName.startsWith(prefix)) {
           // @ts-expect-error - mock has mockReset method
-          mock.mockReset();
+          if (mock && typeof mock.mockReset === 'function') {
+            // @ts-expect-error - mock has mockReset method
+            mock.mockReset();
+          }
         }
       }
     }
-  });
+  }, commandPrefix);
 
-  // Reset all outer mocks
+  // Reset outer mocks (with prefix filtering)
   const mocks = mockStore.getMocks();
-  for (const [, mock] of mocks) {
-    await mock.mockReset();
+  let resetCount = 0;
+  for (const [mockName, mock] of mocks) {
+    if (!commandPrefix || mockName.match(new RegExp(`^tauri\\.${commandPrefix}`))) {
+      await mock.mockReset();
+      resetCount++;
+    }
   }
 
-  log.debug(`resetAllMocks completed - reset ${mocks.length} mocks`);
+  log.debug(`resetAllMocks completed - reset ${resetCount} of ${mocks.length} mocks`);
 }
 
-export async function restoreAllMocks(this: TauriServiceContext): Promise<void> {
-  log.debug('restoreAllMocks command called');
+export async function restoreAllMocks(this: TauriServiceContext, commandPrefix?: string): Promise<void> {
+  log.debug(`restoreAllMocks command called${commandPrefix ? ` with prefix: ${commandPrefix}` : ''}`);
   const browserContext = this?.browser || globalThis.browser;
 
   if (!browserContext || browserContext.isMultiremote) {
     throw new Error('restoreAllMocks requires a valid browser context');
   }
 
-  // Restore all mocks in the injection script
-  await (browserContext as WebdriverIO.Browser).execute<void, []>(() => {
+  // Restore mocks in the injection script (with prefix filtering if provided)
+  await (browserContext as WebdriverIO.Browser).execute<void, [string | undefined]>((prefix) => {
     // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
     if (window.__wdio_mocks__) {
-      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      window.__wdio_mocks__ = {};
+      if (!prefix) {
+        // No prefix: clear all mocks
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        window.__wdio_mocks__ = {};
+      } else {
+        // With prefix: selectively delete matching mocks
+        // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+        for (const commandName of Object.keys(window.__wdio_mocks__)) {
+          if (commandName.startsWith(prefix)) {
+            // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
+            delete window.__wdio_mocks__[commandName];
+          }
+        }
+      }
     }
-  });
+  }, commandPrefix);
 
-  // Restore all outer mocks
+  // Restore outer mocks (with prefix filtering)
   const mocks = mockStore.getMocks();
-  for (const [, mock] of mocks) {
-    await mock.mockRestore();
+  let restoredCount = 0;
+  for (const [mockName, mock] of mocks) {
+    if (!commandPrefix || mockName.match(new RegExp(`^tauri\\.${commandPrefix}`))) {
+      await mock.mockRestore();
+      restoredCount++;
+    }
   }
 
-  log.debug(`restoreAllMocks completed - restored ${mocks.length} mocks`);
+  log.debug(`restoreAllMocks completed - restored ${restoredCount} of ${mocks.length} mocks`);
 }
 
-export async function isMockFunction(this: TauriServiceContext, command: string): Promise<boolean> {
-  try {
-    const existingMock = mockStore.getMock(`tauri.${command}`);
-    return existingMock.__isTauriMock === true;
-  } catch (_e) {
-    return false;
-  }
+export function isMockFunction(fn: unknown): fn is import('@wdio/native-types').TauriMockInstance {
+  return (
+    typeof fn === 'function' && '__isTauriMock' in fn && (fn as unknown as { __isTauriMock: boolean }).__isTauriMock
+  );
 }

@@ -236,28 +236,28 @@ export default class TauriWorkerService {
       execute: <ReturnValue, InnerArguments extends unknown[]>(
         script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
         ...args: InnerArguments
-      ): Promise<ReturnValue | undefined> => {
+      ): Promise<ReturnValue> => {
         return execute<ReturnValue, InnerArguments>(browser, script, ...args);
       },
 
-      clearAllMocks: async (): Promise<void> => {
-        return clearAllMocks.call({ browser });
+      clearAllMocks: async (commandPrefix?: string): Promise<void> => {
+        return clearAllMocks.call({ browser }, commandPrefix);
       },
 
-      isMockFunction: async (command: string): Promise<boolean> => {
-        return isMockFunction.call({ browser }, command);
+      isMockFunction: (fn: unknown) => {
+        return isMockFunction(fn);
       },
 
       mock: async (command: string) => {
         return mock.call({ browser }, command);
       },
 
-      resetAllMocks: async (): Promise<void> => {
-        return resetAllMocks.call({ browser });
+      resetAllMocks: async (commandPrefix?: string): Promise<void> => {
+        return resetAllMocks.call({ browser }, commandPrefix);
       },
 
-      restoreAllMocks: async (): Promise<void> => {
-        return restoreAllMocks.call({ browser });
+      restoreAllMocks: async (commandPrefix?: string): Promise<void> => {
+        return restoreAllMocks.call({ browser }, commandPrefix);
       },
 
       triggerDeeplink: async (url: string): Promise<void> => {

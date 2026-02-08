@@ -12,7 +12,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   browser: WebdriverIO.Browser,
   script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
   ...args: InnerArguments
-): Promise<ReturnValue | undefined> {
+): Promise<ReturnValue> {
   /**
    * parameter check
    */
@@ -125,7 +125,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   }
 
   log.debug(`Execute result:`, result);
-  return (result as ReturnValue) ?? undefined;
+  return result as ReturnValue;
 }
 
 /**
