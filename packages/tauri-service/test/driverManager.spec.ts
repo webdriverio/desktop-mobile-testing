@@ -76,8 +76,12 @@ describe('WebKitWebDriver Management', () => {
       // Check the result structure regardless of success/failure
       expect(result).toHaveProperty('success');
       expect(result).toHaveProperty('path');
-      expect(result).toHaveProperty('error');
-      expect(result).toHaveProperty('installInstructions');
+
+      // error and installInstructions should only be present on failure
+      const hasError = 'error' in result;
+      const hasInstallInstructions = 'installInstructions' in result;
+      expect(hasError).toBe(!result.success);
+      expect(hasInstallInstructions).toBe(!result.success);
     });
 
     it('should return valid result for WebKitWebDriver check', async () => {
@@ -91,17 +95,21 @@ describe('WebKitWebDriver Management', () => {
       // Always check that we get a properly structured result
       expect(result).toHaveProperty('success');
       expect(result).toHaveProperty('path');
-      expect(result).toHaveProperty('error');
-      expect(result).toHaveProperty('installInstructions');
+
+      // error and installInstructions should only be present on failure
+      const hasError = 'error' in result;
+      const hasInstallInstructions = 'installInstructions' in result;
+      expect(hasError).toBe(!result.success);
+      expect(hasInstallInstructions).toBe(!result.success);
 
       // The result should be consistent - if success is true, we should have a path and no error
       // If success is false, we should have an error and install instructions
       const hasPath = result.path && result.path.length > 0;
-      const hasError = result.error && result.error.length > 0;
-      const hasInstallInstructions = result.installInstructions && result.installInstructions.length > 0;
+      const hasErrorContent = result.error && result.error.length > 0;
+      const hasInstallInstructionsContent = result.installInstructions && result.installInstructions.length > 0;
 
-      expect(result.success ? hasPath : hasError).toBe(true);
-      expect(result.success ? !hasError : hasInstallInstructions).toBe(true);
+      expect(result.success ? hasPath : hasErrorContent).toBe(true);
+      expect(result.success ? !hasErrorContent : hasInstallInstructionsContent).toBe(true);
     });
   });
 });
