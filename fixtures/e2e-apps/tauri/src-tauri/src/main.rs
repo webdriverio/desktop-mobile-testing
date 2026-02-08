@@ -3,39 +3,10 @@
 // E2E tests use debug builds on Windows to preserve stdout/stderr for logging tests.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
 static DEEP_LINKS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
-static DEEP_LINK_LOG: Lazy<Option<Mutex<std::fs::File>>> = Lazy::new(|| {
-    let log_path = std::env::temp_dir().join("tauri-deep-link-debug.log");
-    let _ = std::fs::remove_file(&log_path); // Clear log on startup
-    match OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
-        Ok(file) => Some(Mutex::new(file)),
-        Err(e) => {
-            eprintln!("[DEEP-LINK-DEBUG] Failed to open log file at {:?}: {}", log_path, e);
-            None
-        }
-    }
-});
-
-fn log_deep_link(message: &str) {
-    let timestamp = chrono::Local::now().format("%H:%M:%S%.3f");
-    let pid = std::process::id();
-    let log_line = format!("[{}] [PID {}] {}\n", timestamp, pid, message);
-    eprintln!("[DEEP-LINK-DEBUG] {}", message);
-    if let Some(ref log) = *DEEP_LINK_LOG {
-        if let Ok(mut file) = log.lock() {
-            let _ = file.write_all(log_line.as_bytes());
-        }
-    }
-}
 
 fn collect_deep_links_from_args() -> Vec<String> {
     let mut deep_links = Vec::new();
@@ -241,8 +212,6 @@ async fn generate_test_logs(app: tauri::AppHandle) -> Result<(), String> {
 #[tauri::command]
 async fn get_deep_links(_app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let links = DEEP_LINKS.lock().map_err(|e| e.to_string())?.clone();
-    eprintln!("🔍 get_deep_links() called - returning {} links: {:?}", links.len(), links);
-    log_deep_link(&format!("get_deep_links called, returning {} links: {:?}", links.len(), links));
     Ok(links)
 }
 
@@ -250,35 +219,16 @@ fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     let deep_links = DEEP_LINKS.lock().map(|guard| guard.clone()).unwrap_or_default();
 
     if !deep_links.is_empty() {
-        eprintln!("📤 emit_deep_links() called - emitting {} deep links to frontend", deep_links.len());
-        log_deep_link(&format!("Emitting {} deep links to frontend", deep_links.len()));
         for link in &deep_links {
-            match app.emit("deeplink-received", link) {
-                Ok(_) => {
-                    eprintln!("  ✓ Emitted: {}", link);
-                    log_deep_link(&format!("Emitted deep link: {}", link));
-                },
-                Err(e) => {
-                    eprintln!("  ✗ ERROR emitting {}: {}", link, e);
-                    log_deep_link(&format!("ERROR emitting deep link {}: {}", link, e));
-                }
-            }
+            let _ = app.emit("deeplink-received", link);
         }
-    } else {
-        log_deep_link("emit_deep_links() called but no deep links to emit");
     }
 }
 
 fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::WebviewWindow<R> {
-    log_deep_link("create_main_window() called");
-    eprintln!("[Tauri-DEBUG] create_main_window called");
     if let Some(existing) = app.get_webview_window("main") {
-        log_deep_link("Found existing main window, returning it");
-        eprintln!("[Tauri-DEBUG] Found existing main window, returning it");
         return existing;
     }
-    log_deep_link("No existing window found, creating new main window...");
-    eprintln!("[Tauri-DEBUG] Creating new main window");
     let window = tauri::WebviewWindowBuilder::new(
         app,
         "main",
@@ -288,79 +238,28 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> tauri::We
     .inner_size(600.0, 400.0)
     .build()
     .expect("Failed to create main window");
-    log_deep_link("Main window created successfully");
-    eprintln!("[Tauri-DEBUG] Main window created successfully");
     window
 }
 
 #[tauri::command]
 async fn switch_to_main(app: tauri::AppHandle) -> Result<(), String> {
-    eprintln!("[Tauri-DEBUG] switch_to_main called");
-
-    // Standard Tauri splashscreen transition:
-    // Both windows exist, just switch visibility
-
     let main = app.get_webview_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
 
     // Hide splash (keeps WebDriver session alive)
     if let Some(splash) = app.get_webview_window("splash") {
-        eprintln!("[Tauri-DEBUG] Hiding splash window");
         splash.hide().map_err(|e| e.to_string())?;
     }
 
     // Show and focus main
-    eprintln!("[Tauri-DEBUG] Showing main window");
     main.show().map_err(|e| e.to_string())?;
     main.set_focus().map_err(|e| e.to_string())?;
 
-    eprintln!("[Tauri-DEBUG] switch_to_main completed - session stays valid!");
     Ok(())
 }
 
 fn main() {
-    // IMMEDIATE LOG: Before anything else, log that we're starting
-    eprintln!("[EMERGENCY-DEBUG] === MAIN() ENTRY POINT ===");
-    eprintln!("[EMERGENCY-DEBUG] PID: {}", std::process::id());
-    eprintln!("[EMERGENCY-DEBUG] Args: {:?}", std::env::args().collect::<Vec<_>>());
-    eprintln!("[EMERGENCY-DEBUG] ENABLE_SINGLE_INSTANCE: {:?}", std::env::var("ENABLE_SINGLE_INSTANCE"));
-    eprintln!("[EMERGENCY-DEBUG] TAURI_WEBVIEW_AUTOMATION: {:?}", std::env::var("TAURI_WEBVIEW_AUTOMATION"));
-    
-    // Set up panic handler to catch crashes
-    std::panic::set_hook(Box::new(|info| {
-        eprintln!("[EMERGENCY-DEBUG] === PANIC OCCURRED ===");
-        eprintln!("[EMERGENCY-DEBUG] Panic info: {}", info);
-        log_deep_link(&format!("PANIC: {}", info));
-    }));
-    
-    log_deep_link(&format!("=== APP STARTING ==="));
-    log_deep_link(&format!("PID: {}", std::process::id()));
-    log_deep_link(&format!("App starting with {} args", std::env::args().count()));
-    log_deep_link(&format!("CI mode: {}", std::env::var("CI").unwrap_or_else(|_| "not set".to_string())));
-    log_deep_link(&format!("Working directory: {:?}", std::env::current_dir()));
-    log_deep_link(&format!("ENABLE_SINGLE_INSTANCE env: {:?}", std::env::var("ENABLE_SINGLE_INSTANCE")));
-    log_deep_link(&format!("TAURI_WEBVIEW_AUTOMATION env: {:?}", std::env::var("TAURI_WEBVIEW_AUTOMATION")));
-    
-    // Check if we're being launched by protocol handler (cmd /c)
-    let parent_process = std::env::var("_").unwrap_or_default();
-    log_deep_link(&format!("Parent process indicator: {}", parent_process));
-
-    // DEBUG: Print ALL args to diagnose deep link routing
-    let all_args: Vec<String> = std::env::args().collect();
-    eprintln!("[DEEPLINK-DEBUG] All args: {:?}", all_args);
-    log_deep_link(&format!("CLI args: {:?}", all_args));
-
-    // Check for deep link URLs in args
-    for (i, arg) in all_args.iter().enumerate() {
-        if arg.starts_with("testapp://") {
-            eprintln!("[DEEPLINK-DEBUG] Found deep link at index {}: {}", i, arg);
-            log_deep_link(&format!("DEEP-LINK-RECEIVED-VIA-CLI: {} (index {})", arg, i));
-        }
-    }
-
     let is_splash = std::env::var("ENABLE_SPLASH_WINDOW").is_ok();
-    eprintln!("[Tauri-DEBUG] ENABLE_SPLASH_WINDOW={}", is_splash);
-    log_deep_link(&format!("ENABLE_SPLASH_WINDOW={}", is_splash));
 
     // Enable single-instance plugin when explicitly requested (deeplink tests via WDIO env)
     // OR when launched as a protocol handler (args contain testapp:// URL).
@@ -368,108 +267,37 @@ fn main() {
     // env var propagation is unreliable — detecting the URL in args is more robust.
     let has_deeplink_arg = std::env::args().any(|a| a.starts_with("testapp://"));
     let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok() || has_deeplink_arg;
-    log_deep_link(&format!("ENABLE_SINGLE_INSTANCE env={}, has_deeplink_arg={}, enabled={}",
-        std::env::var("ENABLE_SINGLE_INSTANCE").is_ok(), has_deeplink_arg, enable_single_instance));
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init());
 
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
     if enable_single_instance {
-        log_deep_link("Initializing single-instance plugin...");
-        eprintln!("======================================");
-        eprintln!("SINGLE-INSTANCE PLUGIN ENABLED");
-        eprintln!("======================================");
-
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
-            eprintln!("");
-            eprintln!("╔════════════════════════════════════════════════════════════════╗");
-            eprintln!("║ SINGLE-INSTANCE CALLBACK TRIGGERED!                           ║");
-            eprintln!("╚════════════════════════════════════════════════════════════════╝");
-            eprintln!("  Second instance attempted to start");
-            eprintln!("  CWD: {:?}", cwd);
-            eprintln!("  Args count: {}", args.len());
-            eprintln!("  Args: {:?}", args);
-            eprintln!("");
-
-            log_deep_link(&format!("🔔 Single-instance callback triggered! Args: {:?}, CWD: {:?}", args, cwd));
-
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             // Forward deep links from second instance to the running instance
-            let mut deeplink_count = 0;
-            for (i, arg) in args.iter().enumerate() {
-                log_deep_link(&format!("  Processing arg[{}]: {}", i, arg));
+            for arg in args.iter() {
                 if arg.starts_with("testapp://") {
-                    deeplink_count += 1;
-                    eprintln!("  ✓ Found deeplink at arg[{}]: {}", i, arg);
-                    log_deep_link(&format!("🔗 Single-instance forwarding deeplink: {}", arg));
-
-                    // Add to deep links collection
                     if let Ok(mut links) = DEEP_LINKS.lock() {
                         links.push(arg.clone());
-                        log_deep_link(&format!("  ✓ Added to DEEP_LINKS collection (total: {})", links.len()));
                     }
-
-                    // Emit to frontend
-                    match app.emit("deeplink-received", arg) {
-                        Ok(_) => {
-                            eprintln!("  ✓ Emitted deeplink event to frontend: {}", arg);
-                            log_deep_link(&format!("✅ Successfully emitted deeplink to frontend: {}", arg));
-                        },
-                        Err(e) => {
-                            eprintln!("  ✗ ERROR emitting deeplink: {}", e);
-                            log_deep_link(&format!("❌ ERROR emitting deeplink: {}", e));
-                        }
-                    }
-                } else {
-                    log_deep_link(&format!("  ⊘ Arg does not start with testapp://, skipping: {}", arg));
+                    let _ = app.emit("deeplink-received", arg);
                 }
             }
-
-            eprintln!("");
-            if deeplink_count > 0 {
-                eprintln!("  Summary: Forwarded {} deeplink(s) to running instance", deeplink_count);
-            } else {
-                eprintln!("  Summary: No deeplinks found in args");
-            }
-            eprintln!("╚════════════════════════════════════════════════════════════════╝");
-            eprintln!("");
         }));
-
-        log_deep_link("Single-instance plugin initialized successfully");
-        eprintln!("✓ Single-instance plugin registered");
-        eprintln!("  Waiting for second instance attempts...");
-        eprintln!("======================================");
     }
 
-    log_deep_link("Building Tauri app...");
-    
     builder
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
-            log_deep_link("=== TAURI SETUP STARTING ===");
-            eprintln!("[Tauri-DEBUG] Setup called, is_splash={}", is_splash);
-            log_deep_link(&format!("Setup called, is_splash={}", is_splash));
-
             // Collect deep links from CLI args at startup
             let cli_deep_links = collect_deep_links_from_args();
             if !cli_deep_links.is_empty() {
-                eprintln!("");
-                eprintln!("🔗 Found {} deep links in CLI args at startup:", cli_deep_links.len());
-                log_deep_link(&format!("Found {} deep links in CLI args", cli_deep_links.len()));
                 let mut deep_links_guard = DEEP_LINKS.lock().unwrap();
                 for link in &cli_deep_links {
-                    eprintln!("  - {}", link);
                     deep_links_guard.push(link.clone());
-                    log_deep_link(&format!("Collected deep link: {}", link));
                 }
                 drop(deep_links_guard);
-
-                eprintln!("  Emitting to frontend...");
-                // Emit deep links to frontend
                 emit_deep_links(&app.handle());
-                eprintln!("");
-            } else {
-                log_deep_link("No deep links found in CLI args at startup");
             }
 
             // Register deeplink protocol at runtime (Linux/Windows only)
@@ -479,31 +307,16 @@ fn main() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
 
-                // Get CURRENT binary path for debugging
-                let binary_path = std::env::current_exe()
-                    .expect("Failed to get current binary path");
-                log_deep_link(&format!("Current binary path: {:?}", binary_path));
-
-                // Register protocol - the plugin automatically uses current binary
-                // This fixes CI path mismatches where register_all() points to wrong binary
                 match app.deep_link().register("testapp") {
-                    Ok(_) => {
-                        eprintln!("[Tauri-DEBUG] Successfully registered testapp protocol");
-                        log_deep_link("✓ Registered testapp protocol");
-                    }
-                    Err(e) => {
-                        eprintln!("[Tauri-DEBUG] Protocol registration failed (non-fatal): {}", e);
-                        log_deep_link(&format!("Protocol registration note: {}. Deep links still work via CLI args.", e));
+                    Ok(_) => {}
+                    Err(_e) => {
+                        eprintln!("[Tauri] Protocol registration note: {}. Deep links still work via CLI args.", _e);
                     }
                 }
-
-                log_deep_link("Deep links arrive via CLI args on Linux (receiver not used)");
             }
 
             if is_splash {
                 // 1. SPLASH FIRST - WebDriver MUST connect here (visible + focused)
-                log_deep_link("Creating SPLASH window (ENABLE_SPLASH_WINDOW=true)");
-                eprintln!("[Tauri-DEBUG] === Creating SPLASH window FIRST ===");
                 let splash = tauri::WebviewWindowBuilder::new(
                     app,
                     "splash",
@@ -513,20 +326,14 @@ fn main() {
                 .inner_size(300.0, 200.0)
                 .resizable(false)
                 .decorations(false)
-                .focused(true)           // CRITICAL: WebDriver attaches here
+                .focused(true)
                 .build()
                 .expect("Failed to create splash window");
 
-                // Show/focus splash explicitly (ensures WebDriver session)
                 splash.show().expect("Failed to show splash");
                 splash.set_focus().expect("Failed to focus splash");
 
-                eprintln!("[Tauri-DEBUG] ✓ Splash created and focused");
-                log_deep_link("Splash window created and focused successfully");
-
                 // 2. MAIN SECOND - hidden until switch_to_main
-                log_deep_link("Creating MAIN window (hidden)");
-                eprintln!("[Tauri-DEBUG] === Creating MAIN window SECOND (hidden) ===");
                 let _main = tauri::WebviewWindowBuilder::new(
                     app,
                     "main",
@@ -534,20 +341,12 @@ fn main() {
                 )
                 .title("Tauri E2E Test App")
                 .inner_size(600.0, 400.0)
-                .visible(false)          // HIDDEN until switch_to_main
+                .visible(false)
                 .build()
                 .expect("Failed to create main window");
-
-                eprintln!("[Tauri-DEBUG] ✓ Main created (hidden). Ready for switch_to_main!");
-                log_deep_link("Main window created (hidden) successfully");
             } else {
-                // No splash - just main window (unchanged)
-                log_deep_link("No splash mode - creating main window only");
-                eprintln!("[Tauri-DEBUG] No splash mode - creating main only");
                 create_main_window(app.handle());
-                log_deep_link("Main window created successfully");
             }
-            log_deep_link("=== TAURI SETUP COMPLETED SUCCESSFULLY ===");
             Ok::<(), Box<dyn std::error::Error>>(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -571,8 +370,4 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-    
-    log_deep_link("=== APP EXITED NORMALLY ===");
-    eprintln!("[EMERGENCY-DEBUG] === APP EXITED NORMALLY ===");
 }
-

@@ -266,7 +266,7 @@ jobs:
           echo ""
           echo "=== Protocol Handler Setup Complete ==="
 
-      # DEBUG: Verify protocol registration after setup
+      # Verify protocol registration after setup
       - name: 🔍 Verify Protocol Registration
         if: runner.os != 'macOS'
         shell: bash
@@ -276,7 +276,7 @@ jobs:
           if [ "${{ runner.os }}" == "Linux" ]; then
             echo "Linux: Checking xdg-mime registration..."
             xdg-mime query default x-scheme-handler/testapp || echo "WARNING: No handler registered for testapp://"
-            
+
             echo ""
             echo "Checking .desktop file..."
             if [ -f "$HOME/.local/share/applications/tauri-e2e-app-testapp.desktop" ]; then
@@ -285,11 +285,11 @@ jobs:
             else
               echo "❌ Desktop file NOT found at ~/.local/share/applications/tauri-e2e-app-testapp.desktop"
             fi
-            
+
             echo ""
             echo "Checking desktop database..."
             update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-            
+
           elif [ "${{ runner.os }}" == "Windows" ]; then
             echo "Windows: Checking registry..."
             reg query "HKCR\testapp" 2>nul || echo "❌ Protocol NOT registered in HKCR\testapp"
@@ -322,62 +322,23 @@ jobs:
             };
             return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
 
-      # DEBUG: Check for ghost processes BEFORE cleanup (to see if they exist from previous runs)
-      - name: 🔍 Pre-Cleanup Ghost Process Check (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "=== Pre-Cleanup Ghost Process Check ==="
-          Write-Host "Checking for existing tauri-e2e-app processes BEFORE cleanup..."
-          $processes = Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue
-          if ($processes) {
-            Write-Host "⚠️  GHOST PROCESSES FOUND BEFORE CLEANUP:"
-            $processes | ForEach-Object {
-              Write-Host "  PID: $($_.Id), StartTime: $($_.StartTime), Parent: $($_.Parent.ProcessName)"
-            }
-          } else {
-            Write-Host "✅ No ghost processes found before cleanup"
-          }
-          Write-Host "=== End Pre-Cleanup Check ==="
-
       # Cleanup any lingering processes from previous test runs
       - name: 🧹 Cleanup Lingering Processes (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Write-Host "Cleaning up any lingering tauri-driver, msedgedriver, or app processes..."
-          # Kill tauri-driver processes
           Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          # Kill msedgedriver processes (may hold child app processes via Job Object)
           Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          # Kill any tauri app processes
           Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           Write-Host "Windows cleanup complete"
-
-      # DEBUG: Verify cleanup worked
-      - name: 🔍 Verify Cleanup (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "=== Verifying Cleanup ==="
-          Start-Sleep -Seconds 2
-          $remaining = Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue
-          if ($remaining) {
-            Write-Host "❌ Cleanup FAILED - processes still exist:"
-            $remaining | ForEach-Object { Write-Host "  PID: $($_.Id)" }
-          } else {
-            Write-Host "✅ Cleanup successful - no tauri-e2e-app processes found"
-          }
-          Write-Host "=== End Cleanup Verification ==="
 
       - name: 🧹 Cleanup Lingering Processes (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           echo "Cleaning up any lingering tauri-driver or app processes..."
-          # Kill tauri-driver processes
           pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
-          # Kill any tauri app processes
           pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
           echo "Unix cleanup complete"
 
@@ -399,145 +360,8 @@ jobs:
             xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x16" `
               pnpm run ${{ steps.gen-test.outputs.result }}
           } else {
-            # Start ghost process monitor in background for Windows
-            if ($env:RUNNER_OS -eq "Windows") {
-              Write-Host "=== Starting Ghost Process Monitor in background ==="
-              
-              $monitorJob = Start-Job -ScriptBlock {
-                $logFile = "..\logs\ghost-process-monitor.log"
-                "Ghost Process Monitor Started at $(Get-Date)" | Out-File -FilePath $logFile
-                
-                # Check every 5 seconds
-                while ($true) {
-                  Start-Sleep -Seconds 5
-                  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                  $processes = Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue
-                  
-                  if ($processes) {
-                    $msg = "[$timestamp] Found $($processes.Count) tauri-e2e-app process(es):"
-                    $msg | Out-File -FilePath $logFile -Append
-                    foreach ($proc in $processes) {
-                      $procInfo = "  PID: $($proc.Id), StartTime: $($proc.StartTime), Parent: $($proc.Parent.ProcessName)"
-                      $procInfo | Out-File -FilePath $logFile -Append
-                    }
-                  }
-                  
-                  $msedgeProcs = Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue
-                  if ($msedgeProcs) {
-                    "[$timestamp] Found $($msedgeProcs.Count) msedgedriver process(es)" | Out-File -FilePath $logFile -Append
-                  }
-                }
-              }
-              
-              Write-Host "Ghost process monitor started with Job ID: $($monitorJob.Id)"
-              Write-Host "Monitor log will be saved to: ..\logs\ghost-process-monitor.log"
-            }
-            
-            # Run the actual tests
             pnpm run ${{ steps.gen-test.outputs.result }}
-            $testExitCode = $LASTEXITCODE
-            
-            # Stop the monitor and show results
-            if ($env:RUNNER_OS -eq "Windows" -and $monitorJob) {
-              Write-Host ""
-              Write-Host "=== Stopping Ghost Process Monitor ==="
-              Stop-Job -Job $monitorJob
-              Remove-Job -Job $monitorJob
-              
-              $logFile = "..\logs\ghost-process-monitor.log"
-              if (Test-Path $logFile) {
-                Write-Host ""
-                Write-Host "Ghost Process Monitor Log:"
-                Get-Content -Path $logFile
-                Write-Host ""
-                Write-Host "Log file saved to: $logFile"
-              }
-            }
-            
-            exit $testExitCode
           }
-
-      # DEBUG: Check for ghost processes before cleanup
-      - name: 🔍 Check for Ghost Processes (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "=== Checking for Ghost Processes ==="
-          Write-Host ""
-          Write-Host "Running tasklist to find tauri-e2e-app processes..."
-          $null = tasklist | findstr tauri-e2e-app
-          # Reset exit code so it doesn't fail the step
-          $global:LASTEXITCODE = 0
-          
-          $tauriProcs = Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue
-          if ($tauriProcs) {
-            Write-Host ""
-            Write-Host "⚠️  WARNING: Found tauri-e2e-app processes still running!"
-            Write-Host ""
-            Write-Host "Process details:"
-            tasklist /FI "IMAGENAME eq tauri-e2e-app.exe" /V
-            Write-Host ""
-            Write-Host "Parent process tree:"
-            $tauriProcs | ForEach-Object {
-              $proc = $_
-              Write-Host "PID: $($proc.Id), Parent PID: $($proc.Parent.Id), StartTime: $($proc.StartTime)"
-            }
-          } else {
-            Write-Host "✅ No tauri-e2e-app processes found"
-          }
-          Write-Host ""
-          Write-Host "Also checking for msedgedriver processes..."
-          $null = tasklist | findstr msedgedriver
-          # Reset exit code so it doesn't fail the step
-          $global:LASTEXITCODE = 0
-          
-          $msedgeProcs = Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue
-          if ($msedgeProcs) {
-            Write-Host "⚠️  WARNING: Found msedgedriver processes still running!"
-            tasklist /FI "IMAGENAME eq msedgedriver.exe" /V
-          } else {
-            Write-Host "✅ No msedgedriver processes found"
-          }
-          Write-Host ""
-          Write-Host "=== Ghost Process Check Complete ==="
-
-      # Collect single-instance debug log
-      - name: 📋 Collect Single-Instance Debug Log (Windows)
-        if: always() && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "=== Single-Instance Debug Log ==="
-          
-          # Check multiple possible log locations
-          $logPaths = @(
-            "logs\single-instance-debug.log",
-            "e2e\logs\single-instance-debug.log",
-            "C:\temp\single-instance-debug.log"
-          )
-          
-          $foundLog = $false
-          foreach ($logPath in $logPaths) {
-            if (Test-Path $logPath) {
-              Write-Host "✅ Found debug log at: $logPath"
-              Write-Host ""
-              Write-Host "Log contents:"
-              Get-Content -Path $logPath -Tail 100
-              Write-Host ""
-              Write-Host "Log file size: $((Get-Item $logPath).Length) bytes"
-              $foundLog = $true
-              break
-            }
-          }
-          
-          if (-not $foundLog) {
-            Write-Host "❌ Debug log not found in any of the expected locations:"
-            foreach ($logPath in $logPaths) {
-              Write-Host "  - $logPath"
-            }
-            Write-Host ""
-            Write-Host "This may indicate that no detached processes were launched"
-          }
-          Write-Host "=== End Single-Instance Debug Log ==="
 
       # Cleanup processes after tests complete
       - name: 🧹 Post-Test Cleanup (Windows)
@@ -545,11 +369,8 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Cleaning up test processes..."
-          # Kill tauri-driver processes
           Get-Process -Name "tauri-driver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          # Kill msedgedriver processes
           Get-Process -Name "msedgedriver" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          # Kill any tauri app processes
           Get-Process -Name "tauri-e2e-app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           Write-Host "Post-test Windows cleanup complete"
 
@@ -558,31 +379,9 @@ jobs:
         shell: bash
         run: |
           echo "Cleaning up test processes..."
-          # Kill tauri-driver processes
           pkill -9 -f tauri-driver || echo "No tauri-driver processes found"
-          # Kill any tauri app processes
           pkill -9 -f tauri-e2e-app || echo "No tauri-e2e-app processes found"
           echo "Post-test Unix cleanup complete"
-
-      # Show System Logs
-      - name: 🔍 Show System Logs
-        if: always()
-        shell: bash
-        run: |
-          echo "=== Tauri App Process Info ==="
-          ps aux | grep tauri || echo "No tauri processes found"
-
-          echo ""
-          echo "=== Deep Link Debug Log ==="
-          if [ -f /tmp/tauri-deep-link-debug.log ]; then
-            cat /tmp/tauri-deep-link-debug.log
-          else
-            echo "No deep link debug log found at /tmp/tauri-deep-link-debug.log"
-          fi
-
-          echo ""
-          echo "=== System Logs (last 50 lines) ==="
-          journalctl --no-pager -n 50 || echo "No system logs available"
 
       # Show comprehensive debug information on failure
       - name: 🐛 Debug Information

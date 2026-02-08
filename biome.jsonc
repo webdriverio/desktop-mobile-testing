@@ -17,9 +17,7 @@
       // ignore tauri build files
       "!**/tauri-plugin/target",
       "!**/src-tauri/target",
-      "!**/src-tauri/target/**/.fingerprint/**/*.json",
-      // ignore patches directory
-      "!patches/**"
+      "!**/src-tauri/target/**/.fingerprint/**/*.json"
     ]
   },
   "formatter": {
