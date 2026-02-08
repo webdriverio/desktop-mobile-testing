@@ -20,13 +20,19 @@ type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 export default class TauriWorkerService {
   private browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
   private clearMocks: boolean;
+  private clearMocksPrefix?: string;
   private resetMocks: boolean;
+  private resetMocksPrefix?: string;
   private restoreMocks: boolean;
+  private restoreMocksPrefix?: string;
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
+    this.clearMocksPrefix = options.clearMocksPrefix;
     this.resetMocks = options.resetMocks ?? false;
+    this.resetMocksPrefix = options.resetMocksPrefix;
     this.restoreMocks = options.restoreMocks ?? false;
+    this.restoreMocksPrefix = options.restoreMocksPrefix;
     log.debug('TauriWorkerService initialized');
   }
 
@@ -124,13 +130,13 @@ export default class TauriWorkerService {
 
   async beforeTest(_test: unknown, _context: unknown): Promise<void> {
     if (this.clearMocks) {
-      await clearAllMocks.call({ browser: this.browser });
+      await clearAllMocks.call({ browser: this.browser }, this.clearMocksPrefix);
     }
     if (this.resetMocks) {
-      await resetAllMocks.call({ browser: this.browser });
+      await resetAllMocks.call({ browser: this.browser }, this.resetMocksPrefix);
     }
     if (this.restoreMocks) {
-      await restoreAllMocks.call({ browser: this.browser });
+      await restoreAllMocks.call({ browser: this.browser }, this.restoreMocksPrefix);
     }
   }
 

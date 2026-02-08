@@ -83,7 +83,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
       }
       try {
         // @ts-expect-error - Running in browser context
-        const execResult = window.wdioTauri.execute(script, args);
+        const execResult = window.wdioTauri.execute(script, ...args);
         // Handle Promise results - await them in browser context
         if (execResult && typeof execResult.then === 'function') {
           try {

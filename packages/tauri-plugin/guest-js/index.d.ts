@@ -3,7 +3,7 @@
  */
 
 export interface WdioTauriAPI {
-  execute(script: string, args?: unknown[]): Promise<unknown>;
+  execute(script: string, ...args: unknown[]): Promise<unknown>;
   setMock(command: string, config: unknown): Promise<void>;
   getMock(command: string): Promise<unknown | null>;
   clearMocks(): Promise<void>;
@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-export function execute(script: string, args?: unknown[]): Promise<unknown>;
+export function execute(script: string, ...args: unknown[]): Promise<unknown>;
 export function setMock(command: string, config: unknown): Promise<void>;
 export function getMock(command: string): Promise<unknown | null>;
 export function clearMocks(): Promise<void>;

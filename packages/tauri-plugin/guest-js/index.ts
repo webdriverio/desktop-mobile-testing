@@ -53,7 +53,7 @@ declare global {
       };
     };
     wdioTauri?: {
-      execute: (script: string, args?: unknown[]) => Promise<unknown>;
+      execute: (script: string, ...args: unknown[]) => Promise<unknown>;
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
@@ -118,7 +118,7 @@ if (typeof window !== 'undefined') {
  * @param args - Arguments to pass to the script (after the Tauri APIs object)
  * @returns Result of the script execution
  */
-export async function execute(script: string, args: unknown[] = []): Promise<unknown> {
+export async function execute(script: string, ...args: unknown[]): Promise<unknown> {
   try {
     // Ensure window.__TAURI__ is available
     if (!window.__TAURI__) {

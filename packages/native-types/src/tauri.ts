@@ -259,17 +259,38 @@ export interface TauriServiceGlobalOptions {
    */
   clearMocks?: boolean;
   /**
+   * Optional command name prefix to filter which mocks to clear before each test.
+   * Only used when clearMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be cleared.
+   * @default undefined
+   */
+  clearMocksPrefix?: string;
+  /**
    * If true, all mocks will be reset (implementation + history) before each test.
    * Equivalent to calling `browser.tauri.resetAllMocks()` before each test.
    * @default false
    */
   resetMocks?: boolean;
   /**
+   * Optional command name prefix to filter which mocks to reset before each test.
+   * Only used when resetMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be reset.
+   * @default undefined
+   */
+  resetMocksPrefix?: string;
+  /**
    * If true, all mocks will be restored to their original implementations before each test.
    * Equivalent to calling `browser.tauri.restoreAllMocks()` before each test.
    * @default false
    */
   restoreMocks?: boolean;
+  /**
+   * Optional command name prefix to filter which mocks to restore before each test.
+   * Only used when restoreMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be restored.
+   * @default undefined
+   */
+  restoreMocksPrefix?: string;
   /**
    * Enable/disable capturing Rust backend logs from stdout
    * @default false
