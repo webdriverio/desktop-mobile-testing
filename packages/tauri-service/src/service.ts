@@ -84,35 +84,18 @@ export default class TauriWorkerService {
 
     // Wait for the plugin to fully initialize (specifically attachConsole())
     // This ensures frontend console logs will be captured
-    log.info('🔍 DEBUG: Waiting for Tauri plugin initialization...');
+    log.debug('Waiting for Tauri plugin initialization...');
     try {
-      const result = await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
-        const debug: string[] = [];
-        // @ts-expect-error - window exists in browser context
-        debug.push(`window.wdioTauri available: ${typeof window.wdioTauri !== 'undefined'}`);
-        // @ts-expect-error - window exists in browser context
-        if (typeof window.wdioTauri !== 'undefined') {
-          // @ts-expect-error - window exists in browser context
-          debug.push(`window.wdioTauri.waitForInit available: ${typeof window.wdioTauri.waitForInit === 'function'}`);
-          // @ts-expect-error - window exists in browser context
-          debug.push(`window.__TAURI__ available: ${typeof window.__TAURI__ !== 'undefined'}`);
-          // @ts-expect-error - window exists in browser context
-          debug.push(`window.__TAURI__?.log available: ${typeof window.__TAURI__?.log !== 'undefined'}`);
-        }
+      await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
         // @ts-expect-error - window exists in browser context
         if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
-          debug.push('Calling waitForInit...');
           // @ts-expect-error - window exists in browser context
           await window.wdioTauri.waitForInit();
-          debug.push('waitForInit completed');
-          return { success: true, debug };
         }
-        return { success: false, debug };
       });
-      log.info(`🔍 DEBUG: waitForInit result: ${JSON.stringify(result)}`);
-      log.info('✅ Tauri plugin initialization complete');
+      log.debug('Tauri plugin initialization complete');
     } catch (error) {
-      log.error('❌ Failed to wait for plugin initialization:', error);
+      log.error('Failed to wait for plugin initialization:', error);
     }
 
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
@@ -120,7 +103,7 @@ export default class TauriWorkerService {
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
 
     // Initialize Tauri mocking system
-    log.info('🔧 Initializing Tauri mocking system...');
+    log.debug('Initializing Tauri mocking system...');
     try {
       await (browser as WebdriverIO.Browser).execute(async function initMocks() {
         // @ts-expect-error - injection script will be bundled
@@ -129,10 +112,10 @@ export default class TauriWorkerService {
           await window.initializeTauriMocks();
         }
       });
-      log.info('✅ Tauri mocking system initialized');
+      log.debug('Tauri mocking system initialized');
     } catch (error) {
-      log.warn('⚠️ Failed to initialize Tauri mocking system:', error);
-      log.warn('   Mocking functionality may not be available');
+      log.warn('Failed to initialize Tauri mocking system:', error);
+      log.warn('Mocking functionality may not be available');
     }
 
     // Install command overrides to trigger mock updates after DOM interactions

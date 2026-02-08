@@ -17,7 +17,6 @@ vi.mock('node:fs', () => ({
 
 vi.mock('node:util', () => ({
   promisify: vi.fn((fn) => fn),
-  execAsync: vi.fn(),
 }));
 
 describe('Edge Driver Manager', () => {
