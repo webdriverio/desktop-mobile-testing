@@ -38,7 +38,7 @@ try {
   }
 
   // Verify logs were captured with correct prefix
-  const logs1 = readWdioLogs(logDir);
+  const logs1 = await readWdioLogs(logDir);
   if (!logs1) {
     throw new Error('No logs found in output directory');
   }
@@ -66,7 +66,7 @@ try {
   }
 
   // Verify renderer logs were captured with correct prefix
-  const logs2 = readWdioLogs(logDir);
+  const logs2 = await readWdioLogs(logDir);
   assertLogContains(logs2, /\[Electron:Renderer\].*\[Test\].*Standalone renderer INFO/i);
   assertLogContains(logs2, /\[Electron:Renderer\].*\[Test\].*Standalone renderer WARN/i);
   assertLogContains(logs2, /\[Electron:Renderer\].*\[Test\].*Standalone renderer ERROR/i);
@@ -90,7 +90,7 @@ try {
   }
 
   // Verify DEBUG logs are filtered out (info level filtering)
-  const logs3 = readWdioLogs(logDir);
+  const logs3 = await readWdioLogs(logDir);
   assertLogDoesNotContain(logs3, /\[Electron:MainProcess\].*DEBUG.*should be filtered/i);
   assertLogDoesNotContain(logs3, /\[Electron:Renderer\].*DEBUG.*should be filtered/i);
   assertLogContains(logs3, /\[Electron:MainProcess\].*INFO.*should appear/i);

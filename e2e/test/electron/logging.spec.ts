@@ -23,7 +23,7 @@ describe('Electron Log Integration', () => {
         throw new Error('Main process logs not captured within timeout');
       }
 
-      const logs = readWdioLogs(logBaseDir);
+      const logs = await readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
       console.log(`[DEBUG] Sample logs (first 2000 chars): ${logs.slice(0, 2000)}`);
 
@@ -54,7 +54,7 @@ describe('Electron Log Integration', () => {
         throw new Error('Main process logs not captured within timeout');
       }
 
-      const logs = readWdioLogs(logBaseDir);
+      const logs = await readWdioLogs(logBaseDir);
 
       // With default 'info' level, DEBUG should be filtered out
       const debugLogs = findLogEntries(logs, /\[Electron:MainProcess\].*DEBUG/i);
@@ -77,7 +77,7 @@ describe('Electron Log Integration', () => {
         throw new Error('Renderer logs not captured within timeout');
       }
 
-      const logs = readWdioLogs(logBaseDir);
+      const logs = await readWdioLogs(logBaseDir);
       console.log(`[DEBUG] Total log length: ${logs.length}`);
 
       // Search for renderer logs
@@ -110,7 +110,7 @@ describe('Electron Log Integration', () => {
         throw new Error('Renderer logs not captured within timeout');
       }
 
-      const logs = readWdioLogs(logBaseDir);
+      const logs = await readWdioLogs(logBaseDir);
 
       // With default 'info' level, DEBUG should be filtered out
       const debugLogs = findLogEntries(logs, /\[Electron:Renderer\].*DEBUG/i);
@@ -136,7 +136,7 @@ describe('Electron Log Integration', () => {
         throw new Error('Combined logs not captured within timeout');
       }
 
-      const logs = readWdioLogs(logBaseDir);
+      const logs = await readWdioLogs(logBaseDir);
 
       // Both should be present
       assertLogContains(logs, /\[Electron:MainProcess\].*Combined main process/i);

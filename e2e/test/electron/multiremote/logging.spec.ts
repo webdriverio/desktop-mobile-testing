@@ -44,7 +44,7 @@ describe('Electron Log Integration - Multiremote', () => {
 
     // Verify logs were captured with correct prefixes and instance IDs
     console.log(`[DEBUG] Reading multiremote logs from: ${getMultiremoteLogDir()}`);
-    const logs = readWdioLogs(getMultiremoteLogDir());
+    const logs = await readWdioLogs(getMultiremoteLogDir());
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -90,7 +90,7 @@ describe('Electron Log Integration - Multiremote', () => {
     }
 
     // Verify renderer logs were captured with correct prefixes
-    const logs = readWdioLogs(getMultiremoteLogDir());
+    const logs = await readWdioLogs(getMultiremoteLogDir());
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -131,7 +131,7 @@ describe('Electron Log Integration - Multiremote', () => {
     }
 
     // Verify both types of logs are captured independently
-    const logs = readWdioLogs(getMultiremoteLogDir());
+    const logs = await readWdioLogs(getMultiremoteLogDir());
 
     if (!logs) {
       throw new Error('No logs found in output directory');
@@ -174,7 +174,7 @@ describe('Electron Log Integration - Multiremote', () => {
       throw new Error('Logs not captured within timeout');
     }
 
-    const logs = readWdioLogs(getMultiremoteLogDir());
+    const logs = await readWdioLogs(getMultiremoteLogDir());
 
     // With default 'info' level, DEBUG should be filtered out
     const debugLogs = findLogEntries(logs, /\[Electron:MainProcess:(browserA|browserB)\].*DEBUG/i);

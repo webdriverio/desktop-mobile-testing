@@ -235,9 +235,9 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
 
 /**
  * Read WDIO log files from output directory
- * Uses file locking to prevent reading incomplete files during concurrent writes
+ * Uses async file reading to prevent blocking the event loop
  */
-export function readWdioLogs(logBaseDir: string): string {
+export async function readWdioLogs(logBaseDir: string): Promise<string> {
   if (!fs.existsSync(logBaseDir)) {
     console.log(`[DEBUG] Log base directory does not exist: ${logBaseDir}`);
     return '';
@@ -259,7 +259,7 @@ export function readWdioLogs(logBaseDir: string): string {
     for (const logFile of directLogFiles) {
       const logPath = path.join(logBaseDir, logFile);
       try {
-        const content = readLogFileWithRetry(logPath);
+        const content = await readLogFileWithRetry(logPath);
         allLogs += `${content}\n`;
         console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
       } catch (error) {
@@ -298,7 +298,7 @@ export function readWdioLogs(logBaseDir: string): string {
   for (const logFile of logFiles) {
     const logPath = path.join(logDir, logFile);
     try {
-      const content = readLogFileWithRetry(logPath);
+      const content = await readLogFileWithRetry(logPath);
       allLogs += `${content}\n`;
       console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
     } catch (error) {
@@ -311,15 +311,15 @@ export function readWdioLogs(logBaseDir: string): string {
 
 /**
  * Read a log file with retry logic to handle concurrent writes
- * Uses exponential backoff to wait for file locks to be released
+ * Uses async/await with the existing delay() helper to avoid blocking the event loop
  */
-function readLogFileWithRetry(filePath: string, maxRetries = 5, baseDelay = 100): string {
+async function readLogFileWithRetry(filePath: string, maxRetries = 5, baseDelay = 100): Promise<string> {
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      // Try to read the file
-      const content = fs.readFileSync(filePath, 'utf8');
+      // Try to read the file asynchronously
+      const content = await fs.promises.readFile(filePath, 'utf8');
       return content;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -331,11 +331,11 @@ function readLogFileWithRetry(filePath: string, maxRetries = 5, baseDelay = 100)
 
       // Wait with exponential backoff before retrying
       if (attempt < maxRetries - 1) {
-        const delay = baseDelay * 2 ** attempt;
+        const delayMs = baseDelay * 2 ** attempt;
         console.log(
-          `[DEBUG] File ${path.basename(filePath)} locked, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+          `[DEBUG] File ${path.basename(filePath)} locked, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`,
         );
-        sleep(delay);
+        await delay(delayMs);
       }
     }
   }
@@ -350,16 +350,6 @@ function isRetryableError(error: Error): boolean {
   const retryableCodes = ['EBUSY', 'EAGAIN', 'EACCES', 'EPERM'];
   const code = (error as { code?: string }).code;
   return code !== undefined && retryableCodes.includes(code);
-}
-
-/**
- * Synchronous sleep for retry delays
- */
-function sleep(ms: number): void {
-  const start = Date.now();
-  while (Date.now() - start < ms) {
-    // Busy wait to avoid async/await complexity
-  }
 }
 
 /**
@@ -414,7 +404,7 @@ export async function waitForLog(
   const requiredStableChecks = 3; // Number of consecutive stable checks required
 
   while (Date.now() - startTime < timeout) {
-    const logs = readWdioLogs(logDir);
+    const logs = await readWdioLogs(logDir);
     const currentLogSize = logs.length;
 
     // Check if pattern is found
@@ -446,7 +436,7 @@ export async function waitForLog(
   }
 
   // Timeout reached - check one final time
-  const finalLogs = readWdioLogs(logDir);
+  const finalLogs = await readWdioLogs(logDir);
   return regex.test(finalLogs);
 }
 
