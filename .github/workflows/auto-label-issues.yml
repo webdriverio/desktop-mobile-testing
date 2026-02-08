@@ -21,12 +21,12 @@ jobs:
 
             // Match both the issue template dropdown format and plain text
             const scopeLabels = [
-              { patterns: ['Electron Service', '@wdio/electron-service'], label: 'area:electron' },
-              { patterns: ['Tauri Service', '@wdio/tauri-service'], label: 'area:tauri' },
-              { patterns: ['Shared Utilities', '@wdio/native-utils', '@wdio/native-types'], label: 'area:shared' },
-              { patterns: ['Electron CDP Bridge', '@wdio/electron-cdp-bridge'], label: 'area:electron-cdp' },
-              { patterns: ['Tauri Plugin', '@wdio/tauri-plugin'], label: 'area:tauri-plugin' },
-              { patterns: ['Documentation'], label: 'area:docs' }
+              { patterns: ['Electron Service', '@wdio/electron-service'], label: 'scope:electron' },
+              { patterns: ['Tauri Service', '@wdio/tauri-service'], label: 'scope:tauri' },
+              { patterns: ['Shared Utilities', '@wdio/native-utils', '@wdio/native-types'], label: 'scope:shared' },
+              { patterns: ['Electron CDP Bridge', '@wdio/electron-cdp-bridge'], label: 'scope:electron' },
+              { patterns: ['Tauri Plugin', '@wdio/tauri-plugin'], label: 'scope:tauri' },
+              { patterns: ['Documentation'], label: 'area:documentation' }
             ];
 
             for (const { patterns, label } of scopeLabels) {
