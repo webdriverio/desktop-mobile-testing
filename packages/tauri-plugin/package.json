@@ -23,12 +23,12 @@
   "author": "WebDriverIO Community",
   "license": "MIT",
   "dependencies": {
-    "@tauri-apps/api": "2.9.1",
+    "@tauri-apps/api": "2.10.1",
     "@tauri-apps/plugin-log": "2.8.0",
-    "@vitest/spy": "^4.0.17"
+    "@vitest/spy": "^4.0.18"
   },
   "devDependencies": {
-    "esbuild": "^0.25.11",
+    "esbuild": "^0.27.3",
     "typescript": "^5.0.0"
   }
 }
