@@ -17,13 +17,13 @@ describe('Tauri Log Integration', () => {
 
       await browser.waitUntil(
         async () => {
-          const logs = readWdioLogs(getLogDir());
+          const logs = await readWdioLogs(getLogDir());
           return logs.includes('[Tauri:Backend]');
         },
         { timeout: 5000, timeoutMsg: 'Backend logs not captured' },
       );
 
-      const logs = readWdioLogs(getLogDir());
+      const logs = await readWdioLogs(getLogDir());
       expect(logs).toMatch(/\[Tauri:Backend\].*INFO level log/s);
       expect(logs).toMatch(/\[Tauri:Backend\].*WARN level log/s);
       expect(logs).toMatch(/\[Tauri:Backend\].*ERROR level log/s);
@@ -58,13 +58,13 @@ describe('Tauri Log Integration', () => {
 
       await browser.waitUntil(
         async () => {
-          const logs = readWdioLogs(getLogDir());
+          const logs = await readWdioLogs(getLogDir());
           return logs.includes('[Tauri:Frontend]');
         },
         { timeout: 5000, timeoutMsg: 'Frontend logs not captured' },
       );
 
-      const logs = readWdioLogs(getLogDir());
+      const logs = await readWdioLogs(getLogDir());
       expect(logs).toMatch(/\[Tauri:Frontend\].*Frontend INFO from execute/s);
       expect(logs).toMatch(/\[Tauri:Frontend\].*Frontend WARN from execute/s);
       expect(logs).toMatch(/\[Tauri:Frontend\].*Frontend ERROR from execute/s);
@@ -81,13 +81,13 @@ describe('Tauri Log Integration', () => {
 
       await browser.waitUntil(
         async () => {
-          const logs = readWdioLogs(getLogDir());
+          const logs = await readWdioLogs(getLogDir());
           return logs.includes('[Tauri:Frontend]');
         },
         { timeout: 5000, timeoutMsg: 'Frontend logs not captured' },
       );
 
-      const logs = readWdioLogs(getLogDir());
+      const logs = await readWdioLogs(getLogDir());
       expect(logs).toMatch(/\[Tauri:Frontend\].*TRACE from execute/s);
       expect(logs).toMatch(/\[Tauri:Frontend\].*DEBUG from execute/s);
       expect(logs).toMatch(/\[Tauri:Frontend\].*INFO from execute/s);
@@ -104,20 +104,20 @@ describe('Tauri Log Integration', () => {
 
       await browser.waitUntil(
         async () => {
-          const logs = readWdioLogs(getLogDir());
+          const logs = await readWdioLogs(getLogDir());
           return logs.includes('[Tauri:Frontend]');
         },
         { timeout: 5000, timeoutMsg: 'Frontend logs not captured' },
       );
 
-      const logs = readWdioLogs(getLogDir());
+      const logs = await readWdioLogs(getLogDir());
       expect(logs).toMatch(/\[Tauri:Frontend\].*String message/s);
     });
   });
 
   describe('Log Infrastructure', () => {
     it('should have log directory with log files', async () => {
-      const logs = readWdioLogs(getLogDir());
+      const logs = await readWdioLogs(getLogDir());
       expect(logs.length).toBeGreaterThan(0);
     });
   });
