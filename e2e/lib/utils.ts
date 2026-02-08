@@ -399,47 +399,41 @@ export async function waitForLog(
   settleDelay: number = 2000,
 ): Promise<boolean> {
   const startTime = Date.now();
-  const regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern;
-  let lastMatchTime: number | null = null;
+  // Strip the global flag to avoid stateful lastIndex behavior across polls
+  const source = typeof pattern === 'string' ? pattern : pattern.source;
+  const flags = typeof pattern === 'string' ? 'i' : pattern.flags.replace('g', '');
+  const regex = new RegExp(source, flags);
   let lastLogSize = 0;
   let stableCount = 0;
-  const requiredStableChecks = 3; // Number of consecutive stable checks required
+  const requiredStableChecks = 2;
 
   while (Date.now() - startTime < timeout) {
     const logs = await readWdioLogs(logDir);
     const currentLogSize = logs.length;
 
-    // Check if pattern is found
     if (regex.test(logs)) {
-      if (lastMatchTime === null) {
-        lastMatchTime = Date.now();
-      }
-
       // Check if log size has stabilized (no new writes)
       if (currentLogSize === lastLogSize) {
         stableCount++;
         if (stableCount >= requiredStableChecks) {
-          // Pattern matched and logs are stable - wait for final settle delay
-          await new Promise((resolve) => setTimeout(resolve, settleDelay));
+          // Pattern matched and logs are stable - wait for final settle delay,
+          // clamped to remaining timeout so we don't overshoot
+          const remaining = timeout - (Date.now() - startTime);
+          await delay(Math.max(0, Math.min(settleDelay, remaining)));
           return true;
         }
       } else {
-        // Log size changed, reset stability counter
         stableCount = 0;
       }
     } else {
-      // Pattern not found, reset match time and stability
-      lastMatchTime = null;
       stableCount = 0;
     }
 
     lastLogSize = currentLogSize;
-    await new Promise((resolve) => setTimeout(resolve, interval));
+    await delay(interval);
   }
 
-  // Timeout reached - check one final time
-  const finalLogs = await readWdioLogs(logDir);
-  return regex.test(finalLogs);
+  return false;
 }
 
 /**
