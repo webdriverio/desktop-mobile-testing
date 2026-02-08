@@ -91,7 +91,7 @@ export function appendUserDataDir(url: string, userDataDir: string): string {
  * ```ts
  * // Windows
  * getPlatformCommand('myapp://test', 'win32', 'C:\\app.exe');
- * // Returns { command: 'cmd', args: ['/c', 'start', '', 'myapp://test'] }
+ * // Returns { command: 'rundll32.exe', args: ['url.dll,FileProtocolHandler', 'myapp://test'] }
  *
  * // macOS
  * getPlatformCommand('myapp://test', 'darwin');
@@ -99,7 +99,7 @@ export function appendUserDataDir(url: string, userDataDir: string): string {
  *
  * // Linux
  * getPlatformCommand('myapp://test', 'linux');
- * // Returns { command: 'xdg-open', args: ['myapp://test'] }
+ * // Returns { command: 'gio', args: ['open', 'myapp://test'] }
  * ```
  */
 export function getPlatformCommand(
@@ -115,12 +115,11 @@ export function getPlatformCommand(
             'Please set appBinaryPath in your wdio:electronServiceOptions.',
         );
       }
-      // Windows: Use cmd /c start to trigger the deeplink
-      // The empty quoted string after 'start' is the window title (required)
-      // URL must be quoted to handle special characters like & in query strings
+      // Windows: Use rundll32 to trigger the deeplink via ShellExecuteEx
+      // This avoids cmd.exe shell interpretation of URL metacharacters (e.g. &)
       return {
-        command: 'cmd',
-        args: ['/c', 'start', '""', `"${url}"`],
+        command: 'rundll32.exe',
+        args: ['url.dll,FileProtocolHandler', url],
       };
 
     case 'darwin': {
@@ -147,10 +146,10 @@ export function getPlatformCommand(
     }
 
     case 'linux':
-      // Linux: Use xdg-open command
+      // Linux: Use gio open command
       return {
-        command: 'xdg-open',
-        args: [url],
+        command: 'gio',
+        args: ['open', url],
       };
 
     default:
@@ -182,7 +181,6 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
-        shell: process.platform === 'win32', // Windows needs shell: true
       });
 
       // Unref the child process to allow parent to exit

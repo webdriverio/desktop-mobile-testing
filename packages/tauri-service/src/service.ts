@@ -2,6 +2,7 @@ import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceOptions } from './types.js';
 import { clearWindowState, ensureActiveWindowFocus } from './window.js';
@@ -241,6 +242,10 @@ export default class TauriWorkerService {
 
       restoreAllMocks: async (): Promise<void> => {
         return restoreAllMocks.call({ browser });
+      },
+
+      triggerDeeplink: async (url: string): Promise<void> => {
+        return triggerDeeplink.call({ browser }, url);
       },
     };
   }

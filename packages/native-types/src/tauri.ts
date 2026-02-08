@@ -131,6 +131,19 @@ export interface TauriServiceAPI {
    * Restore all Tauri API mocks.
    */
   restoreAllMocks: () => Promise<void>;
+
+  /**
+   * Trigger a deeplink to the Tauri application for testing protocol handlers.
+   *
+   * @param url - The deeplink URL to trigger (e.g., 'myapp://open?path=/test')
+   * @returns Promise that resolves when the deeplink has been triggered
+   *
+   * @example
+   * ```js
+   * await browser.tauri.triggerDeeplink('myapp://open?file=test.txt');
+   * ```
+   */
+  triggerDeeplink: (url: string) => Promise<void>;
 }
 
 /**
@@ -324,6 +337,7 @@ export interface TauriBrowserExtension extends BrowserBase {
    * - {@link TauriServiceAPI.mockAll `browser.tauri.mockAll`} - Mock an entire API object of the Tauri API
    * - {@link TauriServiceAPI.resetAllMocks `browser.tauri.resetAllMocks`} - Reset the Tauri API mock functions
    * - {@link TauriServiceAPI.restoreAllMocks `browser.tauri.restoreAllMocks`} - Restore the original Tauri API functionality
+   * - {@link TauriServiceAPI.triggerDeeplink `browser.tauri.triggerDeeplink`} - Trigger a deeplink for testing protocol handlers
    */
   tauri: TauriServiceAPI;
 }

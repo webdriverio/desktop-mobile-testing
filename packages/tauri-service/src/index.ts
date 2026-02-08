@@ -20,6 +20,7 @@ export {
   resetAllMocks,
   restoreAllMocks,
 } from './commands/mock.js';
+export { triggerDeeplink } from './commands/triggerDeeplink.js';
 // Export Edge driver management (Windows only)
 export {
   detectEdgeVersion,

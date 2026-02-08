@@ -11,7 +11,7 @@ export const EnvSchema = z.object({
   FRAMEWORK: z.enum(['electron', 'tauri']).default('electron'),
   APP: z.enum(['builder', 'forge', 'script', 'basic']).default('builder'),
   MODULE_TYPE: z.enum(['cjs', 'esm']).optional().default('esm'),
-  TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone']).default('standard'),
+  TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone', 'deeplink']).default('standard'),
   BINARY: z.enum(['true', 'false']).default('true'),
 
   // Special modes
@@ -70,7 +70,7 @@ export class EnvironmentContext {
     return this.env.MODULE_TYPE ?? 'esm';
   }
 
-  get testType(): 'standard' | 'window' | 'multiremote' | 'standalone' {
+  get testType(): 'standard' | 'window' | 'multiremote' | 'standalone' | 'deeplink' {
     return this.env.TEST_TYPE;
   }
 

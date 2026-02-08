@@ -15,7 +15,7 @@ import BuildManager from './build-apps.js';
 interface TestVariant {
   framework: 'electron' | 'tauri';
   app: 'builder' | 'forge' | 'script' | 'basic';
-  testType: 'standard' | 'window' | 'multiremote' | 'standalone';
+  testType: 'standard' | 'window' | 'multiremote' | 'standalone' | 'deeplink';
   binary: boolean;
 }
 
@@ -41,11 +41,12 @@ function generateTestVariants(): TestVariant[] {
 
   const electronApps: Array<'builder' | 'forge' | 'script'> = ['builder', 'forge', 'script'];
   const tauriApps: Array<'basic'> = ['basic'];
-  const testTypes: Array<'standard' | 'window' | 'multiremote' | 'standalone'> = [
+  const testTypes: Array<'standard' | 'window' | 'multiremote' | 'standalone' | 'deeplink'> = [
     'standard',
     'window',
     'multiremote',
     'standalone',
+    'deeplink',
   ];
 
   const variants: TestVariant[] = [];
@@ -58,6 +59,11 @@ function generateTestVariants(): TestVariant[] {
         // script app is always non-binary for Electron
         // Tauri apps are always binary
         const binary = framework === 'tauri' || app !== 'script';
+
+        // Skip deeplink tests for script mode - deeplink requires packaged apps
+        if (testType === 'deeplink' && !binary) {
+          continue;
+        }
 
         variants.push({
           framework,

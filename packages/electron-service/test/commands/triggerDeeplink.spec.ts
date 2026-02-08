@@ -132,8 +132,8 @@ describe('getPlatformCommand', () => {
     it('should return correct command for Windows', () => {
       const result = getPlatformCommand('myapp://test', 'win32', 'C:\\app.exe');
       expect(result).toEqual({
-        command: 'cmd',
-        args: ['/c', 'start', '""', '"myapp://test"'],
+        command: 'rundll32.exe',
+        args: ['url.dll,FileProtocolHandler', 'myapp://test'],
       });
     });
 
@@ -152,7 +152,7 @@ describe('getPlatformCommand', () => {
 
     it('should handle URLs with query parameters', () => {
       const result = getPlatformCommand('myapp://test?foo=bar&userData=/tmp/data', 'win32', 'C:\\app.exe');
-      expect(result.args).toContain('"myapp://test?foo=bar&userData=/tmp/data"');
+      expect(result.args).toContain('myapp://test?foo=bar&userData=/tmp/data');
     });
   });
 
@@ -180,19 +180,19 @@ describe('getPlatformCommand', () => {
     it('should return correct command for Linux', () => {
       const result = getPlatformCommand('myapp://test', 'linux');
       expect(result).toEqual({
-        command: 'xdg-open',
-        args: ['myapp://test'],
+        command: 'gio',
+        args: ['open', 'myapp://test'],
       });
     });
 
     it('should not require appBinaryPath for Linux', () => {
       const result = getPlatformCommand('myapp://test', 'linux', undefined);
-      expect(result.command).toBe('xdg-open');
+      expect(result.command).toBe('gio');
     });
 
     it('should handle URLs with query parameters', () => {
       const result = getPlatformCommand('myapp://test?foo=bar', 'linux');
-      expect(result.args).toEqual(['myapp://test?foo=bar']);
+      expect(result.args).toEqual(['open', 'myapp://test?foo=bar']);
     });
   });
 
@@ -241,27 +241,11 @@ describe('executeDeeplinkCommand', () => {
     expect(mockChildProcess.unref).toHaveBeenCalled();
   });
 
-  it('should use shell: true on Windows', async () => {
-    const originalPlatform = process.platform;
-    Object.defineProperty(process, 'platform', {
-      value: 'win32',
-      configurable: true,
-    });
+  it('should not use shell option', async () => {
+    await executeDeeplinkCommand('rundll32.exe', ['url.dll,FileProtocolHandler', 'myapp://test']);
 
-    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test']);
-
-    expect(mockSpawn).toHaveBeenCalledWith(
-      'cmd',
-      ['/c', 'start', '""', 'myapp://test'],
-      expect.objectContaining({
-        shell: true,
-      }),
-    );
-
-    Object.defineProperty(process, 'platform', {
-      value: originalPlatform,
-      configurable: true,
-    });
+    const spawnOptions = mockSpawn.mock.calls[0][2];
+    expect(spawnOptions.shell).toBeUndefined();
   });
 
   it('should resolve promise on successful spawn', async () => {
@@ -294,9 +278,13 @@ describe('executeDeeplinkCommand', () => {
   });
 
   it('should handle multiple args correctly', async () => {
-    await executeDeeplinkCommand('cmd', ['/c', 'start', '""', 'myapp://test']);
+    await executeDeeplinkCommand('rundll32.exe', ['url.dll,FileProtocolHandler', 'myapp://test']);
 
-    expect(mockSpawn).toHaveBeenCalledWith('cmd', ['/c', 'start', '""', 'myapp://test'], expect.any(Object));
+    expect(mockSpawn).toHaveBeenCalledWith(
+      'rundll32.exe',
+      ['url.dll,FileProtocolHandler', 'myapp://test'],
+      expect.any(Object),
+    );
   });
 });
 
@@ -373,7 +361,7 @@ describe('triggerDeeplink', () => {
 
       // Verify that spawn was called with a URL containing userData
       const spawnCall = mockSpawn.mock.calls[0];
-      const urlArg = spawnCall[1][3]; // The URL is the 4th argument in ['/c', 'start', '""', url]
+      const urlArg = spawnCall[1][1]; // The URL is the 2nd argument in ['url.dll,FileProtocolHandler', url]
       expect(urlArg).toContain('userData=');
     });
 
@@ -383,10 +371,10 @@ describe('triggerDeeplink', () => {
 
       await triggerDeeplink.call(mockContext, 'myapp://test');
 
-      // Verify that spawn was called with the original URL (quoted for Windows)
+      // Verify that spawn was called with the original URL
       const spawnCall = mockSpawn.mock.calls[0];
-      const urlArg = spawnCall[1][3];
-      expect(urlArg).toBe('"myapp://test"');
+      const urlArg = spawnCall[1][1];
+      expect(urlArg).toBe('myapp://test');
     });
   });
 
@@ -459,8 +447,8 @@ describe('triggerDeeplink', () => {
 
       // Verify that spawn was called with userData appended
       const spawnCall = mockSpawn.mock.calls[0];
-      expect(spawnCall[1][0]).toContain('userData=');
-      expect(spawnCall[1][0]).toContain(encodeURIComponent('/tmp/user-data'));
+      expect(spawnCall[1][1]).toContain('userData=');
+      expect(spawnCall[1][1]).toContain(encodeURIComponent('/tmp/user-data'));
     });
   });
 
@@ -514,18 +502,17 @@ describe('triggerDeeplink', () => {
       await triggerDeeplink.call(mockContext, 'myapp://test?foo=bar');
 
       expect(mockSpawn).toHaveBeenCalledWith(
-        'cmd',
-        expect.arrayContaining(['/c', 'start', '""']),
+        'rundll32.exe',
+        expect.arrayContaining(['url.dll,FileProtocolHandler']),
         expect.objectContaining({
           detached: true,
           stdio: 'ignore',
-          shell: true,
         }),
       );
 
       // Verify URL includes both original params and userData
       const spawnCall = mockSpawn.mock.calls[0];
-      const urlArg = spawnCall[1][3]; // The URL is the 4th argument
+      const urlArg = spawnCall[1][1]; // The URL is the 2nd argument
       expect(urlArg).toContain('foo=bar');
       expect(urlArg).toContain('userData=');
     });
@@ -561,8 +548,8 @@ describe('triggerDeeplink', () => {
       await triggerDeeplink.call(mockContext, 'myapp://test?foo=bar');
 
       expect(mockSpawn).toHaveBeenCalledWith(
-        'xdg-open',
-        ['myapp://test?foo=bar'],
+        'gio',
+        ['open', 'myapp://test?foo=bar'],
         expect.objectContaining({
           detached: true,
           stdio: 'ignore',

@@ -74,6 +74,7 @@ See [Configuration Reference](./docs/configuration.md) for all options.
 - [Usage Examples](./docs/usage-examples.md) - Common testing patterns
 - [Log Forwarding](./docs/log-forwarding.md) - Capture app logs
 - [Edge WebDriver (Windows)](./docs/edge-webdriver-windows.md) - Windows-specific setup
+- [Deeplink Testing](./docs/deeplink-testing.md) - Test protocol handlers
 
 **Help & Support**
 - [Troubleshooting](./docs/troubleshooting.md) - Common issues and solutions
