@@ -10,7 +10,7 @@ vi.mock('../../src/mockStore.js', () => ({
 }));
 
 describe('clearAllMocks Command', () => {
-  let mockedGetPlatformInfo: any, mockedReadClipboard: any;
+  let mockedGetPlatformInfo: any, mockedReadClipboard: any, mockedWriteClipboard: any;
 
   beforeEach(async () => {
     mockedGetPlatformInfo = {
@@ -21,9 +21,14 @@ describe('clearAllMocks Command', () => {
       getMockName: () => 'tauri.read_clipboard',
       mockClear: vi.fn(),
     };
+    mockedWriteClipboard = {
+      getMockName: () => 'tauri.write_clipboard',
+      mockClear: vi.fn(),
+    };
     (mockStore.getMocks as Mock).mockReturnValue([
       ['tauri.get_platform_info', mockedGetPlatformInfo],
       ['tauri.read_clipboard', mockedReadClipboard],
+      ['tauri.write_clipboard', mockedWriteClipboard],
     ]);
   });
 
@@ -31,9 +36,31 @@ describe('clearAllMocks Command', () => {
     vi.resetAllMocks();
   });
 
-  it('should clear all mock functions', async () => {
+  it('should clear all mock functions when no prefix is provided', async () => {
     await clearAllMocks();
     expect(mockedGetPlatformInfo.mockClear).toHaveBeenCalled();
     expect(mockedReadClipboard.mockClear).toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockClear).toHaveBeenCalled();
+  });
+
+  it('should clear only mocks matching the command prefix', async () => {
+    await clearAllMocks('read');
+    expect(mockedGetPlatformInfo.mockClear).not.toHaveBeenCalled();
+    expect(mockedReadClipboard.mockClear).toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockClear).not.toHaveBeenCalled();
+  });
+
+  it('should clear multiple mocks matching the prefix', async () => {
+    await clearAllMocks('write');
+    expect(mockedGetPlatformInfo.mockClear).not.toHaveBeenCalled();
+    expect(mockedReadClipboard.mockClear).not.toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockClear).toHaveBeenCalled();
+  });
+
+  it('should handle prefix that matches no mocks', async () => {
+    await clearAllMocks('nonexistent');
+    expect(mockedGetPlatformInfo.mockClear).not.toHaveBeenCalled();
+    expect(mockedReadClipboard.mockClear).not.toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockClear).not.toHaveBeenCalled();
   });
 });

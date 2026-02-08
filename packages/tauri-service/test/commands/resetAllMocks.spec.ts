@@ -10,7 +10,7 @@ vi.mock('../../src/mockStore.js', () => ({
 }));
 
 describe('resetAllMocks Command', () => {
-  let mockedGetPlatformInfo: any, mockedReadClipboard: any;
+  let mockedGetPlatformInfo: any, mockedReadClipboard: any, mockedWriteClipboard: any;
 
   beforeEach(async () => {
     globalThis.browser = {
@@ -25,9 +25,14 @@ describe('resetAllMocks Command', () => {
       getMockName: () => 'tauri.read_clipboard',
       mockReset: vi.fn(),
     };
+    mockedWriteClipboard = {
+      getMockName: () => 'tauri.write_clipboard',
+      mockReset: vi.fn(),
+    };
     (mockStore.getMocks as Mock).mockReturnValue([
       ['tauri.get_platform_info', mockedGetPlatformInfo],
       ['tauri.read_clipboard', mockedReadClipboard],
+      ['tauri.write_clipboard', mockedWriteClipboard],
     ]);
   });
 
@@ -35,14 +40,34 @@ describe('resetAllMocks Command', () => {
     vi.resetAllMocks();
   });
 
-  it('should reset all mocks in the injection script', async () => {
+  it('should reset all mocks in the injection script when no prefix is provided', async () => {
     await resetAllMocks();
-    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function));
+    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), undefined);
   });
 
-  it('should reset all outer mock functions', async () => {
+  it('should reset all outer mock functions when no prefix is provided', async () => {
     await resetAllMocks();
     expect(mockedGetPlatformInfo.mockReset).toHaveBeenCalled();
     expect(mockedReadClipboard.mockReset).toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockReset).toHaveBeenCalled();
+  });
+
+  it('should reset only mocks matching the command prefix', async () => {
+    await resetAllMocks('read');
+    expect(mockedGetPlatformInfo.mockReset).not.toHaveBeenCalled();
+    expect(mockedReadClipboard.mockReset).toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockReset).not.toHaveBeenCalled();
+  });
+
+  it('should pass prefix to browser execute for inner mock filtering', async () => {
+    await resetAllMocks('write');
+    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), 'write');
+  });
+
+  it('should handle prefix that matches no mocks', async () => {
+    await resetAllMocks('nonexistent');
+    expect(mockedGetPlatformInfo.mockReset).not.toHaveBeenCalled();
+    expect(mockedReadClipboard.mockReset).not.toHaveBeenCalled();
+    expect(mockedWriteClipboard.mockReset).not.toHaveBeenCalled();
   });
 });
