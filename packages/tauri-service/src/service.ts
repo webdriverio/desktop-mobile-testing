@@ -20,13 +20,19 @@ type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 export default class TauriWorkerService {
   private browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
   private clearMocks: boolean;
+  private clearMocksPrefix?: string;
   private resetMocks: boolean;
+  private resetMocksPrefix?: string;
   private restoreMocks: boolean;
+  private restoreMocksPrefix?: string;
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
+    this.clearMocksPrefix = options.clearMocksPrefix;
     this.resetMocks = options.resetMocks ?? false;
+    this.resetMocksPrefix = options.resetMocksPrefix;
     this.restoreMocks = options.restoreMocks ?? false;
+    this.restoreMocksPrefix = options.restoreMocksPrefix;
     log.debug('TauriWorkerService initialized');
   }
 
@@ -84,56 +90,23 @@ export default class TauriWorkerService {
 
     // Wait for the plugin to fully initialize (specifically attachConsole())
     // This ensures frontend console logs will be captured
-    log.info('🔍 DEBUG: Waiting for Tauri plugin initialization...');
+    log.debug('Waiting for Tauri plugin initialization...');
     try {
-      const result = await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
-        const debug: string[] = [];
-        // @ts-expect-error - window exists in browser context
-        debug.push(`window.wdioTauri available: ${typeof window.wdioTauri !== 'undefined'}`);
-        // @ts-expect-error - window exists in browser context
-        if (typeof window.wdioTauri !== 'undefined') {
-          // @ts-expect-error - window exists in browser context
-          debug.push(`window.wdioTauri.waitForInit available: ${typeof window.wdioTauri.waitForInit === 'function'}`);
-          // @ts-expect-error - window exists in browser context
-          debug.push(`window.__TAURI__ available: ${typeof window.__TAURI__ !== 'undefined'}`);
-          // @ts-expect-error - window exists in browser context
-          debug.push(`window.__TAURI__?.log available: ${typeof window.__TAURI__?.log !== 'undefined'}`);
-        }
+      await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
         // @ts-expect-error - window exists in browser context
         if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
-          debug.push('Calling waitForInit...');
           // @ts-expect-error - window exists in browser context
           await window.wdioTauri.waitForInit();
-          debug.push('waitForInit completed');
-          return { success: true, debug };
         }
-        return { success: false, debug };
       });
-      log.info(`🔍 DEBUG: waitForInit result: ${JSON.stringify(result)}`);
-      log.info('✅ Tauri plugin initialization complete');
+      log.debug('Tauri plugin initialization complete');
     } catch (error) {
-      log.error('❌ Failed to wait for plugin initialization:', error);
+      log.error('Failed to wait for plugin initialization:', error);
     }
 
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
     // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
-
-    // Initialize Tauri mocking system
-    log.info('🔧 Initializing Tauri mocking system...');
-    try {
-      await (browser as WebdriverIO.Browser).execute(async function initMocks() {
-        // @ts-expect-error - injection script will be bundled
-        if (typeof window.initializeTauriMocks === 'function') {
-          // @ts-expect-error - injection script will be bundled
-          await window.initializeTauriMocks();
-        }
-      });
-      log.info('✅ Tauri mocking system initialized');
-    } catch (error) {
-      log.warn('⚠️ Failed to initialize Tauri mocking system:', error);
-      log.warn('   Mocking functionality may not be available');
-    }
 
     // Install command overrides to trigger mock updates after DOM interactions
     this.installCommandOverrides();
@@ -141,13 +114,13 @@ export default class TauriWorkerService {
 
   async beforeTest(_test: unknown, _context: unknown): Promise<void> {
     if (this.clearMocks) {
-      await clearAllMocks.call({ browser: this.browser });
+      await clearAllMocks.call({ browser: this.browser }, this.clearMocksPrefix);
     }
     if (this.resetMocks) {
-      await resetAllMocks.call({ browser: this.browser });
+      await resetAllMocks.call({ browser: this.browser }, this.resetMocksPrefix);
     }
     if (this.restoreMocks) {
-      await restoreAllMocks.call({ browser: this.browser });
+      await restoreAllMocks.call({ browser: this.browser }, this.restoreMocksPrefix);
     }
   }
 
@@ -236,28 +209,28 @@ export default class TauriWorkerService {
       execute: <ReturnValue, InnerArguments extends unknown[]>(
         script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
         ...args: InnerArguments
-      ): Promise<ReturnValue | undefined> => {
+      ): Promise<ReturnValue> => {
         return execute<ReturnValue, InnerArguments>(browser, script, ...args);
       },
 
-      clearAllMocks: async (): Promise<void> => {
-        return clearAllMocks.call({ browser });
+      clearAllMocks: async (commandPrefix?: string): Promise<void> => {
+        return clearAllMocks.call({ browser }, commandPrefix);
       },
 
-      isMockFunction: async (command: string): Promise<boolean> => {
-        return isMockFunction.call({ browser }, command);
+      isMockFunction: (fn: unknown) => {
+        return isMockFunction(fn);
       },
 
       mock: async (command: string) => {
         return mock.call({ browser }, command);
       },
 
-      resetAllMocks: async (): Promise<void> => {
-        return resetAllMocks.call({ browser });
+      resetAllMocks: async (commandPrefix?: string): Promise<void> => {
+        return resetAllMocks.call({ browser }, commandPrefix);
       },
 
-      restoreAllMocks: async (): Promise<void> => {
-        return restoreAllMocks.call({ browser });
+      restoreAllMocks: async (commandPrefix?: string): Promise<void> => {
+        return restoreAllMocks.call({ browser }, commandPrefix);
       },
 
       triggerDeeplink: async (url: string): Promise<void> => {

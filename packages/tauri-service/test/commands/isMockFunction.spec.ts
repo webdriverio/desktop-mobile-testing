@@ -2,7 +2,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isMockFunction } from '../../src/commands/mock.js';
 import { createMock } from '../../src/mock.js';
-import mockStore from '../../src/mockStore.js';
 
 describe('isMockFunction Command', () => {
   beforeEach(async () => {
@@ -21,11 +20,30 @@ describe('isMockFunction Command', () => {
 
   it('should return true for a Tauri mock', async () => {
     const mockFn = await createMock('get_platform_info');
-    mockStore.setMock(mockFn);
-    expect(await isMockFunction('get_platform_info')).toBe(true);
+    expect(isMockFunction(mockFn)).toBe(true);
   });
 
-  it('should return false for a non-mocked command', async () => {
-    expect(await isMockFunction('non_existent_command')).toBe(false);
+  it('should return false for a non-mock function', () => {
+    const regularFn = () => {};
+    expect(isMockFunction(regularFn)).toBe(false);
+  });
+
+  it('should return false for non-function values', () => {
+    expect(isMockFunction(null)).toBe(false);
+    expect(isMockFunction(undefined)).toBe(false);
+    expect(isMockFunction({})).toBe(false);
+    expect(isMockFunction('string')).toBe(false);
+    expect(isMockFunction(42)).toBe(false);
+  });
+
+  it('should return false for a function without __isTauriMock property', () => {
+    const fn = () => {};
+    expect(isMockFunction(fn)).toBe(false);
+  });
+
+  it('should return false for a function with __isTauriMock set to false', () => {
+    const fn = (() => {}) as any;
+    fn.__isTauriMock = false;
+    expect(isMockFunction(fn)).toBe(false);
   });
 });

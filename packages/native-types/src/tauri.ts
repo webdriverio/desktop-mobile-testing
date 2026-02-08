@@ -83,15 +83,24 @@ export interface TauriServiceAPI {
   execute<ReturnValue, InnerArguments extends unknown[]>(
     script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
     ...args: InnerArguments
-  ): Promise<ReturnValue | undefined>;
+  ): Promise<ReturnValue>;
 
   /**
-   * Check if a command is a Tauri mock function.
+   * Check if a value is a Tauri mock function.
+   * This is a TypeScript type guard that narrows the type when true.
    *
-   * @param command - Command name to check
-   * @returns True if the command is mocked
+   * @param fn - Value to check
+   * @returns True if the value is a TauriMockInstance
+   * @example
+   * ```js
+   * const mock = await browser.tauri.mock('clipboard_read');
+   * if (browser.tauri.isMockFunction(mock)) {
+   *   // TypeScript knows mock is TauriMockInstance here
+   *   expect(mock.mock.calls).toHaveLength(1);
+   * }
+   * ```
    */
-  isMockFunction: (command: string) => Promise<boolean>;
+  isMockFunction: (fn: unknown) => fn is TauriMockInstance;
 
   /**
    * Mock a Tauri backend command.
@@ -109,18 +118,38 @@ export interface TauriServiceAPI {
 
   /**
    * Clear all Tauri API mocks.
+   *
+   * @param commandPrefix - Optional command name prefix to filter which mocks to clear.
+   *                        If provided, only mocks with command names starting with this prefix will be cleared.
+   *                        If omitted, all mocks will be cleared.
+   * @example
+   * ```js
+   * // Clear all mocks
+   * await browser.tauri.clearAllMocks();
+   *
+   * // Clear only clipboard-related mocks
+   * await browser.tauri.clearAllMocks('clipboard');
+   * ```
    */
-  clearAllMocks: () => Promise<void>;
+  clearAllMocks: (commandPrefix?: string) => Promise<void>;
 
   /**
    * Reset all Tauri API mocks.
+   *
+   * @param commandPrefix - Optional command name prefix to filter which mocks to reset.
+   *                        If provided, only mocks with command names starting with this prefix will be reset.
+   *                        If omitted, all mocks will be reset.
    */
-  resetAllMocks: () => Promise<void>;
+  resetAllMocks: (commandPrefix?: string) => Promise<void>;
 
   /**
    * Restore all Tauri API mocks.
+   *
+   * @param commandPrefix - Optional command name prefix to filter which mocks to restore.
+   *                        If provided, only mocks with command names starting with this prefix will be restored.
+   *                        If omitted, all mocks will be restored.
    */
-  restoreAllMocks: () => Promise<void>;
+  restoreAllMocks: (commandPrefix?: string) => Promise<void>;
 
   /**
    * Trigger a deeplink to the Tauri application for testing protocol handlers.
@@ -230,17 +259,38 @@ export interface TauriServiceGlobalOptions {
    */
   clearMocks?: boolean;
   /**
+   * Optional command name prefix to filter which mocks to clear before each test.
+   * Only used when clearMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be cleared.
+   * @default undefined
+   */
+  clearMocksPrefix?: string;
+  /**
    * If true, all mocks will be reset (implementation + history) before each test.
    * Equivalent to calling `browser.tauri.resetAllMocks()` before each test.
    * @default false
    */
   resetMocks?: boolean;
   /**
+   * Optional command name prefix to filter which mocks to reset before each test.
+   * Only used when resetMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be reset.
+   * @default undefined
+   */
+  resetMocksPrefix?: string;
+  /**
    * If true, all mocks will be restored to their original implementations before each test.
    * Equivalent to calling `browser.tauri.restoreAllMocks()` before each test.
    * @default false
    */
   restoreMocks?: boolean;
+  /**
+   * Optional command name prefix to filter which mocks to restore before each test.
+   * Only used when restoreMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be restored.
+   * @default undefined
+   */
+  restoreMocksPrefix?: string;
   /**
    * Enable/disable capturing Rust backend logs from stdout
    * @default false

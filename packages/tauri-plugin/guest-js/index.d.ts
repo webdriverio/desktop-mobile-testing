@@ -3,12 +3,13 @@
  */
 
 export interface WdioTauriAPI {
-  execute(script: string, args?: unknown[]): Promise<unknown>;
-  setMock(command: string, config: unknown): Promise<void>;
-  getMock(command: string): Promise<unknown | null>;
-  clearMocks(): Promise<void>;
-  resetMocks(): Promise<void>;
-  restoreMocks(): Promise<void>;
+  execute(script: string, ...args: unknown[]): Promise<unknown>;
+  waitForInit(): Promise<void>;
+  cleanupBackendLogListener?: () => void;
+  cleanupFrontendLogListener?: () => void;
+  cleanupInvokeInterception?: () => void;
+  cleanupLogListeners: () => void;
+  cleanupAll: () => void;
 }
 
 declare global {
@@ -17,10 +18,7 @@ declare global {
   }
 }
 
-export function execute(script: string, args?: unknown[]): Promise<unknown>;
-export function setMock(command: string, config: unknown): Promise<void>;
-export function getMock(command: string): Promise<unknown | null>;
-export function clearMocks(): Promise<void>;
-export function resetMocks(): Promise<void>;
-export function restoreMocks(): Promise<void>;
-export function init(): void;
+export function execute(script: string, ...args: unknown[]): Promise<unknown>;
+export function getConsoleForwardingCode(): string;
+export function init(): Promise<void>;
+export function waitForInit(): Promise<void>;
