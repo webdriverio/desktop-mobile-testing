@@ -235,6 +235,7 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
 
 /**
  * Read WDIO log files from output directory
+ * Uses file locking to prevent reading incomplete files during concurrent writes
  */
 export function readWdioLogs(logBaseDir: string): string {
   if (!fs.existsSync(logBaseDir)) {
@@ -258,7 +259,7 @@ export function readWdioLogs(logBaseDir: string): string {
     for (const logFile of directLogFiles) {
       const logPath = path.join(logBaseDir, logFile);
       try {
-        const content = fs.readFileSync(logPath, 'utf8');
+        const content = readLogFileWithRetry(logPath);
         allLogs += `${content}\n`;
         console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
       } catch (error) {
@@ -297,7 +298,7 @@ export function readWdioLogs(logBaseDir: string): string {
   for (const logFile of logFiles) {
     const logPath = path.join(logDir, logFile);
     try {
-      const content = fs.readFileSync(logPath, 'utf8');
+      const content = readLogFileWithRetry(logPath);
       allLogs += `${content}\n`;
       console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
     } catch (error) {
@@ -306,6 +307,59 @@ export function readWdioLogs(logBaseDir: string): string {
   }
 
   return allLogs;
+}
+
+/**
+ * Read a log file with retry logic to handle concurrent writes
+ * Uses exponential backoff to wait for file locks to be released
+ */
+function readLogFileWithRetry(filePath: string, maxRetries = 5, baseDelay = 100): string {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Try to read the file
+      const content = fs.readFileSync(filePath, 'utf8');
+      return content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // If it's not a lock/EBUSY error, throw immediately
+      if (!isRetryableError(lastError)) {
+        throw lastError;
+      }
+
+      // Wait with exponential backoff before retrying
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * 2 ** attempt;
+        console.log(
+          `[DEBUG] File ${path.basename(filePath)} locked, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+        );
+        sleep(delay);
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to read ${filePath} after ${maxRetries} attempts`);
+}
+
+/**
+ * Check if an error is retryable (file lock, busy, etc.)
+ */
+function isRetryableError(error: Error): boolean {
+  const retryableCodes = ['EBUSY', 'EAGAIN', 'EACCES', 'EPERM'];
+  const code = (error as { code?: string }).code;
+  return code !== undefined && retryableCodes.includes(code);
+}
+
+/**
+ * Synchronous sleep for retry delays
+ */
+function sleep(ms: number): void {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    // Busy wait to avoid async/await complexity
+  }
 }
 
 /**
@@ -343,7 +397,7 @@ export function assertLogDoesNotContain(logs: string, pattern: string | RegExp):
 
 /**
  * Wait for a log message to appear in the log directory
- * Uses polling to check for the expected pattern
+ * Uses polling with file stability detection to ensure logs are fully written
  */
 export async function waitForLog(
   logDir: string,
@@ -354,18 +408,46 @@ export async function waitForLog(
 ): Promise<boolean> {
   const startTime = Date.now();
   const regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern;
+  let lastMatchTime: number | null = null;
+  let lastLogSize = 0;
+  let stableCount = 0;
+  const requiredStableChecks = 3; // Number of consecutive stable checks required
 
   while (Date.now() - startTime < timeout) {
     const logs = readWdioLogs(logDir);
+    const currentLogSize = logs.length;
+
+    // Check if pattern is found
     if (regex.test(logs)) {
-      // Pattern matched - wait for additional logs to be written/flushed
-      await new Promise((resolve) => setTimeout(resolve, settleDelay));
-      return true;
+      if (lastMatchTime === null) {
+        lastMatchTime = Date.now();
+      }
+
+      // Check if log size has stabilized (no new writes)
+      if (currentLogSize === lastLogSize) {
+        stableCount++;
+        if (stableCount >= requiredStableChecks) {
+          // Pattern matched and logs are stable - wait for final settle delay
+          await new Promise((resolve) => setTimeout(resolve, settleDelay));
+          return true;
+        }
+      } else {
+        // Log size changed, reset stability counter
+        stableCount = 0;
+      }
+    } else {
+      // Pattern not found, reset match time and stability
+      lastMatchTime = null;
+      stableCount = 0;
     }
+
+    lastLogSize = currentLogSize;
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
-  return false;
+  // Timeout reached - check one final time
+  const finalLogs = readWdioLogs(logDir);
+  return regex.test(finalLogs);
 }
 
 /**
