@@ -722,28 +722,10 @@ export async function init(): Promise<void> {
 // Auto-initialize when imported
 // NOTE: We can't await at module level, but we start the initialization immediately
 // and expose a promise that can be awaited by consumers if needed
-const initMessages: string[] = [];
-initMessages.push('[WDIO][CRITICAL] Plugin module loaded - this message must appear in logs');
-initMessages.push(`[WDIO][CRITICAL] typeof window at module level: ${typeof window}`);
-
-// Add visible marker to DOM
-if (typeof document !== 'undefined' && document.body) {
-  const marker = document.createElement('div');
-  marker.id = 'wdio-plugin-loaded';
-  marker.style.cssText =
-    'position:fixed;top:0;left:0;background:red;color:white;padding:10px;z-index:999999;font-size:20px;';
-  marker.textContent = '[WDIO][CRITICAL] Plugin JS loaded!';
-  document.body.appendChild(marker);
-}
-
 let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 if (typeof window !== 'undefined') {
-  initMessages.push('[WDIO][CRITICAL] Auto-initializing plugin...');
-  for (const msg of initMessages) {
-    console.error(msg);
-  }
   if (typeof document !== 'undefined' && document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       if (!isInitialized) {
@@ -754,11 +736,6 @@ if (typeof window !== 'undefined') {
     if (!isInitialized) {
       initPromise = init();
     }
-  }
-} else {
-  initMessages.push('[WDIO][CRITICAL] Window not available at module level, skipping auto-init');
-  for (const msg of initMessages) {
-    console.error(msg);
   }
 }
 

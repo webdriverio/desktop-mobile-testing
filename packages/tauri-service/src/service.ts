@@ -108,22 +108,6 @@ export default class TauriWorkerService {
     // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
 
-    // Initialize Tauri mocking system
-    log.debug('Initializing Tauri mocking system...');
-    try {
-      await (browser as WebdriverIO.Browser).execute(async function initMocks() {
-        // @ts-expect-error - injection script will be bundled
-        if (typeof window.initializeTauriMocks === 'function') {
-          // @ts-expect-error - injection script will be bundled
-          await window.initializeTauriMocks();
-        }
-      });
-      log.debug('Tauri mocking system initialized');
-    } catch (error) {
-      log.warn('Failed to initialize Tauri mocking system:', error);
-      log.warn('Mocking functionality may not be available');
-    }
-
     // Install command overrides to trigger mock updates after DOM interactions
     this.installCommandOverrides();
   }
