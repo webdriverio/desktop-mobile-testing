@@ -28,9 +28,9 @@
     "test:e2e:tauri-basic:multiremote": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=multiremote tsx scripts/run-matrix.ts",
     "test:e2e:tauri-basic:standalone": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standalone tsx scripts/run-matrix.ts",
     "test:e2e:tauri-basic:deeplink": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=deeplink tsx scripts/run-matrix.ts",
-    "protocol-install:tauri": "./fixtures/e2e-apps/tauri/scripts/protocol-install.sh",
-    "protocol-install:electron-builder": "./fixtures/e2e-apps/electron-builder/scripts/protocol-install.sh",
-    "protocol-install:electron-forge": "./fixtures/e2e-apps/electron-forge/scripts/protocol-install.sh"
+    "protocol-install:tauri": "../fixtures/e2e-apps/tauri/scripts/protocol-install.sh",
+    "protocol-install:electron-builder": "../fixtures/e2e-apps/electron-builder/scripts/protocol-install.sh",
+    "protocol-install:electron-forge": "../fixtures/e2e-apps/electron-forge/scripts/protocol-install.sh"
   },
   "dependencies": {
     "@wdio/cli": "catalog:default",
