@@ -9,6 +9,27 @@ interface TauriServiceContext {
   browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
 }
 
+/**
+ * Escapes special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Checks if a mock should be processed based on the optional command prefix
+ * @param mockName - Full mock name (e.g., "tauri.read_clipboard")
+ * @param commandPrefix - Optional prefix to filter by (e.g., "read")
+ * @returns true if the mock should be processed
+ */
+function shouldProcessMock(mockName: string, commandPrefix?: string): boolean {
+  if (!commandPrefix) {
+    return true;
+  }
+  const escapedPrefix = escapeRegex(commandPrefix);
+  return new RegExp(`^tauri\\.${escapedPrefix}`).test(mockName);
+}
+
 export async function mock(this: TauriServiceContext, command: string): Promise<TauriMock> {
   log.debug(`[${command}] mock command called`);
   // First try returning an existing mock without requiring a browser context
@@ -57,8 +78,7 @@ export async function clearAllMocks(this: TauriServiceContext, commandPrefix?: s
   let clearedCount = 0;
 
   for (const [mockName, mock] of mocks) {
-    // Filter by command prefix if provided (mock names are like "tauri.command_name")
-    if (!commandPrefix || mockName.match(new RegExp(`^tauri\\.${commandPrefix}`))) {
+    if (shouldProcessMock(mockName, commandPrefix)) {
       await mock.mockClear();
       clearedCount++;
     }
@@ -97,7 +117,7 @@ export async function resetAllMocks(this: TauriServiceContext, commandPrefix?: s
   const mocks = mockStore.getMocks();
   let resetCount = 0;
   for (const [mockName, mock] of mocks) {
-    if (!commandPrefix || mockName.match(new RegExp(`^tauri\\.${commandPrefix}`))) {
+    if (shouldProcessMock(mockName, commandPrefix)) {
       await mock.mockReset();
       resetCount++;
     }
@@ -139,7 +159,7 @@ export async function restoreAllMocks(this: TauriServiceContext, commandPrefix?:
   const mocks = mockStore.getMocks();
   let restoredCount = 0;
   for (const [mockName, mock] of mocks) {
-    if (!commandPrefix || mockName.match(new RegExp(`^tauri\\.${commandPrefix}`))) {
+    if (shouldProcessMock(mockName, commandPrefix)) {
       await mock.mockRestore();
       restoredCount++;
     }
