@@ -55,9 +55,6 @@ export interface TauriMockInstance extends Omit<Mock, MockOverride> {
   update(): Promise<TauriMock>;
   __isTauriMock: boolean;
   mock: TauriMockContext;
-  results: MockResult[];
-  invocationCallOrder: number[];
-  lastCall?: unknown;
 }
 
 /**
@@ -109,13 +106,6 @@ export interface TauriServiceAPI {
    * ```
    */
   mock: (command: string) => Promise<TauriMock>;
-
-  /**
-   * Mock all Tauri commands.
-   *
-   * @returns Promise that resolves when all mocks are cleared
-   */
-  mockAll: () => Promise<void>;
 
   /**
    * Clear all Tauri API mocks.
@@ -234,6 +224,24 @@ export interface TauriServiceGlobalOptions {
   tauriDriverPort?: number;
   nativeDriverPath?: string;
   /**
+   * If true, all mock call history will be cleared before each test.
+   * Equivalent to calling `browser.tauri.clearAllMocks()` before each test.
+   * @default false
+   */
+  clearMocks?: boolean;
+  /**
+   * If true, all mocks will be reset (implementation + history) before each test.
+   * Equivalent to calling `browser.tauri.resetAllMocks()` before each test.
+   * @default false
+   */
+  resetMocks?: boolean;
+  /**
+   * If true, all mocks will be restored to their original implementations before each test.
+   * Equivalent to calling `browser.tauri.restoreAllMocks()` before each test.
+   * @default false
+   */
+  restoreMocks?: boolean;
+  /**
    * Enable/disable capturing Rust backend logs from stdout
    * @default false
    */
@@ -334,7 +342,6 @@ export interface TauriBrowserExtension extends BrowserBase {
    * - {@link TauriServiceAPI.clearAllMocks `browser.tauri.clearAllMocks`} - Clear the Tauri API mock functions
    * - {@link TauriServiceAPI.execute `browser.tauri.execute`} - Execute code in the Tauri frontend context
    * - {@link TauriServiceAPI.mock `browser.tauri.mock`} - Mock a function from the Tauri API
-   * - {@link TauriServiceAPI.mockAll `browser.tauri.mockAll`} - Mock an entire API object of the Tauri API
    * - {@link TauriServiceAPI.resetAllMocks `browser.tauri.resetAllMocks`} - Reset the Tauri API mock functions
    * - {@link TauriServiceAPI.restoreAllMocks `browser.tauri.restoreAllMocks`} - Restore the original Tauri API functionality
    * - {@link TauriServiceAPI.triggerDeeplink `browser.tauri.triggerDeeplink`} - Trigger a deeplink for testing protocol handlers

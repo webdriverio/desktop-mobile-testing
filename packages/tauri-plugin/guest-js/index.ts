@@ -4,7 +4,7 @@
  */
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
-import type * as vitestSpy from '@vitest/spy';
+import * as nativeSpy from '@wdio/native-spy';
 
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
@@ -61,7 +61,7 @@ declare global {
       cleanupLogListeners: () => void;
       cleanupAll: () => void;
     };
-    __vitest_spy__?: typeof vitestSpy;
+    __wdio_spy__?: typeof nativeSpy;
     __wdio_mocks__?: Record<string, unknown>;
   }
 }
@@ -699,6 +699,9 @@ export async function init(): Promise<void> {
   console.log('[WDIO Tauri Plugin] Setting up frontend log event listener...');
   setupFrontendLogListener();
   console.log('[WDIO Tauri Plugin] ✅ Frontend log listener initialized');
+
+  // Expose native spy on window for mock creation
+  window.__wdio_spy__ = nativeSpy;
 
   // Setup invoke interception for mocking support
   console.log('[WDIO Tauri Plugin] Setting up invoke interception for mocking...');

@@ -16,7 +16,6 @@ export {
   clearAllMocks,
   isMockFunction,
   mock,
-  mockAll,
   resetAllMocks,
   restoreAllMocks,
 } from './commands/mock.js';

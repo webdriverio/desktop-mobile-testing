@@ -7,8 +7,8 @@
  * that can be loaded directly in the browser without a bundler.
  *
  * Why we bundle:
- * - The guest-js imports @vitest/spy for mocking functionality
- * - Browsers can't resolve bare module specifiers like '@vitest/spy'
+ * - The guest-js imports @wdio/native-spy for mocking functionality
+ * - Browsers can't resolve bare module specifiers like '@wdio/native-spy'
  * - Package test apps load the plugin without a bundler (no Vite)
  * - E2E apps use Vite which can resolve imports, but bundling works there too
  *

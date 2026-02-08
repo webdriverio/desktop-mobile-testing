@@ -146,22 +146,6 @@ expect(content).toBe('mocked file content');
 
 ---
 
-#### `mockAll()`
-
-Mock all Tauri commands. Useful for isolated testing.
-
-**Parameters:** None
-
-**Returns:** `Promise<void>`
-
-**Example:**
-```typescript
-await browser.tauri.mockAll();
-// All commands are now mocked, will return undefined by default
-```
-
----
-
 #### `isMockFunction(command)`
 
 Check if a command is currently mocked.
@@ -967,7 +951,6 @@ The following methods are available on the `browser.tauri` object when connected
 - **`browser.tauri.execute(script, ...args)`** - See [execute()](#executebrowser-script-args) above
 - **`browser.tauri.mock(command)`** - See [mock()](#mockcommand) above
 - **`browser.tauri.isMockFunction(command)`** - See [isMockFunction()](#ismockfunctioncommand) above
-- **`browser.tauri.mockAll()`** - See [mockAll()](#mockall) above
 - **`browser.tauri.clearAllMocks()`** - See [clearAllMocks()](#clearallmocks) above
 - **`browser.tauri.resetAllMocks()`** - See [resetAllMocks()](#resetallmocks) above
 - **`browser.tauri.restoreAllMocks()`** - See [restoreAllMocks()](#restoreallmocks) above

@@ -51,26 +51,6 @@ export async function mock(this: TauriServiceContext, command: string): Promise<
   }
 }
 
-export async function mockAll(this: TauriServiceContext): Promise<void> {
-  log.debug('mockAll command called');
-  const browserContext = this?.browser || globalThis.browser;
-
-  if (!browserContext || browserContext.isMultiremote) {
-    throw new Error('mockAll requires a valid browser context');
-  }
-
-  // Clear all mocks in the injection script
-  await (browserContext as WebdriverIO.Browser).execute<void, []>(() => {
-    // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-    if (window.__wdio_mocks__) {
-      // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
-      window.__wdio_mocks__ = {};
-    }
-  });
-
-  log.debug('mockAll completed');
-}
-
 export async function clearAllMocks(this: TauriServiceContext): Promise<void> {
   log.debug('clearAllMocks command called');
   const mocks = mockStore.getMocks();
