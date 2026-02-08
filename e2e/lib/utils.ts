@@ -344,10 +344,12 @@ async function readLogFileWithRetry(filePath: string, maxRetries = 5, baseDelay 
 }
 
 /**
- * Check if an error is retryable (file lock, busy, etc.)
+ * Check if an error is retryable (transient file locks only)
+ * Only retries on EBUSY/EAGAIN which indicate temporary file locks.
+ * EACCES/EPERM indicate permission problems that won't resolve with retries.
  */
 function isRetryableError(error: Error): boolean {
-  const retryableCodes = ['EBUSY', 'EAGAIN', 'EACCES', 'EPERM'];
+  const retryableCodes = ['EBUSY', 'EAGAIN'];
   const code = (error as { code?: string }).code;
   return code !== undefined && retryableCodes.includes(code);
 }
