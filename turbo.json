@@ -111,6 +111,7 @@
       "outputs": ["dist/**"]
     },
     "@wdio/tauri-plugin#build:js": {
+      "dependsOn": ["@wdio/native-spy#build"],
       "outputs": ["dist-js/**"]
     },
     "@wdio/tauri-service#build": {
@@ -140,6 +141,14 @@
     "electron-forge-e2e-app#build:mac-universal": {
       "dependsOn": ["^build"],
       "outputs": ["out/**"]
+    },
+    "tauri-app-example#build": {
+      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
+      "outputs": ["src-tauri/target/**"]
+    },
+    "tauri-app-example#build:debug": {
+      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
+      "outputs": ["src-tauri/target/**"]
     },
     "tauri-e2e-app#build": {
       "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
