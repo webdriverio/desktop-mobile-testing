@@ -111,6 +111,7 @@
       "outputs": ["dist/**"]
     },
     "@wdio/tauri-plugin#build:js": {
+      "dependsOn": ["@wdio/native-spy#build"],
       "outputs": ["dist-js/**"]
     },
     "@wdio/tauri-service#build": {

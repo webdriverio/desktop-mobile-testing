@@ -5,17 +5,6 @@ import { execute as tauriExecute } from './commands/execute.js';
 
 const log = createLogger('tauri-service', 'mock');
 
-/**
- * Internal mock state structure that we control fully.
- * Unlike vitest's mock which has readonly getters, we can mutate this freely.
- */
-interface MockState {
-  calls: unknown[][];
-  results: unknown[];
-  invocationCallOrder: number[];
-  lastCall?: unknown;
-}
-
 async function restoreTauriCommand(command: string, browserContext?: WebdriverIO.Browser) {
   const browserToUse = browserContext || browser;
 
@@ -67,42 +56,11 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     }
   });
 
-  const mockState: MockState = {
-    calls: [],
-    results: [],
-    invocationCallOrder: [],
-    lastCall: undefined,
-  };
-
   Object.defineProperty(wrapperMock, 'mock', {
     configurable: false,
     enumerable: false,
     get() {
       return originalMock;
-    },
-  });
-
-  Object.defineProperty(wrapperMock, 'calls', {
-    get() {
-      return mockState.calls;
-    },
-  });
-
-  Object.defineProperty(wrapperMock, 'results', {
-    get() {
-      return mockState.results;
-    },
-  });
-
-  Object.defineProperty(wrapperMock, 'invocationCallOrder', {
-    get() {
-      return mockState.invocationCallOrder;
-    },
-  });
-
-  Object.defineProperty(wrapperMock, 'lastCall', {
-    get() {
-      return mockState.lastCall;
     },
   });
 
@@ -115,10 +73,10 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     browserToUse,
     (_tauri, cmd) => {
       // @ts-expect-error - window is available in browser context
-      const spy = window.__vitest_spy__;
+      const spy = window.__wdio_spy__;
       if (!spy || !spy.fn) {
         throw new Error(
-          'Vitest spy not available. Make sure @vitest/spy is imported and exposed as window.__vitest_spy__ in your app.',
+          '@wdio/native-spy not available. Make sure @wdio/tauri-plugin is imported and initialized in your app.',
         );
       }
 
@@ -139,46 +97,34 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
 
   mock.update = async () => {
     log.debug(`[${command}] Starting mock update`);
-    const mockStateFromJs = await tauriExecute<
-      {
-        calls: unknown[][];
-        results: unknown[];
-        invocationCallOrder: number[];
-        lastCall?: unknown;
-      } | null,
-      [string]
-    >(
-      browserToUse,
-      (_tauri, cmd: string) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd];
-        if (!mockObj?.mock) return null;
+    const calls =
+      (await tauriExecute<unknown[][], [string]>(
+        browserToUse,
+        (_tauri, cmd: string) => {
+          // @ts-expect-error - window is available in browser context
+          const mockObj = window.__wdio_mocks__?.[cmd];
+          if (!mockObj?.mock) return [];
+          return JSON.parse(JSON.stringify((mockObj.mock as { calls?: unknown[] }).calls || []));
+        },
+        command,
+      )) || [];
 
-        return {
-          calls: JSON.parse(JSON.stringify((mockObj.mock as { calls?: unknown[] }).calls || [])),
-          results: JSON.parse(JSON.stringify((mockObj.mock as { results?: unknown[] }).results || [])),
-          invocationCallOrder: JSON.parse(
-            JSON.stringify((mockObj.mock as { invocationCallOrder?: unknown[] }).invocationCallOrder || []),
-          ),
-          lastCall: (mockObj.mock as { lastCall?: unknown }).lastCall
-            ? JSON.parse(JSON.stringify((mockObj.mock as { lastCall: unknown }).lastCall))
-            : undefined,
-        };
-      },
-      command,
+    const outerCalls = originalMock.calls;
+    log.debug(
+      `[${command}] Retrieved ${calls.length} calls from inner mock, outer mock has ${outerCalls.length} calls`,
     );
 
-    if (mockStateFromJs) {
-      log.debug(
-        `[${command}] Updating mock state: ${mockStateFromJs.calls.length} calls, ${mockStateFromJs.results.length} results`,
-      );
-
-      mockState.calls = mockStateFromJs.calls;
-      mockState.results = mockStateFromJs.results;
-      mockState.invocationCallOrder = mockStateFromJs.invocationCallOrder;
-      mockState.lastCall = mockStateFromJs.lastCall;
+    // Re-apply calls from the browser inner mock to the outer one
+    if (outerCalls.length < calls.length) {
+      log.debug(`[${command}] Applying ${calls.length - outerCalls.length} new calls to outer mock`);
+      calls.forEach((call: unknown[], index: number) => {
+        if (!outerCalls[index]) {
+          log.debug(`[${command}] Applying call ${index}:`, call);
+          mock?.apply(mock, call);
+        }
+      });
     } else {
-      log.debug(`[${command}] No mock state to update`);
+      log.debug(`[${command}] No new calls to synchronize`);
     }
 
     return mock;
@@ -338,17 +284,14 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       command,
     );
 
-    mockState.calls = [];
-    mockState.results = [];
-    mockState.invocationCallOrder = [];
-    mockState.lastCall = undefined;
-
     outerMockClear();
 
     return mock;
   };
 
   mock.mockReset = async () => {
+    const currentName = outerMock.getMockName();
+
     await tauriExecute<void, [string]>(
       browserToUse,
       (_tauri, cmd) => {
@@ -361,12 +304,8 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       command,
     );
 
-    mockState.calls = [];
-    mockState.results = [];
-    mockState.invocationCallOrder = [];
-    mockState.lastCall = undefined;
-
     outerMockReset();
+    outerMock.mockName(currentName);
 
     await mock.mockClear();
 
@@ -376,13 +315,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   mock.mockRestore = async () => {
     await restoreTauriCommand(command, browserToUse);
 
-    mockState.calls = [];
-    mockState.results = [];
-    mockState.invocationCallOrder = [];
-    mockState.lastCall = undefined;
-
     outerMockClear();
-    await mock.mockClear();
 
     return mock;
   };

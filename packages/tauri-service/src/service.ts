@@ -1,10 +1,11 @@
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
-import { clearAllMocks, isMockFunction, mock, mockAll, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { clearAllMocks, isMockFunction, mock, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import { triggerDeeplink } from './commands/triggerDeeplink.js';
+import mockStore from './mockStore.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
-import type { TauriCapabilities, TauriServiceOptions } from './types.js';
+import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 import { clearWindowState, ensureActiveWindowFocus } from './window.js';
 
 const log = createLogger('tauri-service', 'service');
@@ -14,10 +15,18 @@ const EXECUTE_PATCHED = Symbol('wdio-tauri-execute-patched');
 /**
  * Tauri worker service
  */
+type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
+
 export default class TauriWorkerService {
   private browser?: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser;
+  private clearMocks: boolean;
+  private resetMocks: boolean;
+  private restoreMocks: boolean;
 
-  constructor(_options: TauriServiceOptions, _capabilities: TauriCapabilities) {
+  constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
+    this.clearMocks = options.clearMocks ?? false;
+    this.resetMocks = options.resetMocks ?? false;
+    this.restoreMocks = options.restoreMocks ?? false;
     log.debug('TauriWorkerService initialized');
   }
 
@@ -125,10 +134,21 @@ export default class TauriWorkerService {
       log.warn('⚠️ Failed to initialize Tauri mocking system:', error);
       log.warn('   Mocking functionality may not be available');
     }
+
+    // Install command overrides to trigger mock updates after DOM interactions
+    this.installCommandOverrides();
   }
 
   async beforeTest(_test: unknown, _context: unknown): Promise<void> {
-    // Pre-test logic if needed
+    if (this.clearMocks) {
+      await clearAllMocks.call({ browser: this.browser });
+    }
+    if (this.resetMocks) {
+      await resetAllMocks.call({ browser: this.browser });
+    }
+    if (this.restoreMocks) {
+      await restoreAllMocks.call({ browser: this.browser });
+    }
   }
 
   async beforeCommand(commandName: string, _args: unknown[]): Promise<void> {
@@ -232,10 +252,6 @@ export default class TauriWorkerService {
         return mock.call({ browser }, command);
       },
 
-      mockAll: async (): Promise<void> => {
-        return mockAll.call({ browser });
-      },
-
       resetAllMocks: async (): Promise<void> => {
         return resetAllMocks.call({ browser });
       },
@@ -248,6 +264,38 @@ export default class TauriWorkerService {
         return triggerDeeplink.call({ browser }, url);
       },
     };
+  }
+
+  /**
+   * Install command overrides to trigger mock updates after DOM interactions
+   */
+  private installCommandOverrides() {
+    const commandsToOverride: ElementCommands[] = ['click', 'doubleClick', 'setValue', 'clearValue'];
+    commandsToOverride.forEach((commandName) => {
+      this.overrideElementCommand(commandName);
+    });
+  }
+
+  /**
+   * Override an element-level command to add mock update after execution
+   */
+  private overrideElementCommand(commandName: ElementCommands) {
+    const browser = this.browser as WebdriverIO.Browser;
+    try {
+      const testOverride = async function (
+        this: WebdriverIO.Element,
+        originalCommand: (...args: readonly unknown[]) => Promise<unknown>,
+        ...args: readonly unknown[]
+      ): Promise<unknown> {
+        const result = await Reflect.apply(originalCommand, this, args as unknown[]);
+        await updateAllMocks();
+        return result;
+      } as Parameters<typeof browser.overwriteCommand>[1];
+
+      browser.overwriteCommand(commandName, testOverride, true);
+    } catch {
+      // ignore
+    }
   }
 
   /**
@@ -297,5 +345,33 @@ export default class TauriWorkerService {
 
     patchedBrowser[EXECUTE_PATCHED] = true;
     log.debug('browser.execute() patched with console forwarding');
+  }
+}
+
+/**
+ * Update all existing mocks by syncing inner (browser) mock state to outer (test) mocks
+ */
+async function updateAllMocks() {
+  log.debug('updateAllMocks called');
+  const mocks = mockStore.getMocks();
+  log.debug(`Found ${mocks.length} mocks to update`);
+
+  if (mocks.length === 0) {
+    log.debug('No mocks to update, returning');
+    return;
+  }
+
+  try {
+    log.debug('Starting mock update batch');
+    await Promise.all(
+      mocks.map(async ([mockId, mockInstance]) => {
+        log.debug(`Updating mock: ${mockId}`);
+        await mockInstance.update();
+        log.debug(`Mock update completed: ${mockId}`);
+      }),
+    );
+    log.debug('All mock updates completed successfully');
+  } catch (error) {
+    log.debug('Mock update batch failed:', error);
   }
 }
