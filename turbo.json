@@ -8,26 +8,34 @@
   "tasks": {
     "//#format:check": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,t}s", "**/*.{yml,md,json}", "package.json"],
+      "inputs": ["**/*.{j,mj,cj,t}s", "**/*.{yml,md,json}", "package.json", "biome.jsonc", "pnpm-workspace.yaml"],
       "cache": false
     },
     "//#format": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,t}s", "**/*.{yml,md,json}", "package.json"],
+      "inputs": ["**/*.{j,mj,cj,t}s", "**/*.{yml,md,json}", "package.json", "biome.jsonc", "pnpm-workspace.yaml"],
       "cache": false
     },
     "//#lint": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.json", "package.json"],
+      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.jsonc", "package.json", "pnpm-workspace.yaml"],
       "outputs": [".eslintcache"]
     },
     "//#lint:fix": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.json", "package.json"],
+      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.jsonc", "package.json", "pnpm-workspace.yaml"],
       "outputs": [".eslintcache"]
     },
     "build": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "wdio-bundler.config.ts",
+        "rollup.config.ts",
+        "package.json"
+      ],
       "outputs": ["dist/**"]
     },
     "test": {
@@ -48,6 +56,8 @@
     },
     "lint": {
       "dependsOn": [],
+      "inputs": ["src/**", "test/**", "*.config.ts", "*.config.js", "tsconfig.json", "package.json"],
+      "outputs": [".eslintcache"],
       "cache": true
     },
     "typecheck": {
@@ -128,11 +138,11 @@
     },
     "electron-builder-e2e-app#build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "dist-electron/**"]
     },
     "electron-forge-e2e-app#build": {
       "dependsOn": ["^build"],
-      "outputs": ["out/**"]
+      "outputs": ["dist/**", "out/**"]
     },
     "electron-script-e2e-app#build": {
       "dependsOn": ["^build"],
@@ -140,11 +150,11 @@
     },
     "electron-builder-e2e-app#build:mac-universal": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "dist-electron/**"]
     },
     "electron-forge-e2e-app#build:mac-universal": {
       "dependsOn": ["^build"],
-      "outputs": ["out/**"]
+      "outputs": ["dist/**", "out/**"]
     },
     "tauri-e2e-app#build": {
       "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
