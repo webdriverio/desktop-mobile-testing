@@ -74,7 +74,7 @@ jobs:
         uses: ./.github/workflows/actions/download-archive
         with:
           name: wdio-desktop-mobile
-          path: wdio-desktop-mobile-build
+          path: ${{ runner.temp }}/wdio-desktop-mobile-build
           filename: artifact.zip
           cache_key_prefix: wdio-desktop-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
@@ -94,13 +94,15 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const generateBuildFilter = (scenario) => {
-              return scenario
-                .split(',')
-                .map((s) => `--filter=electron-${s.trim()}-e2e-app`)
-                .join(' ');
-            };
-            return generateBuildFilter('${{ inputs.scenario }}');
+            const ALLOWED_SCENARIOS = ['builder', 'forge', 'script'];
+            const scenarios = '${{ inputs.scenario }}'.split(',').map(s => s.trim());
+            for (const s of scenarios) {
+              if (!ALLOWED_SCENARIOS.includes(s)) {
+                core.setFailed(`Invalid scenario: "${s}". Allowed: ${ALLOWED_SCENARIOS.join(', ')}`);
+                return '';
+              }
+            }
+            return scenarios.map(s => `--filter=electron-${s}-e2e-app`).join(' ');
 
       # Build the test applications using Turbo with the generated filter
       # This builds only the necessary test apps for the current test configuration
@@ -191,16 +193,15 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const generateTestCommand = (scenario) => {
-              return scenario
-                .split(',')
-                .map((s) => {
-                  const scenarioTrimmed = s.trim();
-                  return `test:e2e:electron-${scenarioTrimmed}`;
-                })
-                .join(' ');
-            };
-            return generateTestCommand('${{ inputs.scenario }}');
+            const ALLOWED_SCENARIOS = ['builder', 'forge', 'script'];
+            const scenarios = '${{ inputs.scenario }}'.split(',').map(s => s.trim());
+            for (const s of scenarios) {
+              if (!ALLOWED_SCENARIOS.includes(s)) {
+                core.setFailed(`Invalid scenario: "${s}". Allowed: ${ALLOWED_SCENARIOS.join(', ')}`);
+                return '';
+              }
+            }
+            return scenarios.map(s => `test:e2e:electron-${s}`).join(' ');
 
       # Run the E2E tests using Turbo with the generated test commands
       # Each test builds its own apps with correct environment context
