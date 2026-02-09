@@ -367,6 +367,7 @@ jobs:
       os: ${{ matrix.os }}
       node-version: '20'
       scenario: ${{ matrix.scenario }}
+      variant: window
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}

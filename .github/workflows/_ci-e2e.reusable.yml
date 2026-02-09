@@ -33,6 +33,10 @@ on:
         description: 'Size of the build artifact in bytes'
         type: string
         required: false
+      variant:
+        description: 'Optional variant label to disambiguate artifact names (e.g. window)'
+        type: string
+        default: ''
       cache_key:
         description: 'Cache key to use for downloading artifacts'
         type: string
@@ -239,7 +243,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ github.run_id }}-${{ inputs.scenario }}
+          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}${{ inputs.variant && format('-{0}', inputs.variant) || '' }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.scenario }}
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn

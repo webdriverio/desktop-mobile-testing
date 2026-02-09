@@ -230,6 +230,7 @@ runs:
         path: ${{ inputs.output }}
         retention-days: ${{ inputs.retention_days }}
         if-no-files-found: error
+        overwrite: true
 
     # Cache with platform-specific key
     # Cross-platform archive enabled - works for TypeScript packages (wdio-desktop-build)
