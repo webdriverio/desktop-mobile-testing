@@ -39,7 +39,7 @@
     </div>
 </h4>
 
-[`@wdio/electron-service`](./packages/electron-service) - Electron applications (Windows/macOS/Linux)
+[`@wdio/electron-service`](./packages/electron-service) - Electron applications (Windows / macOS / Linux)
 
 <h4>
   <div>
@@ -49,7 +49,7 @@
   </div>
 </h4>
 
-[`@wdio/tauri-service`](./packages/tauri-service) - Tauri applications (Windows/Linux)
+[`@wdio/tauri-service`](./packages/tauri-service) - Tauri applications (Windows / macOS (experimental) / Linux)
 
 ## Planned Support
 
