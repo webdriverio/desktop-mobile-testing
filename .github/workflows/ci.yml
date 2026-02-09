@@ -39,6 +39,7 @@ jobs:
     name: Build [Linux]
     needs: [detect-changes]
     uses: ./.github/workflows/_ci-build.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-latest'
 
@@ -47,6 +48,7 @@ jobs:
     name: Lint [Linux]
     needs: [detect-changes, build]
     uses: ./.github/workflows/_ci-lint.reusable.yml
+    secrets: inherit
     with:
       cache_key: ${{ needs.build.outputs.cache_key }}
 
@@ -67,6 +69,7 @@ jobs:
           - os: macos-15-intel
             display-name: macOS-Intel
     uses: ./.github/workflows/_ci-unit.reusable.yml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       build_id: ${{ needs.build.outputs.build_id }}
@@ -79,6 +82,7 @@ jobs:
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-latest'
       build_id: ${{ needs.build.outputs.build_id }}
@@ -90,6 +94,7 @@ jobs:
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
+    secrets: inherit
     with:
       os: 'windows-latest'
       build-command: 'build:debug'  # Use debug build on Windows to preserve stdout/stderr for log capture
@@ -103,6 +108,7 @@ jobs:
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-latest'
       build_id: ${{ needs.build.outputs.build_id }}
@@ -114,6 +120,7 @@ jobs:
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
+    secrets: inherit
     with:
       os: 'windows-latest'
       build_id: ${{ needs.build.outputs.build_id }}
@@ -125,6 +132,7 @@ jobs:
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-24.04-arm'
       build_id: ${{ needs.build.outputs.build_id }}
@@ -175,6 +183,7 @@ jobs:
             display-name: macOS-Intel
             module-type: esm
     uses: ./.github/workflows/_ci-package.reusable.yml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       service: 'electron'
@@ -188,6 +197,7 @@ jobs:
     needs: [detect-changes, build, build-tauri-package-app-linux]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-latest'
       service: 'tauri'
@@ -201,6 +211,7 @@ jobs:
     needs: [detect-changes, build, build-tauri-package-app-windows]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
+    secrets: inherit
     with:
       os: 'windows-latest'
       service: 'tauri'
@@ -214,6 +225,7 @@ jobs:
     needs: [detect-changes, build, build-tauri-package-app-linux-arm]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-24.04-arm'
       service: 'tauri'
@@ -248,6 +260,7 @@ jobs:
           - distro: void
             display-name: Void
     uses: ./.github/workflows/_ci-package-docker.reusable.yml
+    secrets: inherit
     with:
       distro: ${{ matrix.distro }}
 
@@ -267,6 +280,7 @@ jobs:
           - os: macos-15-intel
             display-name: macOS-Intel
     uses: ./.github/workflows/_ci-build.reusable.yml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
 
@@ -320,6 +334,7 @@ jobs:
             display-name: macOS-Intel
             scenario: script
     uses: ./.github/workflows/_ci-e2e.reusable.yml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       node-version: '20'
@@ -347,6 +362,7 @@ jobs:
             display-name: Linux
             scenario: script
     uses: ./.github/workflows/_ci-e2e.reusable.yml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       node-version: '20'
@@ -366,6 +382,7 @@ jobs:
         scenario: ['tauri-basic']
         test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
+    secrets: inherit
     with:
       os: 'ubuntu-latest'
       node-version: '20'
@@ -387,6 +404,7 @@ jobs:
         scenario: ['tauri-basic']
         test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
+    secrets: inherit
     with:
       os: 'windows-latest'
       node-version: '20'
@@ -432,6 +450,7 @@ jobs:
             scenario: tauri-basic
             test-type: standalone
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
+    secrets: inherit
     with:
       os: ${{ matrix.os }}
       node-version: '20'
