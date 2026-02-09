@@ -48,6 +48,8 @@ on:
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   TURBO_DAEMON: false
 
 jobs:
@@ -307,20 +309,20 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const generateTauriTestCommand = (scenario, testType) => {
-              return scenario
-                .split(',')
-                .map((s) => {
-                  const scenario = s.trim();
-                  // Use 'tauri-basic' as the app name (single Tauri app variant)
-                  const baseCommand = `test:e2e:tauri-basic`;
-                  return testType !== 'standard'
-                    ? `${baseCommand}:${testType}`
-                    : baseCommand;
-                })
-                .join(' ');
-            };
-            return generateTauriTestCommand('${{ inputs.scenario }}', '${{ inputs.test-type }}');
+            const ALLOWED_SCENARIOS = ['tauri-basic'];
+            const ALLOWED_TEST_TYPES = ['standard', 'window', 'multiremote', 'standalone', 'deeplink'];
+            const scenario = '${{ inputs.scenario }}'.trim();
+            const testType = '${{ inputs.test-type }}'.trim();
+            if (!ALLOWED_SCENARIOS.includes(scenario)) {
+              core.setFailed(`Invalid scenario: "${scenario}". Allowed: ${ALLOWED_SCENARIOS.join(', ')}`);
+              return '';
+            }
+            if (!ALLOWED_TEST_TYPES.includes(testType)) {
+              core.setFailed(`Invalid test-type: "${testType}". Allowed: ${ALLOWED_TEST_TYPES.join(', ')}`);
+              return '';
+            }
+            const baseCommand = `test:e2e:${scenario}`;
+            return testType !== 'standard' ? `${baseCommand}:${testType}` : baseCommand;
 
       # Cleanup any lingering processes from previous test runs
       - name: 🧹 Cleanup Lingering Processes (Windows)
@@ -396,7 +398,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-tauri-logs-${{ inputs.os }}-${{ github.run_id }}-${{ inputs.scenario }}-${{ inputs.test-type }}
+          name: e2e-tauri-logs-${{ inputs.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.scenario }}-${{ inputs.test-type }}
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn

@@ -45,7 +45,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
-          name: test-results-${{ inputs.distro }}
+          name: test-results-${{ inputs.distro }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: fixtures/package-tests/**/logs-*/
           retention-days: 7
           if-no-files-found: warn

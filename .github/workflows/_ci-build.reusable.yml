@@ -30,6 +30,8 @@ on:
 env:
   TURBO_TELEMETRY_DISABLED: 1
   TURBO_DAEMON: false
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
   # This job builds all packages in the monorepo
@@ -67,7 +69,7 @@ jobs:
       # Build all packages using Turbo
       # This creates the dist/ directories with compiled code
       - name: 🏗️ Build All Packages
-        run: pnpm run build
+        run: pnpm turbo run build --filter=./packages/* --filter=./e2e
         shell: bash
 
       # Upload build artifacts, but only from Linux

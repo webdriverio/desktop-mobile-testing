@@ -33,6 +33,10 @@ on:
         description: 'Size of the build artifact in bytes'
         type: string
         required: false
+      variant:
+        description: 'Optional variant label to disambiguate artifact names (e.g. window)'
+        type: string
+        default: ''
       cache_key:
         description: 'Cache key to use for downloading artifacts'
         type: string
@@ -40,6 +44,8 @@ on:
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   TURBO_DAEMON: false
 
 jobs:
@@ -84,6 +90,17 @@ jobs:
         run: |
           echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
 
+      # Validate build-command input to prevent shell injection
+      - name: 🔒 Validate Build Command
+        shell: bash
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        run: |
+          case "$BUILD_CMD" in
+            build|build:mac-universal) ;;
+            *) echo "::error::Invalid build-command: '$BUILD_CMD'" && exit 1 ;;
+          esac
+
       # Dynamically generate the Turbo filter for building test applications
       # This converts the scenario input into Turbo filter syntax
       - name: 🪄 Generate Build Filter for Test Apps
@@ -92,19 +109,24 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const generateBuildFilter = (scenario) => {
-              return scenario
-                .split(',')
-                .map((s) => `--filter=electron-${s.trim()}-e2e-app`)
-                .join(' ');
-            };
-            return generateBuildFilter('${{ inputs.scenario }}');
+            const ALLOWED_SCENARIOS = ['builder', 'forge', 'script'];
+            const scenarios = '${{ inputs.scenario }}'.split(',').map(s => s.trim());
+            for (const s of scenarios) {
+              if (!ALLOWED_SCENARIOS.includes(s)) {
+                core.setFailed(`Invalid scenario: "${s}". Allowed: ${ALLOWED_SCENARIOS.join(', ')}`);
+                return '';
+              }
+            }
+            return scenarios.map(s => `--filter=electron-${s}-e2e-app`).join(' ');
 
       # Build the test applications using Turbo with the generated filter
       # This builds only the necessary test apps for the current test configuration
       - name: 🏗️ Build Test Applications
         shell: bash
-        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+          BUILD_FILTER: ${{ steps.gen-build.outputs.result }}
+        run: pnpm exec turbo run $BUILD_CMD $BUILD_FILTER --parallel
 
       # Setup protocol handlers for deeplink testing
       # Required for Windows and Linux to properly handle testapp:// protocol
@@ -189,16 +211,15 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const generateTestCommand = (scenario) => {
-              return scenario
-                .split(',')
-                .map((s) => {
-                  const scenarioTrimmed = s.trim();
-                  return `test:e2e:electron-${scenarioTrimmed}`;
-                })
-                .join(' ');
-            };
-            return generateTestCommand('${{ inputs.scenario }}');
+            const ALLOWED_SCENARIOS = ['builder', 'forge', 'script'];
+            const scenarios = '${{ inputs.scenario }}'.split(',').map(s => s.trim());
+            for (const s of scenarios) {
+              if (!ALLOWED_SCENARIOS.includes(s)) {
+                core.setFailed(`Invalid scenario: "${s}". Allowed: ${ALLOWED_SCENARIOS.join(', ')}`);
+                return '';
+              }
+            }
+            return scenarios.map(s => `test:e2e:electron-${s}`).join(' ');
 
       # Run the E2E tests using Turbo with the generated test commands
       # Each test builds its own apps with correct environment context
@@ -206,7 +227,8 @@ jobs:
         shell: bash
         env:
           ENABLE_SPLASH_WINDOW: 'true'
-        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
+          TEST_TASKS: ${{ steps.gen-test.outputs.result }}
+        run: pnpm exec turbo run $TEST_TASKS --only --log-order=stream
 
       # Show logs on failure for debugging
       - name: 🐛 Show Logs on Failure
@@ -221,7 +243,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
-          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}-${{ github.run_id }}-${{ inputs.scenario }}
+          name: e2e-logs-${{ inputs.os }}${{ contains(inputs.build-command, 'mac-universal') && '-u' || '' }}${{ inputs.variant && format('-{0}', inputs.variant) || '' }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.scenario }}
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn
