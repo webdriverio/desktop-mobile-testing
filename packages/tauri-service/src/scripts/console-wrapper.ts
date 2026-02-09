@@ -1,97 +1,10 @@
+import { CONSOLE_WRAPPED_KEY, LOG_FRONTEND_COMMAND, PREFIXES } from '../constants/logging.js';
+
 /**
  * Console wrapper script injected into browser.execute() context
  * This script wraps console methods to capture logs and forward them to Rust backend
+ *
+ * Note: This is manually minified to reduce bundle size. For development, see the
+ * readable source in the repository history or documentation.
  */
-
-import { CONSOLE_WRAPPED_KEY, LOG_FRONTEND_COMMAND, PREFIXES } from '../constants/logging.js';
-
-export const CONSOLE_WRAPPER_SCRIPT = `
-// Console wrapper state - prevent double-wrapping using Symbol
-(function() {
-  'use strict';
-
-  var CONSOLE_WRAPPED = Symbol.for('${CONSOLE_WRAPPED_KEY}');
-  if (console[CONSOLE_WRAPPED]) return;
-
-  if (typeof window === 'undefined' || !window.__TAURI__ || !window.__TAURI__.core || !window.__TAURI__.core.invoke) return;
-
-  console[CONSOLE_WRAPPED] = true;
-
-  var originalConsole = {
-    log: console.log.bind(console),
-    debug: console.debug.bind(console),
-    info: console.info.bind(console),
-    warn: console.warn.bind(console),
-    error: console.error.bind(console),
-  };
-
-  var LogLevel = { Trace: 1, Debug: 2, Info: 3, Warn: 4, Error: 5 };
-  var levelToString = {};
-  levelToString[LogLevel.Trace] = 'trace';
-  levelToString[LogLevel.Debug] = 'debug';
-  levelToString[LogLevel.Info] = 'info';
-  levelToString[LogLevel.Warn] = 'warn';
-  levelToString[LogLevel.Error] = 'error';
-
-  function forward(level, args) {
-    var message = Array.from(args).map(function(arg) {
-      return typeof arg === 'string' ? arg : JSON.stringify(arg);
-    }).join(' ');
-
-    var methodMap = {};
-    methodMap[LogLevel.Trace] = 'log';
-    methodMap[LogLevel.Debug] = 'debug';
-    methodMap[LogLevel.Info] = 'info';
-    methodMap[LogLevel.Warn] = 'warn';
-    methodMap[LogLevel.Error] = 'error';
-    var method = methodMap[level] || 'log';
-    var originalMethod = originalConsole[method];
-
-    if (originalMethod) {
-      originalMethod.call(console, '${PREFIXES.frontend} ' + message);
-    }
-
-    var levelStr = levelToString[level] || 'info';
-    var invokePromise, timeoutPromise;
-
-    (function() {
-      try {
-        invokePromise = window.__TAURI__.core.invoke('${LOG_FRONTEND_COMMAND}', {
-          message: message,
-          level: levelStr
-        });
-        timeoutPromise = new Promise(function(_, reject) {
-          setTimeout(function() { reject(new Error('Invoke timeout')); }, 5000);
-        });
-        Promise.race([invokePromise, timeoutPromise]);
-      } catch (e) {}
-    })();
-  }
-
-  try {
-    Object.defineProperty(console, 'log', { value: function() { forward(LogLevel.Trace, arguments); }, writable: true, configurable: true });
-    Object.defineProperty(console, 'debug', { value: function() { forward(LogLevel.Debug, arguments); }, writable: true, configurable: true });
-    Object.defineProperty(console, 'info', { value: function() { forward(LogLevel.Info, arguments); }, writable: true, configurable: true });
-    Object.defineProperty(console, 'warn', { value: function() { forward(LogLevel.Warn, arguments); }, writable: true, configurable: true });
-    Object.defineProperty(console, 'error', { value: function() { forward(LogLevel.Error, arguments); }, writable: true, configurable: true });
-  } catch (err) {
-    originalConsole.warn('[WDIO Console Forwarding] Failed to override console methods:', err);
-  }
-
-  function cleanup() {
-    try {
-      Object.defineProperty(console, 'log', { value: originalConsole.log, writable: true, configurable: true });
-      Object.defineProperty(console, 'debug', { value: originalConsole.debug, writable: true, configurable: true });
-      Object.defineProperty(console, 'info', { value: originalConsole.info, writable: true, configurable: true });
-      Object.defineProperty(console, 'warn', { value: originalConsole.warn, writable: true, configurable: true });
-      Object.defineProperty(console, 'error', { value: originalConsole.error, writable: true, configurable: true });
-      console[CONSOLE_WRAPPED] = undefined;
-    } catch (e) {}
-  }
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('beforeunload', cleanup);
-    window.__wdioConsoleCleanup = cleanup;
-  }
-})();
-`;
+export const CONSOLE_WRAPPER_SCRIPT = `!function(){var e=Symbol.for('${CONSOLE_WRAPPED_KEY}');if(console[e])return;if(typeof window=="undefined"||!window.__TAURI__?.core?.invoke)return;console[e]=!0;var n={log:console.log.bind(console),debug:console.debug.bind(console),info:console.info.bind(console),warn:console.warn.bind(console),error:console.error.bind(console)},o={Trace:1,Debug:2,Info:3,Warn:4,Error:5},r={1:"log",2:"debug",3:"info",4:"warn",5:"error"},t={1:"trace",2:"debug",3:"info",4:"warn",5:"error"};function i(e,i){var c=Array.from(i).map(function(e){return typeof e=="string"?e:JSON.stringify(e)}).join(" "),a=r[e]||"log";n[a]&&n[a].call(console,"${PREFIXES.frontend} "+c);var s=t[e]||"info";try{Promise.race([window.__TAURI__.core.invoke("${LOG_FRONTEND_COMMAND}",{message:c,level:s}),new Promise(function(e,n){setTimeout(function(){n(new Error("timeout"))},5e3)})])}catch{}}try{Object.defineProperty(console,"log",{value:function(){i(o.Trace,arguments)},writable:!0,configurable:!0}),Object.defineProperty(console,"debug",{value:function(){i(o.Debug,arguments)},writable:!0,configurable:!0}),Object.defineProperty(console,"info",{value:function(){i(o.Info,arguments)},writable:!0,configurable:!0}),Object.defineProperty(console,"warn",{value:function(){i(o.Warn,arguments)},writable:!0,configurable:!0}),Object.defineProperty(console,"error",{value:function(){i(o.Error,arguments)},writable:!0,configurable:!0})}catch(e){n.warn("[WDIO] Console override failed:",e)}var c=function(){try{Object.defineProperty(console,"log",{value:n.log,writable:!0,configurable:!0}),Object.defineProperty(console,"debug",{value:n.debug,writable:!0,configurable:!0}),Object.defineProperty(console,"info",{value:n.info,writable:!0,configurable:!0}),Object.defineProperty(console,"warn",{value:n.warn,writable:!0,configurable:!0}),Object.defineProperty(console,"error",{value:n.error,writable:!0,configurable:!0}),console[e]=void 0}catch{}};typeof window!="undefined"&&(window.addEventListener("beforeunload",c),window.__wdioConsoleCleanup=c)}();`;
