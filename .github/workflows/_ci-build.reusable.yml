@@ -66,10 +66,26 @@ jobs:
           echo "build_id=$(date +%s)-${{ github.run_id }}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
+      # Debug Turbo remote cache configuration
+      - name: 🔍 Debug Turbo Configuration
+        run: |
+          echo "=== TURBO DEBUG INFO ==="
+          echo "TURBO_TEAM: $TURBO_TEAM"
+          echo "TURBO_TOKEN exists: $([[ -n \"$TURBO_TOKEN\" ]] && echo ✅ YES || echo ❌ MISSING)"
+          echo ""
+          echo "Turbo version:"
+          npx turbo --version
+          echo ""
+          echo "Testing remote cache connection..."
+          npx turbo login --force 2>&1 || echo "Login test completed"
+          echo ""
+          echo "=== END DEBUG INFO ==="
+        shell: bash
+
       # Build all packages using Turbo
       # This creates the dist/ directories with compiled code
       - name: 🏗️ Build All Packages
-        run: pnpm turbo run build --filter=./packages/* --filter=./e2e --cache=local:rw,remote:rw
+        run: pnpm turbo run build --filter=./packages/* --filter=./e2e --verbose
         shell: bash
 
       # Upload build artifacts, but only from Linux
