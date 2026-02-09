@@ -50,7 +50,13 @@ export async function init(
 
   // Extract connection info from capabilities (set by launcher.onPrepare)
   const hostname = (capabilities as { hostname?: string }).hostname || 'localhost';
-  const port = (capabilities as { port?: number }).port || 4444;
+  const port = (capabilities as { port?: number }).port;
+  if (!port) {
+    throw new Error(
+      'Tauri driver port was not set on capabilities by onPrepare. ' +
+        'This usually means the launcher failed to allocate a port.',
+    );
+  }
 
   // Create a deep clone for driver initialization so we can strip unsupported props
   const driverCapabilities = structuredClone(capabilities);
@@ -156,7 +162,7 @@ export function createTauriCapabilities(
     'wdio:tauriServiceOptions': {
       appBinaryPath,
       appArgs: options.appArgs || [],
-      tauriDriverPort: options.tauriDriverPort || 4444,
+      tauriDriverPort: options.tauriDriverPort,
       logLevel: options.logLevel || 'info',
       commandTimeout: options.commandTimeout || 30000,
       startTimeout: options.startTimeout || 30000,

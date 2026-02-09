@@ -55,9 +55,6 @@ export interface TauriMockInstance extends Omit<Mock, MockOverride> {
   update(): Promise<TauriMock>;
   __isTauriMock: boolean;
   mock: TauriMockContext;
-  results: MockResult[];
-  invocationCallOrder: number[];
-  lastCall?: unknown;
 }
 
 /**
@@ -86,15 +83,24 @@ export interface TauriServiceAPI {
   execute<ReturnValue, InnerArguments extends unknown[]>(
     script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
     ...args: InnerArguments
-  ): Promise<ReturnValue | undefined>;
+  ): Promise<ReturnValue>;
 
   /**
-   * Check if a command is a Tauri mock function.
+   * Check if a value is a Tauri mock function.
+   * This is a TypeScript type guard that narrows the type when true.
    *
-   * @param command - Command name to check
-   * @returns True if the command is mocked
+   * @param fn - Value to check
+   * @returns True if the value is a TauriMockInstance
+   * @example
+   * ```js
+   * const mock = await browser.tauri.mock('clipboard_read');
+   * if (browser.tauri.isMockFunction(mock)) {
+   *   // TypeScript knows mock is TauriMockInstance here
+   *   expect(mock.mock.calls).toHaveLength(1);
+   * }
+   * ```
    */
-  isMockFunction: (command: string) => Promise<boolean>;
+  isMockFunction: (fn: unknown) => fn is TauriMockInstance;
 
   /**
    * Mock a Tauri backend command.
@@ -111,26 +117,52 @@ export interface TauriServiceAPI {
   mock: (command: string) => Promise<TauriMock>;
 
   /**
-   * Mock all Tauri commands.
-   *
-   * @returns Promise that resolves when all mocks are cleared
-   */
-  mockAll: () => Promise<void>;
-
-  /**
    * Clear all Tauri API mocks.
+   *
+   * @param commandPrefix - Optional command name prefix to filter which mocks to clear.
+   *                        If provided, only mocks with command names starting with this prefix will be cleared.
+   *                        If omitted, all mocks will be cleared.
+   * @example
+   * ```js
+   * // Clear all mocks
+   * await browser.tauri.clearAllMocks();
+   *
+   * // Clear only clipboard-related mocks
+   * await browser.tauri.clearAllMocks('clipboard');
+   * ```
    */
-  clearAllMocks: () => Promise<void>;
+  clearAllMocks: (commandPrefix?: string) => Promise<void>;
 
   /**
    * Reset all Tauri API mocks.
+   *
+   * @param commandPrefix - Optional command name prefix to filter which mocks to reset.
+   *                        If provided, only mocks with command names starting with this prefix will be reset.
+   *                        If omitted, all mocks will be reset.
    */
-  resetAllMocks: () => Promise<void>;
+  resetAllMocks: (commandPrefix?: string) => Promise<void>;
 
   /**
    * Restore all Tauri API mocks.
+   *
+   * @param commandPrefix - Optional command name prefix to filter which mocks to restore.
+   *                        If provided, only mocks with command names starting with this prefix will be restored.
+   *                        If omitted, all mocks will be restored.
    */
-  restoreAllMocks: () => Promise<void>;
+  restoreAllMocks: (commandPrefix?: string) => Promise<void>;
+
+  /**
+   * Trigger a deeplink to the Tauri application for testing protocol handlers.
+   *
+   * @param url - The deeplink URL to trigger (e.g., 'myapp://open?path=/test')
+   * @returns Promise that resolves when the deeplink has been triggered
+   *
+   * @example
+   * ```js
+   * await browser.tauri.triggerDeeplink('myapp://open?file=test.txt');
+   * ```
+   */
+  triggerDeeplink: (url: string) => Promise<void>;
 }
 
 /**
@@ -185,6 +217,29 @@ export interface TauriServiceOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -197,6 +252,45 @@ export interface TauriServiceGlobalOptions {
   startTimeout?: number;
   tauriDriverPort?: number;
   nativeDriverPath?: string;
+  /**
+   * If true, all mock call history will be cleared before each test.
+   * Equivalent to calling `browser.tauri.clearAllMocks()` before each test.
+   * @default false
+   */
+  clearMocks?: boolean;
+  /**
+   * Optional command name prefix to filter which mocks to clear before each test.
+   * Only used when clearMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be cleared.
+   * @default undefined
+   */
+  clearMocksPrefix?: string;
+  /**
+   * If true, all mocks will be reset (implementation + history) before each test.
+   * Equivalent to calling `browser.tauri.resetAllMocks()` before each test.
+   * @default false
+   */
+  resetMocks?: boolean;
+  /**
+   * Optional command name prefix to filter which mocks to reset before each test.
+   * Only used when resetMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be reset.
+   * @default undefined
+   */
+  resetMocksPrefix?: string;
+  /**
+   * If true, all mocks will be restored to their original implementations before each test.
+   * Equivalent to calling `browser.tauri.restoreAllMocks()` before each test.
+   * @default false
+   */
+  restoreMocks?: boolean;
+  /**
+   * Optional command name prefix to filter which mocks to restore before each test.
+   * Only used when restoreMocks is true. If provided, only mocks with command names
+   * starting with this prefix will be restored.
+   * @default undefined
+   */
+  restoreMocksPrefix?: string;
   /**
    * Enable/disable capturing Rust backend logs from stdout
    * @default false
@@ -217,6 +311,29 @@ export interface TauriServiceGlobalOptions {
    * @default 'info'
    */
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use cargo-installed tauri-driver (default)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula';
+  /**
+   * Path to @crabnebula/tauri-driver executable
+   * If not provided, will be auto-detected from node_modules
+   */
+  crabnebulaDriverPath?: string;
+  /**
+   * Auto-manage test-runner-backend process (macOS only)
+   * Required for macOS testing with CrabNebula
+   * @default true when driverProvider is 'crabnebula' and platform is darwin
+   */
+  crabnebulaManageBackend?: boolean;
+  /**
+   * Port for test-runner-backend (macOS only)
+   * @default 3000
+   */
+  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -275,9 +392,9 @@ export interface TauriBrowserExtension extends BrowserBase {
    * - {@link TauriServiceAPI.clearAllMocks `browser.tauri.clearAllMocks`} - Clear the Tauri API mock functions
    * - {@link TauriServiceAPI.execute `browser.tauri.execute`} - Execute code in the Tauri frontend context
    * - {@link TauriServiceAPI.mock `browser.tauri.mock`} - Mock a function from the Tauri API
-   * - {@link TauriServiceAPI.mockAll `browser.tauri.mockAll`} - Mock an entire API object of the Tauri API
    * - {@link TauriServiceAPI.resetAllMocks `browser.tauri.resetAllMocks`} - Reset the Tauri API mock functions
    * - {@link TauriServiceAPI.restoreAllMocks `browser.tauri.restoreAllMocks`} - Restore the original Tauri API functionality
+   * - {@link TauriServiceAPI.triggerDeeplink `browser.tauri.triggerDeeplink`} - Trigger a deeplink for testing protocol handlers
    */
   tauri: TauriServiceAPI;
 }

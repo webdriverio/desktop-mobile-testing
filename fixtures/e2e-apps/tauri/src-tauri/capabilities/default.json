@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability - includes core app commands and WDIO plugin permissions",
+  "description": "Default capability - includes core app commands, WDIO plugin, and deep-link permissions",
   "windows": ["splash", "main"],
-  "permissions": ["core:default", "core:window:default", "wdio:default"]
+  "permissions": ["core:default", "core:window:default", "core:event:default", "deep-link:default", "wdio:default"]
 }

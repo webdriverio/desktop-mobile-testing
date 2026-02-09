@@ -23,9 +23,9 @@
   "author": "WebDriverIO Community",
   "license": "MIT",
   "dependencies": {
-    "@tauri-apps/api": "^2.9.1",
-    "@tauri-apps/plugin-log": "^2.8.0",
-    "@vitest/spy": "^4.0.17"
+    "@tauri-apps/api": "2.9.1",
+    "@tauri-apps/plugin-log": "2.8.0",
+    "@wdio/native-spy": "workspace:*"
   },
   "devDependencies": {
     "esbuild": "^0.25.11",

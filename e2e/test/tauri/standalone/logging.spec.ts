@@ -53,7 +53,7 @@ const browser = await startWdioSession(sessionOptions, {
 await browser.tauri.execute(({ core }) => core.invoke('get_platform_info'));
 await browser.waitUntil(
   async () => {
-    const logs = readWdioLogs(logDir);
+    const logs = await readWdioLogs(logDir);
     return logs.length > 0;
   },
   { timeout: 10000, timeoutMsg: 'Log infrastructure not ready' },
@@ -86,7 +86,7 @@ try {
       `[DEBUG] Files in directory: ${files.map((f) => `${f.name} (${f.isDirectory() ? 'dir' : 'file'})`).join(', ')}`,
     );
   }
-  const logs1 = readWdioLogs(logDir);
+  const logs1 = await readWdioLogs(logDir);
   if (!logs1) {
     throw new Error('No logs found in output directory');
   }
@@ -111,7 +111,7 @@ try {
   }
 
   // Verify frontend logs were captured with correct prefix
-  const logs2 = readWdioLogs(logDir);
+  const logs2 = await readWdioLogs(logDir);
   assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend INFO/i);
   assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend WARN/i);
   assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend ERROR/i);
@@ -128,7 +128,7 @@ try {
   }
 
   // Verify backend logs were captured with correct prefix and levels
-  const logs3 = readWdioLogs(logDir);
+  const logs3 = await readWdioLogs(logDir);
   assertLogContains(logs3, /\[Tauri:Backend\].*INFO.*log/i);
   assertLogContains(logs3, /\[Tauri:Backend\].*WARN.*log/i);
   assertLogContains(logs3, /\[Tauri:Backend\].*ERROR.*log/i);

@@ -46,10 +46,10 @@ jobs:
     needs: [detect-changes]
     uses: ./.github/workflows/_ci-lint.reusable.yml
 
-  # Run unit tests in parallel with linting (lint runs independently)
+  # Run unit tests in parallel with lint - both only need build artifacts
   unit-matrix:
     name: Unit
-    needs: [detect-changes, build]
+    needs: [build]
     strategy:
       fail-fast: false
       matrix:
@@ -101,6 +101,9 @@ jobs:
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     with:
       os: 'ubuntu-latest'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
 
   build-tauri-package-app-windows:
     name: Build Tauri Package Test App [Windows]
@@ -109,6 +112,9 @@ jobs:
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     with:
       os: 'windows-latest'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
 
   build-tauri-package-app-linux-arm:
     name: Build Tauri Package Test App [Linux-ARM64]
@@ -117,6 +123,9 @@ jobs:
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     with:
       os: 'ubuntu-24.04-arm'
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
 
   # Electron package tests run in parallel with linting
   package-electron-matrix:
@@ -168,7 +177,7 @@ jobs:
 
   package-tauri-linux:
     name: Package - Tauri [Linux]
-    needs: [detect-changes, build, lint, build-tauri-package-app-linux]
+    needs: [detect-changes, build, build-tauri-package-app-linux]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -181,7 +190,7 @@ jobs:
 
   package-tauri-windows:
     name: Package - Tauri [Windows]
-    needs: [detect-changes, build, lint, build-tauri-package-app-windows]
+    needs: [detect-changes, build, build-tauri-package-app-windows]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -194,7 +203,7 @@ jobs:
 
   package-tauri-linux-arm:
     name: Package - Tauri [Linux-ARM64]
-    needs: [detect-changes, build, lint, build-tauri-package-app-linux-arm]
+    needs: [detect-changes, build, build-tauri-package-app-linux-arm]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -347,7 +356,7 @@ jobs:
       fail-fast: false
       matrix:
         scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone']
+        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
       os: 'ubuntu-latest'
@@ -368,7 +377,7 @@ jobs:
       fail-fast: false
       matrix:
         scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone']
+        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
     uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
     with:
       os: 'windows-latest'
@@ -512,3 +521,37 @@ jobs:
           fi
 
           echo "✅ Universal binary verified: $ARCHS"
+
+  # Single status check gate - use this as the sole required check in branch protection
+  # Avoids needing to update branch protection rules when CI jobs are added/removed
+  ci-status:
+    name: CI Status
+    if: always()
+    needs:
+      - lint
+      - unit-matrix
+      - e2e-matrix
+      - e2e-electron-window
+      - e2e-tauri-linux-matrix
+      - e2e-tauri-windows-matrix
+      - e2e-tauri-macos-matrix
+      - package-electron-matrix
+      - package-tauri-linux
+      - package-tauri-windows
+      - package-tauri-linux-arm
+      - package-tauri-distros
+      - build-matrix
+      - package-electron-mac-universal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI results
+        run: |
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "Job results: $results"
+          for result in $results; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "CI failed: found job with result '$result'"
+              exit 1
+            fi
+          done
+          echo "All CI jobs passed or were skipped"

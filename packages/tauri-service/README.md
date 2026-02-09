@@ -13,7 +13,7 @@ Enables cross-platform E2E testing of Tauri apps via the extensive WebdriverIO e
 - 🚗 Automatic tauri-driver installation and management
 - 🔧 Automatic Edge WebDriver management on Windows
 - 📦 Automatic Tauri binary path detection
-- 🌐 Cross-platform support (Windows & Linux)
+- 🌐 Cross-platform support (Windows, Linux, macOS🔬)
 - 🔗 Full Tauri API access via `browser.tauri.execute()`
 - 🧩 Mocking support for Tauri's invoke API
 - 📊 Backend and frontend log capture
@@ -74,6 +74,7 @@ See [Configuration Reference](./docs/configuration.md) for all options.
 - [Usage Examples](./docs/usage-examples.md) - Common testing patterns
 - [Log Forwarding](./docs/log-forwarding.md) - Capture app logs
 - [Edge WebDriver (Windows)](./docs/edge-webdriver-windows.md) - Windows-specific setup
+- [Deeplink Testing](./docs/deeplink-testing.md) - Test protocol handlers
 
 **Help & Support**
 - [Troubleshooting](./docs/troubleshooting.md) - Common issues and solutions
@@ -85,9 +86,11 @@ See [Configuration Reference](./docs/configuration.md) for all options.
 |----------|-----------|-----------|-------|
 | **Windows** | ✅ Yes | Edge WebDriver | Auto-managed |
 | **Linux** | ✅ Yes | WebKitWebDriver | Manual install |
-| **macOS** | ❌ No | None | No WKWebView driver |
+| **macOS** | 🔬 Experimental | CrabNebula | Requires API key, untested |
 
 See [Platform Support](./docs/platform-support.md) for detailed information including distribution support and troubleshooting.
+
+> 🔬 **macOS support via CrabNebula is experimental.** This integration has not been tested due to API key access limitations.
 
 ## Example Projects
 

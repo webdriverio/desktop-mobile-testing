@@ -21,18 +21,10 @@ describe('Tauri Service', () => {
 
   it('should match Electron service API surface', () => {
     // The Tauri service should provide the same API as Electron service
-    const expectedMethods = [
-      'execute',
-      'clearAllMocks',
-      'isMockFunction',
-      'mock',
-      'mockAll',
-      'resetAllMocks',
-      'restoreAllMocks',
-    ];
+    const expectedMethods = ['execute', 'clearAllMocks', 'isMockFunction', 'mock', 'resetAllMocks', 'restoreAllMocks'];
 
     // This test documents the expected API surface
-    expect(expectedMethods).toHaveLength(7);
+    expect(expectedMethods).toHaveLength(6);
     expect(expectedMethods).toContain('execute');
     expect(expectedMethods).toContain('mock');
   });

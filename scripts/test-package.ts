@@ -247,19 +247,11 @@ async function testExample(
     const packagesToInstall: string[] = [packages.utilsPath, packages.spyPath];
 
     // Add @wdio/utils override if the tarball exists
-    const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.23.0.tgz');
+    const wdioUtilsTarball = join(rootDir, 'wdio-utils-9.23.3.tgz');
     if (existsSync(wdioUtilsTarball)) {
       overrides['@wdio/utils'] = `file:${wdioUtilsTarball}`;
       packagesToInstall.push(wdioUtilsTarball);
       log(`  Adding @wdio/utils override: ${wdioUtilsTarball}`);
-    }
-
-    // Add @puppeteer/browsers override if the tarball exists
-    const puppeteerBrowsersTarball = join(rootDir, 'puppeteer-browsers-2.11.1.tgz');
-    if (existsSync(puppeteerBrowsersTarball)) {
-      overrides['@puppeteer/browsers'] = `file:${puppeteerBrowsersTarball}`;
-      packagesToInstall.push(puppeteerBrowsersTarball);
-      log(`  Adding @puppeteer/browsers override: ${puppeteerBrowsersTarball}`);
     }
 
     if (service === 'electron') {

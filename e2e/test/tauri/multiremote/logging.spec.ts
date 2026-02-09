@@ -32,7 +32,7 @@ describe('Tauri Log Integration - Multiremote', () => {
     // Verify logs were captured with correct prefixes and instance IDs
     // For multiremote tests, logs go to logs/multiremote-tauri/
     console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
-    const logs = readWdioLogs(logDir);
+    const logs = await readWdioLogs(logDir);
 
     if (!logs) {
       throw new Error('No logs found in multiremote log directory');
@@ -77,7 +77,7 @@ describe('Tauri Log Integration - Multiremote', () => {
 
     // Verify frontend logs were captured (without instance ID prefix for now)
     console.log(`[DEBUG] Reading multiremote logs from: ${logDir}`);
-    const logs = readWdioLogs(logDir);
+    const logs = await readWdioLogs(logDir);
 
     if (!logs) {
       throw new Error('No logs found in multiremote log directory');
@@ -111,7 +111,7 @@ describe('Tauri Log Integration - Multiremote', () => {
     }
 
     // Verify both types of logs are captured
-    const logs = readWdioLogs(logDir);
+    const logs = await readWdioLogs(logDir);
 
     if (!logs) {
       throw new Error('No logs found in multiremote log directory');

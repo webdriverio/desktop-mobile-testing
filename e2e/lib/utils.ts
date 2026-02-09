@@ -235,8 +235,9 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
 
 /**
  * Read WDIO log files from output directory
+ * Uses async file reading to prevent blocking the event loop
  */
-export function readWdioLogs(logBaseDir: string): string {
+export async function readWdioLogs(logBaseDir: string): Promise<string> {
   if (!fs.existsSync(logBaseDir)) {
     console.log(`[DEBUG] Log base directory does not exist: ${logBaseDir}`);
     return '';
@@ -258,7 +259,7 @@ export function readWdioLogs(logBaseDir: string): string {
     for (const logFile of directLogFiles) {
       const logPath = path.join(logBaseDir, logFile);
       try {
-        const content = fs.readFileSync(logPath, 'utf8');
+        const content = await readLogFileWithRetry(logPath);
         allLogs += `${content}\n`;
         console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
       } catch (error) {
@@ -297,7 +298,7 @@ export function readWdioLogs(logBaseDir: string): string {
   for (const logFile of logFiles) {
     const logPath = path.join(logDir, logFile);
     try {
-      const content = fs.readFileSync(logPath, 'utf8');
+      const content = await readLogFileWithRetry(logPath);
       allLogs += `${content}\n`;
       console.log(`[DEBUG] Read ${logFile}: ${content.length} chars`);
     } catch (error) {
@@ -306,6 +307,51 @@ export function readWdioLogs(logBaseDir: string): string {
   }
 
   return allLogs;
+}
+
+/**
+ * Read a log file with retry logic to handle concurrent writes
+ * Uses async/await with the existing delay() helper to avoid blocking the event loop
+ */
+async function readLogFileWithRetry(filePath: string, maxRetries = 5, baseDelay = 100): Promise<string> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Try to read the file asynchronously
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      return content;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // If it's not a lock/EBUSY error, throw immediately
+      if (!isRetryableError(lastError)) {
+        throw lastError;
+      }
+
+      // Wait with exponential backoff before retrying
+      if (attempt < maxRetries - 1) {
+        const delayMs = baseDelay * 2 ** attempt;
+        console.log(
+          `[DEBUG] File ${path.basename(filePath)} locked, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`,
+        );
+        await delay(delayMs);
+      }
+    }
+  }
+
+  throw lastError || new Error(`Failed to read ${filePath} after ${maxRetries} attempts`);
+}
+
+/**
+ * Check if an error is retryable (transient file locks only)
+ * Only retries on EBUSY/EAGAIN which indicate temporary file locks.
+ * EACCES/EPERM indicate permission problems that won't resolve with retries.
+ */
+function isRetryableError(error: Error): boolean {
+  const retryableCodes = ['EBUSY', 'EAGAIN'];
+  const code = (error as { code?: string }).code;
+  return code !== undefined && retryableCodes.includes(code);
 }
 
 /**
@@ -343,7 +389,7 @@ export function assertLogDoesNotContain(logs: string, pattern: string | RegExp):
 
 /**
  * Wait for a log message to appear in the log directory
- * Uses polling to check for the expected pattern
+ * Uses polling with file stability detection to ensure logs are fully written
  */
 export async function waitForLog(
   logDir: string,
@@ -353,16 +399,38 @@ export async function waitForLog(
   settleDelay: number = 2000,
 ): Promise<boolean> {
   const startTime = Date.now();
-  const regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern;
+  // Strip the global flag to avoid stateful lastIndex behavior across polls
+  const source = typeof pattern === 'string' ? pattern : pattern.source;
+  const flags = typeof pattern === 'string' ? 'i' : pattern.flags.replace('g', '');
+  const regex = new RegExp(source, flags);
+  let lastLogSize = 0;
+  let stableCount = 0;
+  const requiredStableChecks = 2;
 
   while (Date.now() - startTime < timeout) {
-    const logs = readWdioLogs(logDir);
+    const logs = await readWdioLogs(logDir);
+    const currentLogSize = logs.length;
+
     if (regex.test(logs)) {
-      // Pattern matched - wait for additional logs to be written/flushed
-      await new Promise((resolve) => setTimeout(resolve, settleDelay));
-      return true;
+      // Check if log size has stabilized (no new writes)
+      if (currentLogSize === lastLogSize) {
+        stableCount++;
+        if (stableCount >= requiredStableChecks) {
+          // Pattern matched and logs are stable - wait for final settle delay,
+          // clamped to remaining timeout so we don't overshoot
+          const remaining = timeout - (Date.now() - startTime);
+          await delay(Math.max(0, Math.min(settleDelay, remaining)));
+          return true;
+        }
+      } else {
+        stableCount = 0;
+      }
+    } else {
+      stableCount = 0;
     }
-    await new Promise((resolve) => setTimeout(resolve, interval));
+
+    lastLogSize = currentLogSize;
+    await delay(interval);
   }
 
   return false;
