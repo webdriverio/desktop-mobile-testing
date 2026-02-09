@@ -20,6 +20,8 @@ export {
   restoreAllMocks,
 } from './commands/mock.js';
 export { triggerDeeplink } from './commands/triggerDeeplink.js';
+// Export driver process management
+export { DriverProcess, type DriverProcessInfo, type DriverStartOptions } from './driverProcess.js';
 // Export Edge driver management (Windows only)
 export {
   detectEdgeVersion,
