@@ -4,8 +4,9 @@ import type { TauriCommandContext, TauriResult } from '../types.js';
 
 const log = createLogger('tauri-service', 'service');
 
-// Cache for plugin availability per browser session
-const pluginAvailabilityCache = new Map<string, boolean>();
+// WeakMap to store plugin availability per browser session
+// Automatically cleans up when browser objects are garbage collected
+const pluginAvailabilityCache = new WeakMap<WebdriverIO.Browser, boolean>();
 
 /**
  * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs
@@ -27,9 +28,8 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  // Check cache first
-  const sessionId = browser.sessionId || 'default';
-  if (!pluginAvailabilityCache.get(sessionId)) {
+  // Check cache first using WeakMap - automatically cleans up when browser is GC'd
+  if (!pluginAvailabilityCache.get(browser)) {
     // Check if plugin is available with retry logic (handles async module loading)
     const pluginAvailable = await browser.executeAsync((done) => {
       const checkPlugin = () => {
@@ -67,9 +67,9 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
       );
     }
 
-    // Cache the successful check
-    pluginAvailabilityCache.set(sessionId, true);
-    log.debug('Plugin availability cached for session:', sessionId);
+    // Cache the successful check using browser object as key
+    pluginAvailabilityCache.set(browser, true);
+    log.debug('Plugin availability cached for browser session');
   } else {
     log.debug('Plugin availability cached, skipping check');
   }
