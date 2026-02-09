@@ -106,7 +106,7 @@ jobs:
       # This builds only the necessary test apps for the current test configuration
       - name: 🏗️ Build Test Applications
         shell: bash
-        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --only --parallel
+        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --parallel
 
       # Setup protocol handlers for deeplink testing
       # Required for Windows and Linux to properly handle testapp:// protocol
@@ -208,7 +208,7 @@ jobs:
         shell: bash
         env:
           ENABLE_SPLASH_WINDOW: 'true'
-        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --only --log-order=stream
+        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --log-order=stream
 
       # Show logs on failure for debugging
       - name: 🐛 Show Logs on Failure

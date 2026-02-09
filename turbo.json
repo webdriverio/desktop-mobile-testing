@@ -77,32 +77,50 @@
     "@repo/e2e#build": {
       "dependsOn": ["@wdio/electron-service#build", "@wdio/tauri-service#build"]
     },
+    "@repo/e2e#protocol-install:electron-builder": {
+      "cache": false
+    },
+    "@repo/e2e#protocol-install:electron-forge": {
+      "cache": false
+    },
+    "@repo/e2e#protocol-install:tauri": {
+      "cache": false
+    },
     "@repo/e2e#test:e2e:electron-builder": {
-      "dependsOn": ["electron-builder-e2e-app#build", "@repo/e2e#protocol-install:electron-builder"]
+      "dependsOn": ["electron-builder-e2e-app#build", "@repo/e2e#protocol-install:electron-builder"],
+      "cache": false
     },
     "@repo/e2e#test:e2e:electron-forge": {
-      "dependsOn": ["electron-forge-e2e-app#build", "@repo/e2e#protocol-install:electron-forge"]
+      "dependsOn": ["electron-forge-e2e-app#build", "@repo/e2e#protocol-install:electron-forge"],
+      "cache": false
     },
     "@repo/e2e#test:e2e:electron-script": {
-      "dependsOn": ["electron-script-e2e-app#build"]
+      "dependsOn": ["electron-script-e2e-app#build"],
+      "cache": false
     },
     "@repo/e2e#test:e2e-mac-universal:electron-builder": {
-      "dependsOn": ["electron-builder-e2e-app#build:mac-universal"]
+      "dependsOn": ["electron-builder-e2e-app#build:mac-universal"],
+      "cache": false
     },
     "@repo/e2e#test:e2e-mac-universal:electron-forge": {
-      "dependsOn": ["electron-forge-e2e-app#build:mac-universal"]
+      "dependsOn": ["electron-forge-e2e-app#build:mac-universal"],
+      "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic:window": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic:multiremote": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic:standalone": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"]
+      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "cache": false
     },
     "@wdio/bundler#build": {
       "dependsOn": ["typecheck"],
