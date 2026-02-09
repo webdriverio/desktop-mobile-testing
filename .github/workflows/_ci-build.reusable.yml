@@ -69,7 +69,7 @@ jobs:
       # Build all packages using Turbo
       # This creates the dist/ directories with compiled code
       - name: 🏗️ Build All Packages
-        run: pnpm run build
+        run: pnpm turbo run build --filter=./packages/* --filter=./e2e --cache=local:rw,remote:rw
         shell: bash
 
       # Upload build artifacts, but only from Linux
