@@ -48,10 +48,10 @@ jobs:
     with:
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # Run unit tests after linting to ensure code quality first
+  # Run unit tests in parallel with lint - both only need build artifacts
   unit-matrix:
     name: Unit
-    needs: [build, lint]
+    needs: [build]
     strategy:
       fail-fast: false
       matrix:
@@ -136,7 +136,7 @@ jobs:
   # Electron package tests are split by module type (CJS/ESM) for better error isolation
   package-electron-matrix:
     name: Package - Electron
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
@@ -183,7 +183,7 @@ jobs:
 
   package-tauri-linux:
     name: Package - Tauri [Linux]
-    needs: [detect-changes, build, lint, build-tauri-package-app-linux]
+    needs: [detect-changes, build, build-tauri-package-app-linux]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -196,7 +196,7 @@ jobs:
 
   package-tauri-windows:
     name: Package - Tauri [Windows]
-    needs: [detect-changes, build, lint, build-tauri-package-app-windows]
+    needs: [detect-changes, build, build-tauri-package-app-windows]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -209,7 +209,7 @@ jobs:
 
   package-tauri-linux-arm:
     name: Package - Tauri [Linux-ARM64]
-    needs: [detect-changes, build, lint, build-tauri-package-app-linux-arm]
+    needs: [detect-changes, build, build-tauri-package-app-linux-arm]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     with:
@@ -229,7 +229,7 @@ jobs:
   # - CentOS Stream 10: WebKitGTK removed by Red Hat due to 200+ CVEs and unsustainable maintenance
   package-tauri-distros:
     name: Package - Tauri (Docker)
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
       fail-fast: false
@@ -252,7 +252,7 @@ jobs:
   # Run build tests outside of the main Linux build job
   build-matrix:
     name: Build
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     strategy:
       fail-fast: false
@@ -443,7 +443,7 @@ jobs:
   # Universal binary verification - Electron only
   package-electron-mac-universal:
     name: Package - Electron [macOS-Universal-Verify]
-    needs: [detect-changes, build, lint]
+    needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_electron == 'true'
     runs-on: macos-latest
     steps:
@@ -527,3 +527,37 @@ jobs:
           fi
 
           echo "✅ Universal binary verified: $ARCHS"
+
+  # Single status check gate - use this as the sole required check in branch protection
+  # Avoids needing to update branch protection rules when CI jobs are added/removed
+  ci-status:
+    name: CI Status
+    if: always()
+    needs:
+      - lint
+      - unit-matrix
+      - e2e-matrix
+      - e2e-electron-window
+      - e2e-tauri-linux-matrix
+      - e2e-tauri-windows-matrix
+      - e2e-tauri-macos-matrix
+      - package-electron-matrix
+      - package-tauri-linux
+      - package-tauri-windows
+      - package-tauri-linux-arm
+      - package-tauri-distros
+      - build-matrix
+      - package-electron-mac-universal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI results
+        run: |
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "Job results: $results"
+          for result in $results; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "CI failed: found job with result '$result'"
+              exit 1
+            fi
+          done
+          echo "All CI jobs passed or were skipped"

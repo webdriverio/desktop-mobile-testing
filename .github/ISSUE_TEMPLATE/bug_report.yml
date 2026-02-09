@@ -55,6 +55,7 @@ body:
       label: Operating System
       description: Which OS are you using?
       options:
+        - All platforms
         - Windows
         - macOS
         - Linux
