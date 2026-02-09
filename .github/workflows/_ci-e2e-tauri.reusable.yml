@@ -142,7 +142,7 @@ jobs:
         uses: ./.github/workflows/actions/download-archive
         with:
           name: wdio-desktop-mobile
-          path: ${{ runner.temp }}/wdio-desktop-mobile-build
+          path: wdio-desktop-mobile-build
           filename: artifact.zip
           cache_key_prefix: wdio-desktop-build
           exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
@@ -154,7 +154,7 @@ jobs:
         uses: ./.github/workflows/actions/download-archive
         with:
           name: tauri-e2e-app-${{ runner.os }}
-          path: ${{ runner.temp }}/tauri-e2e-app-${{ runner.os }}
+          path: tauri-e2e-app-${{ runner.os }}
           filename: artifact.zip
           cache_key_prefix: tauri-e2e-app
           exact_cache_key: ${{ inputs.tauri_cache_key }}
