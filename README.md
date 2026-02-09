@@ -29,33 +29,29 @@
     <a href="./CHANGELOG.md">Changelog</a>
 </p>
 
-## Supported Services
+## Supported Frameworks
 
-<h3>
-  <a href="./packages/electron-service">@wdio/electron-service</a>
-  <span style="float: right;">
-  <a href="https://www.npmjs.com/package/@wdio/electron-service"><img src="https://img.shields.io/badge/@wdio-electron--service-9feaf9?labelColor=1a1a1a" alt="npm package" /></a>
-    <a href="https://www.npmjs.com/package/@wdio/electron-service"><img src="https://img.shields.io/npm/v/@wdio/electron-service" alt="npm version" /></a>
-    <a href="https://www.npmjs.com/package/@wdio/electron-service"><img src="https://img.shields.io/npm/dw/@wdio/electron-service" alt="npm downloads" /></a>
-  </span>
-</h3>
+<h4>
+    <div>
+        <a href="https://www.npmjs.com/package/@wdio/electron-service"><img src="https://img.shields.io/badge/@wdio-electron--service-9feaf9?labelColor=1a1a1a&style=plastic" alt="npm package" /></a>
+        <a href="https://www.npmjs.com/package/@wdio/electron-service"><img src="https://img.shields.io/npm/v/@wdio/electron-service" alt="npm version" /></a>
+        <a href="https://www.npmjs.com/package/@wdio/electron-service"><img src="https://img.shields.io/npm/dw/@wdio/electron-service" alt="npm downloads" /></a>
+    </div>
+</h4>
 
-Electron applications (Windows/macOS/Linux)\
-CDP bridge for main process • Full API mocking • Window management
+[`@wdio/electron-service`](./packages/electron-service) - Electron applications (Windows/macOS/Linux)
 
-<h3>
-  <a href="./packages/tauri-service">@wdio/tauri-service</a>
-  <span style="float: right;">
-    <a href="https://www.npmjs.com/package/@wdio/tauri-service"><img src="https://img.shields.io/badge/@wdio-tauri--service-FFC131?labelColor=1a1a1a" alt="npm package" /></a>
+<h4>
+  <div>
+    <a href="https://www.npmjs.com/package/@wdio/tauri-service"><img src="https://img.shields.io/badge/@wdio-tauri--service-FFC131?labelColor=1a1a1a&style=plastic" alt="npm package" /></a>
     <a href="https://www.npmjs.com/package/@wdio/tauri-service"><img src="https://img.shields.io/npm/v/@wdio/tauri-service" alt="npm version" /></a>
     <a href="https://www.npmjs.com/package/@wdio/tauri-service"><img src="https://img.shields.io/npm/dw/@wdio/tauri-service" alt="npm downloads" /></a>
-  </span>
-</h3>
+  </div>
+</h4>
 
-Tauri applications (Windows/Linux)\
-Official tauri-driver integration • Multiremote support • Plugin architecture
+[`@wdio/tauri-service`](./packages/tauri-service) - Tauri applications (Windows/Linux)
 
-### Planned Services
+## Planned Support
 
 - **Dioxus** - Modern cross-platform UI framework
 - **React Native** - Popular mobile and desktop framework
@@ -63,7 +59,7 @@ Official tauri-driver integration • Multiremote support • Plugin architectur
 - **Capacitor** - Ionic's cross-platform mobile framework
 - **Neutralino** - Lightweight desktop applications
 
-See [ROADMAP.md](./ROADMAP.md) for detailed sequencing, platform support, and timelines.
+See [ROADMAP.md](./ROADMAP.md) for detailed sequencing, os support, and timelines.
 
 ## Features
 
