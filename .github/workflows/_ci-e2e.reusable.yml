@@ -224,7 +224,7 @@ jobs:
         env:
           ENABLE_SPLASH_WINDOW: 'true'
           TEST_TASKS: ${{ steps.gen-test.outputs.result }}
-        run: pnpm exec turbo run $TEST_TASKS --log-order=stream
+        run: pnpm exec turbo run $TEST_TASKS --only --log-order=stream
 
       # Show logs on failure for debugging
       - name: 🐛 Show Logs on Failure
