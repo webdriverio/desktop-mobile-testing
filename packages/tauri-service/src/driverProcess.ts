@@ -31,13 +31,36 @@ export interface DriverProcessInfo {
  * Manages a single tauri-driver process lifecycle
  */
 export class DriverProcess {
-  private proc?: ChildProcess;
+  private _proc?: ChildProcess;
   private streamHandlers: ReadlineInterface[] = [];
   private startupTimeout?: ReturnType<typeof setTimeout>;
   private readonly startTimeout = 30000; // 30 seconds
+  private _port?: number;
+  private _nativePort?: number;
+  private _dataDir?: string;
+
+  get proc(): ChildProcess | undefined {
+    return this._proc;
+  }
+
+  get port(): number | undefined {
+    return this._port;
+  }
+
+  get nativePort(): number | undefined {
+    return this._nativePort;
+  }
+
+  get dataDir(): string | undefined {
+    return this._dataDir;
+  }
 
   async start(options: DriverStartOptions): Promise<DriverProcessInfo> {
     const { identifier, port, nativePort, tauriDriverPath, nativeDriverPath, env, options: serviceOptions } = options;
+
+    this._port = port;
+    this._nativePort = nativePort;
+    this._dataDir = options.dataDir;
 
     log.info(`Starting tauri-driver [${identifier}] on port ${port} (native port: ${nativePort})`);
 
@@ -70,13 +93,13 @@ export class DriverProcess {
       };
 
       try {
-        this.proc = spawn(tauriDriverPath, args, {
+        this._proc = spawn(tauriDriverPath, args, {
           stdio: ['ignore', 'pipe', 'pipe'],
           detached: false,
           ...(env ? { env } : {}),
         });
 
-        log.info(`[${identifier}] Spawned process with PID: ${this.proc.pid ?? 'unknown'}`);
+        log.info(`[${identifier}] Spawned process with PID: ${this._proc.pid ?? 'unknown'}`);
 
         // Set startup timeout
         this.startupTimeout = setTimeout(() => {
@@ -87,7 +110,7 @@ export class DriverProcess {
 
         // Setup stream handlers
         const stdoutHandler = this.setupStreamLogHandler({
-          stream: this.proc.stdout,
+          stream: this._proc.stdout,
           streamName: 'stdout',
           identifier,
           options: serviceOptions,
@@ -101,7 +124,7 @@ export class DriverProcess {
         });
 
         const stderrHandler = this.setupStreamLogHandler({
-          stream: this.proc.stderr,
+          stream: this._proc.stderr,
           streamName: 'stderr',
           identifier,
           options: serviceOptions,
@@ -111,7 +134,7 @@ export class DriverProcess {
         if (stderrHandler) this.streamHandlers.push(stderrHandler);
 
         // Handle process exit during startup
-        this.proc.once('exit', (code, signal) => {
+        this._proc.once('exit', (code, signal) => {
           if (!settled) {
             safeReject(
               new Error(
@@ -121,15 +144,15 @@ export class DriverProcess {
           }
         });
 
-        this.proc.once('error', (err) => {
+        this._proc.once('error', (err) => {
           safeReject(new Error(`tauri-driver [${identifier}] failed to start: ${err.message}`));
         });
 
         // Wait a bit then resolve if process is still running
         setTimeout(() => {
-          if (this.proc && !this.proc.killed && startupDetected) {
+          if (this._proc && !this._proc.killed && startupDetected) {
             safeResolve({
-              proc: this.proc,
+              proc: this._proc,
               port,
               nativePort,
               dataDir: options.dataDir,
@@ -143,12 +166,12 @@ export class DriverProcess {
   }
 
   async stop(): Promise<void> {
-    if (!this.proc || this.proc.killed) {
+    if (!this._proc || this._proc.killed) {
       return;
     }
 
     log.debug('Stopping tauri-driver...');
-    this.proc.kill('SIGTERM');
+    this._proc.kill('SIGTERM');
 
     await this.waitForExit();
     this.cleanup();
@@ -158,7 +181,7 @@ export class DriverProcess {
   }
 
   isRunning(): boolean {
-    return !!this.proc && !this.proc.killed;
+    return !!this._proc && !this._proc.killed;
   }
 
   private async waitForExit(): Promise<void> {
@@ -179,11 +202,11 @@ export class DriverProcess {
         resolve();
       };
 
-      this.proc?.once('exit', onExit);
+      this._proc?.once('exit', onExit);
 
       shutdownTimeout = setTimeout(() => {
         log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
-        this.proc?.kill('SIGKILL');
+        this._proc?.kill('SIGKILL');
 
         killTimeout = setTimeout(() => {
           log.warn('tauri-driver force kill timeout, giving up');
@@ -204,9 +227,9 @@ export class DriverProcess {
     this.streamHandlers = [];
 
     // Remove all listeners
-    if (this.proc) {
-      this.proc.removeAllListeners('exit');
-      this.proc.removeAllListeners('error');
+    if (this._proc) {
+      this._proc.removeAllListeners('exit');
+      this._proc.removeAllListeners('error');
     }
   }
 
