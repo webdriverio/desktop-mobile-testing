@@ -86,6 +86,17 @@ jobs:
         run: |
           echo "::notice::Build artifact: ID=${{ inputs.build_id }}, Size=${{ inputs.artifact_size }} bytes"
 
+      # Validate build-command input to prevent shell injection
+      - name: 🔒 Validate Build Command
+        shell: bash
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+        run: |
+          case "$BUILD_CMD" in
+            build|build:mac-universal) ;;
+            *) echo "::error::Invalid build-command: '$BUILD_CMD'" && exit 1 ;;
+          esac
+
       # Dynamically generate the Turbo filter for building test applications
       # This converts the scenario input into Turbo filter syntax
       - name: 🪄 Generate Build Filter for Test Apps
@@ -108,7 +119,10 @@ jobs:
       # This builds only the necessary test apps for the current test configuration
       - name: 🏗️ Build Test Applications
         shell: bash
-        run: pnpm exec turbo run ${{ inputs.build-command }} ${{ steps.gen-build.outputs.result }} --parallel
+        env:
+          BUILD_CMD: ${{ inputs.build-command }}
+          BUILD_FILTER: ${{ steps.gen-build.outputs.result }}
+        run: pnpm exec turbo run $BUILD_CMD $BUILD_FILTER --parallel
 
       # Setup protocol handlers for deeplink testing
       # Required for Windows and Linux to properly handle testapp:// protocol
@@ -209,7 +223,8 @@ jobs:
         shell: bash
         env:
           ENABLE_SPLASH_WINDOW: 'true'
-        run: pnpm exec turbo run ${{ steps.gen-test.outputs.result }} --log-order=stream
+          TEST_TASKS: ${{ steps.gen-test.outputs.result }}
+        run: pnpm exec turbo run $TEST_TASKS --log-order=stream
 
       # Show logs on failure for debugging
       - name: 🐛 Show Logs on Failure
