@@ -81,6 +81,17 @@ function extractLogLevel(line: string): LogLevel | undefined {
 }
 
 /**
+ * Pre-compiled regex patterns for log cleaning
+ */
+const TIMESTAMP_PATTERN = /\[\d{4}-\d{2}-\d{2}\]\[\d{2}:\d{2}:\d{2}\]/g;
+const TAURI_PLUGIN_PATTERN = /\]\[tauri_[a-zA-Z0-9_]+\]/g;
+const ISO_TIMESTAMP_PATTERN = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s*/g;
+const BRACKET_PATTERN = /\[[a-zA-Z0-9_-]+\]\s*/g;
+const WDIO_FRONTEND_PATTERN = /\[WDIO-FRONTEND\]\[(INFO|WARN|ERROR|DEBUG|TRACE)\]\s*/i;
+const QUOTED_STRING_PATTERN = /^".*"$/;
+const TAURI_PREFIX_PATTERN = /^\[Tauri:(Backend|Frontend)\]\s*/i;
+
+/**
  * Clean up log message by removing timestamps and app names
  * If line already has a prefix, we preserve it and just trim
  */
@@ -89,15 +100,13 @@ function cleanLogMessage(line: string, hasPrefix: boolean): string {
     return line.trim();
   }
 
-  // Remove tauri-plugin-log format: [2026-01-19][15:09:22][appname][LEVEL]
-  let cleaned = line.replace(/\[\d{4}-\d{2}-\d{2}\]\[\d{2}:\d{2}:\d{2}\]/g, '');
-  cleaned = cleaned.replace(/\]\[tauri_[a-zA-Z0-9_]+\]/g, ']');
-
-  // Remove simple_logger format: 2026-01-20T15:41:50.030Z INFO [appname]
-  cleaned = cleaned.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\s*/g, '');
-  cleaned = cleaned.replace(/\[[a-zA-Z0-9_-]+\]\s*/g, '');
-
-  return cleaned.trim();
+  // Single-pass cleaning with pre-compiled patterns
+  return line
+    .replace(TIMESTAMP_PATTERN, '')
+    .replace(TAURI_PLUGIN_PATTERN, ']')
+    .replace(ISO_TIMESTAMP_PATTERN, '')
+    .replace(BRACKET_PATTERN, '')
+    .trim();
 }
 
 /**
@@ -129,15 +138,14 @@ export function parseLogLine(line: string): ParsedLog | undefined {
   // If line has a prefix, strip it first - we'll add it back via prefixedMessage
   const hasPrefix = prefix !== null;
   let cleanedMessage = hasPrefix
-    ? trimmedLine.replace(/^\[Tauri:(Backend|Frontend)\]\s*/i, '')
+    ? trimmedLine.replace(TAURI_PREFIX_PATTERN, '')
     : cleanLogMessage(trimmedLine, hasPrefix);
 
   // For frontend logs from log_frontend command, strip the [WDIO-FRONTEND][LEVEL] prefix
   // Format: [WDIO-FRONTEND][LEVEL] message
   if (source === 'frontend' && hasPrefix === false) {
-    const wdioFrontendPattern = /\[WDIO-FRONTEND\]\[(INFO|WARN|ERROR|DEBUG|TRACE)\]\s*/i;
-    if (wdioFrontendPattern.test(cleanedMessage)) {
-      cleanedMessage = cleanedMessage.replace(wdioFrontendPattern, '').trim();
+    if (WDIO_FRONTEND_PATTERN.test(cleanedMessage)) {
+      cleanedMessage = cleanedMessage.replace(WDIO_FRONTEND_PATTERN, '').trim();
     }
   }
 
@@ -146,7 +154,7 @@ export function parseLogLine(line: string): ParsedLog | undefined {
   // Format: [Tauri:Frontend] "message" or just "message" (raw from Rust)
   if (source === 'frontend') {
     const trimmed = cleanedMessage.trim();
-    if (/^".*"$/.test(trimmed)) {
+    if (QUOTED_STRING_PATTERN.test(trimmed)) {
       cleanedMessage = trimmed.slice(1, -1);
     }
   }
