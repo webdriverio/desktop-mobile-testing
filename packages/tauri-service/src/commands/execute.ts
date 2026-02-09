@@ -4,6 +4,9 @@ import type { TauriCommandContext, TauriResult } from '../types.js';
 
 const log = createLogger('tauri-service', 'service');
 
+// Cache for plugin availability per browser session
+const pluginAvailabilityCache = new Map<string, boolean>();
+
 /**
  * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs
  * Matches Electron's execute pattern: accepts functions or strings, passes Tauri APIs as first parameter
@@ -24,41 +27,51 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  // Check if plugin is available with retry logic (handles async module loading)
-  const pluginAvailable = await browser.executeAsync((done) => {
-    const checkPlugin = () => {
-      // @ts-expect-error - Plugin API injected at runtime
-      return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
-    };
+  // Check cache first
+  const sessionId = browser.sessionId || 'default';
+  if (!pluginAvailabilityCache.get(sessionId)) {
+    // Check if plugin is available with retry logic (handles async module loading)
+    const pluginAvailable = await browser.executeAsync((done) => {
+      const checkPlugin = () => {
+        // @ts-expect-error - Plugin API injected at runtime
+        return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
+      };
 
-    // If already available, return immediately
-    if (checkPlugin()) {
-      done(true);
-      return;
-    }
-
-    // Otherwise, poll for up to 5 seconds
-    const startTime = Date.now();
-    const timeout = 5000;
-    const interval = 50;
-
-    const poll = () => {
+      // If already available, return immediately
       if (checkPlugin()) {
         done(true);
-      } else if (Date.now() - startTime > timeout) {
-        done(false);
-      } else {
-        setTimeout(poll, interval);
+        return;
       }
-    };
 
-    poll();
-  });
+      // Otherwise, poll for up to 5 seconds
+      const startTime = Date.now();
+      const timeout = 5000;
+      const interval = 50;
 
-  if (!pluginAvailable) {
-    throw new Error(
-      'Tauri plugin not available. Make sure @wdio/tauri-plugin is installed and registered in your Tauri app.',
-    );
+      const poll = () => {
+        if (checkPlugin()) {
+          done(true);
+        } else if (Date.now() - startTime > timeout) {
+          done(false);
+        } else {
+          setTimeout(poll, interval);
+        }
+      };
+
+      poll();
+    });
+
+    if (!pluginAvailable) {
+      throw new Error(
+        'Tauri plugin not available. Make sure @wdio/tauri-plugin is installed and registered in your Tauri app.',
+      );
+    }
+
+    // Cache the successful check
+    pluginAvailabilityCache.set(sessionId, true);
+    log.debug('Plugin availability cached for session:', sessionId);
+  } else {
+    log.debug('Plugin availability cached, skipping check');
   }
 
   // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
