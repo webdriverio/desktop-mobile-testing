@@ -163,6 +163,14 @@
     "tauri-e2e-app#build:debug": {
       "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
       "outputs": ["src-tauri/target/**"]
+    },
+    "tauri-app-example#build": {
+      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
+      "outputs": ["src-tauri/target/**"]
+    },
+    "tauri-app-example#build:debug": {
+      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
+      "outputs": ["src-tauri/target/**"]
     }
   }
 }
