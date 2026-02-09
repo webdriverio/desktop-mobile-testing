@@ -146,8 +146,21 @@
       "dependsOn": ["@wdio/native-spy#build"],
       "outputs": ["dist-js/**"]
     },
+    "@wdio/tauri-service#build:console-wrapper": {
+      "inputs": [
+        "src/scripts/console-wrapper.source.js",
+        "src/constants/logging.ts",
+        "scripts/minify-console-wrapper.ts"
+      ],
+      "outputs": ["src/scripts/console-wrapper.ts"]
+    },
     "@wdio/tauri-service#build": {
-      "dependsOn": ["@wdio/native-utils#build", "@wdio/tauri-plugin#build:js", "typecheck"],
+      "dependsOn": [
+        "@wdio/native-utils#build",
+        "@wdio/tauri-plugin#build:js",
+        "@wdio/tauri-service#build:console-wrapper",
+        "typecheck"
+      ],
       "outputs": ["dist/**"]
     },
     "@wdio/native-spy#build": {

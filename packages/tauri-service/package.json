@@ -26,6 +26,7 @@
   "files": ["dist", "docs", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsx ../../scripts/build-package.ts",
+    "build:console-wrapper": "tsx scripts/minify-console-wrapper.ts",
     "build:watch": "tsx ../../scripts/build-package.ts --watch",
     "clean": "shx rm -rf dist",
     "clean:dist": "shx rm -rf dist",
@@ -55,6 +56,7 @@
   "devDependencies": {
     "@types/debug": "^4.1.12",
     "@types/node": "^25.0.3",
+    "terser": "^5.44.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },

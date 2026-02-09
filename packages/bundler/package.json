@@ -50,6 +50,7 @@
     "@types/node": "^25.0.3",
     "@vitest/coverage-v8": "^4.0.16",
     "shx": "^0.4.0",
+    "terser": "^5.44.0",
     "vitest": "^4.0.16"
   },
   "files": ["dist", "LICENSE"],

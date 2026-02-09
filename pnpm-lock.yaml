@@ -663,6 +663,9 @@ importers:
       shx:
         specifier: ^0.4.0
         version: 0.4.0
+      terser:
+        specifier: ^5.44.0
+        version: 5.44.0
       vitest:
         specifier: ^4.0.16
         version: 4.0.17(@types/node@25.0.8)(jiti@2.6.1)(jsdom@27.4.0)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -999,6 +1002,9 @@ importers:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.8
+      terser:
+        specifier: ^5.44.0
+        version: 5.44.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
