@@ -24,7 +24,7 @@ catalogs:
     '@wdio/spec-reporter': ^9.20.0
     '@wdio/types': 9.20.0
     '@wdio/xvfb': ^9.20.0
-    electron: 39.2.7
+    electron: 39.5.2
     webdriverio: ^9.23.0
   minimum:
     '@wdio/cli': ^8.43.0
@@ -46,5 +46,5 @@ catalogs:
     '@wdio/spec-reporter': latest
     '@wdio/types': latest
     '@wdio/xvfb': latest
-    electron-nightly: 41.0.0-nightly.20260106
+    electron-nightly: 41.0.0-nightly.20260119
     webdriverio: latest
