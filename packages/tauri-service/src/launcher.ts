@@ -16,7 +16,6 @@ import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './p
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
-let specReporterPatched = false;
 
 /**
  * Generate unique data directory for multiremote instance or worker
@@ -158,25 +157,6 @@ export default class TauriLaunchService {
     capabilities: TauriCapabilities[] | Record<string, { capabilities: TauriCapabilities }>,
   ): Promise<void> {
     log.debug('Preparing Tauri service...');
-
-    if (!specReporterPatched) {
-      try {
-        const specReporterModule = (await import('@wdio/spec-reporter')) as {
-          default: {
-            prototype: { onRunnerStart: (runner: unknown) => unknown };
-            __tauriPatched?: boolean;
-          };
-        };
-        const SpecReporter = specReporterModule.default;
-        if (SpecReporter && !SpecReporter.__tauriPatched) {
-          SpecReporter.__tauriPatched = true;
-          specReporterPatched = true;
-          log.debug('Patched @wdio/spec-reporter to display Tauri browser name');
-        }
-      } catch (error) {
-        log.warn(`Failed to patch spec reporter for Tauri display name: ${(error as Error).message}`);
-      }
-    }
 
     // Determine if using CrabNebula provider
     const firstCap = Array.isArray(capabilities) ? capabilities[0] : Object.values(capabilities)[0]?.capabilities;
