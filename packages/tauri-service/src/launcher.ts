@@ -372,19 +372,20 @@ export default class TauriLaunchService {
           exclude: Array.from(usedPorts),
         });
 
-        await this.startTauriDriver(port, nativePort, capsList);
+        try {
+          await this.startTauriDriver(port, nativePort, capsList);
+          log.info(`Successfully started tauri-driver on ${hostname}:${port}`);
+        } catch (error) {
+          log.error(`Failed to start tauri-driver: ${error}`);
+          throw error;
+        }
 
         // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
         // This is necessary for standalone mode where capabilities are passed directly to remote()
         for (const cap of capsList) {
           (cap as { port?: number; hostname?: string }).port = port;
           (cap as { port?: number; hostname?: string }).hostname = hostname;
-          log.debug(
-            `Set tauri-driver connection on capabilities: ${hostname}:${port}, ` +
-              `browserName=${(cap as { browserName?: string }).browserName}, ` +
-              `port=${(cap as { port?: number }).port}, ` +
-              `hostname=${(cap as { hostname?: string }).hostname}`,
-          );
+          log.info(`Set tauri-driver connection on capabilities: ${hostname}:${port}`);
         }
       }
     }
