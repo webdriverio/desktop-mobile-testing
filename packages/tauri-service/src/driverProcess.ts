@@ -161,7 +161,7 @@ export class DriverProcess {
               dataDir: options.dataDir,
             });
           }
-        }, 1000);
+        }, 30000);
       } catch (error) {
         safeReject(error instanceof Error ? error : new Error(String(error)));
       }
