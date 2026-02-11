@@ -18,6 +18,7 @@ export interface DriverStartOptions {
   env?: NodeJS.ProcessEnv;
   options: TauriServiceOptions;
   dataDir?: string;
+  instanceId?: string;
 }
 
 export interface DriverProcessInfo {
@@ -121,6 +122,7 @@ export class DriverProcess {
           onErrorDetected: (message: string) => {
             safeReject(new Error(message));
           },
+          instanceId: options.instanceId,
         });
 
         const stderrHandler = this.setupStreamLogHandler({
@@ -128,6 +130,7 @@ export class DriverProcess {
           streamName: 'stderr',
           identifier,
           options: serviceOptions,
+          instanceId: options.instanceId,
         });
 
         if (stdoutHandler) this.streamHandlers.push(stdoutHandler);
@@ -247,6 +250,7 @@ export class DriverProcess {
     options,
     onStartupDetected,
     onErrorDetected,
+    instanceId: _instanceId,
   }: {
     stream: Readable | null;
     streamName: 'stdout' | 'stderr';
@@ -254,6 +258,7 @@ export class DriverProcess {
     options: TauriServiceOptions;
     onStartupDetected?: () => void;
     onErrorDetected?: (message: string) => void;
+    instanceId?: string;
   }): ReadlineInterface | undefined {
     if (!stream) return undefined;
 

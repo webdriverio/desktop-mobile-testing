@@ -9,6 +9,7 @@ import type { Options } from '@wdio/types';
 import getPort from 'get-port';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { ensureTauriDriver, ensureWebKitWebDriver, findTestRunnerBackend } from './driverManager.js';
+import { DriverProcess } from './driverProcess.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
 import { forwardLog, type LogLevel } from './logForwarder.js';
 import { parseLogLine } from './logParser.js';
@@ -124,6 +125,7 @@ function setupStreamLogHandler({
  */
 export default class TauriLaunchService {
   private tauriDriverProcess?: ChildProcess;
+  private driverProcess?: DriverProcess; // New: DriverProcess for single mode
   private testRunnerBackend?: ChildProcess; // CrabNebula backend for macOS
   private appBinaryPath?: string;
   private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
@@ -898,92 +900,34 @@ export default class TauriLaunchService {
 
     log.debug(`Starting tauri-driver on port ${port} (native port: ${nativePort})`);
 
-    // Prepare tauri-driver arguments
-    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
-
     // Resolve native driver path (WebKitWebDriver on Linux)
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
 
     if (nativeDriverPath) {
-      args.push('--native-driver', nativeDriverPath);
       log.debug(`Using native driver: ${nativeDriverPath}`);
     }
 
-    await new Promise<void>((resolve, reject) => {
-      let settled = false;
-      const safeResolve = () => {
-        if (!settled) {
-          settled = true;
-          resolve();
-        }
-      };
-      const safeReject = (err: Error) => {
-        if (!settled) {
-          settled = true;
-          reject(err);
-        }
-      };
+    // Use DriverProcess for single mode
+    this.driverProcess = new DriverProcess();
 
-      if (process.platform === 'linux') {
-        log.info(`Starting tauri-driver (DISPLAY from environment: ${process.env.DISPLAY || 'not set'})`);
-      }
+    if (process.platform === 'linux') {
+      log.info(`Starting tauri-driver (DISPLAY from environment: ${process.env.DISPLAY || 'not set'})`);
+    }
 
-      const spawnEnv = options.env ? { ...process.env, ...options.env } : undefined;
-
-      this.tauriDriverProcess = spawn(tauriDriverPath, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
-        ...(spawnEnv ? { env: spawnEnv } : {}),
-      });
-
-      // Use readline for line-buffered log handling (fixes Windows chunking issues)
-      setupStreamLogHandler({
-        stream: this.tauriDriverProcess.stdout,
-        streamName: 'stdout',
-        identifier: 'tauri-driver',
-        options,
-        onStartupDetected: () => safeResolve(),
-        onErrorDetected: (msg) => safeReject(new Error(msg)),
-      });
-
-      setupStreamLogHandler({
-        stream: this.tauriDriverProcess.stderr,
-        streamName: 'stderr',
-        identifier: 'tauri-driver',
-        options,
-      });
-
-      this.tauriDriverProcess.on('error', (error: Error) => {
-        log.error(`Failed to start tauri-driver: ${error.message}`);
-        safeReject(error);
-      });
-
-      this.tauriDriverProcess.on('exit', (code: number) => {
-        if (code !== 0) {
-          log.error(`tauri-driver exited with code ${code}`);
-          safeReject(new Error(`tauri-driver exited with code ${code}`));
-        }
-      });
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
-        if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
-          log.warn('tauri-driver startup timeout, assuming ready');
-          safeResolve();
-        }
-      }, 30000);
+    const info = await this.driverProcess.start({
+      mode: 'single',
+      identifier: 'tauri-driver',
+      port,
+      nativePort,
+      tauriDriverPath,
+      nativeDriverPath,
+      env: options.env,
+      options,
     });
 
-    // Wait for driver to be ready (matches per-worker and multiremote modes)
-    log.debug(`Waiting for TCP port ${port} to open...`);
-    await this.waitForPortOpen('127.0.0.1', port, 30000);
-    log.debug(`Waiting for HTTP endpoint to be ready...`);
-    await this.waitForHttpReady('127.0.0.1', port, 10000);
+    // Keep reference to old field for backward compatibility during transition
+    this.tauriDriverProcess = info.proc;
 
-    // Verify process is still alive
-    if (this.tauriDriverProcess?.killed) {
-      throw new Error('tauri-driver process died during startup');
-    }
     log.info(`Driver ready on port ${port} (native port: ${nativePort})`);
   }
 
@@ -1237,7 +1181,15 @@ export default class TauriLaunchService {
       return;
     }
 
-    // Fallback to single driver mode
+    // Single driver mode - use DriverProcess if available
+    if (this.driverProcess) {
+      await this.driverProcess.stop();
+      this.driverProcess = undefined;
+      this.tauriDriverProcess = undefined;
+      return;
+    }
+
+    // Legacy fallback - direct process management
     if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
       log.debug('Stopping tauri-driver...');
       this.tauriDriverProcess.kill('SIGTERM');
@@ -1289,6 +1241,14 @@ export default class TauriLaunchService {
    * Get tauri-driver status
    */
   getTauriDriverStatus(): { running: boolean; pid?: number } {
+    // Check new DriverProcess first, then fall back to old field
+    if (this.driverProcess) {
+      return {
+        running: this.driverProcess.isRunning(),
+        pid: this.driverProcess.proc?.pid,
+      };
+    }
+
     return {
       running: this.tauriDriverProcess ? !this.tauriDriverProcess.killed : false,
       pid: this.tauriDriverProcess?.pid,
