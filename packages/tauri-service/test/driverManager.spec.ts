@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureWebKitWebDriver, getWebKitDriverInstallCommand } from '../src/driverManager.js';
+import { isOk } from '../src/utils/result.js';
 
 describe('WebKitWebDriver Management', () => {
   describe('getWebKitDriverInstallCommand', () => {
@@ -57,7 +58,7 @@ describe('WebKitWebDriver Management', () => {
       });
 
       const result = await ensureWebKitWebDriver();
-      expect(result.success).toBe(true);
+      expect(isOk(result)).toBe(true);
 
       Object.defineProperty(process, 'platform', {
         value: originalPlatform,
@@ -66,50 +67,26 @@ describe('WebKitWebDriver Management', () => {
     });
 
     it('should have proper result structure for WebKitWebDriver', async () => {
-      // Skip this test on non-Linux platforms
       if (process.platform !== 'linux') {
         return;
       }
 
       const result = await ensureWebKitWebDriver();
 
-      // Check the result structure regardless of success/failure
-      expect(result).toHaveProperty('success');
-      expect(result).toHaveProperty('path');
-
-      // error and installInstructions should only be present on failure
-      const hasError = 'error' in result;
-      const hasInstallInstructions = 'installInstructions' in result;
-      expect(hasError).toBe(!result.success);
-      expect(hasInstallInstructions).toBe(!result.success);
+      expect(result).toHaveProperty('ok');
+      expect(result.ok ? result.value : result.error).toBeDefined();
+      expect(result.ok ? undefined : result.error).toHaveProperty('message');
     });
 
     it('should return valid result for WebKitWebDriver check', async () => {
-      // Skip this test on non-Linux platforms
       if (process.platform !== 'linux') {
         return;
       }
 
       const result = await ensureWebKitWebDriver();
 
-      // Always check that we get a properly structured result
-      expect(result).toHaveProperty('success');
-      expect(result).toHaveProperty('path');
-
-      // error and installInstructions should only be present on failure
-      const hasError = 'error' in result;
-      const hasInstallInstructions = 'installInstructions' in result;
-      expect(hasError).toBe(!result.success);
-      expect(hasInstallInstructions).toBe(!result.success);
-
-      // The result should be consistent - if success is true, we should have a path and no error
-      // If success is false, we should have an error and install instructions
-      const hasPath = result.path && result.path.length > 0;
-      const hasErrorContent = result.error && result.error.length > 0;
-      const hasInstallInstructionsContent = result.installInstructions && result.installInstructions.length > 0;
-
-      expect(result.success ? hasPath : hasErrorContent).toBe(true);
-      expect(result.success ? !hasErrorContent : hasInstallInstructionsContent).toBe(true);
+      expect(result).toHaveProperty('ok');
+      expect(result.ok ? result.value.path : result.error.message).toBeDefined();
     });
   });
 });

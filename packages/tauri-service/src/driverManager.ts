@@ -4,17 +4,18 @@ import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriServiceOptions } from './types.js';
+import { Err, Ok, type Result } from './utils/result.js';
 
 const execAsync = promisify(exec);
 
 const log = createLogger('tauri-service');
 
-export interface DriverInstallResult {
-  success: boolean;
+export interface DriverInstallSuccess {
   path: string;
   method: 'found' | 'installed' | 'cached';
-  error?: string;
 }
+
+export type DriverInstallResult = Result<DriverInstallSuccess, Error>;
 
 /**
  * Check if cargo is available
@@ -203,109 +204,54 @@ export async function installTauriDriver(): Promise<string> {
 export async function ensureTauriDriver(options: TauriServiceOptions): Promise<DriverInstallResult> {
   const provider = options.driverProvider ?? 'official';
 
-  // Handle CrabNebula provider
   if (provider === 'crabnebula') {
-    // Check for explicit path first
     if (options.crabnebulaDriverPath) {
       if (existsSync(options.crabnebulaDriverPath)) {
-        return {
-          success: true,
-          path: options.crabnebulaDriverPath,
-          method: 'found',
-        };
+        return Ok({ path: options.crabnebulaDriverPath, method: 'found' as const });
       }
-      return {
-        success: false,
-        path: options.crabnebulaDriverPath,
-        method: 'found',
-        error: `CrabNebula driver not found at: ${options.crabnebulaDriverPath}`,
-      };
+      return Err(new Error(`CrabNebula driver not found at: ${options.crabnebulaDriverPath}`));
     }
 
-    // Auto-detect from node_modules
     const detectedPath = findCrabNebulaDriver();
     if (detectedPath) {
-      return {
-        success: true,
-        path: detectedPath,
-        method: 'found',
-      };
+      return Ok({ path: detectedPath, method: 'found' as const });
     }
 
-    return {
-      success: false,
-      path: '',
-      method: 'found',
-      error: '@crabnebula/tauri-driver not found. Install with: npm install -D @crabnebula/tauri-driver',
-    };
+    return Err(new Error('@crabnebula/tauri-driver not found. Install with: npm install -D @crabnebula/tauri-driver'));
   }
 
-  // Official driver provider (default)
-  // Check if explicitly provided
   if (options.tauriDriverPath) {
     if (existsSync(options.tauriDriverPath)) {
-      return {
-        success: true,
-        path: options.tauriDriverPath,
-        method: 'found',
-      };
+      return Ok({ path: options.tauriDriverPath, method: 'found' as const });
     }
-    return {
-      success: false,
-      path: options.tauriDriverPath,
-      method: 'found',
-      error: `tauri-driver not found at provided path: ${options.tauriDriverPath}`,
-    };
+    return Err(new Error(`tauri-driver not found at provided path: ${options.tauriDriverPath}`));
   }
 
-  // Check if already installed
   const existingPath = findTauriDriver();
   if (existingPath) {
     log.debug(`Found tauri-driver at: ${existingPath}`);
-    return {
-      success: true,
-      path: existingPath,
-      method: 'found',
-    };
+    return Ok({ path: existingPath, method: 'found' as const });
   }
 
-  // Auto-install if enabled
   if (options.autoInstallTauriDriver) {
     if (!isCargoAvailable()) {
-      return {
-        success: false,
-        path: '',
-        method: 'installed',
-        error: 'Rust toolchain (cargo) not found. Please install Rust from https://rustup.rs/',
-      };
+      return Err(new Error('Rust toolchain (cargo) not found. Please install Rust from https://rustup.rs/'));
     }
 
     try {
       const installedPath = await installTauriDriver();
-      return {
-        success: true,
-        path: installedPath,
-        method: 'installed',
-      };
+      return Ok({ path: installedPath, method: 'installed' as const });
     } catch (error) {
-      return {
-        success: false,
-        path: '',
-        method: 'installed',
-        error: error instanceof Error ? error.message : String(error),
-      };
+      return Err(error instanceof Error ? error : new Error(String(error)));
     }
   }
 
-  // Not found and auto-install disabled
-  return {
-    success: false,
-    path: '',
-    method: 'found',
-    error:
+  return Err(
+    new Error(
       `tauri-driver not found. Install it with: cargo install tauri-driver\n` +
-      `Or enable auto-installation by setting autoInstallTauriDriver: true in service options.`,
-  };
+        `Or enable auto-installation by setting autoInstallTauriDriver: true in service options.`,
+    ),
+  );
 }
 
 /**
@@ -354,31 +300,32 @@ export function getWebKitDriverInstallCommand(packageManager: string): string {
   return installCommands[packageManager] || installCommands.apt; // Default to apt-get
 }
 
+export interface WebKitWebDriverSuccess {
+  path?: string;
+}
+
+export interface WebKitWebDriverError extends Error {
+  installInstructions?: string;
+}
+
 /**
  * Get WebKitWebDriver path with helpful error messages
  */
-export async function ensureWebKitWebDriver(): Promise<{
-  success: boolean;
-  path?: string;
-  error?: string;
-  installInstructions?: string;
-}> {
+export async function ensureWebKitWebDriver(): Promise<Result<WebKitWebDriverSuccess, WebKitWebDriverError>> {
   if (process.platform !== 'linux') {
-    return { success: true }; // Not needed on non-Linux
+    return Ok({}); // Not needed on non-Linux
   }
 
-  // Try to find WebKitWebDriver
   try {
     const result = execSync('which WebKitWebDriver', { encoding: 'utf8' });
     const path = result.trim();
     if (path && existsSync(path)) {
-      return { success: true, path };
+      return Ok({ path });
     }
   } catch {
     // Not in PATH
   }
 
-  // Check common paths
   const commonPaths = [
     '/usr/bin/WebKitWebDriver',
     '/usr/local/bin/WebKitWebDriver',
@@ -388,22 +335,19 @@ export async function ensureWebKitWebDriver(): Promise<{
 
   for (const path of commonPaths) {
     if (existsSync(path)) {
-      return { success: true, path };
+      return Ok({ path });
     }
   }
 
-  // Detect package manager and provide specific instructions
   log.debug('WebKitWebDriver not found, detecting package manager...');
   const packageManager = await detectPackageManager();
   log.debug(`Detected package manager: ${packageManager}`);
 
   const installCommand = getWebKitDriverInstallCommand(packageManager);
 
-  return {
-    success: false,
-    error: 'WebKitWebDriver not found',
-    installInstructions: installCommand,
-  };
+  const error = new Error('WebKitWebDriver not found') as WebKitWebDriverError;
+  error.installInstructions = installCommand;
+  return Err(error);
 }
 
 /**

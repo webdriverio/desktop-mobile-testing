@@ -14,6 +14,7 @@ import type { LogLevel } from './logForwarder.js';
 
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
+import { isErr } from './utils/result.js';
 
 const log = createLogger('tauri-service', 'launcher');
 
@@ -144,34 +145,32 @@ export default class TauriLaunchService {
       // Ensure Edge WebDriver compatibility on Windows
       // This checks if msedgedriver matches the WebView2 version in the Tauri binary and downloads if needed
       // Only runs on Windows; skipped on Linux/macOS
-      const autoDownloadEdgeDriver = this.options.autoDownloadEdgeDriver ?? true; // Default to true
+      const autoDownloadEdgeDriver = this.options.autoDownloadEdgeDriver ?? true;
       if (process.platform === 'win32') {
         log.debug('Checking Edge WebDriver compatibility...');
         const edgeDriverResult = await ensureMsEdgeDriver(appBinaryPath, autoDownloadEdgeDriver);
 
-        if (!edgeDriverResult.success) {
-          const errorMsg = edgeDriverResult.error || 'Unknown error checking Edge WebDriver';
+        if (isErr(edgeDriverResult)) {
+          const errorMsg = edgeDriverResult.error.message;
           log.error(`Edge WebDriver check failed: ${errorMsg}`);
 
           if (!autoDownloadEdgeDriver) {
-            // Only throw if auto-download is disabled - let user fix manually
             throw new Error(
               `${errorMsg}\n` +
                 `To auto-fix: set autoDownloadEdgeDriver: true in tauri service options.\n` +
                 `Or manually download from: https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/`,
             );
           } else {
-            // Auto-download was enabled but still failed - log warning and continue
             log.warn(`${errorMsg} - continuing anyway, test may fail with version mismatch`);
           }
-        } else if (edgeDriverResult.method === 'downloaded') {
+        } else if (edgeDriverResult.value.method === 'downloaded') {
           log.info(
-            `✅ Downloaded msedgedriver ${edgeDriverResult.driverVersion} for WebView2 ${edgeDriverResult.edgeVersion}`,
+            `✅ Downloaded msedgedriver ${edgeDriverResult.value.driverVersion} for WebView2 ${edgeDriverResult.value.edgeVersion}`,
           );
-        } else if (edgeDriverResult.method === 'found') {
-          log.info(`✅ Using existing msedgedriver ${edgeDriverResult.driverVersion}`);
+        } else if (edgeDriverResult.value.method === 'found') {
+          log.info(`✅ Using existing msedgedriver ${edgeDriverResult.value.driverVersion}`);
         }
-        break; // Only check once for the first capability
+        break;
       }
 
       // Validate app args if provided
@@ -200,10 +199,10 @@ export default class TauriLaunchService {
     // This prevents a race condition where parallel workers all try to
     // cargo-install tauri-driver simultaneously, causing "Access is denied" errors on Windows.
     const driverResult = await ensureTauriDriver(mergedOptions);
-    if (!driverResult.success) {
-      throw new Error(driverResult.error || 'Failed to find or install tauri-driver');
+    if (isErr(driverResult)) {
+      throw driverResult.error;
     }
-    log.info(`tauri-driver ready: ${driverResult.path} (${driverResult.method})`);
+    log.info(`tauri-driver ready: ${driverResult.value.path} (${driverResult.value.method})`);
 
     // Auto-detect per-worker mode based on maxInstances
     // When maxInstances > 1, enable per-worker spawning for parallelism
@@ -573,23 +572,22 @@ export default class TauriLaunchService {
     };
     const driverResult = await ensureTauriDriver(driverOptions);
 
-    if (!driverResult.success) {
-      const errorMsg = driverResult.error || 'Failed to find or install tauri-driver';
-      log.error(errorMsg);
-      throw new Error(errorMsg);
+    if (isErr(driverResult)) {
+      log.error(driverResult.error.message);
+      throw driverResult.error;
     }
 
-    log.info(`Using tauri-driver: ${driverResult.path} (${driverResult.method})`);
+    log.info(`Using tauri-driver: ${driverResult.value.path} (${driverResult.value.method})`);
 
     // 8. Check WebKitWebDriver availability (Linux only)
     if (process.platform === 'linux') {
       const webkitResult = await ensureWebKitWebDriver();
-      if (webkitResult.success && webkitResult.path) {
-        log.info(`✅ WebKitWebDriver found: ${webkitResult.path}`);
-      } else {
+      if (!isErr(webkitResult) && webkitResult.value.path) {
+        log.info(`✅ WebKitWebDriver found: ${webkitResult.value.path}`);
+      } else if (isErr(webkitResult)) {
         log.warn('⚠️  WebKitWebDriver not found - tests may fail');
-        if (webkitResult.installInstructions) {
-          log.warn(`   Install it with: ${webkitResult.installInstructions}`);
+        if (webkitResult.error.installInstructions) {
+          log.warn(`   Install it with: ${webkitResult.error.installInstructions}`);
         }
       }
     }
@@ -651,11 +649,11 @@ export default class TauriLaunchService {
   ): Promise<void> {
     const workerOptions = options ?? mergeOptions(this.options, undefined);
     const driverResult = await ensureTauriDriver(workerOptions);
-    if (!driverResult.success) {
-      throw new Error(driverResult.error || 'Failed to find tauri-driver');
+    if (isErr(driverResult)) {
+      throw driverResult.error;
     }
 
-    const tauriDriverPath = driverResult.path;
+    const tauriDriverPath = driverResult.value.path;
 
     log.info(`Starting tauri-driver [worker-${workerId}] on port ${port} (native port: ${nativePort})`);
 
@@ -757,11 +755,11 @@ export default class TauriLaunchService {
 
     // Ensure driver is available
     const driverResult = await ensureTauriDriver(options);
-    if (!driverResult.success) {
-      throw new Error(driverResult.error || 'Failed to find tauri-driver');
+    if (isErr(driverResult)) {
+      throw driverResult.error;
     }
 
-    const tauriDriverPath = driverResult.path;
+    const tauriDriverPath = driverResult.value.path;
 
     log.debug(`Starting tauri-driver on port ${port} (native port: ${nativePort})`);
 
@@ -806,11 +804,11 @@ export default class TauriLaunchService {
     // Ensure driver is available
     const instanceOptions = options ?? mergeOptions(this.options, undefined);
     const driverResult = await ensureTauriDriver(instanceOptions);
-    if (!driverResult.success) {
-      throw new Error(driverResult.error || 'Failed to find tauri-driver');
+    if (isErr(driverResult)) {
+      throw driverResult.error;
     }
 
-    const tauriDriverPath = driverResult.path;
+    const tauriDriverPath = driverResult.value.path;
 
     log.info(`Starting tauri-driver [${instanceId}] on port ${port} (native port: ${nativePort})`);
 

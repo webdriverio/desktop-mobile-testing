@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EdgeDriverResult } from '../src/edgeDriverManager.js';
+import { isOk } from '../src/utils/result.js';
 
-// Mock child_process, fs, and util modules
 vi.mock('node:child_process', () => ({
   execSync: vi.fn(),
   exec: vi.fn(),
@@ -26,17 +26,14 @@ describe('Edge Driver Manager', () => {
   let ensureMsEdgeDriver: (tauriBinaryPath?: string, autoDownload?: boolean) => Promise<EdgeDriverResult>;
 
   beforeEach(async () => {
-    // Dynamic import to ensure mocks are applied
     const module = await import('../src/edgeDriverManager.js');
     detectEdgeVersion = module.detectEdgeVersion;
     getMajorVersion = module.getMajorVersion;
     findMsEdgeDriver = module.findMsEdgeDriver;
     ensureMsEdgeDriver = module.ensureMsEdgeDriver;
 
-    // Reset mocks
     vi.clearAllMocks();
 
-    // Mock process.platform for Windows tests
     Object.defineProperty(process, 'platform', {
       value: 'win32',
       writable: true,
@@ -95,23 +92,21 @@ describe('Edge Driver Manager', () => {
       });
 
       const result = await ensureMsEdgeDriver();
-      expect(result.success).toBe(true);
-      expect(result.method).toBe('skipped');
+      expect(isOk(result)).toBe(true);
+      expect(result.ok ? result.value.method : undefined).toBe('skipped');
     });
 
     it('should handle Edge version detection failure gracefully', async () => {
-      // Use the mocked functions directly
-      const { exec } = await vi.importMock('node:child_process');
+      const { exec } = await import('node:child_process');
 
-      vi.mocked(exec).mockImplementation(((_cmd: string, _opts: any, callback: any) => {
+      vi.mocked(exec as any).mockImplementation(((_cmd: string, _opts: any, callback: any) => {
         callback?.(new Error('Registry error'), { stdout: '', stderr: '' });
         return {} as any;
       }) as any);
 
       const result = await ensureMsEdgeDriver();
-      expect(result.success).toBe(true); // Don't fail hard
-      expect(result.method).toBe('skipped');
-      expect(result.error).toContain('Could not detect Edge');
+      expect(isOk(result)).toBe(true);
+      expect(result.ok ? result.value.method : undefined).toBe('skipped');
     });
   });
 });
