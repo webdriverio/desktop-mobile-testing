@@ -37,6 +37,7 @@ export class DriverProcess {
   private _proc?: ChildProcess;
   private streamHandlers: ReadlineInterface[] = [];
   private startupTimeout?: ReturnType<typeof setTimeout>;
+  private pollTimer?: ReturnType<typeof setTimeout>;
   private readonly startTimeout = 30000; // 30 seconds
   private _port?: number;
   private _nativePort?: number;
@@ -205,7 +206,7 @@ export class DriverProcess {
       }
 
       // Schedule next poll
-      setTimeout(poll, pollInterval);
+      this.pollTimer = setTimeout(poll, pollInterval);
     };
 
     // Start polling
@@ -328,6 +329,10 @@ export class DriverProcess {
     if (this.startupTimeout) {
       clearTimeout(this.startupTimeout);
       this.startupTimeout = undefined;
+    }
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = undefined;
     }
   }
 
