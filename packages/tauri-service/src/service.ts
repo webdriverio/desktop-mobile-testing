@@ -155,6 +155,15 @@ export default class TauriWorkerService {
   async afterSession(_config: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     log.debug('Cleaning up session...');
 
+    // Restore and clear mocks to prevent memory leaks
+    try {
+      await restoreAllMocks.call({ browser: this.browser });
+      mockStore.clear();
+      log.debug('Mock store cleared');
+    } catch (error) {
+      log.warn('Failed to clear mock store:', error);
+    }
+
     if (!this.browser) {
       log.warn('No browser instance available for session cleanup');
       clearWindowState();
