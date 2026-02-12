@@ -4,7 +4,7 @@
  * Simulates successful driver startup and graceful shutdown
  */
 
-const http = require('http');
+const http = require('node:http');
 
 const args = process.argv.slice(2);
 const portIndex = args.indexOf('--port');
@@ -13,13 +13,13 @@ const port = portIndex !== -1 ? args[portIndex + 1] : '4444';
 const nativePort = nativePortIndex !== -1 ? args[nativePortIndex + 1] : '4445';
 
 // Create HTTP server to respond to health checks
-const server = http.createServer((req, res) => {
+const server = http.createServer((_req, res) => {
   res.writeHead(200);
   res.end('OK');
 });
 
 // Start server then log startup messages
-server.listen(parseInt(port), '127.0.0.1', () => {
+server.listen(parseInt(port, 10), '127.0.0.1', () => {
   console.log(`Starting tauri-driver on port ${port} (native port: ${nativePort})`);
   console.log('tauri-driver started');
   console.log(`Server listening on 127.0.0.1:${port}`);

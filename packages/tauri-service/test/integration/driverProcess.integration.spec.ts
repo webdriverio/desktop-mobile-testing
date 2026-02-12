@@ -1,8 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-// Import mocked modules after mocks are defined
-import { ensureTauriDriver } from '../../src/driverManager.js';
 import { DriverProcess } from '../../src/driverProcess.js';
 import type { TauriServiceOptions } from '../../src/types.js';
 
