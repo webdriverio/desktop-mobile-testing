@@ -103,14 +103,14 @@ describe('Multiremote Mode - Integration', () => {
       try {
         await Promise.race([
           (launcher as any).onComplete?.(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Cleanup timeout')), 5000)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Cleanup timeout')), 10000)),
         ]);
       } catch {
         // Ignore cleanup errors
       }
     }
     // Wait for ports to be fully released
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
   describe('instance spawning', () => {
