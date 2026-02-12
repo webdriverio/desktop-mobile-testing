@@ -223,11 +223,10 @@ export default class TauriLaunchService {
         log.info(`Allocated ports for instance ${i}: main=${port}, native=${nativePort}`);
       }
 
-      for (let i = 0; i < capEntries.length; i++) {
-        const [key, value] = capEntries[i];
+      // Prepare all instance configs first
+      const instanceConfigs = capEntries.map(([key, value], i) => {
         const cap = value.capabilities;
         const instanceId = String(key);
-
         const instanceOptions = mergeOptions(this.options, cap['wdio:tauriServiceOptions']);
         this.instanceOptions.set(instanceId, instanceOptions);
 
@@ -245,8 +244,28 @@ export default class TauriLaunchService {
           `Starting tauri-driver for ${key} (ID: ${instanceId}) on ${instanceHost}:${instancePort} ` +
             `(native port: ${instanceNativePort})`,
         );
-        await this.startTauriDriverForInstance(instanceId, instancePort, instanceNativePort, env, instanceOptions);
-      }
+
+        return {
+          instanceId,
+          instancePort,
+          instanceNativePort,
+          env,
+          instanceOptions,
+        };
+      });
+
+      // Start all drivers in parallel for faster multiremote startup
+      const startPromises = instanceConfigs.map((config) =>
+        this.startTauriDriverForInstance(
+          config.instanceId,
+          config.instancePort,
+          config.instanceNativePort,
+          config.env,
+          config.instanceOptions,
+        ),
+      );
+
+      await Promise.all(startPromises);
     } else {
       // Standard session: single shared tauri-driver or per-worker drivers
       if (this.perWorkerMode) {
