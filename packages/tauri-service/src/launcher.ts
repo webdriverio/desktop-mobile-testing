@@ -677,6 +677,7 @@ export default class TauriLaunchService {
       nativeDriverPath,
       env: workerOptions.env,
       options: workerOptions,
+      instanceId: workerId,
     });
 
     // Keep backward compatibility with old map
@@ -831,6 +832,7 @@ export default class TauriLaunchService {
       nativeDriverPath,
       env,
       options: instanceOptions,
+      instanceId,
     });
 
     log.info(`[${instanceId}] Driver ready on port ${port} (native port: ${nativePort})`);

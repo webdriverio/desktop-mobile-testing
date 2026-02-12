@@ -338,7 +338,7 @@ export class DriverProcess {
     options,
     onStartupDetected,
     onErrorDetected,
-    instanceId: _instanceId,
+    instanceId,
   }: {
     stream: Readable | null;
     streamName: 'stdout' | 'stderr';
@@ -375,11 +375,11 @@ export class DriverProcess {
       if (parsedLog) {
         if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
           const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-          forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, identifier);
+          forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
         }
         if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
           const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-          forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, identifier);
+          forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
         }
       }
     });
