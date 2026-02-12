@@ -154,10 +154,10 @@ export default class TauriWorkerService {
    */
   async afterSession(_config: unknown, _capabilities: TauriCapabilities, _specs: string[]): Promise<void> {
     log.debug('Cleaning up session...');
-    clearWindowState();
 
     if (!this.browser) {
       log.warn('No browser instance available for session cleanup');
+      clearWindowState();
       return;
     }
 
@@ -165,6 +165,7 @@ export default class TauriWorkerService {
       // Delete WebDriver session explicitly for clean retry handling
       if (!this.browser.isMultiremote) {
         const stdBrowser = this.browser as WebdriverIO.Browser;
+        clearWindowState(stdBrowser.sessionId);
         if (stdBrowser.sessionId) {
           log.debug(`Deleting session: ${stdBrowser.sessionId}`);
           await stdBrowser.deleteSession();
@@ -173,9 +174,11 @@ export default class TauriWorkerService {
       } else {
         // Handle multiremote cleanup
         const mrBrowser = this.browser as WebdriverIO.MultiRemoteBrowser;
+        const sessionIds: (string | undefined)[] = [];
         for (const instanceName of mrBrowser.instances) {
           try {
             const instance = mrBrowser.getInstance(instanceName);
+            sessionIds.push(instance.sessionId);
             if (instance.sessionId) {
               log.debug(`Deleting session for instance ${instanceName}: ${instance.sessionId}`);
               await instance.deleteSession();
@@ -184,6 +187,10 @@ export default class TauriWorkerService {
           } catch (error) {
             log.warn(`Failed to delete session for instance ${instanceName}:`, error);
           }
+        }
+        // Clear all session IDs from cache
+        for (const sid of sessionIds) {
+          clearWindowState(sid);
         }
       }
     } catch (error) {

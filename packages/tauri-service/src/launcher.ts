@@ -526,6 +526,7 @@ export default class TauriLaunchService {
     }
 
     await this.driverPool.stopAll();
+    this.instanceOptions.clear();
 
     log.debug('Tauri service completed');
   }
