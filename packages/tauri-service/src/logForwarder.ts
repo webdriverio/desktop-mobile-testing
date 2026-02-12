@@ -116,13 +116,6 @@ export function forwardLog(
     : undefined;
   const formattedMessage = transformedPrefixed || formatLogMessage(source, message, instanceId);
 
-  // DEBUG: Log when generate_test_logs output is forwarded
-  if (message.includes('level log') || message.includes('generate_test_logs')) {
-    console.log(
-      `[DEBUG forwardLog] ${Date.now()} | source=${source} | level=${level} | msg="${message.substring(0, 50)}"`,
-    );
-  }
-
   // Check if we're in standalone mode (log writer initialized)
   const isInitialized = isStandaloneLogWriterInitialized();
   if (isInitialized) {
