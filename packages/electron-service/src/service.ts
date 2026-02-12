@@ -23,11 +23,10 @@ import { checkInspectFuse } from './fuses.js';
 import { LogCaptureManager, type LogCaptureOptions } from './logCapture.js';
 import mockStore from './mockStore.js';
 import { ServiceConfig } from './serviceConfig.js';
+import { isInternalCommand } from './utils.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
 
 const log = createLogger('electron-service', 'service');
-
-const isInternalCommand = (args: unknown[]) => Boolean((args[args.length - 1] as ExecuteOpts)?.internal);
 
 type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 
