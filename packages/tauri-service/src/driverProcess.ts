@@ -219,18 +219,27 @@ export class DriverProcess {
   private async isPortOpen(port: number, timeout: number): Promise<boolean> {
     return new Promise((resolve) => {
       const socket = new net.Socket();
+      let settled = false;
 
-      const onError = () => {
-        socket.destroy();
-        resolve(false);
+      const cleanup = () => {
+        if (!settled) {
+          settled = true;
+          socket.destroy();
+        }
       };
 
       socket.setTimeout(timeout);
-      socket.once('error', onError);
-      socket.once('timeout', onError);
+      socket.once('error', () => {
+        cleanup();
+        resolve(false);
+      });
+      socket.once('timeout', () => {
+        cleanup();
+        resolve(false);
+      });
 
       socket.connect(port, '127.0.0.1', () => {
-        socket.destroy();
+        cleanup();
         resolve(true);
       });
     });
@@ -242,7 +251,8 @@ export class DriverProcess {
   private async waitForHttpReady(port: number, timeout: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = http.get(`http://127.0.0.1:${port}/status`, (res) => {
-        res.resume(); // Consume response data
+        res.resume();
+        request.destroy();
         resolve();
       });
 
@@ -252,6 +262,7 @@ export class DriverProcess {
       });
 
       request.on('error', (err) => {
+        request.destroy();
         reject(err);
       });
     });
