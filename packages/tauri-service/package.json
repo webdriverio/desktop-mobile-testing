@@ -34,6 +34,9 @@
     "lint": "biome check --linter-enabled=true --formatter-enabled=false src/",
     "lint:fix": "biome check --write --linter-enabled=true --formatter-enabled=false src/",
     "test": "vitest run",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:watch": "vitest --config vitest.integration.config.ts",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

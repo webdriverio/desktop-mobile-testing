@@ -95,10 +95,12 @@ export class DriverProcess {
       };
 
       try {
+        const spawnEnv = env ? { ...process.env, ...env } : process.env;
+
         this._proc = spawn(tauriDriverPath, args, {
           stdio: ['ignore', 'pipe', 'pipe'],
           detached: false,
-          ...(env ? { env } : {}),
+          env: spawnEnv,
         });
 
         log.info(`[${identifier}] Spawned process with PID: ${this._proc.pid ?? 'unknown'}`);

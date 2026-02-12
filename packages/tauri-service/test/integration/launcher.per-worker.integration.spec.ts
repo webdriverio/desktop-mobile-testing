@@ -1,6 +1,7 @@
 import type { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import getPort from 'get-port';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriCapabilities } from '../../src/types.js';
 
@@ -61,6 +62,15 @@ vi.mock('node:fs', async () => {
   };
 });
 
+// Mock execSync to prevent ldd errors in tests
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process');
+  return {
+    ...actual,
+    execSync: vi.fn(),
+  };
+});
+
 import { ensureTauriDriver } from '../../src/driverManager.js';
 import TauriLaunchService from '../../src/launcher.js';
 
@@ -70,10 +80,8 @@ const __dirname = path.dirname(__filename);
 // Track all spawned processes for cleanup
 const spawnedProcesses: ReturnType<typeof spawn>[] = [];
 
-// Helper to get mock driver path
-function getMockDriver(name: string): string {
-  return path.join(__dirname, '..', 'fixtures', name);
-}
+// Path to mock driver executable
+const mockDriverPath = path.join(__dirname, '..', 'fixtures', 'mock-success.sh');
 
 // Global cleanup - kill any leftover processes
 afterAll(async () => {
@@ -88,9 +96,12 @@ afterAll(async () => {
 
 describe('Per-Worker Mode - Integration', () => {
   let launcher: TauriLaunchService;
+  let basePort: number;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Use dynamic base port to avoid conflicts
+    basePort = await getPort({ port: 4444 });
   });
 
   afterEach(async () => {
@@ -105,11 +116,12 @@ describe('Per-Worker Mode - Integration', () => {
         // Ignore cleanup errors
       }
     }
+    // Wait for ports to be fully released
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   describe('worker spawning', () => {
     it('should spawn separate driver per worker', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
         path: mockDriverPath,
@@ -117,9 +129,9 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
-        { maxInstances: 2 }, // Enable per-worker mode
+        { maxInstances: 2 },
       );
 
       // Simulate onPrepare (this sets up per-worker mode)
@@ -148,7 +160,6 @@ describe('Per-Worker Mode - Integration', () => {
     });
 
     it('should allocate unique ports for each worker', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
         path: mockDriverPath,
@@ -156,7 +167,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -191,7 +202,6 @@ describe('Per-Worker Mode - Integration', () => {
     });
 
     it('should set environment variables per worker', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
         path: mockDriverPath,
@@ -199,7 +209,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -226,7 +236,6 @@ describe('Per-Worker Mode - Integration', () => {
 
   describe('worker isolation', () => {
     it('should stop correct worker without affecting others', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
         path: mockDriverPath,
@@ -234,7 +243,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -264,7 +273,6 @@ describe('Per-Worker Mode - Integration', () => {
     });
 
     it('should handle worker end event', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
         path: mockDriverPath,
@@ -272,7 +280,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -293,7 +301,6 @@ describe('Per-Worker Mode - Integration', () => {
 
   describe('cleanup', () => {
     it('should cleanup all workers in onComplete', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
         path: mockDriverPath,
@@ -301,7 +308,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -334,7 +341,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { tauriDriverPort: basePort },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );

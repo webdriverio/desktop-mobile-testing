@@ -1,6 +1,7 @@
 import type { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import getPort from 'get-port';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock only the driver discovery, not the process itself
@@ -33,6 +34,15 @@ vi.mock('../../src/edgeDriverManager.js', () => ({
   }),
 }));
 
+// Mock execSync to prevent ldd errors in tests
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process');
+  return {
+    ...actual,
+    execSync: vi.fn(),
+  };
+});
+
 import { ensureTauriDriver } from '../../src/driverManager.js';
 import TauriLaunchService from '../../src/launcher.js';
 
@@ -42,10 +52,9 @@ const __dirname = path.dirname(__filename);
 // Track all spawned processes for cleanup
 const spawnedProcesses: ReturnType<typeof spawn>[] = [];
 
-// Helper to get mock driver path
-function getMockDriver(name: string): string {
-  return path.join(__dirname, '..', 'fixtures', name);
-}
+// Paths to mock driver executables
+const mockSuccessPath = path.join(__dirname, '..', 'fixtures', 'mock-success.sh');
+const mockBindFailPath = path.join(__dirname, '..', 'fixtures', 'mock-bind-fail.sh');
 
 // Global cleanup - kill any leftover processes
 afterAll(async () => {
@@ -60,13 +69,13 @@ afterAll(async () => {
 
 describe('Single Mode - Integration', () => {
   let launcher: TauriLaunchService;
-  let testPort = 4444;
-  let testNativePort = 4445;
+  let testPort: number;
+  let testNativePort: number;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Use different ports for each test to avoid conflicts
-    testPort = 4444 + Math.floor(Math.random() * 100);
+    // Use dynamic ports to avoid conflicts with other tests
+    testPort = await getPort({ port: 4444 });
     testNativePort = testPort + 1;
   });
 
@@ -82,14 +91,15 @@ describe('Single Mode - Integration', () => {
         // Ignore cleanup errors
       }
     }
+    // Wait for ports to be fully released
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   describe('startup', () => {
     it('should spawn driver and detect startup message', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
-        path: mockDriverPath,
+        path: mockSuccessPath,
         method: 'found',
       });
 
@@ -105,34 +115,12 @@ describe('Single Mode - Integration', () => {
       expect((launcher as any).getTauriDriverStatus().pid).toBeDefined();
     });
 
-    it('should spawn with correct arguments', async () => {
-      // Note: Cannot spy on node:child_process in ESM modules to verify exact args
-      // Instead, this test verifies that spawn works correctly with the expected config
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-      vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
-      });
-
-      launcher = new TauriLaunchService(
-        {},
-        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
-        { maxInstances: 1 },
-      );
-
-      await (launcher as any).startTauriDriver(testPort, testNativePort, []);
-
-      // If we get here, spawn was called with correct arguments
-      // and the driver started successfully
-      expect((launcher as any).getTauriDriverStatus().running).toBe(true);
-    });
+    // Note: "should spawn with correct arguments" test removed - redundant with "should spawn driver and detect startup message"
 
     it('should reject on bind failure', async () => {
-      const mockDriverPath = getMockDriver('mock-driver-bind-fail.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
-        path: mockDriverPath,
+        path: mockBindFailPath,
         method: 'found',
       });
 
@@ -166,10 +154,9 @@ describe('Single Mode - Integration', () => {
 
   describe('shutdown', () => {
     it('should stop with SIGTERM and wait for graceful exit', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
-        path: mockDriverPath,
+        path: mockSuccessPath,
         method: 'found',
       });
 
@@ -197,10 +184,9 @@ describe('Single Mode - Integration', () => {
 
   describe('stream handling', () => {
     it('should capture stdout and stderr output', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         success: true,
-        path: mockDriverPath,
+        path: mockSuccessPath,
         method: 'found',
       });
 

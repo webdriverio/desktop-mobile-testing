@@ -4,16 +4,23 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 import { DriverProcess } from '../../src/driverProcess.js';
 import type { TauriServiceOptions } from '../../src/types.js';
 
+// Mock execSync to prevent ldd errors in tests
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process');
+  return {
+    ...actual,
+    execSync: vi.fn(),
+  };
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Track all DriverProcess instances for cleanup
 const driverProcesses: DriverProcess[] = [];
 
-// Helper to get mock driver path
-function getMockDriver(name: string): string {
-  return path.join(__dirname, '..', 'fixtures', name);
-}
+// Path to mock driver executable
+const mockDriverPath = path.join(__dirname, '..', 'fixtures', 'mock-success.sh');
 
 // Global cleanup
 afterAll(async () => {
@@ -26,7 +33,7 @@ afterAll(async () => {
       // Ignore cleanup errors
     }
   }
-}, 10000);
+}, 20000);
 
 describe('DriverProcess - Integration', () => {
   let driver: DriverProcess;
@@ -57,12 +64,10 @@ describe('DriverProcess - Integration', () => {
     if (index > -1) {
       driverProcesses.splice(index, 1);
     }
-  }, 5000);
+  }, 10000);
 
   describe('startup', () => {
     it('should start driver and detect startup message', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-
       const info = await driver.start({
         mode: 'single',
         identifier: 'test-driver',
@@ -84,8 +89,6 @@ describe('DriverProcess - Integration', () => {
 
   describe('shutdown', () => {
     it('should stop with SIGTERM and wait for graceful exit', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-
       await driver.start({
         mode: 'single',
         identifier: 'test-driver',
@@ -105,8 +108,6 @@ describe('DriverProcess - Integration', () => {
     });
 
     it('should be safe to call stop multiple times', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-
       await driver.start({
         mode: 'single',
         identifier: 'test-driver',
@@ -130,8 +131,6 @@ describe('DriverProcess - Integration', () => {
 
   describe('state management', () => {
     it('should track running state correctly', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-
       expect(driver.isRunning()).toBe(false);
 
       await driver.start({
@@ -151,8 +150,6 @@ describe('DriverProcess - Integration', () => {
     });
 
     it('should provide access to process info', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-
       await driver.start({
         mode: 'single',
         identifier: 'test-driver',
@@ -171,8 +168,6 @@ describe('DriverProcess - Integration', () => {
 
   describe('multiple instances', () => {
     it('should manage multiple drivers independently', async () => {
-      const mockDriverPath = getMockDriver('mock-tauri-driver.js');
-
       const driver2 = new DriverProcess();
       driverProcesses.push(driver2);
 
@@ -180,8 +175,8 @@ describe('DriverProcess - Integration', () => {
       const info1 = await driver.start({
         mode: 'single',
         identifier: 'driver-1',
-        port: 4444,
-        nativePort: 4445,
+        port: 4500,
+        nativePort: 4501,
         tauriDriverPath: mockDriverPath,
         options: baseOptions,
       });
@@ -189,8 +184,8 @@ describe('DriverProcess - Integration', () => {
       const info2 = await driver2.start({
         mode: 'single',
         identifier: 'driver-2',
-        port: 4446,
-        nativePort: 4447,
+        port: 4502,
+        nativePort: 4503,
         tauriDriverPath: mockDriverPath,
         options: baseOptions,
       });
@@ -210,6 +205,55 @@ describe('DriverProcess - Integration', () => {
       // Stop second driver
       await driver2.stop();
       expect(driver2.isRunning()).toBe(false);
+    });
+  });
+
+  describe('environment inheritance', () => {
+    it('should inherit process.env and merge with custom env', async () => {
+      const driver2 = new DriverProcess();
+      driverProcesses.push(driver2);
+
+      const originalDisplay = process.env.DISPLAY;
+      process.env.DISPLAY = ':99';
+
+      try {
+        await driver2.start({
+          mode: 'single',
+          identifier: 'env-test',
+          port: 4600,
+          nativePort: 4601,
+          tauriDriverPath: mockDriverPath,
+          options: baseOptions,
+          env: { CUSTOM_VAR: 'custom_value' },
+        });
+
+        expect(driver2.isRunning()).toBe(true);
+      } finally {
+        process.env.DISPLAY = originalDisplay;
+      }
+    });
+
+    it('should inherit process.env when no custom env provided', async () => {
+      const driver2 = new DriverProcess();
+      driverProcesses.push(driver2);
+
+      const originalDisplay = process.env.DISPLAY;
+      process.env.DISPLAY = ':99';
+
+      try {
+        await driver2.start({
+          mode: 'single',
+          identifier: 'no-custom-env',
+          port: 4602,
+          nativePort: 4603,
+          tauriDriverPath: mockDriverPath,
+          options: baseOptions,
+        });
+
+        expect(driver2.isRunning()).toBe(true);
+      } finally {
+        process.env.DISPLAY = originalDisplay;
+      }
     });
   });
 });

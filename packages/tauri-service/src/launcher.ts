@@ -1,9 +1,8 @@
-import { type ChildProcess, execSync, spawn } from 'node:child_process';
+import { type ChildProcess, execSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
-import type { Readable } from 'node:stream';
+
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import getPort from 'get-port';
@@ -11,8 +10,8 @@ import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendRea
 import { ensureTauriDriver, ensureWebKitWebDriver, findTestRunnerBackend } from './driverManager.js';
 import { DriverProcess } from './driverProcess.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
-import { forwardLog, type LogLevel } from './logForwarder.js';
-import { parseLogLine } from './logParser.js';
+import type { LogLevel } from './logForwarder.js';
+
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 
@@ -54,72 +53,6 @@ function mergeOptions(
 /**
  * Options for setting up readline-based log handling
  */
-interface StreamLogHandlerOptions {
-  stream: Readable | null;
-  streamName: 'stdout' | 'stderr';
-  identifier: string;
-  options: TauriServiceOptions;
-  onStartupDetected?: () => void;
-  onErrorDetected?: (message: string) => void;
-  instanceId?: string;
-}
-
-/**
- * Set up readline-based log handling for a process stream.
- * This ensures complete lines are processed, avoiding Windows buffering issues
- * where partial lines could be received in separate chunks.
- */
-function setupStreamLogHandler({
-  stream,
-  streamName,
-  identifier,
-  options,
-  onStartupDetected,
-  onErrorDetected,
-  instanceId,
-}: StreamLogHandlerOptions): ReadlineInterface | undefined {
-  if (!stream) return undefined;
-
-  const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-  rl.on('line', (line: string) => {
-    // Log raw output for debugging
-    if (streamName === 'stdout') {
-      log.info(`[STDOUT] ${identifier} line: ${line.substring(0, 200)}`);
-    } else {
-      log.error(`[${identifier}] stderr: ${line}`);
-    }
-
-    // Check for startup messages
-    if (onStartupDetected && (line.includes('tauri-driver started') || line.includes('listening on'))) {
-      log.info(`✅ tauri-driver [${identifier}] started successfully`);
-      onStartupDetected();
-    }
-
-    // Detect bind failure (tauri-driver prints "can not listen" when port is occupied)
-    if (onErrorDetected && line.includes('can not listen')) {
-      onErrorDetected(`tauri-driver [${identifier}] failed to bind: ${line}`);
-    }
-
-    // Parse and forward log
-    const parsedLog = parseLogLine(line);
-    if (parsedLog) {
-      // Forward backend logs
-      if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-        const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-        forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-      }
-      // Forward frontend logs
-      if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-        const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-        forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-      }
-    }
-  });
-
-  return rl;
-}
-
 /**
  * Tauri launcher service
  */
@@ -127,7 +60,6 @@ export default class TauriLaunchService {
   private driverProcess?: DriverProcess; // Single mode driver
   private testRunnerBackend?: ChildProcess; // CrabNebula backend for macOS
   private appBinaryPath?: string;
-  private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
   private instanceOptions: Map<string, TauriServiceOptions> = new Map();
   private perWorkerMode: boolean = false;
   private perWorkerDrivers: Map<
@@ -139,7 +71,8 @@ export default class TauriLaunchService {
       dataDir: string;
     }
   > = new Map();
-  private perWorkerDriverProcesses: Map<string, DriverProcess> = new Map(); // New: DriverProcess for per-worker mode
+  private perWorkerDriverProcesses: Map<string, DriverProcess> = new Map(); // DriverProcess for per-worker mode
+  private multiremoteDriverProcesses: Map<string, DriverProcess> = new Map(); // DriverProcess for multiremote mode
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -571,7 +504,7 @@ export default class TauriLaunchService {
     if (process.platform === 'linux') {
       try {
         log.info('Checking shared library dependencies...');
-        const lddOutput = execSync(`ldd "${binaryPath}"`, { encoding: 'utf8', timeout: 5000 });
+        const lddOutput = execSync(`ldd "${binaryPath}"`, { encoding: 'utf8', timeout: 5000, stdio: 'pipe' });
         const missing = lddOutput.split('\n').filter((line) => line.includes('not found'));
 
         if (missing.length > 0) {
@@ -592,7 +525,13 @@ export default class TauriLaunchService {
           }
         }
       } catch (error) {
-        log.warn(`Could not check shared libraries: ${error instanceof Error ? error.message : error}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        // Check if ldd command was not found
+        if (errorMessage.includes('ENOENT') || errorMessage.includes('not found')) {
+          log.debug('ldd command not available - skipping shared library check');
+        } else {
+          log.warn(`Could not check shared libraries: ${errorMessage}`);
+        }
       }
     }
 
@@ -873,169 +812,28 @@ export default class TauriLaunchService {
     const tauriDriverPath = driverResult.path;
 
     log.info(`Starting tauri-driver [${instanceId}] on port ${port} (native port: ${nativePort})`);
-    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
 
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
     if (nativeDriverPath) {
-      args.push('--native-driver', nativeDriverPath);
       log.debug(`[${instanceId}] Using native driver: ${nativeDriverPath}`);
     }
 
-    await new Promise<void>((resolve, reject) => {
-      let settled = false;
-      const safeResolve = () => {
-        if (!settled) {
-          settled = true;
-          resolve();
-        }
-      };
-      const safeReject = (err: Error) => {
-        if (!settled) {
-          settled = true;
-          reject(err);
-        }
-      };
+    // Create DriverProcess for this multiremote instance
+    const driverProcess = new DriverProcess();
+    this.multiremoteDriverProcesses.set(instanceId, driverProcess);
 
-      const proc = spawn(tauriDriverPath, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
-        env,
-      });
-
-      log.info(`[${instanceId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
-      this.tauriDriverProcesses.set(instanceId, { proc, port, nativePort });
-
-      const instanceOpts = options ?? mergeOptions(this.options, undefined);
-
-      // Use readline for line-buffered log handling (fixes Windows chunking issues)
-      setupStreamLogHandler({
-        stream: proc.stdout,
-        streamName: 'stdout',
-        identifier: instanceId,
-        options: instanceOpts,
-        onStartupDetected: () => safeResolve(),
-        onErrorDetected: (msg) => safeReject(new Error(msg)),
-        instanceId,
-      });
-
-      setupStreamLogHandler({
-        stream: proc.stderr,
-        streamName: 'stderr',
-        identifier: instanceId,
-        options: instanceOpts,
-        instanceId,
-      });
-
-      proc.on('error', (error: Error) => {
-        log.error(`❌ Failed to start tauri-driver [${instanceId}]: ${error.message}`);
-        safeReject(error);
-      });
-
-      proc.on('exit', (code: number | null, signal: string | null) => {
-        if (code !== null && code !== 0) {
-          log.error(`❌ tauri-driver [${instanceId}] exited with code ${code}, signal: ${signal}`);
-        } else {
-          log.debug(`[${instanceId}] Process exited (code: ${code}, signal: ${signal})`);
-        }
-      });
-
-      setTimeout(() => {
-        if (!proc.killed) {
-          log.warn(`⚠️  tauri-driver [${instanceId}] startup timeout, assuming ready`);
-          safeResolve();
-        }
-      }, 30000);
+    await driverProcess.start({
+      mode: 'multiremote',
+      identifier: instanceId,
+      port,
+      nativePort,
+      tauriDriverPath,
+      nativeDriverPath,
+      env,
+      options: instanceOptions,
     });
 
-    // Wait for driver to be ready
-    log.debug(`[${instanceId}] Waiting for TCP port ${port} to open...`);
-    await this.waitForPortOpen('127.0.0.1', port, 30000);
-    log.debug(`[${instanceId}] Waiting for HTTP endpoint to be ready...`);
-    await this.waitForHttpReady('127.0.0.1', port, 10000);
-
-    // Verify process is still alive
-    const procInfo = this.tauriDriverProcesses.get(instanceId);
-    if (procInfo?.proc.killed) {
-      throw new Error(`tauri-driver [${instanceId}] process died during startup`);
-    }
     log.info(`[${instanceId}] Driver ready on port ${port} (native port: ${nativePort})`);
-  }
-
-  /**
-   * Wait until a TCP port is accepting connections
-   */
-  private async waitForPortOpen(host: string, port: number, timeoutMs: number): Promise<void> {
-    const started = Date.now();
-    const net = await import('node:net');
-    while (Date.now() - started < timeoutMs) {
-      const isOpen = await new Promise<boolean>((resolve) => {
-        const socket = new net.Socket();
-        const onError = () => {
-          try {
-            socket.destroy();
-          } catch {}
-          resolve(false);
-        };
-        socket.setTimeout(750);
-        socket.once('error', onError);
-        socket.once('timeout', onError);
-        socket.connect(port, host, () => {
-          try {
-            socket.end();
-          } catch {}
-          resolve(true);
-        });
-      });
-      if (isOpen) return;
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    log.warn(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
-    throw new Error(`Port ${host}:${port} did not open within ${timeoutMs}ms`);
-  }
-
-  /**
-   * Wait until the WebDriver HTTP endpoint is responding
-   * Verifies the driver is ready to handle HTTP requests, not just TCP connections
-   */
-  private async waitForHttpReady(host: string, port: number, timeoutMs: number): Promise<void> {
-    const started = Date.now();
-    const http = await import('node:http');
-    while (Date.now() - started < timeoutMs) {
-      const isReady = await new Promise<boolean>((resolve) => {
-        // Try /status first (standard WebDriver endpoint), fallback to / if not available
-        const tryEndpoint = (path: string) => {
-          const req = http.get(`http://${host}:${port}${path}`, { timeout: 1000 }, (res) => {
-            // Any HTTP response (even 404/500) means the server is up and responding
-            res.once('data', () => {});
-            res.once('end', () => resolve(true));
-          });
-          req.once('error', () => {
-            // If /status fails, try root endpoint
-            if (path === '/status') {
-              tryEndpoint('/');
-            } else {
-              resolve(false);
-            }
-          });
-          req.once('timeout', () => {
-            req.destroy();
-            if (path === '/status') {
-              tryEndpoint('/');
-            } else {
-              resolve(false);
-            }
-          });
-        };
-        tryEndpoint('/status');
-      });
-      if (isReady) {
-        log.debug(`HTTP endpoint ready at http://${host}:${port}`);
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    log.warn(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
-    throw new Error(`HTTP endpoint at http://${host}:${port} did not become ready within ${timeoutMs}ms`);
   }
 
   /**
@@ -1086,17 +884,14 @@ export default class TauriLaunchService {
       return;
     }
 
-    // Stop per-instance drivers if present (multiremote)
-    if (this.tauriDriverProcesses.size > 0) {
-      for (const [instanceId, { proc }] of this.tauriDriverProcesses.entries()) {
-        if (!proc.killed) {
-          log.debug(`Stopping tauri-driver [${instanceId}]...`);
-          proc.kill('SIGTERM');
-        }
+    // Stop multiremote drivers
+    if (this.multiremoteDriverProcesses.size > 0) {
+      log.info(`Stopping ${this.multiremoteDriverProcesses.size} multiremote driver(s)...`);
+      for (const [instanceId, driverProcess] of this.multiremoteDriverProcesses.entries()) {
+        log.debug(`Stopping tauri-driver [${instanceId}]...`);
+        await driverProcess.stop();
       }
-
-      await new Promise<void>((resolve) => setTimeout(resolve, 500));
-      this.tauriDriverProcesses.clear();
+      this.multiremoteDriverProcesses.clear();
       return;
     }
 
@@ -1121,6 +916,16 @@ export default class TauriLaunchService {
 
     // Check per-worker DriverProcesses - return first running worker
     for (const [, driverProcess] of this.perWorkerDriverProcesses.entries()) {
+      if (driverProcess.isRunning()) {
+        return {
+          running: true,
+          pid: driverProcess.proc?.pid,
+        };
+      }
+    }
+
+    // Check multiremote DriverProcesses - return first running instance
+    for (const [, driverProcess] of this.multiremoteDriverProcesses.entries()) {
       if (driverProcess.isRunning()) {
         return {
           running: true,
