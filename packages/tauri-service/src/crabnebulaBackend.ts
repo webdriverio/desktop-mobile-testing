@@ -46,18 +46,32 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
 
     let isReady = false;
     let startupTimeout: NodeJS.Timeout;
+    let stdoutRl: ReturnType<typeof createInterface> | undefined;
+    let stderrRl: ReturnType<typeof createInterface> | undefined;
+
+    const cleanup = () => {
+      clearTimeout(startupTimeout);
+      if (stdoutRl) {
+        stdoutRl.close();
+        stdoutRl = undefined;
+      }
+      if (stderrRl) {
+        stderrRl.close();
+        stderrRl = undefined;
+      }
+    };
 
     // Handle stdout for ready detection
     if (proc.stdout) {
-      const rl = createInterface({ input: proc.stdout });
-      rl.on('line', (line: string) => {
+      stdoutRl = createInterface({ input: proc.stdout });
+      stdoutRl.on('line', (line: string) => {
         log.debug(`[test-runner-backend] ${line}`);
 
         // Detect ready state - adjust based on actual backend output
         if (line.includes('listening') || line.includes('ready') || line.includes('started')) {
           if (!isReady) {
             isReady = true;
-            clearTimeout(startupTimeout);
+            cleanup();
             resolve({ proc, port });
           }
         }
@@ -66,22 +80,22 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
 
     // Handle stderr
     if (proc.stderr) {
-      const rl = createInterface({ input: proc.stderr });
-      rl.on('line', (line: string) => {
+      stderrRl = createInterface({ input: proc.stderr });
+      stderrRl.on('line', (line: string) => {
         log.error(`[test-runner-backend] ${line}`);
       });
     }
 
     proc.on('error', (error: Error) => {
       if (!isReady) {
-        clearTimeout(startupTimeout);
+        cleanup();
         reject(new Error(`Failed to start test-runner-backend: ${error.message}`));
       }
     });
 
     proc.on('exit', (code: number | null) => {
       if (!isReady && code !== 0) {
-        clearTimeout(startupTimeout);
+        cleanup();
         reject(
           new Error(
             `test-runner-backend exited with code ${code}. ` +
@@ -96,6 +110,7 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
       if (!isReady) {
         log.warn('test-runner-backend startup timeout, assuming ready');
         isReady = true;
+        cleanup();
         resolve({ proc, port });
       }
     }, 10000);
