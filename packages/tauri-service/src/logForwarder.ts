@@ -6,6 +6,19 @@ export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 type WdioLogger = ReturnType<typeof createLogger>;
 
 /**
+ * Cached WDIO logger instance for normal test runner mode
+ * Creating a new logger on every call causes unnecessary GC pressure
+ */
+let cachedLogger: WdioLogger | undefined;
+
+function getLogger(): WdioLogger {
+  if (!cachedLogger) {
+    cachedLogger = createLogger('tauri-service', 'service');
+  }
+  return cachedLogger;
+}
+
+/**
  * Log level priority (higher number = higher priority)
  */
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
@@ -122,8 +135,8 @@ export function forwardLog(
     const writer = getStandaloneLogWriter();
     writer.write(formattedMessage);
   } else {
-    // Use WDIO logger (normal test runner mode)
-    const logger = createLogger('tauri-service', 'service');
+    // Use cached WDIO logger (normal test runner mode)
+    const logger = getLogger();
     const loggerMethod = getLoggerMethod(logger, level);
     loggerMethod(formattedMessage);
   }
