@@ -22,8 +22,8 @@ afterAll(() => {
 vi.mock('../../src/driverManager.js', () => ({
   ensureTauriDriver: vi.fn(),
   ensureWebKitWebDriver: vi.fn().mockResolvedValue({
-    success: true,
-    path: '/usr/bin/WebKitWebDriver',
+    ok: true,
+    value: { path: '/usr/bin/WebKitWebDriver' },
   }),
 }));
 
@@ -45,9 +45,11 @@ vi.mock('@wdio/native-utils', () => ({
 
 vi.mock('../../src/edgeDriverManager.js', () => ({
   ensureMsEdgeDriver: vi.fn().mockResolvedValue({
-    success: true,
-    method: 'found',
-    driverVersion: '120.0.0',
+    ok: true,
+    value: {
+      method: 'found',
+      driverVersion: '120.0.0',
+    },
   }),
 }));
 
@@ -116,9 +118,8 @@ describe('Multiremote Mode - Integration', () => {
   describe('instance spawning', () => {
     it('should spawn separate driver per multiremote instance', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -152,9 +153,8 @@ describe('Multiremote Mode - Integration', () => {
 
     it('should allocate unique ports for each instance', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -193,9 +193,8 @@ describe('Multiremote Mode - Integration', () => {
 
     it('should update capabilities with correct ports and hostname', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -224,9 +223,8 @@ describe('Multiremote Mode - Integration', () => {
   describe('instance isolation', () => {
     it('should stop correct instance without affecting others', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -263,9 +261,8 @@ describe('Multiremote Mode - Integration', () => {
   describe('cleanup', () => {
     it('should handle instance-specific data directories', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -301,9 +298,8 @@ describe('Multiremote Mode - Integration', () => {
 
     it('should cleanup all instances in onComplete', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -336,9 +332,8 @@ describe('Multiremote Mode - Integration', () => {
     it('should handle instance start failures gracefully', async () => {
       // Use a driver that will fail to start
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: 'node', // This will exit immediately
-        method: 'found',
+        ok: true,
+        value: { path: 'node', method: 'found' }, // This will exit immediately
       });
 
       launcher = new TauriLaunchService(

@@ -24,8 +24,8 @@ afterAll(() => {
 vi.mock('../../src/driverManager.js', () => ({
   ensureTauriDriver: vi.fn(),
   ensureWebKitWebDriver: vi.fn().mockResolvedValue({
-    success: true,
-    path: '/usr/bin/WebKitWebDriver',
+    ok: true,
+    value: { path: '/usr/bin/WebKitWebDriver' },
   }),
 }));
 
@@ -47,9 +47,11 @@ vi.mock('@wdio/native-utils', () => ({
 
 vi.mock('../../src/edgeDriverManager.js', () => ({
   ensureMsEdgeDriver: vi.fn().mockResolvedValue({
-    success: true,
-    method: 'found',
-    driverVersion: '120.0.0',
+    ok: true,
+    value: {
+      method: 'found',
+      driverVersion: '120.0.0',
+    },
   }),
 }));
 
@@ -123,9 +125,8 @@ describe('Per-Worker Mode - Integration', () => {
   describe('worker spawning', () => {
     it('should spawn separate driver per worker', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -161,9 +162,8 @@ describe('Per-Worker Mode - Integration', () => {
 
     it('should allocate unique ports for each worker', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -203,9 +203,8 @@ describe('Per-Worker Mode - Integration', () => {
 
     it('should set environment variables per worker', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -237,9 +236,8 @@ describe('Per-Worker Mode - Integration', () => {
   describe('worker isolation', () => {
     it('should stop correct worker without affecting others', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -274,9 +272,8 @@ describe('Per-Worker Mode - Integration', () => {
 
     it('should handle worker end event', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -302,9 +299,8 @@ describe('Per-Worker Mode - Integration', () => {
   describe('cleanup', () => {
     it('should cleanup all workers in onComplete', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockDriverPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockDriverPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -335,9 +331,8 @@ describe('Per-Worker Mode - Integration', () => {
     it('should handle worker start failures gracefully', async () => {
       // Use a driver that will fail to start
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: 'node', // This will exit immediately
-        method: 'found',
+        ok: true,
+        value: { path: 'node', method: 'found' }, // This will exit immediately
       });
 
       launcher = new TauriLaunchService(

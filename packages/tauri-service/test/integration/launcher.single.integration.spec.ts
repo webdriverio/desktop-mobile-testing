@@ -95,9 +95,8 @@ describe('Single Mode - Integration', () => {
   describe('startup', () => {
     it('should spawn driver and detect startup message', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockSuccessPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockSuccessPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -116,9 +115,8 @@ describe('Single Mode - Integration', () => {
 
     it('should reject on bind failure', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockBindFailPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockBindFailPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -133,9 +131,8 @@ describe('Single Mode - Integration', () => {
     it('should reject if process exits during startup', async () => {
       // Create a mock driver that exits immediately
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: 'node',
-        method: 'found',
+        ok: true,
+        value: { path: 'node', method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -152,9 +149,8 @@ describe('Single Mode - Integration', () => {
   describe('shutdown', () => {
     it('should stop with SIGTERM and wait for graceful exit', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockSuccessPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockSuccessPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
@@ -167,7 +163,7 @@ describe('Single Mode - Integration', () => {
       const pid = (launcher as any).getTauriDriverStatus().pid;
       expect(pid).toBeDefined();
 
-      await (launcher as any).stopTauriDriver();
+      await (launcher as any).driverPool.stopDriver('tauri-driver');
 
       expect((launcher as any).getTauriDriverStatus().running).toBe(false);
     });
@@ -182,9 +178,8 @@ describe('Single Mode - Integration', () => {
   describe('stream handling', () => {
     it('should capture stdout and stderr output', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
-        success: true,
-        path: mockSuccessPath,
-        method: 'found',
+        ok: true,
+        value: { path: mockSuccessPath, method: 'found' },
       });
 
       launcher = new TauriLaunchService(
