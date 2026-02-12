@@ -454,8 +454,9 @@ function setupInvokeInterception(): void {
       });
       (core as { _wdioInvokeInterceptor?: boolean })._wdioInvokeInterceptor = true;
       console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete');
-    } catch (_error) {
-      console.error('[WDIO Tauri Plugin] Failed to set up invoke interception:', _error);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('[WDIO Tauri Plugin] Failed to set up invoke interception:', errorMsg);
     }
   };
 
