@@ -13,17 +13,36 @@ function getLogDir() {
 describe('Tauri Log Integration', () => {
   describe('Command Execution', () => {
     it('should capture backend logs via generate_test_logs command', async () => {
-      await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+      const startTime = Date.now();
+      const timestamp = () => `+${Date.now() - startTime}ms`;
 
+      console.log(`[${timestamp()}] Invoking generate_test_logs...`);
+      await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+      console.log(`[${timestamp()}] generate_test_logs completed`);
+
+      let pollCount = 0;
       await browser.waitUntil(
         async () => {
+          pollCount++;
           const logs = await readWdioLogs(getLogDir());
-          return logs.includes('[Tauri:Backend]');
+          const hasBackendLogs = logs.includes('[Tauri:Backend]');
+          console.log(`[${timestamp()}] Poll #${pollCount}: ${logs.length} chars, hasBackendLogs=${hasBackendLogs}`);
+
+          // Debug: check for specific backend log patterns
+          if (!hasBackendLogs && logs.length > 0) {
+            const hasAnyBackend = logs.includes('Tauri:Backend');
+            const hasInfoLevel = logs.includes('INFO level log');
+            console.log(`[${timestamp()}] hasAnyBackend=${hasAnyBackend}, hasInfoLevel=${hasInfoLevel}`);
+          }
+
+          return hasBackendLogs;
         },
         { timeout: 5000, timeoutMsg: 'Backend logs not captured' },
       );
 
       const logs = await readWdioLogs(getLogDir());
+      console.log(`[${timestamp()}] Final read: ${logs.length} chars`);
+
       expect(logs).toMatch(/\[Tauri:Backend\].*INFO level log/s);
       expect(logs).toMatch(/\[Tauri:Backend\].*WARN level log/s);
       expect(logs).toMatch(/\[Tauri:Backend\].*ERROR level log/s);

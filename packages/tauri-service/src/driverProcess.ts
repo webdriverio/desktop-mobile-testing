@@ -373,6 +373,13 @@ export class DriverProcess {
       // Parse and forward log
       const parsedLog = parseLogLine(line);
       if (parsedLog) {
+        // DEBUG: Log when generate_test_logs output is parsed
+        if (parsedLog.message.includes('level log')) {
+          console.log(
+            `[DEBUG driverProcess] ${Date.now()} | identifier=${identifier} | parsed source=${parsedLog.source} | level=${parsedLog.level} | msg="${parsedLog.message.substring(0, 50)}"`,
+          );
+        }
+
         if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
           const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
           forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
