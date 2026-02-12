@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use tauri::{
     plugin::{self, TauriPlugin},
-    Manager, Runtime, Listener,
+    Manager, Runtime,
 };
 
 pub use models::*;
@@ -44,26 +44,6 @@ impl log::Log for WdioUnifiedLogger {
     fn flush(&self) {}
 }
 
-/// Listen for frontend-log events and output to stderr
-/// Uses app.listen() to catch events emitted from frontend
-/// Outputs with [Tauri:Frontend] prefix for unified log parsing
-fn setup_frontend_log_listener<R: Runtime>(app: &tauri::AppHandle<R>) {
-    eprintln!("[WDIO-Rust] Setting up frontend-log listener");
-    let app_handle = app.app_handle().clone();
-
-    // Try app-level listener
-    let _ = app_handle.listen("frontend-log", move |event: tauri::Event| {
-        eprintln!("[WDIO-Rust] Received frontend-log event on app, payload: {:?}", event.payload());
-    });
-
-    // Also try listen_any for cross-window events
-    let _ = app_handle.listen_any("frontend-log", move |event: tauri::Event| {
-        eprintln!("[WDIO-Rust] Received frontend-log event via listen_any, payload: {:?}", event.payload());
-    });
-
-    eprintln!("[WDIO-Rust] frontend-log listeners set up");
-}
-
 /// Creates the Wdio plugin with default options.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     plugin::Builder::new("wdio")
@@ -90,9 +70,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 }
             }
             drop(initialized);
-
-            // Setup frontend log listener
-            setup_frontend_log_listener(app_handle);
 
             #[cfg(desktop)]
             let wdio = desktop::init(app_handle, _api)?;

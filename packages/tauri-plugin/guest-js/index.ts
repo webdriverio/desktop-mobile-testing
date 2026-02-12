@@ -544,83 +544,6 @@ function setupBackendLogListener(): void {
 }
 
 /**
- * Setup event listener for frontend logs
- * Backend emits 'frontend-log' events that we forward to console for WebDriver capture
- * This allows log_frontend command to route logs through frontend console for capture
- */
-function setupFrontendLogListener(): void {
-  if (typeof window === 'undefined') {
-    console.info('[WDIO][Frontend] setupFrontendLogListener: window is undefined, skipping');
-    return;
-  }
-
-  console.info('[WDIO][Frontend] Installing frontend-log listener');
-
-  const maxAttempts = 100;
-  const retryInterval = 50;
-  let attempts = 0;
-  let removeListenerRef: (() => void) | null = null;
-
-  const trySetup = () => {
-    attempts++;
-
-    if (attempts % 10 === 1) {
-      console.info(`[WDIO][Frontend] Waiting for Tauri for frontend-log listener (attempt ${attempts}/${maxAttempts})`);
-    }
-
-    if (attempts >= maxAttempts) {
-      console.warn('[WDIO][Frontend] Timeout waiting for Tauri - frontend log listener not set up');
-      return;
-    }
-
-    if (typeof window.__TAURI__ === 'undefined' || typeof window.__TAURI__.event === 'undefined') {
-      const timerId = window.setTimeout(trySetup, retryInterval);
-      cleanupRegistry.addTimer(timerId);
-      return;
-    }
-
-    console.info('[WDIO][Frontend] Tauri ready - setting up frontend-log listener');
-
-    const setupListener = async () => {
-      try {
-        const { listen } = await import('@tauri-apps/api/event');
-
-        const removeListener = await listen('frontend-log', (event) => {
-          const logMessage = event.payload as string;
-          console.info(logMessage);
-        });
-
-        removeListenerRef = removeListener;
-        cleanupRegistry.addListener(removeListener);
-
-        console.info('[WDIO][Frontend] Frontend log listener registered successfully');
-
-        if (!window.wdioTauri) {
-          window.wdioTauri = {} as Window['wdioTauri'];
-        }
-        const wdioTauri = window.wdioTauri;
-        if (!wdioTauri) {
-          return;
-        }
-        wdioTauri.cleanupFrontendLogListener = () => {
-          if (removeListenerRef) {
-            removeListenerRef();
-            removeListenerRef = null;
-          }
-          console.log('[WDIO Tauri Plugin] Frontend log listener cleaned up');
-        };
-      } catch (error) {
-        console.log(`[WDIO Tauri Plugin] Failed to setup frontend log listener: ${error}`);
-      }
-    };
-
-    setupListener();
-  };
-
-  trySetup();
-}
-
-/**
  * Initialize the plugin frontend API
  * This sets up window.wdioTauri for backward compatibility with execute injection pattern
  */
@@ -694,12 +617,6 @@ export async function init(): Promise<void> {
   console.log('[WDIO Tauri Plugin] Setting up backend log event listener...');
   setupBackendLogListener();
   console.log('[WDIO Tauri Plugin] ✅ Backend log listener initialized');
-
-  // Setup event listener for frontend logs
-  // Backend emits 'frontend-log' events that we forward to console for WebDriver capture
-  console.log('[WDIO Tauri Plugin] Setting up frontend log event listener...');
-  setupFrontendLogListener();
-  console.log('[WDIO Tauri Plugin] ✅ Frontend log listener initialized');
 
   // Expose native spy on window for mock creation
   window.__wdio_spy__ = nativeSpy;
