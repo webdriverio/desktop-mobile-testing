@@ -1,4 +1,6 @@
 import { type ChildProcess, spawn } from 'node:child_process';
+import http from 'node:http';
+import net from 'node:net';
 import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import type { Readable } from 'node:stream';
 import { createLogger } from '@wdio/native-utils';
@@ -74,7 +76,6 @@ export class DriverProcess {
 
     return new Promise<DriverProcessInfo>((resolve, reject) => {
       let settled = false;
-      let startupDetected = false;
 
       const safeResolve = (info: DriverProcessInfo) => {
         if (!settled) {
@@ -104,7 +105,7 @@ export class DriverProcess {
 
         // Set startup timeout
         this.startupTimeout = setTimeout(() => {
-          if (!startupDetected) {
+          if (!settled) {
             safeReject(new Error(`tauri-driver [${identifier}] failed to start within ${this.startTimeout}ms`));
           }
         }, this.startTimeout);
@@ -115,10 +116,6 @@ export class DriverProcess {
           streamName: 'stdout',
           identifier,
           options: serviceOptions,
-          onStartupDetected: () => {
-            startupDetected = true;
-            log.info(`✅ tauri-driver [${identifier}] started successfully`);
-          },
           onErrorDetected: (message: string) => {
             safeReject(new Error(message));
           },
@@ -151,20 +148,109 @@ export class DriverProcess {
           safeReject(new Error(`tauri-driver [${identifier}] failed to start: ${err.message}`));
         });
 
-        // Wait a bit then resolve if process is still running
-        setTimeout(() => {
-          if (this._proc && !this._proc.killed && startupDetected) {
-            safeResolve({
-              proc: this._proc,
-              port,
-              nativePort,
-              dataDir: options.dataDir,
-            });
-          }
-        }, 30000);
+        // Poll for readiness instead of waiting for stdout message
+        this.pollForReadiness(identifier, port, nativePort, options.dataDir, safeResolve, safeReject);
       } catch (error) {
         safeReject(error instanceof Error ? error : new Error(String(error)));
       }
+    });
+  }
+
+  /**
+   * Poll for driver readiness by checking TCP port and HTTP endpoint
+   */
+  private async pollForReadiness(
+    identifier: string,
+    port: number,
+    nativePort: number,
+    dataDir: string | undefined,
+    resolve: (info: DriverProcessInfo) => void,
+    reject: (err: Error) => void,
+  ): Promise<void> {
+    const startTime = Date.now();
+    const timeout = 10000; // 10 seconds
+    const pollInterval = 100; // 100ms between polls
+
+    const poll = async () => {
+      if (!this._proc || this._proc.killed) {
+        reject(new Error(`tauri-driver [${identifier}] process died during startup`));
+        return;
+      }
+
+      if (Date.now() - startTime > timeout) {
+        reject(new Error(`tauri-driver [${identifier}] failed to become ready within ${timeout}ms`));
+        return;
+      }
+
+      // Check if TCP port is open
+      const isPortOpen = await this.isPortOpen(port, 500);
+
+      if (isPortOpen) {
+        // Port is open, check if HTTP endpoint responds
+        try {
+          await this.waitForHttpReady(port, 1000);
+          log.info(`✅ tauri-driver [${identifier}] is ready on port ${port}`);
+          resolve({
+            proc: this._proc,
+            port,
+            nativePort,
+            dataDir,
+          });
+          return;
+        } catch {
+          // Port is open but HTTP not ready yet, continue polling
+        }
+      }
+
+      // Schedule next poll
+      setTimeout(poll, pollInterval);
+    };
+
+    // Start polling
+    poll();
+  }
+
+  /**
+   * Check if a TCP port is open
+   */
+  private async isPortOpen(port: number, timeout: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+
+      const onError = () => {
+        socket.destroy();
+        resolve(false);
+      };
+
+      socket.setTimeout(timeout);
+      socket.once('error', onError);
+      socket.once('timeout', onError);
+
+      socket.connect(port, '127.0.0.1', () => {
+        socket.destroy();
+        resolve(true);
+      });
+    });
+  }
+
+  /**
+   * Wait for HTTP endpoint to respond
+   */
+  private async waitForHttpReady(port: number, timeout: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = http.get(`http://127.0.0.1:${port}/status`, (res) => {
+        res.resume(); // Consume response data
+        resolve();
+      });
+
+      request.setTimeout(timeout, () => {
+        request.destroy();
+        reject(new Error('HTTP request timeout'));
+      });
+
+      request.on('error', (err) => {
+        reject(err);
+      });
     });
   }
 
