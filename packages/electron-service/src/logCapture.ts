@@ -42,11 +42,14 @@ export class LogCaptureManager {
 
       // Create listener for console events
       this.mainProcessListener = (event: unknown) => {
-        const parsed = parseConsoleEvent(event as ConsoleAPICalledEvent, 'main');
+        try {
+          const parsed = parseConsoleEvent(event as ConsoleAPICalledEvent, 'main');
 
-        // Check if we should log this level
-        if (shouldLog(parsed.level, options.mainProcessLogLevel)) {
-          forwardLog('main', parsed.level, parsed.message, options.mainProcessLogLevel, instanceId);
+          if (shouldLog(parsed.level, options.mainProcessLogLevel)) {
+            forwardLog('main', parsed.level, parsed.message, options.mainProcessLogLevel, instanceId);
+          }
+        } catch (error) {
+          log.warn('Error processing main process console event:', error);
         }
       };
 
@@ -81,7 +84,11 @@ export class LogCaptureManager {
       // Listen for new targets
       puppeteerBrowser.on('targetcreated', async (target) => {
         if (target.type() === 'page') {
-          await this.attachToPuppeteerTarget(target, options, instanceId);
+          try {
+            await this.attachToPuppeteerTarget(target, options, instanceId);
+          } catch (error) {
+            log.warn('Failed to attach to new Puppeteer target:', error);
+          }
         }
       });
 
@@ -110,12 +117,15 @@ export class LogCaptureManager {
 
       // Create listener for console events from this target
       const listener = (event: unknown) => {
-        const consoleEvent = event as ConsoleAPICalledEvent;
-        const parsed = parseConsoleEvent(consoleEvent, 'renderer');
+        try {
+          const consoleEvent = event as ConsoleAPICalledEvent;
+          const parsed = parseConsoleEvent(consoleEvent, 'renderer');
 
-        // Check if we should log this level
-        if (shouldLog(parsed.level, options.rendererLogLevel)) {
-          forwardLog('renderer', parsed.level, parsed.message, options.rendererLogLevel, instanceId);
+          if (shouldLog(parsed.level, options.rendererLogLevel)) {
+            forwardLog('renderer', parsed.level, parsed.message, options.rendererLogLevel, instanceId);
+          }
+        } catch (error) {
+          log.warn('Error processing renderer console event:', error);
         }
       };
 
