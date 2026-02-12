@@ -124,8 +124,7 @@ function setupStreamLogHandler({
  * Tauri launcher service
  */
 export default class TauriLaunchService {
-  private tauriDriverProcess?: ChildProcess;
-  private driverProcess?: DriverProcess; // New: DriverProcess for single mode
+  private driverProcess?: DriverProcess; // Single mode driver
   private testRunnerBackend?: ChildProcess; // CrabNebula backend for macOS
   private appBinaryPath?: string;
   private tauriDriverProcesses: Map<string, { proc: ChildProcess; port: number; nativePort: number }> = new Map();
@@ -140,6 +139,7 @@ export default class TauriLaunchService {
       dataDir: string;
     }
   > = new Map();
+  private perWorkerDriverProcesses: Map<string, DriverProcess> = new Map(); // New: DriverProcess for per-worker mode
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -719,92 +719,31 @@ export default class TauriLaunchService {
     const tauriDriverPath = driverResult.path;
 
     log.info(`Starting tauri-driver [worker-${workerId}] on port ${port} (native port: ${nativePort})`);
-    const args = ['--port', port.toString(), '--native-port', nativePort.toString()];
 
     const nativeDriverPath = this.options.nativeDriverPath || getWebKitWebDriverPath();
     if (nativeDriverPath) {
-      args.push('--native-driver', nativeDriverPath);
       log.debug(`[worker-${workerId}] Using native driver: ${nativeDriverPath}`);
     }
 
-    // Extract data directory from env for storage
-    const dataDir = process.env.XDG_DATA_HOME || process.env.TAURI_DATA_DIR || '';
+    // Create DriverProcess for this worker
+    const driverProcess = new DriverProcess();
+    this.perWorkerDriverProcesses.set(workerId, driverProcess);
 
-    await new Promise<void>((resolve, reject) => {
-      let settled = false;
-      const safeResolve = () => {
-        if (!settled) {
-          settled = true;
-          resolve();
-        }
-      };
-      const safeReject = (err: Error) => {
-        if (!settled) {
-          settled = true;
-          reject(err);
-        }
-      };
-
-      const spawnEnv = workerOptions.env ? { ...process.env, ...workerOptions.env } : undefined;
-
-      const proc = spawn(tauriDriverPath, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: false,
-        ...(spawnEnv ? { env: spawnEnv } : {}),
-      });
-
-      log.info(`[worker-${workerId}] Spawned process with PID: ${proc.pid ?? 'unknown'}`);
-      this.perWorkerDrivers.set(workerId, { proc, port, nativePort, dataDir });
-
-      // Use readline for line-buffered log handling (fixes Windows chunking issues)
-      setupStreamLogHandler({
-        stream: proc.stdout,
-        streamName: 'stdout',
-        identifier: `worker-${workerId}`,
-        options: workerOptions,
-        onStartupDetected: () => safeResolve(),
-        onErrorDetected: (msg) => safeReject(new Error(msg)),
-      });
-
-      setupStreamLogHandler({
-        stream: proc.stderr,
-        streamName: 'stderr',
-        identifier: `worker-${workerId}`,
-        options: workerOptions,
-      });
-
-      proc.on('error', (error: Error) => {
-        log.error(`❌ Failed to start tauri-driver [worker-${workerId}]: ${error.message}`);
-        safeReject(error);
-      });
-
-      proc.on('exit', (code: number | null, signal: string | null) => {
-        if (code !== null && code !== 0) {
-          log.error(`❌ tauri-driver [worker-${workerId}] exited with code ${code}, signal: ${signal}`);
-        } else {
-          log.debug(`[worker-${workerId}] Process exited (code: ${code}, signal: ${signal})`);
-        }
-      });
-
-      setTimeout(() => {
-        if (!proc.killed) {
-          log.warn(`⚠️  tauri-driver [worker-${workerId}] startup timeout, assuming ready`);
-          safeResolve();
-        }
-      }, 30000);
+    const info = await driverProcess.start({
+      mode: 'worker',
+      identifier: `worker-${workerId}`,
+      port,
+      nativePort,
+      tauriDriverPath,
+      nativeDriverPath,
+      env: workerOptions.env,
+      options: workerOptions,
     });
 
-    // Wait for driver to be ready
-    log.debug(`[worker-${workerId}] Waiting for TCP port ${port} to open...`);
-    await this.waitForPortOpen('127.0.0.1', port, 30000);
-    log.debug(`[worker-${workerId}] Waiting for HTTP endpoint to be ready...`);
-    await this.waitForHttpReady('127.0.0.1', port, 10000);
+    // Keep backward compatibility with old map
+    const dataDir = process.env.XDG_DATA_HOME || process.env.TAURI_DATA_DIR || '';
+    this.perWorkerDrivers.set(workerId, { proc: info.proc, port, nativePort, dataDir });
 
-    // Verify process is still alive
-    const procInfo = this.perWorkerDrivers.get(workerId);
-    if (procInfo?.proc.killed) {
-      throw new Error(`tauri-driver [worker-${workerId}] process died during startup`);
-    }
     log.info(`[worker-${workerId}] Driver ready on port ${port} (native port: ${nativePort})`);
   }
 
@@ -825,30 +764,15 @@ export default class TauriLaunchService {
    * Stop tauri-driver for a specific worker
    */
   private async stopTauriDriverForWorker(workerId: string): Promise<void> {
-    const driverInfo = this.perWorkerDrivers.get(workerId);
-    if (!driverInfo) {
+    const driverProcess = this.perWorkerDriverProcesses.get(workerId);
+    if (!driverProcess) {
       log.debug(`No driver found for worker ${workerId}`);
       return;
     }
 
-    const { proc, port } = driverInfo;
-
-    if (proc.killed) {
-      log.debug(`Driver for worker ${workerId} already stopped`);
-      this.perWorkerDrivers.delete(workerId);
-      return;
-    }
-
-    log.info(`Stopping tauri-driver for worker ${workerId} (port: ${port})`);
-
-    // Send SIGTERM for graceful shutdown
-    proc.kill('SIGTERM');
-
-    await this.waitForProcessExit(proc);
-
-    // Wait additional time for port release
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
+    log.info(`Stopping tauri-driver for worker ${workerId}`);
+    await driverProcess.stop();
+    this.perWorkerDriverProcesses.delete(workerId);
     this.perWorkerDrivers.delete(workerId);
     log.debug(`Driver for worker ${workerId} stopped and cleaned up`);
   }
@@ -915,7 +839,7 @@ export default class TauriLaunchService {
       log.info(`Starting tauri-driver (DISPLAY from environment: ${process.env.DISPLAY || 'not set'})`);
     }
 
-    const info = await this.driverProcess.start({
+    await this.driverProcess.start({
       mode: 'single',
       identifier: 'tauri-driver',
       port,
@@ -925,9 +849,6 @@ export default class TauriLaunchService {
       env: options.env,
       options,
     });
-
-    // Keep reference to old field for backward compatibility during transition
-    this.tauriDriverProcess = info.proc;
 
     log.info(`Driver ready on port ${port} (native port: ${nativePort})`);
   }
@@ -1153,17 +1074,14 @@ export default class TauriLaunchService {
    * Stop tauri-driver process with proper cleanup
    */
   private async stopTauriDriver(): Promise<void> {
-    // Stop per-worker drivers if present
-    if (this.perWorkerDrivers.size > 0) {
-      log.info(`Stopping ${this.perWorkerDrivers.size} per-worker driver(s)...`);
-      for (const [workerId, { proc }] of this.perWorkerDrivers.entries()) {
-        if (!proc.killed) {
-          log.debug(`Stopping tauri-driver [worker-${workerId}]...`);
-          proc.kill('SIGTERM');
-        }
+    // Stop per-worker drivers
+    if (this.perWorkerDriverProcesses.size > 0) {
+      log.info(`Stopping ${this.perWorkerDriverProcesses.size} per-worker driver(s)...`);
+      for (const [workerId, driverProcess] of this.perWorkerDriverProcesses.entries()) {
+        log.debug(`Stopping tauri-driver [worker-${workerId}]...`);
+        await driverProcess.stop();
       }
-
-      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+      this.perWorkerDriverProcesses.clear();
       this.perWorkerDrivers.clear();
       return;
     }
@@ -1182,67 +1100,18 @@ export default class TauriLaunchService {
       return;
     }
 
-    // Single driver mode - use DriverProcess if available
+    // Single driver mode
     if (this.driverProcess) {
       await this.driverProcess.stop();
       this.driverProcess = undefined;
-      this.tauriDriverProcess = undefined;
-      return;
     }
-
-    // Legacy fallback - direct process management
-    if (this.tauriDriverProcess && !this.tauriDriverProcess.killed) {
-      log.debug('Stopping tauri-driver...');
-      this.tauriDriverProcess.kill('SIGTERM');
-
-      await this.waitForProcessExit(this.tauriDriverProcess);
-
-      // Additional delay to ensure port is fully released
-      // This is especially important on slower CI runners
-      await new Promise<void>((resolve) => setTimeout(resolve, 500));
-    }
-  }
-
-  /**
-   * Wait for a process to exit, with graceful shutdown and force-kill fallback
-   */
-  private async waitForProcessExit(proc: ChildProcess): Promise<void> {
-    const stopTimeout = process.env.CI ? 10000 : 5000;
-
-    let shutdownTimeout: ReturnType<typeof setTimeout> | null = null;
-    let killTimeout: ReturnType<typeof setTimeout> | null = null;
-    const cleanup = () => {
-      if (shutdownTimeout) clearTimeout(shutdownTimeout);
-      if (killTimeout) clearTimeout(killTimeout);
-    };
-
-    return new Promise<void>((resolve) => {
-      const onExit = () => {
-        cleanup();
-        log.debug('tauri-driver process exited');
-        resolve();
-      };
-
-      proc.once('exit', onExit);
-
-      shutdownTimeout = setTimeout(() => {
-        log.warn(`tauri-driver did not stop gracefully after ${stopTimeout}ms, forcing kill`);
-        proc.kill('SIGKILL');
-
-        killTimeout = setTimeout(() => {
-          log.warn('tauri-driver force kill timeout, giving up');
-          cleanup();
-          resolve();
-        }, 2000);
-      }, stopTimeout);
-    });
   }
 
   /**
    * Get tauri-driver status
    */
   getTauriDriverStatus(): { running: boolean; pid?: number } {
-    // Check new DriverProcess first, then fall back to old field
+    // Check single mode DriverProcess first
     if (this.driverProcess) {
       return {
         running: this.driverProcess.isRunning(),
@@ -1250,9 +1119,18 @@ export default class TauriLaunchService {
       };
     }
 
+    // Check per-worker DriverProcesses - return first running worker
+    for (const [, driverProcess] of this.perWorkerDriverProcesses.entries()) {
+      if (driverProcess.isRunning()) {
+        return {
+          running: true,
+          pid: driverProcess.proc?.pid,
+        };
+      }
+    }
+
     return {
-      running: this.tauriDriverProcess ? !this.tauriDriverProcess.killed : false,
-      pid: this.tauriDriverProcess?.pid,
+      running: false,
     };
   }
 }
