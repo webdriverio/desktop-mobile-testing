@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import getPort from 'get-port';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mockBindFailPath, mockSuccessPath } from '../mockPaths.js';
 
 // Mock only the driver discovery, not the process itself
 vi.mock('../../src/driverManager.js', () => ({
@@ -51,10 +52,6 @@ const __dirname = path.dirname(__filename);
 
 // Track all spawned processes for cleanup
 const spawnedProcesses: ReturnType<typeof spawn>[] = [];
-
-// Paths to mock driver executables
-const mockSuccessPath = path.join(__dirname, '..', 'fixtures', 'mock-success.sh');
-const mockBindFailPath = path.join(__dirname, '..', 'fixtures', 'mock-bind-fail.sh');
 
 // Global cleanup - kill any leftover processes
 afterAll(async () => {
