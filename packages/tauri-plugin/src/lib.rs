@@ -15,19 +15,6 @@ pub use error::{Error, Result};
 
 use desktop::Wdio;
 
-struct AppHandleHolder {
-    handle: Mutex<Option<Box<dyn std::any::Any + Send + Sync>>>,
-}
-
-static APP_HANDLE: AppHandleHolder = AppHandleHolder {
-    handle: Mutex::new(None),
-};
-
-pub fn set_app_handle<R: Runtime>(app: tauri::AppHandle<R>) {
-    let mut guard = APP_HANDLE.handle.lock().unwrap();
-    *guard = Some(Box::new(app));
-}
-
 struct WdioUnifiedLogger;
 
 static LOGGER_INIT: Mutex<bool> = Mutex::new(false);
@@ -56,8 +43,6 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             commands::get_window_states
         ])
         .setup(|app_handle, _api| {
-            set_app_handle(app_handle.clone());
-
             // Only set up our global logger if no logger is already configured
             // This prevents conflicts with tauri_plugin_log or other loggers
             let mut initialized = LOGGER_INIT.lock().unwrap();
