@@ -87,7 +87,13 @@ export class ElectronCdpBridge extends CdpBridge {
       let firstContextId: number | null = null;
       let resolved = false;
 
-      this.on('Runtime.executionContextCreated', (params) => {
+      const onContextCreated = (params: {
+        context: { id: number; name: string; origin: string; auxData?: { isDefault?: boolean } };
+      }) => {
+        if (resolved) {
+          return;
+        }
+
         eventCount++;
         const eventTime = Date.now() - handlerStartTime;
         log.debug(`[Handler +${eventTime}ms] Runtime.executionContextCreated event #${eventCount} received:`, {
@@ -98,48 +104,54 @@ export class ElectronCdpBridge extends CdpBridge {
           auxData: params.context.auxData,
         });
 
-        // Store the first context we see as a fallback
         if (firstContextId === null) {
           firstContextId = params.context.id;
           log.debug(`[Handler +${eventTime}ms] Stored first context ID as fallback: ${firstContextId}`);
         }
 
-        // Prefer contexts marked as default
         if (params.context.auxData?.isDefault) {
           log.debug(
             `[Handler +${eventTime}ms] Found default context with ID: ${params.context.id}, resolving immediately`,
           );
           resolved = true;
+          clearTimeout(timeoutId);
+          this.off('Runtime.executionContextCreated', onContextCreated);
           resolve(params.context.id);
         } else {
           log.debug(`[Handler +${eventTime}ms] Context is not marked as default, waiting for next event`);
         }
-      });
+      };
+
+      this.on('Runtime.executionContextCreated', onContextCreated);
 
       log.debug(
         `[Handler +${Date.now() - handlerStartTime}ms] Listener registered, setting ${this.options.timeout}ms timeout`,
       );
 
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        if (resolved) {
+          log.debug(`[Handler +${Date.now() - handlerStartTime}ms] Timeout fired but already resolved, skipping`);
+          return;
+        }
+
         const timeoutTime = Date.now() - handlerStartTime;
         log.debug(
           `[Handler +${timeoutTime}ms] Timeout fired, resolved=${resolved}, eventCount=${eventCount}, firstContextId=${firstContextId}`,
         );
-        if (!resolved) {
-          if (firstContextId !== null) {
-            log.warn(
-              `[Handler +${timeoutTime}ms] No default context found after ${this.options.timeout}ms, using first context ID: ${firstContextId} (received ${eventCount} context events)`,
-            );
-            resolve(firstContextId);
-          } else {
-            const err = new Error(
-              `Timeout exceeded to get the ContextId after ${this.options.timeout}ms (received ${eventCount} context events)`,
-            );
-            log.error(`[Handler +${timeoutTime}ms] ${err.message}`);
-            reject(err);
-          }
+        resolved = true;
+        this.off('Runtime.executionContextCreated', onContextCreated);
+
+        if (firstContextId !== null) {
+          log.warn(
+            `[Handler +${timeoutTime}ms] No default context found after ${this.options.timeout}ms, using first context ID: ${firstContextId} (received ${eventCount} context events)`,
+          );
+          resolve(firstContextId);
         } else {
-          log.debug(`[Handler +${timeoutTime}ms] Already resolved, timeout is a no-op`);
+          const err = new Error(
+            `Timeout exceeded to get the ContextId after ${this.options.timeout}ms (received ${eventCount} context events)`,
+          );
+          log.error(`[Handler +${timeoutTime}ms] ${err.message}`);
+          reject(err);
         }
       }, this.options.timeout);
     });
