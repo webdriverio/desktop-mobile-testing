@@ -24,7 +24,7 @@
 
 <p align="center">
     <a href="#features">Features</a> |
-    <a href="#quick-start">Quick Start</a> |
+    <a href="#development">Development</a> |
     <a href="./CONTRIBUTING.md">Contribute</a> |
     <a href="./CHANGELOG.md">Changelog</a>
 </p>
@@ -69,22 +69,6 @@ See [ROADMAP.md](./ROADMAP.md) for detailed sequencing, os support, and timeline
 - 🌐 **Cross-platform support** - Write once, test everywhere
 - 🔧 **Consistent API** - Familiar WDIO patterns across all frameworks
 
-## Quick Start
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Run tests
-pnpm test
-
-# Run linting
-pnpm lint
-```
-
 ## Project Structure
 
 ```
@@ -95,6 +79,7 @@ desktop-mobile/
 │   ├── electron-cdp-bridge/     # Chrome DevTools Protocol bridge
 │   ├── native-utils/            # Cross-platform utilities
 │   ├── native-types/            # TypeScript type definitions
+│   ├── native-spy/              # Spy utilities for mocking
 │   ├── bundler/                 # Build tool for packaging
 │   └── tauri-plugin/            # Tauri plugin for backend access
 ├── fixtures/                   # Test fixtures and example apps
@@ -172,4 +157,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Related Projects
 
 - [wdio-electron-service](https://github.com/webdriverio-community/wdio-electron-service) - Legacy Electron service repo
-- [tauri-driver](https://github.com/elvis-epx/tauri-driver) - Official Tauri WebDriver implementation
+- [tauri-driver](https://github.com/tauri-apps/tauri/tree/dev/crates/tauri-driver) - Official Tauri WebDriver server
