@@ -11,10 +11,6 @@ on:
         description: 'OS of runner'
         required: true
         type: string
-      build-command:
-        description: 'Build command for Tauri app (build or build:debug)'
-        type: string
-        default: 'build'
       build_id:
         description: 'Build ID from the main build job'
         type: string
@@ -306,7 +302,7 @@ jobs:
           fi
 
       - name: 🏗️ Build Tauri Package Test App
-        run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-app-example --only
+        run: pnpm exec turbo run build --filter=tauri-app-example --only
         shell: bash
 
       # Debug: Check if ACL manifest was generated after build
