@@ -66,26 +66,16 @@ packages/tauri-plugin/
 
 ### Service Packages
 
-Service packages that extend WebdriverIO should use the `wdio-` prefix:
+All packages use the `@wdio/` scope:
 
-- `wdio-electron-service`
-- `wdio-flutter-service`
-- `wdio-neutralino-service`
-- `wdio-tauri-service`
-
-### Utility Packages
-
-Utility packages should use the `@wdio/` scope:
-
-- `@wdio/electron-utils`
-- `@wdio/electron-cdp-bridge`
-- `@wdio/native-utils`
-
-### Plugin Packages
-
-Plugin packages for native frameworks should use the `@wdio/` scope:
-
-- `@wdio/tauri-plugin` - Tauri v2 plugin for WebDriverIO testing
+- `@wdio/electron-service` - Electron WDIO service
+- `@wdio/tauri-service` - Tauri WDIO service
+- `@wdio/electron-cdp-bridge` - Chrome DevTools Protocol bridge
+- `@wdio/native-utils` - Cross-platform utilities
+- `@wdio/native-types` - Shared TypeScript type definitions
+- `@wdio/native-spy` - Spy utilities for mocking
+- `@wdio/tauri-plugin` - Tauri v2 plugin (Rust + JS)
+- `@wdio/bundler` - Build tooling
 
 ## package.json Template
 
@@ -229,7 +219,7 @@ pnpm test:coverage
 
 ### Use Workspace Protocol
 
-For internal dependencies, use the `workspace:*` protocol:
+For internal dependencies, use the `workspace:` protocol:
 
 ```json
 {

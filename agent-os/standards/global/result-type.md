@@ -4,7 +4,7 @@ Use `Result<T, E>` for operations that can fail, instead of try/catch or returni
 
 ## Type Definition
 
-Located at `tauri-service/src/utils/result.ts` (should be moved to `native-utils` for cross-service use).
+Located at `native-utils/src/result.ts`. Import from `@wdio/native-utils`.
 
 ```typescript
 type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };

@@ -136,7 +136,21 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for deta
 
 Monorepo built with **Turborepo**, **pnpm workspaces**, and **TypeScript**. Each service integrates with WebdriverIO's test runner and provides framework-specific automation capabilities.
 
-See [docs/package-structure.md](./docs/package-structure.md) for package conventions and structure.
+See [docs/architecture.md](./docs/architecture.md) for detailed architecture documentation and [docs/package-structure.md](./docs/package-structure.md) for package conventions.
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [AGENTS.md](./AGENTS.md) | AI assistant context and coding standards |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |
+| [ROADMAP.md](./ROADMAP.md) | Framework support roadmap |
+| [MAINTENANCE.md](./MAINTENANCE.md) | Version support and maintenance policy |
+| [SECURITY.md](./SECURITY.md) | Security policy and vulnerability reporting |
+| [docs/setup.md](./docs/setup.md) | Detailed setup instructions |
+| [docs/architecture.md](./docs/architecture.md) | Service architecture overview |
+| [docs/e2e-testing.md](./docs/e2e-testing.md) | E2E testing guide |
+| [docs/package-structure.md](./docs/package-structure.md) | Package conventions |
 
 ## License
 
