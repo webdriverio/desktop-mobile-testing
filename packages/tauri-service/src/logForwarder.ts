@@ -67,7 +67,7 @@ function formatLogMessage(source: 'backend' | 'frontend', message: string, insta
     // Message already has prefix, just add instance ID if needed
     if (instanceId) {
       // Transform [Tauri:Backend] to [Tauri:Backend:instanceId]
-      return message.replace(/(\[Tauri:(Backend|Frontend)\])/i, `$1:${instanceId}`);
+      return message.replace(/(\[Tauri:(Backend|Frontend))\]/i, `$1:${instanceId}]`);
     }
     return message;
   }
