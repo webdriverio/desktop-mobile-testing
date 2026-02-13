@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ElectronCdpBridge } from '../src/bridge.js';
 import { LogCaptureManager } from '../src/logCapture.js';
 
-// Mock dependencies
 vi.mock('@wdio/native-utils', () => ({
   createLogger: vi.fn(() => ({
     debug: vi.fn(),
@@ -112,6 +111,7 @@ describe('LogCaptureManager', () => {
         if (event === 'Runtime.consoleAPICalled') {
           capturedListener = listener as (event: unknown) => void;
         }
+        return mockCdpBridge;
       });
 
       vi.mocked(parseConsoleEvent).mockReturnValue({
@@ -130,11 +130,35 @@ describe('LogCaptureManager', () => {
 
       expect(capturedListener).toBeDefined();
 
-      // Trigger the listener
       capturedListener?.({ type: 'log', args: [], executionContextId: 1, timestamp: 123456 });
 
       expect(parseConsoleEvent).toHaveBeenCalled();
       expect(forwardLog).toHaveBeenCalledWith('main', 'info', 'Test message', 'info', undefined);
+    });
+
+    it('should handle errors in main process listener gracefully', async () => {
+      const { parseConsoleEvent } = await import('../src/logParser.js');
+
+      let capturedListener: ((event: unknown) => void) | undefined;
+      mockCdpBridge.on = vi.fn((event, listener) => {
+        if (event === 'Runtime.consoleAPICalled') {
+          capturedListener = listener as (event: unknown) => void;
+        }
+        return mockCdpBridge;
+      });
+
+      vi.mocked(parseConsoleEvent).mockImplementation(() => {
+        throw new Error('Parse error');
+      });
+
+      await manager.captureMainProcessLogs(mockCdpBridge, {
+        captureMainProcessLogs: true,
+        captureRendererLogs: false,
+        mainProcessLogLevel: 'info',
+        rendererLogLevel: 'info',
+      });
+
+      expect(() => capturedListener?.({ type: 'log', args: [] })).not.toThrow();
     });
   });
 
@@ -214,7 +238,6 @@ describe('LogCaptureManager', () => {
 
       mockPuppeteerBrowser.targets = vi.fn().mockReturnValue([mockTarget]);
 
-      // Should not throw
       await expect(
         manager.captureRendererLogs(mockPuppeteerBrowser, {
           captureMainProcessLogs: false,
@@ -223,6 +246,114 @@ describe('LogCaptureManager', () => {
           rendererLogLevel: 'info',
         }),
       ).resolves.toBeUndefined();
+    });
+
+    it('should forward renderer logs when listener is called', async () => {
+      const { forwardLog } = await import('../src/logForwarder.js');
+      const { parseConsoleEvent } = await import('../src/logParser.js');
+
+      let capturedListener: ((event: unknown) => void) | undefined;
+      const mockCdpSession = {
+        send: vi.fn().mockResolvedValue({}),
+        on: vi.fn((event, listener) => {
+          if (event === 'Runtime.consoleAPICalled') {
+            capturedListener = listener as (event: unknown) => void;
+          }
+        }),
+        off: vi.fn(),
+        detach: vi.fn().mockResolvedValue(undefined),
+      } as unknown as CDPSession;
+
+      const mockTarget = {
+        type: vi.fn().mockReturnValue('page'),
+        _targetId: 'target-123',
+        createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      } as unknown as Target;
+
+      mockPuppeteerBrowser.targets = vi.fn().mockReturnValue([mockTarget]);
+
+      vi.mocked(parseConsoleEvent).mockReturnValue({
+        level: 'warn',
+        message: 'Renderer message',
+        source: 'renderer',
+        timestamp: 123456,
+      });
+
+      await manager.captureRendererLogs(mockPuppeteerBrowser, {
+        captureMainProcessLogs: false,
+        captureRendererLogs: true,
+        mainProcessLogLevel: 'info',
+        rendererLogLevel: 'debug',
+      });
+
+      capturedListener?.({ type: 'warning', args: [] });
+
+      expect(forwardLog).toHaveBeenCalledWith('renderer', 'warn', 'Renderer message', 'debug', undefined);
+    });
+
+    it('should handle errors in renderer listener gracefully', async () => {
+      const { parseConsoleEvent } = await import('../src/logParser.js');
+
+      let capturedListener: ((event: unknown) => void) | undefined;
+      const mockCdpSession = {
+        send: vi.fn().mockResolvedValue({}),
+        on: vi.fn((event, listener) => {
+          if (event === 'Runtime.consoleAPICalled') {
+            capturedListener = listener as (event: unknown) => void;
+          }
+        }),
+        off: vi.fn(),
+        detach: vi.fn().mockResolvedValue(undefined),
+      } as unknown as CDPSession;
+
+      const mockTarget = {
+        type: vi.fn().mockReturnValue('page'),
+        _targetId: 'target-123',
+        createCDPSession: vi.fn().mockResolvedValue(mockCdpSession),
+      } as unknown as Target;
+
+      mockPuppeteerBrowser.targets = vi.fn().mockReturnValue([mockTarget]);
+
+      vi.mocked(parseConsoleEvent).mockImplementation(() => {
+        throw new Error('Parse error');
+      });
+
+      await manager.captureRendererLogs(mockPuppeteerBrowser, {
+        captureMainProcessLogs: false,
+        captureRendererLogs: true,
+        mainProcessLogLevel: 'info',
+        rendererLogLevel: 'info',
+      });
+
+      expect(() => capturedListener?.({ type: 'log', args: [] })).not.toThrow();
+    });
+
+    it('should handle errors in targetcreated handler', async () => {
+      let targetCreatedHandler: ((target: Target) => Promise<void>) | undefined;
+
+      mockPuppeteerBrowser = {
+        targets: vi.fn().mockReturnValue([]),
+        on: vi.fn((event, handler) => {
+          if (event === 'targetcreated') {
+            targetCreatedHandler = handler as (target: Target) => Promise<void>;
+          }
+        }),
+      } as unknown as PuppeteerBrowser;
+
+      await manager.captureRendererLogs(mockPuppeteerBrowser, {
+        captureMainProcessLogs: false,
+        captureRendererLogs: true,
+        mainProcessLogLevel: 'info',
+        rendererLogLevel: 'info',
+      });
+
+      const newTarget = {
+        type: vi.fn().mockReturnValue('page'),
+        _targetId: 'target-new',
+        createCDPSession: vi.fn().mockRejectedValue(new Error('Failed')),
+      } as unknown as Target;
+
+      await expect(targetCreatedHandler?.(newTarget)).resolves.toBeUndefined();
     });
   });
 

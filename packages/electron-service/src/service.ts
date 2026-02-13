@@ -23,11 +23,10 @@ import { checkInspectFuse } from './fuses.js';
 import { LogCaptureManager, type LogCaptureOptions } from './logCapture.js';
 import mockStore from './mockStore.js';
 import { ServiceConfig } from './serviceConfig.js';
+import { isInternalCommand } from './utils.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
 
 const log = createLogger('electron-service', 'service');
-
-const isInternalCommand = (args: unknown[]) => Boolean((args[args.length - 1] as ExecuteOpts)?.internal);
 
 type ElementCommands = 'click' | 'doubleClick' | 'setValue' | 'clearValue';
 
@@ -263,32 +262,47 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   }
 }
 
+let mockUpdatePending = false;
+let mockUpdatePromise: Promise<void> | null = null;
+
 /**
- * Update all existing mocks
+ * Update all existing mocks with debouncing to prevent redundant updates.
+ * Multiple rapid calls will coalesce into a single update.
  */
 async function updateAllMocks() {
-  log.debug('updateAllMocks called');
-  const mocks = mockStore.getMocks();
-  log.debug(`Found ${mocks.length} mocks to update`);
-
-  if (mocks.length === 0) {
-    log.debug('No mocks to update, returning');
-    return;
+  if (mockUpdatePending && mockUpdatePromise) {
+    return mockUpdatePromise;
   }
 
-  try {
-    log.debug('Starting mock update batch');
-    await Promise.all(
-      mocks.map(async ([mockId, mock]) => {
-        log.debug(`Updating mock: ${mockId}`);
-        await mock.update();
-        log.debug(`Mock update completed: ${mockId}`);
-      }),
-    );
-    log.debug('All mock updates completed successfully');
-  } catch (error) {
-    log.debug('Mock update batch failed:', error);
-  }
+  mockUpdatePending = true;
+  mockUpdatePromise = (async () => {
+    log.debug('updateAllMocks called');
+    const mocks = mockStore.getMocks();
+    log.debug(`Found ${mocks.length} mocks to update`);
+
+    if (mocks.length === 0) {
+      log.debug('No mocks to update, returning');
+      return;
+    }
+
+    try {
+      log.debug('Starting mock update batch');
+      await Promise.all(
+        mocks.map(async ([mockId, mock]) => {
+          log.debug(`Updating mock: ${mockId}`);
+          await mock.update();
+          log.debug(`Mock update completed: ${mockId}`);
+        }),
+      );
+      log.debug('All mock updates completed successfully');
+    } catch (error) {
+      log.debug('Mock update batch failed:', error);
+    } finally {
+      mockUpdatePending = false;
+    }
+  })();
+
+  return mockUpdatePromise;
 }
 
 function isMultiremote(

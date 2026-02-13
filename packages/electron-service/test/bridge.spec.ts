@@ -61,6 +61,7 @@ describe('ElectronCdpBridge', () => {
     actual.CdpBridge.prototype.connect = vi.fn();
     actual.CdpBridge.prototype.send = vi.fn();
     actual.CdpBridge.prototype.on = vi.fn();
+    actual.CdpBridge.prototype.off = vi.fn();
     return {
       CdpBridge: actual.CdpBridge,
     };
@@ -147,6 +148,31 @@ describe('ElectronCdpBridge', () => {
       expect(mockedInstance.send).toHaveBeenNthCalledWith(1, 'Runtime.enable');
       expect(mockedInstance.send).toHaveBeenNthCalledWith(2, 'Runtime.disable');
       expect(mockedInstance.send).toHaveBeenNthCalledWith(3, 'Runtime.evaluate', expectedArgsOfEval);
+    });
+
+    it('should remove event listener after resolving with default context', async () => {
+      const mockedInstance = await getMockedInstance();
+      expect(mockedInstance.off).toHaveBeenCalledTimes(1);
+      expect(mockedInstance.off).toHaveBeenCalledWith('Runtime.executionContextCreated', expect.any(Function));
+    });
+
+    it('should remove event listener on timeout with fallback context', async () => {
+      const cdpBridge = new ElectronCdpBridge({ timeout: 10 });
+      const promise = cdpBridge.connect();
+      const mockedInstance = (await vi
+        .mocked(CdpBridge.prototype.connect)
+        .mock.instances.slice(-1)[0]) as unknown as ElectronCdpBridge;
+
+      const [_method, callback] = vi.mocked(mockedInstance.on).mock.calls.slice(-1)[0];
+      callback({
+        context: {
+          id: 123,
+          auxData: { isDefault: false },
+        },
+      } as any);
+
+      await promise;
+      expect(mockedInstance.off).toHaveBeenCalledWith('Runtime.executionContextCreated', expect.any(Function));
     });
   });
 });
