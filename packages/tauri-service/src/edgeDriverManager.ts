@@ -1,6 +1,6 @@
 import { exec, execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -286,6 +286,15 @@ try {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log.error(`Failed to download msedgedriver for Edge ${edgeVersion}:`, errorMsg);
     throw new Error(`Failed to download msedgedriver for Edge ${edgeVersion}: ${errorMsg}`);
+  } finally {
+    // Clean up the PowerShell script file
+    try {
+      if (existsSync(psScriptPath)) {
+        unlinkSync(psScriptPath);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
   }
 }
 
