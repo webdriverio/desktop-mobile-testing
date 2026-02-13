@@ -1,7 +1,7 @@
 import type { ElectronMock } from '@wdio/native-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ElectronCdpBridge } from '../../src/bridge.js';
-import { execute } from '../../src/commands/executeCdp.js';
+import { clearParsedFunctionCache, execute } from '../../src/commands/executeCdp.js';
 import mockStore from '../../src/mockStore.js';
 
 vi.mock('../../src/mockStore.js', () => {
@@ -26,6 +26,7 @@ describe('execute Command', () => {
       } as unknown as WebdriverIO.Browser),
     } as unknown as WebdriverIO.MultiRemoteBrowser;
     vi.clearAllMocks();
+    clearParsedFunctionCache();
   });
   const client = {
     contextId: 9999,
@@ -118,5 +119,44 @@ describe('execute Command', () => {
     await execute(globalThis.browser, client, (_electron, a, b, c) => a + b + c, 1, 2, 3);
 
     expect(updateMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('parsed function cache', () => {
+  const client = {
+    contextId: 9999,
+    connect: vi.fn(),
+    on: vi.fn(),
+    send: vi.fn().mockResolvedValue({ result: { result: { value: 6 } } }),
+  } as unknown as ElectronCdpBridge;
+
+  beforeEach(() => {
+    globalThis.browser = {} as WebdriverIO.Browser;
+    clearParsedFunctionCache();
+    vi.clearAllMocks();
+  });
+
+  it('should cache parsed function strings', async () => {
+    const script = (_electron: unknown, a: number, b: number) => a + b;
+
+    await execute(globalThis.browser, client, script, 1, 2);
+    await execute(globalThis.browser, client, script, 3, 4);
+
+    const calls = vi.mocked(client.send).mock.calls;
+    const firstDecl = calls[0][1] as { functionDeclaration: string };
+    const secondDecl = calls[1][1] as { functionDeclaration: string };
+
+    expect(firstDecl.functionDeclaration).toBe('(a, b) => a + b');
+    expect(secondDecl.functionDeclaration).toBe('(a, b) => a + b');
+  });
+
+  it('should clear cache when clearParsedFunctionCache is called', async () => {
+    const script = (_electron: unknown, a: number) => a * 2;
+
+    await execute(globalThis.browser, client, script, 5);
+    clearParsedFunctionCache();
+    await execute(globalThis.browser, client, script, 10);
+
+    expect(client.send).toHaveBeenCalledTimes(2);
   });
 });
