@@ -20,16 +20,30 @@ export {
   restoreAllMocks,
 } from './commands/mock.js';
 export { triggerDeeplink } from './commands/triggerDeeplink.js';
+// Export driver process management
+export { DriverProcess, type DriverProcessInfo, type DriverStartOptions } from './driverProcess.js';
 // Export Edge driver management (Windows only)
 export {
   detectEdgeVersion,
   detectWebView2VersionFromBinary,
   downloadMsEdgeDriver,
   type EdgeDriverResult,
+  type EdgeDriverSuccess,
   ensureMsEdgeDriver,
   findMsEdgeDriver,
   getMajorVersion,
 } from './edgeDriverManager.js';
+// Export error handling
+export {
+  BackendError,
+  BinaryNotFoundError,
+  DriverError,
+  ErrorCode,
+  hasErrorCode,
+  isTauriServiceError,
+  PortAllocationError,
+  TauriServiceError,
+} from './errors.js';
 export { default as launcher } from './launcher.js';
 // Export utilities
 export {
@@ -39,6 +53,19 @@ export {
 } from './pathResolver.js';
 // Export the worker service as default
 export { default } from './service.js';
+// Export Result type utilities
+export {
+  Err,
+  isErr,
+  isOk,
+  map,
+  mapErr,
+  Ok,
+  type Result,
+  unwrap,
+  unwrapOr,
+  wrapAsync,
+} from './utils/result.js';
 // Export the browser extension
 export const browser: WebdriverIO.Browser = wdioBrowser;
 // Re-export types from @wdio/native-types

@@ -24,6 +24,21 @@ export class TauriServiceMockStore {
   getMocks() {
     return Array.from(this.#mockFns.entries());
   }
+
+  /**
+   * Remove a specific mock from the store
+   */
+  deleteMock(mockId: string): boolean {
+    return this.#mockFns.delete(mockId);
+  }
+
+  /**
+   * Clear all mocks from the store
+   * Called during session cleanup to prevent memory leaks
+   */
+  clear(): void {
+    this.#mockFns.clear();
+  }
 }
 
 const mockStore = new TauriServiceMockStore();

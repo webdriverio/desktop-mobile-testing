@@ -192,6 +192,10 @@ export function getLastCommand(browser: WebdriverIO.Browser): string | undefined
   return lastCommandCache.get(browser.sessionId || 'default');
 }
 
-export function clearWindowState(): void {
-  lastCommandCache.clear();
+export function clearWindowState(sessionId?: string): void {
+  if (sessionId) {
+    lastCommandCache.delete(sessionId);
+  } else {
+    lastCommandCache.clear();
+  }
 }

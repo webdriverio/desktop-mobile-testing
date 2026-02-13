@@ -1,22 +1,24 @@
 import { exec, execFile } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { createLogger } from '@wdio/native-utils';
+import { Err, Ok, type Result } from './utils/result.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const log = createLogger('tauri-service', 'launcher');
 
-export interface EdgeDriverResult {
-  success: boolean;
+export interface EdgeDriverSuccess {
   driverPath?: string;
   driverVersion?: string;
   edgeVersion?: string;
   method?: 'found' | 'downloaded' | 'skipped';
-  error?: string;
 }
+
+export type EdgeDriverResult = Result<EdgeDriverSuccess, Error>;
 
 /**
  * Detect WebView2 version from Tauri binary
@@ -198,17 +200,14 @@ async function getDriverVersionForEdge(edgeVersion: string): Promise<string> {
  */
 export async function downloadMsEdgeDriver(edgeVersion: string): Promise<string> {
   const majorVersion = getMajorVersion(edgeVersion);
-  const downloadDir = join(tmpdir(), 'msedgedriver', majorVersion);
+  // Use random temp directory name to prevent symlink attacks
+  const randomSuffix = randomBytes(8).toString('hex');
+  const downloadDir = join(tmpdir(), 'msedgedriver', `${majorVersion}-${randomSuffix}`);
   const driverPath = join(downloadDir, 'msedgedriver.exe');
 
-  // Check if already downloaded
-  if (existsSync(driverPath)) {
-    log.debug(`msedgedriver ${edgeVersion} already cached at ${driverPath}`);
-    return driverPath;
-  }
-
   log.info(`Downloading msedgedriver for Edge ${edgeVersion}...`);
-  mkdirSync(downloadDir, { recursive: true });
+  // Create directory with restrictive permissions (owner-only access)
+  mkdirSync(downloadDir, { recursive: true, mode: 0o700 });
 
   // Get the correct driver version from Microsoft
   const driverVersion = await getDriverVersionForEdge(edgeVersion);
@@ -287,6 +286,15 @@ try {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log.error(`Failed to download msedgedriver for Edge ${edgeVersion}:`, errorMsg);
     throw new Error(`Failed to download msedgedriver for Edge ${edgeVersion}: ${errorMsg}`);
+  } finally {
+    // Clean up the PowerShell script file
+    try {
+      if (existsSync(psScriptPath)) {
+        unlinkSync(psScriptPath);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
   }
 }
 
@@ -295,18 +303,12 @@ try {
  * This is the main entry point for Edge driver management
  */
 export async function ensureMsEdgeDriver(tauriBinaryPath?: string, autoDownload = true): Promise<EdgeDriverResult> {
-  // Skip on non-Windows platforms
   if (process.platform !== 'win32') {
-    return {
-      success: true,
-      method: 'skipped',
-    };
+    return Ok({ method: 'skipped' as const });
   }
 
   log.info('Checking Edge WebDriver compatibility...');
 
-  // For Tauri apps, we need to detect the WebView2 version from the binary
-  // not the system Edge version, because Tauri uses a fixed WebView2 runtime
   let edgeVersion: string | undefined;
 
   if (tauriBinaryPath) {
@@ -316,7 +318,6 @@ export async function ensureMsEdgeDriver(tauriBinaryPath?: string, autoDownload 
     }
   }
 
-  // Fallback to system Edge detection if binary detection fails
   if (!edgeVersion) {
     edgeVersion = await detectEdgeVersion();
     if (edgeVersion) {
@@ -327,67 +328,56 @@ export async function ensureMsEdgeDriver(tauriBinaryPath?: string, autoDownload 
 
   if (!edgeVersion) {
     log.warn('Could not detect Edge/WebView2 version - skipping driver check');
-    return {
-      success: true, // Don't fail if we can't detect
-      method: 'skipped',
-      error: 'Could not detect Edge/WebView2 version',
-    };
+    return Ok({ method: 'skipped' as const });
   }
   const edgeMajor = getMajorVersion(edgeVersion);
 
-  // Check existing driver
   const existing = await findMsEdgeDriver();
   if (existing.path && existing.version) {
     const driverMajor = getMajorVersion(existing.version);
 
     if (driverMajor === edgeMajor) {
       log.info(`✅ msedgedriver ${existing.version} matches Edge ${edgeVersion}`);
-      return {
-        success: true,
+      return Ok({
         driverPath: existing.path,
         driverVersion: existing.version,
         edgeVersion,
-        method: 'found',
-      };
+        method: 'found' as const,
+      });
     }
 
     log.warn(`❌ Version mismatch: msedgedriver ${existing.version} != Edge ${edgeVersion}`);
   }
 
-  // Download matching driver if auto-download enabled
   if (autoDownload) {
     try {
       log.info(`Attempting to download msedgedriver ${edgeVersion}...`);
       const downloadedPath = await downloadMsEdgeDriver(edgeVersion);
 
-      // Add to PATH for this process
       process.env.PATH = `${join(downloadedPath, '..')}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH}`;
 
       log.info(`✅ Downloaded and configured msedgedriver ${edgeVersion}`);
-      return {
-        success: true,
+      return Ok({
         driverPath: downloadedPath,
         driverVersion: edgeVersion,
         edgeVersion,
-        method: 'downloaded',
-      };
+        method: 'downloaded' as const,
+      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log.error('Failed to download msedgedriver:', errorMsg);
 
-      return {
-        success: false,
-        edgeVersion,
-        error: `Failed to download msedgedriver: ${errorMsg}. Please manually install from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/`,
-        method: 'downloaded',
-      };
+      return Err(
+        new Error(
+          `Failed to download msedgedriver: ${errorMsg}. Please manually install from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/`,
+        ),
+      );
     }
   }
 
-  // Auto-download disabled
-  return {
-    success: false,
-    edgeVersion,
-    error: `msedgedriver version mismatch. Edge: ${edgeVersion}, Driver: ${existing.version || 'unknown'}. Set autoDownloadEdgeDriver: true to auto-fix.`,
-  };
+  return Err(
+    new Error(
+      `msedgedriver version mismatch. Edge: ${edgeVersion}, Driver: ${existing.version || 'unknown'}. Set autoDownloadEdgeDriver: true to auto-fix.`,
+    ),
+  );
 }

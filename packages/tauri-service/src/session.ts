@@ -8,8 +8,8 @@ import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'service');
 
-// Store launcher instances for cleanup
-const activeLaunchers = new Map<WebdriverIO.Browser, TauriLaunchService>();
+// Store launcher instances for cleanup (WeakMap for automatic GC if cleanup() not called)
+const activeLaunchers = new WeakMap<WebdriverIO.Browser, TauriLaunchService>();
 
 /**
  * Initialize Tauri service in standalone mode

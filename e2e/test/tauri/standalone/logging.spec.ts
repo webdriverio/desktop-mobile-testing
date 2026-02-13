@@ -72,7 +72,7 @@ try {
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
   // Wait for backend logs to appear
-  const backendLogsFound = await waitForLog(logDir, /\[Tauri:Backend\].*INFO level log/i, 10000);
+  const backendLogsFound = await waitForLog(logDir, /\[Tauri:Backend[^\]]*\].*INFO level log/i, 10000);
   if (!backendLogsFound) {
     throw new Error('Backend logs not captured within timeout');
   }
@@ -90,9 +90,9 @@ try {
   if (!logs1) {
     throw new Error('No logs found in output directory');
   }
-  assertLogContains(logs1, /\[Tauri:Backend\].*INFO level log/i);
-  assertLogContains(logs1, /\[Tauri:Backend\].*WARN level log/i);
-  assertLogContains(logs1, /\[Tauri:Backend\].*ERROR level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*INFO level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*WARN level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*ERROR level log/i);
   console.log('✅ Backend logs test passed');
 
   // Test 2: Capture frontend logs in standalone session
@@ -105,16 +105,16 @@ try {
   });
 
   // Wait for frontend logs to appear
-  const frontendLogsFound = await waitForLog(logDir, /\[Tauri:Frontend\].*Standalone frontend INFO/i, 10000);
+  const frontendLogsFound = await waitForLog(logDir, /\[Tauri:Frontend[^\]]*\].*Standalone frontend INFO/i, 10000);
   if (!frontendLogsFound) {
     throw new Error('Frontend logs not captured within timeout');
   }
 
   // Verify frontend logs were captured with correct prefix
   const logs2 = await readWdioLogs(logDir);
-  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend INFO/i);
-  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend WARN/i);
-  assertLogContains(logs2, /\[Tauri:Frontend\].*Standalone frontend ERROR/i);
+  assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend INFO/i);
+  assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend WARN/i);
+  assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend ERROR/i);
   console.log('✅ Frontend logs test passed');
 
   // Test 3: Log level filtering - Using backend logs for verification
@@ -122,16 +122,16 @@ try {
   await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
   // Wait for backend logs to appear
-  const backendFilterLogsFound = await waitForLog(logDir, /\[Tauri:Backend\].*INFO.*log/i, 10000);
+  const backendFilterLogsFound = await waitForLog(logDir, /\[Tauri:Backend[^\]]*\].*INFO.*log/i, 10000);
   if (!backendFilterLogsFound) {
     throw new Error('Backend logs not captured within timeout');
   }
 
   // Verify backend logs were captured with correct prefix and levels
   const logs3 = await readWdioLogs(logDir);
-  assertLogContains(logs3, /\[Tauri:Backend\].*INFO.*log/i);
-  assertLogContains(logs3, /\[Tauri:Backend\].*WARN.*log/i);
-  assertLogContains(logs3, /\[Tauri:Backend\].*ERROR.*log/i);
+  assertLogContains(logs3, /\[Tauri:Backend[^\]]*\].*INFO.*log/i);
+  assertLogContains(logs3, /\[Tauri:Backend[^\]]*\].*WARN.*log/i);
+  assertLogContains(logs3, /\[Tauri:Backend[^\]]*\].*ERROR.*log/i);
   console.log('✅ Backend log filtering test passed');
 
   console.log('✅ All Tauri standalone logging tests passed');
