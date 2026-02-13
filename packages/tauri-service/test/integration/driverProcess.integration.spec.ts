@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DriverProcess } from '../../src/driverProcess.js';
 import type { TauriServiceOptions } from '../../src/types.js';
+import { mockSuccessPath } from '../mockPaths.js';
 
 // Mock execSync to prevent ldd errors in tests
 vi.mock('node:child_process', async () => {
@@ -18,9 +19,6 @@ const __dirname = path.dirname(__filename);
 
 // Track all DriverProcess instances for cleanup
 const driverProcesses: DriverProcess[] = [];
-
-// Path to mock driver executable
-const mockDriverPath = path.join(__dirname, '..', 'fixtures', 'mock-success.sh');
 
 // Global cleanup
 afterAll(async () => {
@@ -73,7 +71,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'test-driver',
         port: testPort,
         nativePort: testNativePort,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -94,7 +92,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'test-driver',
         port: testPort,
         nativePort: testNativePort,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -113,7 +111,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'test-driver',
         port: testPort,
         nativePort: testNativePort,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -138,7 +136,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'test-driver',
         port: testPort,
         nativePort: testNativePort,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -155,7 +153,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'test-driver',
         port: testPort,
         nativePort: testNativePort,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -177,7 +175,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'driver-1',
         port: 4500,
         nativePort: 4501,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -186,7 +184,7 @@ describe('DriverProcess - Integration', () => {
         identifier: 'driver-2',
         port: 4502,
         nativePort: 4503,
-        tauriDriverPath: mockDriverPath,
+        tauriDriverPath: mockSuccessPath,
         options: baseOptions,
       });
 
@@ -222,7 +220,7 @@ describe('DriverProcess - Integration', () => {
           identifier: 'env-test',
           port: 4600,
           nativePort: 4601,
-          tauriDriverPath: mockDriverPath,
+          tauriDriverPath: mockSuccessPath,
           options: baseOptions,
           env: { CUSTOM_VAR: 'custom_value' },
         });
@@ -246,7 +244,7 @@ describe('DriverProcess - Integration', () => {
           identifier: 'no-custom-env',
           port: 4602,
           nativePort: 4603,
-          tauriDriverPath: mockDriverPath,
+          tauriDriverPath: mockSuccessPath,
           options: baseOptions,
         });
 
