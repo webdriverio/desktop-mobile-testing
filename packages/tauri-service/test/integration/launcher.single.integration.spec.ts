@@ -25,6 +25,10 @@ vi.mock('@wdio/native-utils', () => ({
     error: vi.fn(),
     trace: vi.fn(),
   })),
+  isErr: vi.fn(() => false),
+  isOk: vi.fn(() => true),
+  Ok: vi.fn((v: unknown) => ({ ok: true, value: v })),
+  Err: vi.fn((e: unknown) => ({ ok: false, error: e })),
 }));
 
 vi.mock('../../src/edgeDriverManager.js', () => ({
