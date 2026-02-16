@@ -4,8 +4,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { createLogger } from '@wdio/native-utils';
-import { Err, Ok, type Result } from './utils/result.js';
+import { createLogger, Err, Ok, type Result } from '@wdio/native-utils';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);

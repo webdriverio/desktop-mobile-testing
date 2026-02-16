@@ -1,9 +1,8 @@
-import { createLogger } from '@wdio/native-utils';
+import { createLogger, isErr } from '@wdio/native-utils';
 import { ensureTauriDriver } from './driverManager.js';
 import { DriverProcess } from './driverProcess.js';
 import { getWebKitWebDriverPath } from './pathResolver.js';
 import type { TauriServiceOptions } from './types.js';
-import { isErr } from './utils/result.js';
 
 const log = createLogger('tauri-service');
 
