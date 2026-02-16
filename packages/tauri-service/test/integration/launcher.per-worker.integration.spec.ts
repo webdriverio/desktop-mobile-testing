@@ -43,6 +43,22 @@ vi.mock('@wdio/native-utils', () => ({
     error: vi.fn(),
     trace: vi.fn(),
   })),
+  isErr: vi.fn(() => false),
+  isOk: vi.fn(() => true),
+  Ok: vi.fn((v: unknown) => ({ ok: true, value: v })),
+  Err: vi.fn((e: unknown) => ({ ok: false, error: e })),
+  diagnosePlatform: vi.fn(() => [
+    { category: 'Platform', status: 'ok', message: 'linux x64' },
+    { category: 'Node Version', status: 'ok', message: 'v20.0.0' },
+  ]),
+  diagnoseDisplay: vi.fn(() => []),
+  diagnoseBinary: vi.fn(() => [
+    { category: 'Binary Permissions', status: 'ok', message: '755' },
+    { category: 'Binary Size', status: 'ok', message: '100.00 MB' },
+  ]),
+  diagnoseDiskSpace: vi.fn(() => []),
+  diagnoseLinuxDependencies: vi.fn(() => []),
+  formatDiagnosticResults: vi.fn(),
 }));
 
 vi.mock('../../src/edgeDriverManager.js', () => ({

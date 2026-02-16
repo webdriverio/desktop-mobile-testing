@@ -1,6 +1,6 @@
+import { isOk } from '@wdio/native-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EdgeDriverResult } from '../src/edgeDriverManager.js';
-import { isOk } from '../src/utils/result.js';
 
 vi.mock('node:child_process', () => ({
   execSync: vi.fn(),

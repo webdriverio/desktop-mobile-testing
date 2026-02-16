@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createLogger } from '@wdio/native-utils';
+import { createLogger, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { diagnoseTauriEnvironment, formatDiagnosticResults } from './diagnostics.js';
@@ -11,11 +11,9 @@ import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
 import { DriverPool } from './driverPool.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
 import type { LogLevel } from './logForwarder.js';
-
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import { PortManager } from './portManager.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
-import { isErr } from './utils/result.js';
 
 const log = createLogger('tauri-service', 'launcher');
 

@@ -1,6 +1,6 @@
+import { isOk } from '@wdio/native-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureWebKitWebDriver, getWebKitDriverInstallCommand } from '../src/driverManager.js';
-import { isOk } from '../src/utils/result.js';
 
 describe('WebKitWebDriver Management', () => {
   describe('getWebKitDriverInstallCommand', () => {

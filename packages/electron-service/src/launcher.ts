@@ -21,6 +21,7 @@ import {
   getElectronCapabilities,
 } from './capabilities.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
+import { diagnoseElectronEnvironment, formatDiagnosticResults } from './diagnostics.js';
 import { resolveAppPaths } from './pathResolver.js';
 import { getChromiumVersion } from './versions.js';
 
@@ -91,6 +92,7 @@ function generateBinaryPathErrorMessage(result: BinaryPathResult, appBuildInfo: 
 export default class ElectronLaunchService implements Services.ServiceInstance {
   #globalOptions: ElectronServiceGlobalOptions;
   #projectRoot: string;
+  #usedPorts = new Set<number>();
 
   constructor(globalOptions: ElectronServiceGlobalOptions, _caps: unknown, config: Options.Testrunner) {
     this.#globalOptions = globalOptions;
@@ -281,7 +283,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
       const capsList = Array.isArray(capabilities) ? (capabilities as WebdriverIO.Capabilities[]) : [capabilities];
       const caps = capsList.flatMap((cap) => getConvertedElectronCapabilities(cap) as WebdriverIO.Capabilities);
 
-      const portList = await getDebuggerPorts(caps.length);
+      const portList = await this.#allocateDebuggerPorts(caps.length);
 
       await Promise.all(
         caps.map(async (cap, index) => {
@@ -289,6 +291,14 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
         }),
       );
       log.debug('Setting capability at onWorkerStart', JSON.stringify(caps));
+
+      // Run environment diagnostics
+      const firstCap = caps[0];
+      const appBinaryPath = (firstCap?.['goog:chromeOptions'] as Record<string, unknown>)?.binary as string | undefined;
+      const electronVersion = (firstCap as Record<string, unknown>)?.['wdio:electronVersion'] as string | undefined;
+      const chromiumVersion = (firstCap as Record<string, unknown>)?.['wdio:chromiumVersion'] as string | undefined;
+      const results = await diagnoseElectronEnvironment({ appBinaryPath, electronVersion, chromiumVersion });
+      formatDiagnosticResults(results, 'electron-service');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.stack || error.message : String(error);
       const msg = `Failed to assign debugging ports to Electron instances: ${errorMessage}`;
@@ -296,17 +306,22 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
       throw new SevereServiceError(msg);
     }
   }
-}
 
-/**
- * Dynamically allocates available ports for Electron debugger instances
- *
- * @param quantity Number of ports needed (one per Electron instance)
- * @returns Array of available port numbers
- */
-const getDebuggerPorts = async (quantity: number): Promise<number[]> => {
-  return Promise.all(Array.from({ length: quantity }, () => getPort()));
-};
+  async #allocateDebuggerPorts(quantity: number): Promise<number[]> {
+    const ports: number[] = [];
+    for (let i = 0; i < quantity; i++) {
+      const port = await getPort({
+        host: '127.0.0.1',
+        exclude: [...this.#usedPorts, ...ports],
+      });
+      ports.push(port);
+    }
+    for (const port of ports) {
+      this.#usedPorts.add(port);
+    }
+    return ports;
+  }
+}
 
 /**
  * Configures an Electron capability with the necessary debugging arguments

@@ -96,12 +96,19 @@ Types:
 - `chore`: Build process or tooling changes
 - `perf`: Performance improvements
 
-Example:
+Scope:
+
+Scope by **framework**, not package name. Most changes that touch a service, its plugin, fixtures, and E2E tests are all part of the same logical unit of work. For cross-cutting changes, omit the scope.
 
 ```bash
-git commit -m "feat(electron): add window management support"
-git commit -m "fix(tauri): resolve binary detection on Windows"
+# Framework-scoped (changes within one framework's ecosystem)
+git commit -m "feat(tauri): complete mocking"
+git commit -m "fix(electron): windows multiremote"
+
+# No scope (cross-cutting or shared changes)
+git commit -m "refactor: extract shared diagnostics to native-utils"
 git commit -m "docs: update installation instructions"
+git commit -m "chore: update deps"
 ```
 
 ### 4. Push and Create Pull Request

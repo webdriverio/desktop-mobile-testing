@@ -7,7 +7,7 @@ import type {
   ElectronType,
   ExecuteOpts,
 } from '@wdio/native-types';
-import { createLogger } from '@wdio/native-utils';
+import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import type { Capabilities, Services } from '@wdio/types';
 import { ElectronCdpBridge, getDebuggerEndpoint } from './bridge.js';
 import { clearAllMocks } from './commands/clearAllMocks.js';
@@ -168,6 +168,11 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   after() {
     this.logCaptureManager?.stopCapture();
     clearPuppeteerSessions();
+  }
+
+  async afterSession() {
+    await restoreAllMocks();
+    mockStore.clear();
   }
 
   /**
@@ -344,13 +349,6 @@ async function initCdpBridge(
     return undefined;
   }
 }
-
-export const waitUntilWindowAvailable = async (browser: WebdriverIO.Browser) => {
-  await browser.waitUntil(async () => {
-    const numWindows = (await browser.getWindowHandles()).length;
-    return numWindows > 0;
-  });
-};
 
 const copyOriginalApi = async (browser: WebdriverIO.Browser) => {
   await browser.electron.execute<void, [ExecuteOpts]>(

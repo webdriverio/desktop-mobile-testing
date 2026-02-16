@@ -4,8 +4,6 @@ import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'bridge');
 
-import { SevereServiceError } from 'webdriverio';
-
 export const getDebuggerEndpoint = (capabilities: WebdriverIO.Capabilities) => {
   log.trace('Try to detect the node debugger endpoint');
 
@@ -17,7 +15,9 @@ export const getDebuggerEndpoint = (capabilities: WebdriverIO.Capabilities) => {
   const result = { host, port: Number(strPort) };
 
   if (!result.host || !result.port) {
-    throw new SevereServiceError(`Failed to detect the debugger endpoint.`);
+    throw new Error(
+      'Failed to detect the debugger endpoint. Ensure the Electron app was launched with --inspect and a valid port.',
+    );
   }
 
   log.trace(`Detected the node debugger endpoint: `, result);

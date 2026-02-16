@@ -25,6 +25,14 @@ export class ElectronServiceMockStore {
   getMocks() {
     return Array.from(this.#mockFns.entries());
   }
+
+  deleteMock(mockId: string): boolean {
+    return this.#mockFns.delete(mockId);
+  }
+
+  clear(): void {
+    this.#mockFns.clear();
+  }
 }
 
 const mockStore = new ElectronServiceMockStore();

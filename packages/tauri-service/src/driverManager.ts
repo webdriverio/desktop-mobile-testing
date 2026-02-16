@@ -2,9 +2,8 @@ import { exec, execSync, spawn } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
-import { createLogger } from '@wdio/native-utils';
+import { createLogger, Err, Ok, type Result } from '@wdio/native-utils';
 import type { TauriServiceOptions } from './types.js';
-import { Err, Ok, type Result } from './utils/result.js';
 
 const execAsync = promisify(exec);
 

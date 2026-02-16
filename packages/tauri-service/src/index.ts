@@ -2,93 +2,21 @@
 import { browser as wdioBrowser } from '@wdio/globals';
 import '@wdio/native-types';
 
-export {
-  execute,
-  executeTauriCommand,
-  executeTauriCommands,
-  executeTauriCommandsParallel,
-  executeTauriCommandWithTimeout,
-  getTauriAppInfo as getTauriAppInfoFromBrowser,
-  getTauriVersion,
-  isTauriApiAvailable,
-} from './commands/execute.js';
-export {
-  clearAllMocks,
-  isMockFunction,
-  mock,
-  resetAllMocks,
-  restoreAllMocks,
-} from './commands/mock.js';
-export { triggerDeeplink } from './commands/triggerDeeplink.js';
-// Export driver process management
-export { DriverProcess, type DriverProcessInfo, type DriverStartOptions } from './driverProcess.js';
-// Export Edge driver management (Windows only)
-export {
-  detectEdgeVersion,
-  detectWebView2VersionFromBinary,
-  downloadMsEdgeDriver,
-  type EdgeDriverResult,
-  type EdgeDriverSuccess,
-  ensureMsEdgeDriver,
-  findMsEdgeDriver,
-  getMajorVersion,
-} from './edgeDriverManager.js';
-// Export error handling
-export {
-  BackendError,
-  BinaryNotFoundError,
-  DriverError,
-  ErrorCode,
-  hasErrorCode,
-  isTauriServiceError,
-  PortAllocationError,
-  TauriServiceError,
-} from './errors.js';
 export { default as launcher } from './launcher.js';
-// Export utilities
 export {
   getTauriAppInfo,
   getTauriBinaryPath,
-  isTauriAppBuilt,
 } from './pathResolver.js';
-// Export the worker service as default
 export { default } from './service.js';
-// Export Result type utilities
-export {
-  Err,
-  isErr,
-  isOk,
-  map,
-  mapErr,
-  Ok,
-  type Result,
-  unwrap,
-  unwrapOr,
-  wrapAsync,
-} from './utils/result.js';
-// Export the browser extension
-export const browser: WebdriverIO.Browser = wdioBrowser;
-// Re-export types from @wdio/native-types
-export type {
-  TauriAPIs,
-  TauriServiceAPI,
-  TauriServiceCapabilities as TauriServiceCapabilitiesBase,
-} from '@wdio/native-types';
-// Export session management
 export {
   cleanup as cleanupWdioSession,
   createTauriCapabilities,
-  getTauriServiceStatus,
   init as startWdioSession,
 } from './session.js';
-
-// Export types from local types file (these extend the base types from native-types)
+export const browser: WebdriverIO.Browser = wdioBrowser;
 export type {
   TauriAppInfo,
   TauriCapabilities,
-  TauriCommandContext,
-  TauriDriverProcess,
-  TauriResult,
   TauriServiceGlobalOptions,
   TauriServiceOptions,
 } from './types.js';

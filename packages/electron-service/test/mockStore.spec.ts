@@ -41,3 +41,35 @@ describe('getMocks', () => {
     ]);
   });
 });
+
+describe('deleteMock', () => {
+  it('should remove a specific mock from the store', () => {
+    const testMock1 = { getMockName: () => 'test mock 1' } as unknown as ElectronMock;
+    const testMock2 = { getMockName: () => 'test mock 2' } as unknown as ElectronMock;
+    mockStore.setMock(testMock1);
+    mockStore.setMock(testMock2);
+
+    const result = mockStore.deleteMock('test mock 1');
+
+    expect(result).toBe(true);
+    expect(mockStore.getMocks()).toStrictEqual([['test mock 2', testMock2]]);
+  });
+
+  it('should return false when deleting a non-existent mock', () => {
+    const result = mockStore.deleteMock('non-existent');
+    expect(result).toBe(false);
+  });
+});
+
+describe('clear', () => {
+  it('should remove all mocks from the store', () => {
+    const testMock1 = { getMockName: () => 'test mock 1' } as unknown as ElectronMock;
+    const testMock2 = { getMockName: () => 'test mock 2' } as unknown as ElectronMock;
+    mockStore.setMock(testMock1);
+    mockStore.setMock(testMock2);
+
+    mockStore.clear();
+
+    expect(mockStore.getMocks()).toStrictEqual([]);
+  });
+});
