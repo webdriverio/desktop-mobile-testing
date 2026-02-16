@@ -168,7 +168,7 @@ export function diagnoseDiskSpace(): DiagnosticResult[] {
   const results: DiagnosticResult[] = [];
 
   try {
-    const df = execSync('df -h . 2>&1 || true', { encoding: 'utf8', timeout: 2000 });
+    const df = execFileSync('df', ['-h', '.'], { encoding: 'utf8', timeout: 2000, stdio: ['pipe', 'pipe', 'pipe'] });
     const lines = df.trim().split('\n');
     if (lines.length >= 2) {
       const parts = lines[1].split(/\s+/);
