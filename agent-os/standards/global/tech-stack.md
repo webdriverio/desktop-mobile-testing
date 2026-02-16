@@ -1,31 +1,36 @@
-## Tech stack
+## Tech Stack
 
-Define your technical stack below. This serves as a reference for all team members and helps maintain consistency across the project.
+This document provides a quick reference for the tech stack. See [agent-os/product/tech-stack.md](../product/tech-stack.md) for detailed documentation.
 
 ### Framework & Runtime
-- **Application Framework:** [e.g., Rails, Django, Next.js, Express]
-- **Language/Runtime:** [e.g., Ruby, Python, Node.js, Java]
-- **Package Manager:** [e.g., bundler, pip, npm, yarn]
+- **Language:** TypeScript 5.9+
+- **Runtime:** Node.js 18 LTS or 20 LTS
+- **Package Manager:** pnpm 10.27.0+
+- **Module System:** ESM with CJS dual build
 
-### Frontend
-- **JavaScript Framework:** [e.g., React, Vue, Svelte, Alpine, vanilla JS]
-- **CSS Framework:** [e.g., Tailwind CSS, Bootstrap, custom]
-- **UI Components:** [e.g., shadcn/ui, Material UI, custom library]
+### Monorepo
+- **Build Tool:** Turborepo 2.5+
+- **Workspaces:** pnpm workspaces
 
-### Database & Storage
-- **Database:** [e.g., PostgreSQL, MySQL, MongoDB]
-- **ORM/Query Builder:** [e.g., ActiveRecord, Prisma, Sequelize]
-- **Caching:** [e.g., Redis, Memcached]
+### Testing
+- **Unit/Integration:** Vitest 3.2+
+- **E2E:** WebdriverIO 9.0+
+- **Coverage:** 80% minimum
 
-### Testing & Quality
-- **Test Framework:** [e.g., Jest, RSpec, pytest]
-- **Linting/Formatting:** [e.g., ESLint, Prettier, RuboCop]
+### Code Quality
+- **Formatter:** Biome 2.2.5
+- **Linter:** Biome 2.2.5 + ESLint 9.37+
+- **Pre-commit:** Husky 9.1+ with lint-staged
 
-### Deployment & Infrastructure
-- **Hosting:** [e.g., Heroku, AWS, Vercel, Railway]
-- **CI/CD:** [e.g., GitHub Actions, CircleCI]
+### CI/CD
+- **Platform:** GitHub Actions
+- **Release:** Automated via Turborepo
 
-### Third-Party Services
-- **Authentication:** [e.g., Auth0, Devise, NextAuth]
-- **Email:** [e.g., SendGrid, Postmark]
-- **Monitoring:** [e.g., Sentry, Datadog]
+### Supported Frameworks
+- **Electron:** `@wdio/electron-service` v10.x
+- **Tauri:** `@wdio/tauri-service` v1.x
+
+### Planned
+- Dioxus, React Native, Flutter, Capacitor, Neutralino
+
+See [ROADMAP.md](../../ROADMAP.md) for details.

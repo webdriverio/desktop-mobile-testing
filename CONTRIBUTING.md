@@ -11,7 +11,7 @@ Please be respectful and constructive in all interactions. We aim to create a we
 ### Prerequisites
 
 - Node.js 18 LTS or 20 LTS
-- pnpm 10.12.0+
+- pnpm 10.27.0+
 - Git
 
 ### Setup
@@ -100,7 +100,7 @@ Example:
 
 ```bash
 git commit -m "feat(electron): add window management support"
-git commit -m "fix(flutter): resolve binary detection on Windows"
+git commit -m "fix(tauri): resolve binary detection on Windows"
 git commit -m "docs: update installation instructions"
 ```
 
@@ -125,21 +125,7 @@ Then create a pull request on GitHub with:
 - Prefer `undefined` over `null`
 - Use **ESM** (ES Modules) everywhere
 - Avoid `any` - use proper types
-- Document public APIs with JSDoc comments
-
-Example:
-
-```typescript
-/**
- * Detect the binary path for an Electron application
- * @param options - Detection options
- * @returns Path to the binary
- * @throws {Error} If binary cannot be found
- */
-export async function detectBinary(options: BinaryOptions): Promise<string> {
-  // Implementation
-}
-```
+- JSDoc for public APIs only when necessary (prefer self-documenting code)
 
 ### Code Style
 
@@ -212,9 +198,9 @@ pnpm --filter @wdio/electron-service vitest
 
 ### Code Documentation
 
-- Add JSDoc comments to all public APIs
-- Include `@param`, `@returns`, `@throws` where applicable
-- Provide usage examples in comments
+- JSDoc for public APIs only when necessary
+- Prefer self-documenting code over comments
+- No comments unless the logic isn't self-evident
 
 ### README Files
 

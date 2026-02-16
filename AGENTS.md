@@ -1,0 +1,200 @@
+# AGENTS.md
+
+AI context file for the WebdriverIO Desktop & Mobile Testing monorepo.
+
+## Project Overview
+
+This is a monorepo providing WebdriverIO services for automated testing of native desktop and mobile applications.
+
+**Supported Frameworks:**
+- **Electron** - `@wdio/electron-service` (v10.x)
+- **Tauri** - `@wdio/tauri-service` (v1.x)
+
+**Planned:** Dioxus, React Native, Flutter, Capacitor, Neutralino. See [ROADMAP.md](./ROADMAP.md) for details.
+
+## Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| Language | TypeScript 5.9+ (strict mode, ESM) |
+| Runtime | Node.js 18 LTS or 20 LTS |
+| Package Manager | pnpm 10.27.0+ |
+| Monorepo | Turborepo 2.5+ with pnpm workspaces |
+| Testing | Vitest 3.2+ (unit/integration), WebdriverIO 9.0+ (E2E) |
+| Linting | Biome 2.2.5 + ESLint 9.37+ |
+| Build | TypeScript compiler (dual ESM/CJS) |
+
+## Monorepo Structure
+
+```
+packages/
+├── electron-service/     # Electron WDIO service
+├── tauri-service/        # Tauri WDIO service  
+├── tauri-plugin/         # Tauri v2 plugin (Rust + JS)
+├── electron-cdp-bridge/  # Chrome DevTools Protocol bridge
+├── native-utils/         # Cross-platform utilities
+├── native-types/         # TypeScript type definitions
+├── native-spy/           # Spy utilities for mocking
+└── bundler/              # Build tool for packages
+
+fixtures/
+├── e2e-apps/             # E2E test applications
+└── package-tests/        # Package integration test fixtures
+
+e2e/                      # End-to-end test suites
+agent-os/                 # Agent OS standards and specs
+```
+
+## Service Architecture Pattern
+
+WDIO runs launcher and worker services in **separate processes**. Every service package splits into two classes:
+
+```
+src/
+├── index.ts              # Package entry point (default=worker, named launcher=launcher)
+├── launcher.ts           # Launcher service (main process)
+├── service.ts            # Worker service (worker process)
+├── types.ts              # TypeScript type definitions
+└── constants/            # Constants and configuration
+```
+
+**Launcher** (`launcher.ts`) — runs in main process, no `browser` access:
+- Hooks: `onPrepare`, `onWorkerStart`, `onWorkerEnd`, `onComplete`
+- Responsibilities: binary detection, port allocation, driver spawning, capability mutation
+- Throw `SevereServiceError` (from `webdriverio`) for fatal failures that should stop the runner
+
+**Worker** (`service.ts`) — runs in worker process, receives `browser` via `before` hook:
+- Hooks: `before`, `beforeTest`, `beforeCommand`, `after`, `afterSession`
+- Responsibilities: API injection onto `browser`, mock lifecycle, window focus, log capture
+
+## Logging
+
+Use `createLogger` from `@wdio/native-utils` for all logging:
+
+```typescript
+import { createLogger } from '@wdio/native-utils';
+const log = createLogger('service-name', 'module-name');
+```
+
+## Mock Architecture
+
+Mocks span two process boundaries — an **inner mock** in the app context and an **outer mock** in the test process. The inner mock (created via `@wdio/native-spy`) intercepts real API calls inside the app. The outer mock (vitest-compatible) is used for test assertions. Call data syncs one-way from inner to outer via `update()`, serialized as JSON across CDP/WebDriver boundaries. See `agent-os/standards/global/mock-architecture.md` for details.
+
+## Coding Standards
+
+### TypeScript
+- Strict mode enabled
+- Prefer `undefined` over `null`
+- ESM modules everywhere (dual CJS build for compatibility)
+- Avoid `any` - use proper types
+- No barrel files (`index.ts` with only re-exports) except at package roots
+
+### Code Style
+- 2 spaces indentation
+- Single quotes for strings
+- Trailing commas in objects/arrays
+- Max line length: 120 characters
+- Arrow functions for callbacks
+
+### Comments
+- No comments unless explicitly requested
+- JSDoc for public APIs only when necessary
+
+## Testing
+
+### Test Organization
+```
+test/
+├── *.spec.ts             # Unit tests
+└── integration/
+    └── *.spec.ts         # Integration tests
+```
+
+### Test Requirements
+- 80%+ test coverage required
+- Unit tests for logic, integration tests for process management
+- E2E tests in `e2e/` directory
+
+### Running Tests
+```bash
+pnpm test                 # All tests
+pnpm --filter @wdio/tauri-service test  # Specific package
+pnpm test:integration     # Integration tests only
+```
+
+## Build Commands
+
+```bash
+pnpm build               # Build all packages
+pnpm lint                # Lint all packages
+pnpm typecheck           # Type check all packages
+pnpm test                # Run all tests
+```
+
+## Result Type Pattern
+
+This codebase uses a `Result<T, E>` type for operations that can fail:
+
+```typescript
+type Result<T, E = Error> = 
+  | { ok: true; value: T }
+  | { ok: false; error: E }
+
+// Usage
+if (result.ok) {
+  console.log(result.value);  // Success case
+} else {
+  console.error(result.error); // Error case
+}
+```
+
+**Important:** Do not use `.success` or `.data` properties. Use `.ok` to check and `.value`/`.error` to access.
+
+## Cross-Platform Considerations
+
+- Windows requires `.cmd` files for shell scripts
+- Use `get-port` for dynamic port allocation to avoid conflicts
+- Driver processes need graceful shutdown (SIGTERM, then SIGKILL after timeout)
+- File paths must handle both Unix and Windows separators
+
+## Key Documentation
+
+| File | Purpose |
+|------|---------|
+| [README.md](./README.md) | Project overview and quick start |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guidelines |
+| [ROADMAP.md](./ROADMAP.md) | Framework support roadmap |
+| [docs/setup.md](./docs/setup.md) | Detailed setup instructions |
+| [docs/package-structure.md](./docs/package-structure.md) | Package conventions |
+| [docs/architecture.md](./docs/architecture.md) | Service architecture |
+| [docs/e2e-testing.md](./docs/e2e-testing.md) | E2E testing guide |
+
+## Agent OS Integration
+
+This project uses Agent OS v3 for AI-assisted development standards. Standards are in `agent-os/standards/` and can be injected using `/inject-standards`.
+
+Available commands:
+- `/discover-standards` - Extract patterns from codebase
+- `/inject-standards` - Inject standards into context
+- `/shape-spec` - Enhanced spec shaping
+- `/plan-product` - Product planning
+
+## Common Tasks
+
+### Adding a New Service Package
+1. Create `packages/<framework>-service/`
+2. Follow the service architecture pattern (launcher.ts, service.ts, types.ts)
+3. Add to `pnpm-workspace.yaml`
+4. Update `turbo.json` with build dependencies
+5. Create E2E test app in `fixtures/e2e-apps/<framework>/`
+
+### Debugging Integration Tests
+1. Tests are in `test/integration/`
+2. Mock drivers are in `test/fixtures/`
+3. Use `fileParallelism: false` in vitest config for port isolation
+4. Check port conflicts if tests hang
+
+### Debugging E2E Tests
+1. E2E tests require built apps in `fixtures/e2e-apps/`
+2. Check `e2e/wdio.*.conf.ts` for configuration
+3. Protocol handlers may need setup (see `PROTOCOL_HANDLER_SETUP.md`)

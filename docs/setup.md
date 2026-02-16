@@ -1,6 +1,6 @@
 # Monorepo Setup Guide
 
-This guide will help you set up the WebdriverIO Cross-Platform Testing Services monorepo for development.
+This guide will help you set up the WebdriverIO Desktop & Mobile monorepo for development.
 
 ## Prerequisites
 
@@ -11,10 +11,10 @@ Before you begin, ensure you have the following installed:
   node --version  # Should be v18.x or v20.x
   ```
 
-- **pnpm**: Version 10.12.0 or higher
+- **pnpm**: Version 10.27.0 or higher
   ```bash
   npm install -g pnpm
-  pnpm --version  # Should be 10.12.0+
+  pnpm --version  # Should be 10.27.0+
   ```
 
 - **Git**: For version control
@@ -68,8 +68,8 @@ This runs tests for all packages and ensures everything is working correctly.
 pnpm turbo build
 
 # Build a specific package
-pnpm --filter @wdio/electron-utils build
-pnpm --filter wdio-electron-service build
+pnpm --filter @wdio/electron-service build
+pnpm --filter @wdio/tauri-service build
 
 # Clean and rebuild
 pnpm clean
@@ -86,10 +86,10 @@ pnpm test
 pnpm test:coverage
 
 # Run tests for specific package
-pnpm --filter @wdio/electron-utils test
+pnpm --filter @wdio/electron-service test
 
 # Run tests in watch mode
-pnpm --filter @wdio/electron-utils vitest
+pnpm --filter @wdio/electron-service vitest
 ```
 
 ### Code Quality
@@ -125,13 +125,14 @@ desktop-mobile/
 ├── .github/
 │   └── workflows/          # CI/CD workflows
 ├── packages/               # All packages
-│   ├── @wdio/             # Scoped utility packages
-│   │   ├── electron-utils/
-│   │   ├── electron-cdp-bridge/
-│   │   ├── native-utils/
-│   │   └── tauri-plugin/  # Tauri v2 plugin
-│   ├── wdio-electron-service/  # Service packages
-│   └── wdio-tauri-service/     # Tauri service
+│   ├── electron-service/       # Electron WDIO service
+│   ├── tauri-service/          # Tauri WDIO service
+│   ├── tauri-plugin/           # Tauri v2 plugin (Rust + JS)
+│   ├── electron-cdp-bridge/    # Chrome DevTools Protocol bridge
+│   ├── native-utils/           # Cross-platform utilities
+│   ├── native-types/           # Shared TypeScript type definitions
+│   ├── native-spy/             # Spy utilities for mocking
+│   └── bundler/                # Build tooling
 ├── fixtures/              # Test fixtures and example apps
 │   ├── e2e-apps/         # E2E test applications
 │   │   └── tauri/        # Tauri E2E app
@@ -157,25 +158,25 @@ See [package-structure.md](./package-structure.md) for detailed guidelines.
 
 Quick steps:
 
-1. Create package directory: `packages/@wdio/my-package/`
-2. Copy structure from `packages/@wdio/electron-service/`
+1. Create package directory: `packages/my-package/`
+2. Copy structure from `packages/electron-service/`
 3. Update `package.json` with your package details
 4. Implement your code in `src/`
 5. Add tests in `test/`
-6. Build: `pnpm --filter @wdio/my-package build`
+6. Build: `pnpm --filter @wdio/my-package build` (use the `name` from package.json)
 7. Test: `pnpm --filter @wdio/my-package test`
 
 ### Adding Dependencies
 
 ```bash
 # Add dependency to specific package
-pnpm --filter @wdio/electron-utils add some-package
+pnpm --filter @wdio/electron-service add some-package
 
 # Add dev dependency
-pnpm --filter @wdio/electron-utils add -D some-dev-package
+pnpm --filter @wdio/electron-service add -D some-dev-package
 
 # Add workspace dependency
-pnpm --filter wdio-electron-service add @wdio/electron-utils@workspace:*
+pnpm --filter @wdio/electron-service add @wdio/native-utils@workspace:*
 ```
 
 ### Using the Catalog
@@ -240,7 +241,7 @@ pnpm turbo build
 pnpm update -r -i --latest
 
 # Update specific package
-pnpm --filter @wdio/electron-utils update some-package
+pnpm --filter @wdio/electron-service update some-package
 ```
 
 ## Troubleshooting
@@ -339,9 +340,19 @@ See the [Tauri Plugin README](../packages/tauri-plugin/README.md) for detailed s
 
 - Read [package-structure.md](./package-structure.md) for package conventions
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines
-- Check out example packages in `packages/@wdio/electron-service/`
-- Explore the Electron service implementation in `packages/wdio-electron-service/`
+- Read [AGENTS.md](../AGENTS.md) for AI assistant context and coding standards
+- Explore the Electron service implementation in `packages/electron-service/`
+- Explore the Tauri service implementation in `packages/tauri-service/`
 - See [Tauri Plugin README](../packages/tauri-plugin/README.md) for Tauri plugin setup
+
+## AI-Assisted Development
+
+This project uses Agent OS for AI-assisted development. The [AGENTS.md](../AGENTS.md) file contains context for AI tools like Claude Code, Cursor, and others.
+
+Available slash commands (Claude Code):
+- `/discover-standards` - Extract patterns from the codebase into documented standards
+- `/inject-standards` - Inject standards into context for consistent AI assistance
+- `/shape-spec` - Enhanced spec shaping with standards awareness
 
 ## Getting Help
 
