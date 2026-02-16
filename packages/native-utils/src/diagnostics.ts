@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
 import { createLogger } from './log.js';
 
@@ -140,7 +140,7 @@ export function diagnoseLinuxDependencies(requiredPackages: string[]): Diagnosti
 
   for (const pkg of requiredPackages) {
     try {
-      execSync(`dpkg -s ${pkg} > /dev/null 2>&1`, { timeout: 1000 });
+      execFileSync('dpkg', ['-s', pkg], { timeout: 1000, stdio: 'ignore' });
     } catch {
       missing.push(pkg);
     }
