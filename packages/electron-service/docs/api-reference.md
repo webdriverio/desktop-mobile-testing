@@ -53,38 +53,54 @@ These functions are exported directly from the package and can be used independe
 
 ### `createElectronCapabilities()`
 
-Creates an Electron capabilities object for use with `startWdioSession()` or in WDIO configuration. This is a convenience helper that builds the correct capability structure including `goog:chromeOptions` and `wdio:electronServiceOptions`.
+Creates an Electron capabilities object for use with `startWdioSession()` or in WDIO configuration. Builds the correct capability structure including `goog:chromeOptions` and `wdio:electronServiceOptions`.
 
 **Signature:**
 ```ts
 import { createElectronCapabilities } from '@wdio/electron-service';
 
-createElectronCapabilities(
-  appBinaryPath: string,
-  appEntryPoint?: string,
-  options?: { appArgs?: string[] }
-): ElectronServiceCapabilities
+createElectronCapabilities(options: ElectronServiceOptions): ElectronStandaloneCapability
 ```
 
 **Parameters:**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `appBinaryPath` | `string` | Path to the Electron application binary |
-| `appEntryPoint` | `string` | Optional. Path to the unpackaged app entry point (e.g., `main.js`) |
-| `options.appArgs` | `string[]` | Optional. Command-line arguments to pass to the app |
+| `options` | `ElectronServiceOptions` | Service options. Must include at least `appBinaryPath` or `appEntryPoint`. |
+
+Common fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `appBinaryPath` | `string` | Path to the compiled Electron app binary |
+| `appEntryPoint` | `string` | Path to the unpackaged app entry point (e.g., `main.js`) |
+| `appArgs` | `string[]` | Command-line arguments passed to the app |
+| `captureMainProcessLogs` | `boolean` | Enable main process log capture |
+| `captureRendererLogs` | `boolean` | Enable renderer process log capture |
+| `logDir` | `string` | Directory for standalone mode logs |
+
+See [Configuration](./configuration.md) for the full list of `ElectronServiceOptions` fields.
 
 **Returns:**
 
-`ElectronServiceCapabilities` - A fully-formed capabilities object
+`ElectronStandaloneCapability` - A single capabilities object
+
+**Throws:**
+
+| Error | Condition |
+|-------|-----------|
+| `Error` | If neither `appBinaryPath` nor `appEntryPoint` is provided |
 
 **Example:**
 
 ```ts
 import { startWdioSession, createElectronCapabilities } from '@wdio/electron-service';
 
-const caps = createElectronCapabilities('./dist/mac/MyApp.app/Contents/MacOS/MyApp', undefined, {
+const caps = createElectronCapabilities({
+  appBinaryPath: './dist/mac/MyApp.app/Contents/MacOS/MyApp',
   appArgs: ['--disable-gpu', '--headless'],
+  captureMainProcessLogs: true,
+  logDir: './test-logs',
 });
 
 const browser = await startWdioSession([caps]);
@@ -92,7 +108,7 @@ const browser = await startWdioSession([caps]);
 
 **See Also:**
 - [Standalone Mode](./standalone-mode.md)
-- [Configuration - `appBinaryPath`](./configuration.md#appbinarypath)
+- [Configuration](./configuration.md)
 
 ---
 

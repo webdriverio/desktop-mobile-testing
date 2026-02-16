@@ -22,6 +22,7 @@ export type {
   ElectronServiceCapabilities,
   ElectronServiceGlobalOptions,
   ElectronServiceOptions,
+  ElectronStandaloneCapability,
   ElectronType,
   ExecuteOpts,
   ForgeArch,

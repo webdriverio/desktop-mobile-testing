@@ -31,7 +31,8 @@ You can also use the `createElectronCapabilities` helper to build capabilities p
 ```TS
 import { startWdioSession, createElectronCapabilities } from '@wdio/electron-service';
 
-const caps = createElectronCapabilities('/path/to/binary', undefined, {
+const caps = createElectronCapabilities({
+  appBinaryPath: '/path/to/binary',
   appArgs: ['--disable-dev-shm-usage', '--disable-gpu', '--headless'],
 });
 
