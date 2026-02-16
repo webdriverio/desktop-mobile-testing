@@ -170,6 +170,10 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
     clearPuppeteerSessions();
   }
 
+  afterSession() {
+    mockStore.clear();
+  }
+
   /**
    * Install command overrides to trigger mock updates after DOM interactions
    */
