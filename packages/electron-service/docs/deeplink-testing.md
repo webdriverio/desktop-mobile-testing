@@ -428,7 +428,7 @@ if (process.platform === 'win32' || process.platform === 'linux') {
 
 3. Make sure this code runs **before** `app.whenReady()` or any other app initialization
 
-For more details, see the [Common Issues guide](./common-issues.md#deeplink-launches-new-app-instance-instead-of-reaching-test-instance-windows).
+For more details, see the [Common Issues guide](./common-issues.md).
 
 ### Warning: "Using appEntryPoint with protocol handlers"
 

@@ -39,7 +39,7 @@ npm run build                       # for production
 
 See: [Electron Fuses Documentation](https://www.electronjs.org/docs/latest/tutorial/fuses#nodecliinspect)
 
-### DevToolsActivePort file doesn't exist
+## DevToolsActivePort file doesn't exist
 
 This is a Chromium error which may appear when using Docker or CI. Most of the "fixes" discussed online are based around passing different combinations of args to Chromium - you can set these via [`appArgs`](./configuration.md#appargs), though in most cases using xvfb has proven to be more effective; the service itself uses xvfb when running E2Es on Linux CI.
 

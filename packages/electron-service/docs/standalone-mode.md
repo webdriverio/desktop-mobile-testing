@@ -26,6 +26,18 @@ const browser = await startWdioSession([{
 const appName = await browser.electron.execute((electron) => electron.app.getName());
 ```
 
+You can also use the `createElectronCapabilities` helper to build capabilities programmatically:
+
+```TS
+import { startWdioSession, createElectronCapabilities } from '@wdio/electron-service';
+
+const caps = createElectronCapabilities('/path/to/binary', undefined, {
+  appArgs: ['--disable-dev-shm-usage', '--disable-gpu', '--headless'],
+});
+
+const browser = await startWdioSession([caps]);
+```
+
 `rootDir` can be specified in the second (optional) `ElectronServiceGlobalOptions` parameter, which also accepts mocking preferences for the session:
 
 ```TS

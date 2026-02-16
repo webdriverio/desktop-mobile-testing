@@ -91,7 +91,7 @@ Alternatively, you can run it for each individual package.
 For example, run the dev script for `@wdio/electron-utils` in a new terminal:
 
 ```bash
-pnpm dev --filter "@wdio/electron-utils"
+pnpm dev --filter "@wdio/native-utils"
 ```
 
 ## Testing - E2Es
@@ -196,8 +196,6 @@ Check the issues or [raise a new one](https://github.com/webdriverio/desktop-mob
 Project maintainers can publish a release or pre-release of the npm package by manually running the [`Manual NPM Publish`](https://github.com/webdriverio/desktop-mobile/actions/workflows/release.yml) GitHub workflow. They will choose the release type to trigger a `major` , `minor`, or `patch` release following [Semantic Versioning](https://semver.org/), or a pre-release.
 
 For detailed information about our release management process, including milestone structure, labeling system, and workflow, see the [Release Management](./release-management.md) documentation.
-
-### Publish a Release
 
 ## Release Process
 

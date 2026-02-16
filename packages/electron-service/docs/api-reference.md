@@ -1,9 +1,12 @@
 # API Reference
 
-This document provides a complete reference for all `browser.electron.*` methods provided by the service.
+This document provides a complete reference for all `browser.electron.*` methods and exported utility functions provided by the service.
 
 ## Table of Contents
 
+- [Utility Functions](#utility-functions)
+  - [`createElectronCapabilities()`](#createelectroncapabilities)
+  - [`getElectronBinaryPath()`](#getelectronbinarypath)
 - [Execution Methods](#execution-methods)
   - [`execute()`](#execute)
   - [`triggerDeeplink()`](#triggerdeeplink)
@@ -41,6 +44,98 @@ This document provides a complete reference for all `browser.electron.*` methods
   - [`[methodName]`](#methodname)
   - [`getMockName()`](#getmockname)
   - [`mockRestore()`](#mockrestore)
+
+---
+
+## Utility Functions
+
+These functions are exported directly from the package and can be used independently of the WDIO test runner.
+
+### `createElectronCapabilities()`
+
+Creates an Electron capabilities object for use with `startWdioSession()` or in WDIO configuration. This is a convenience helper that builds the correct capability structure including `goog:chromeOptions` and `wdio:electronServiceOptions`.
+
+**Signature:**
+```ts
+import { createElectronCapabilities } from '@wdio/electron-service';
+
+createElectronCapabilities(
+  appBinaryPath: string,
+  appEntryPoint?: string,
+  options?: { appArgs?: string[] }
+): ElectronServiceCapabilities
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `appBinaryPath` | `string` | Path to the Electron application binary |
+| `appEntryPoint` | `string` | Optional. Path to the unpackaged app entry point (e.g., `main.js`) |
+| `options.appArgs` | `string[]` | Optional. Command-line arguments to pass to the app |
+
+**Returns:**
+
+`ElectronServiceCapabilities` - A fully-formed capabilities object
+
+**Example:**
+
+```ts
+import { startWdioSession, createElectronCapabilities } from '@wdio/electron-service';
+
+const caps = createElectronCapabilities('./dist/mac/MyApp.app/Contents/MacOS/MyApp', undefined, {
+  appArgs: ['--disable-gpu', '--headless'],
+});
+
+const browser = await startWdioSession([caps]);
+```
+
+**See Also:**
+- [Standalone Mode](./standalone-mode.md)
+- [Configuration - `appBinaryPath`](./configuration.md#appbinarypath)
+
+---
+
+### `getElectronBinaryPath()`
+
+Resolves the path to the Electron binary for a given app directory. Uses the same detection logic as the service (reading `package.json`, checking Electron Forge/Builder configs) without starting a session.
+
+**Signature:**
+```ts
+import { getElectronBinaryPath } from '@wdio/electron-service';
+
+getElectronBinaryPath(appDir: string): Promise<string>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `appDir` | `string` | Path to the Electron app directory (must contain a `package.json`) |
+
+**Returns:**
+
+`Promise<string>` - The resolved path to the Electron binary
+
+**Throws:**
+
+| Error | Condition |
+|-------|-----------|
+| `Error` | If no `package.json` is found in `appDir` |
+| `Error` | If the binary path cannot be resolved |
+
+**Example:**
+
+```ts
+import { getElectronBinaryPath } from '@wdio/electron-service';
+
+const binaryPath = await getElectronBinaryPath('/path/to/my-electron-app');
+console.log(binaryPath);
+// e.g. '/path/to/my-electron-app/dist/mac-arm64/MyApp.app/Contents/MacOS/MyApp'
+```
+
+**See Also:**
+- [Configuration - Automatic detection of App binary](./configuration.md#automatic-detection-of-app-binary)
 
 ---
 

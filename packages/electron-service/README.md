@@ -44,7 +44,7 @@ npm install --save-dev @wdio/cli @wdio/electron-service
 
 Or use your package manager of choice - pnpm, yarn, etc.
 
-Next, create your WDIO configuration file. If you need some inspiration for this, there is a working configuration in the [example directory](../../examples/) of this repository, as well as the [WDIO configuration reference page](https://webdriver.io/docs/configuration).
+Next, create your WDIO configuration file. For inspiration, see the self-contained [package test apps](../../fixtures/package-tests/) in this repository or the [WDIO configuration reference](https://webdriver.io/docs/configuration).
 
 You will need to add `electron` to your services array and set an Electron capability, e.g.:
 
@@ -135,7 +135,7 @@ Read the [development doc](./docs/development.md) if you are interested in contr
 
 ## Example Integrations
 
-Check out our [Electron boilerplate](https://github.com/webdriverio/electron-boilerplate) project that showcases how to integrate WebdriverIO in an example application. You can also have a look at the [Example Apps](../../examples/) and [E2Es](../../e2e/) directories in this repository.
+Check out our [Electron boilerplate](https://github.com/webdriverio/electron-boilerplate) project that showcases how to integrate WebdriverIO in an example application. You can also have a look at the [package test apps](../../fixtures/package-tests/), [E2E test apps](../../fixtures/e2e-apps/), and [E2E test suites](../../e2e/) in this repository.
 
 ## Support
 
