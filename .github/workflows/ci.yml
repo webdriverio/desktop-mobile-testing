@@ -158,12 +158,6 @@ jobs:
           - os: ubuntu-latest
             display-name: Linux
             module-type: esm
-          - os: ubuntu-24.04-arm
-            display-name: Linux-ARM64
-            module-type: cjs
-          - os: ubuntu-24.04-arm
-            display-name: Linux-ARM64
-            module-type: esm
           - os: windows-latest
             display-name: Windows
             module-type: cjs
