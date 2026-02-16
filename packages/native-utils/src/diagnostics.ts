@@ -1,4 +1,4 @@
-import { execSync, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
 import { createLogger } from './log.js';
 
@@ -83,7 +83,7 @@ export function diagnoseSharedLibraries(binaryPath: string): DiagnosticResult[] 
   const results: DiagnosticResult[] = [];
 
   try {
-    const lddOutput = execSync(`ldd "${binaryPath}"`, { encoding: 'utf8', timeout: 5000, stdio: 'pipe' });
+    const lddOutput = execFileSync('ldd', [binaryPath], { encoding: 'utf8', timeout: 5000, stdio: 'pipe' });
     const missing = lddOutput.split('\n').filter((line) => line.includes('not found'));
 
     if (missing.length > 0) {
