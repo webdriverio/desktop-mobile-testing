@@ -158,23 +158,11 @@ jobs:
           - os: ubuntu-latest
             display-name: Linux
             module-type: esm
-          - os: ubuntu-24.04-arm
-            display-name: Linux-ARM64
-            module-type: cjs
-          - os: ubuntu-24.04-arm
-            display-name: Linux-ARM64
-            module-type: esm
           - os: windows-latest
             display-name: Windows
             module-type: cjs
           - os: windows-latest
             display-name: Windows
-            module-type: esm
-          - os: windows-11-arm
-            display-name: Windows-ARM64
-            module-type: cjs
-          - os: windows-11-arm
-            display-name: Windows-ARM64
             module-type: esm
           - os: macos-latest
             display-name: macOS-ARM
@@ -281,8 +269,6 @@ jobs:
         include:
           - os: windows-latest
             display-name: Windows
-          - os: windows-11-arm
-            display-name: Windows-ARM64
           - os: macos-latest
             display-name: macOS-ARM
           - os: macos-15-intel
