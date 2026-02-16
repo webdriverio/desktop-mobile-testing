@@ -37,9 +37,6 @@ catalogs:
       specifier: ^9.23.0
       version: 9.23.0
 
-overrides:
-  '@wdio/utils': file:./wdio-utils-9.23.3.tgz
-
 importers:
 
   .:
@@ -2833,9 +2830,8 @@ packages:
     resolution: {integrity: sha512-zMmAtse2UMCSOW76mvK3OejauAdcFGuKopNRH7crI0gwKTZtvV89yXWRziz9cVXpFgfmJCjf9edxKFWdhuF5yw==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/utils@file:wdio-utils-9.23.3.tgz':
-    resolution: {integrity: sha512-vLSsQ64u752m9shThP4Z66eUhPFgQr0EbGrY+4LMlLUiLfOw6eONlj9eId4NfS0SQHpO9GQQCrp5cmQL5H1q4w==, tarball: file:wdio-utils-9.23.3.tgz}
-    version: 9.23.3
+  '@wdio/utils@9.23.0':
+    resolution: {integrity: sha512-WhXuVSxEvPw/i34bL1aCHAOi+4g29kRkIMyBShNSxH+Shxh2G91RJYsXm4IAiPMGcC4H6G8T2VcbZ32qnGPm5Q==}
     engines: {node: '>=18.20.0'}
 
   '@wdio/xvfb@9.20.0':
@@ -8515,7 +8511,7 @@ snapshots:
       '@wdio/logger': 9.18.0
       '@wdio/protocols': 9.16.2
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.23.3.tgz
+      '@wdio/utils': 9.23.0
       async-exit-hook: 2.0.1
       chalk: 5.6.2
       chokidar: 4.0.3
@@ -8544,7 +8540,7 @@ snapshots:
     dependencies:
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.23.3.tgz
+      '@wdio/utils': 9.23.0
       deepmerge-ts: 7.1.5
       glob: 10.4.5
       import-meta-resolve: 4.2.0
@@ -8601,7 +8597,7 @@ snapshots:
       '@types/node': 20.19.23
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.23.3.tgz
+      '@wdio/utils': 9.23.0
       mocha: 10.8.2
     transitivePeerDependencies:
       - bare-abort-controller
@@ -8631,7 +8627,7 @@ snapshots:
       '@wdio/globals': 9.23.0(expect-webdriverio@5.4.3)(webdriverio@9.23.0(puppeteer-core@24.37.2))
       '@wdio/logger': 9.18.0
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.23.3.tgz
+      '@wdio/utils': 9.23.0
       deepmerge-ts: 7.1.5
       expect-webdriverio: 5.4.3(@wdio/globals@9.23.0)(@wdio/logger@9.18.0)(webdriverio@9.23.0(puppeteer-core@24.37.2))
       webdriver: 9.23.0
@@ -8656,7 +8652,7 @@ snapshots:
     dependencies:
       '@types/node': 20.19.23
 
-  '@wdio/utils@file:wdio-utils-9.23.3.tgz':
+  '@wdio/utils@9.23.0':
     dependencies:
       '@puppeteer/browsers': 2.12.0
       '@wdio/logger': 9.18.0
@@ -8664,7 +8660,6 @@ snapshots:
       decamelize: 6.0.1
       deepmerge-ts: 7.1.5
       edgedriver: 6.1.2
-      electron-to-chromium: 1.5.267
       geckodriver: 6.1.0
       get-port: 7.1.0
       import-meta-resolve: 4.2.0
@@ -12608,7 +12603,7 @@ snapshots:
       '@wdio/logger': 9.18.0
       '@wdio/protocols': 9.16.2
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.23.3.tgz
+      '@wdio/utils': 9.23.0
       deepmerge-ts: 7.1.5
       https-proxy-agent: 7.0.6
       undici: 6.22.0
@@ -12630,7 +12625,7 @@ snapshots:
       '@wdio/protocols': 9.16.2
       '@wdio/repl': 9.16.2
       '@wdio/types': 9.20.0
-      '@wdio/utils': file:wdio-utils-9.23.3.tgz
+      '@wdio/utils': 9.23.0
       archiver: 7.0.1
       aria-query: 5.3.2
       cheerio: 1.1.2
