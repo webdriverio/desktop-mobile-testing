@@ -42,7 +42,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@babel/parser": "^7.28.5",
+    "@babel/parser": "^7.29.0",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
     "@wdio/native-spy": "workspace:*",
