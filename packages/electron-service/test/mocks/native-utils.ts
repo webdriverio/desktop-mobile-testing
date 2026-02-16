@@ -18,3 +18,28 @@ export const createLogger = vi.fn(() => createMockLogger());
 export const getBinaryPath = vi.fn();
 export const getAppBuildInfo = vi.fn();
 export const getElectronVersion = vi.fn();
+export const waitUntilWindowAvailable = vi.fn();
+
+// Diagnostics
+export const diagnoseBinary = vi.fn();
+export const diagnoseDiskSpace = vi.fn();
+export const diagnoseDisplay = vi.fn();
+export const diagnoseLinuxDependencies = vi.fn();
+export const diagnosePlatform = vi.fn();
+export const diagnoseSharedLibraries = vi.fn();
+export const formatDiagnosticResults = vi.fn();
+
+// Result types
+export const Err = vi.fn();
+export const Ok = vi.fn();
+export const isErr = vi.fn();
+export const isOk = vi.fn();
+export const map = vi.fn();
+export const mapErr = vi.fn();
+export const unwrap = vi.fn();
+export const unwrapOr = vi.fn();
+export const wrapAsync = vi.fn();
+
+// Select executable
+export const selectExecutable = vi.fn();
+export const validateBinaryPaths = vi.fn();

@@ -47,6 +47,19 @@ vi.mock('@wdio/native-utils', () => ({
     warn: vi.fn(),
     error: vi.fn(),
   }),
+  diagnoseBinary: vi.fn(() => [
+    { category: 'Binary Permissions', status: 'ok', message: '755' },
+    { category: 'Binary Size', status: 'ok', message: '100.00 MB' },
+  ]),
+  diagnoseDiskSpace: vi.fn(() => [{ category: 'Disk Space', status: 'ok', message: '50G used, 50G available' }]),
+  diagnoseDisplay: vi.fn(() => []),
+  diagnoseLinuxDependencies: vi.fn(() => []),
+  diagnosePlatform: vi.fn(() => [
+    { category: 'Platform', status: 'ok', message: 'darwin x64' },
+    { category: 'Node Version', status: 'ok', message: 'v20.0.0' },
+  ]),
+  diagnoseSharedLibraries: vi.fn(() => []),
+  formatDiagnosticResults: vi.fn(),
 }));
 
 import { type DiagnosticResult, diagnoseElectronEnvironment, formatDiagnosticResults } from '../src/diagnostics.js';
