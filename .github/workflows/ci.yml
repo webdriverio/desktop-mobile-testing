@@ -170,6 +170,12 @@ jobs:
           - os: windows-latest
             display-name: Windows
             module-type: esm
+          - os: windows-11-arm
+            display-name: Windows-ARM64
+            module-type: cjs
+          - os: windows-11-arm
+            display-name: Windows-ARM64
+            module-type: esm
           - os: macos-latest
             display-name: macOS-ARM
             module-type: cjs
@@ -275,6 +281,8 @@ jobs:
         include:
           - os: windows-latest
             display-name: Windows
+          - os: windows-11-arm
+            display-name: Windows-ARM64
           - os: macos-latest
             display-name: macOS-ARM
           - os: macos-15-intel
