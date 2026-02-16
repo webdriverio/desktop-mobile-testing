@@ -26,6 +26,23 @@ interface DriverInstallSuccess {
 type DriverInstallResult = Result<DriverInstallSuccess, Error>;
 ```
 
+## Result Type
+
+`ensure*()` functions return `Result<T, E>` instead of throwing. Located at `native-utils/src/result.ts`, import from `@wdio/native-utils`.
+
+```typescript
+type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
+
+function Ok<T>(value: T): Result<T, never>;
+function Err<E>(error: E): Result<never, E>;
+function isOk<T, E>(result: Result<T, E>): result is { ok: true; value: T };
+function isErr<T, E>(result: Result<T, E>): result is { ok: false; error: E };
+function unwrap<T, E>(result: Result<T, E>): T;  // throws if Err
+function wrapAsync<T>(promise: Promise<T>): Promise<Result<T, Error>>;
+```
+
+Check with `isOk()`/`isErr()`, access `.value`/`.error`. Never use `.success`, `.data`, or `.result` properties.
+
 ## Rules
 - Always return `Result`, never throw from `ensure*()` functions
 - `find*()` is pure discovery (no side effects), `ensure*()` may install
