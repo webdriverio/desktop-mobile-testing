@@ -197,4 +197,4 @@ Available commands:
 ### Debugging E2E Tests
 1. E2E tests require built apps in `fixtures/e2e-apps/`
 2. Check `e2e/wdio.*.conf.ts` for configuration
-3. Protocol handlers may need setup (see `PROTOCOL_HANDLER_SETUP.md`)
+3. Protocol handlers may need setup (see `docs/e2e-testing.md`)

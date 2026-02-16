@@ -275,7 +275,19 @@ ls -la fixtures/e2e-apps/tauri/src-tauri/target/release/
 
 #### Protocol Handler Not Registered
 
-For Tauri deep link tests, the protocol handler must be registered. See [PROTOCOL_HANDLER_SETUP.md](../PROTOCOL_HANDLER_SETUP.md).
+For Tauri deep link tests, the protocol handler must be registered. Setup scripts are provided per app:
+
+```bash
+# From root - protocol install runs automatically before E2E tests
+pnpm e2e:tauri-basic
+pnpm e2e:electron-builder
+
+# Run protocol install only
+pnpm protocol-install:tauri
+pnpm protocol-install:electron-builder
+```
+
+Each app has platform-specific setup scripts in `fixtures/e2e-apps/<app>/scripts/` that detect the OS and register the protocol handler. These scripts are idempotent — running them multiple times is safe as they check if the protocol is already registered and skip if so.
 
 ## CI Integration
 
