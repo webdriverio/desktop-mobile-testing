@@ -221,9 +221,10 @@ export interface TauriServiceOptions {
    * Driver provider to use for WebDriver communication
    * - 'official': Use cargo-installed tauri-driver (default)
    * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * - 'embedded': Use embedded WebDriver server via tauri-plugin-webdriver (no external driver needed)
    * @default 'official'
    */
-  driverProvider?: 'official' | 'crabnebula';
+  driverProvider?: 'official' | 'crabnebula' | 'embedded';
   /**
    * Path to @crabnebula/tauri-driver executable
    * If not provided, will be auto-detected from node_modules
@@ -240,6 +241,13 @@ export interface TauriServiceOptions {
    * @default 3000
    */
   crabnebulaBackendPort?: number;
+  /**
+   * Port for embedded WebDriver server (when driverProvider is 'embedded')
+   * Defaults to 4445 (tauri-plugin-webdriver default)
+   * Can be overridden via TAURI_WEBDRIVER_PORT env var
+   * @default 4445
+   */
+  embeddedPort?: number;
 }
 
 /**
@@ -315,9 +323,10 @@ export interface TauriServiceGlobalOptions {
    * Driver provider to use for WebDriver communication
    * - 'official': Use cargo-installed tauri-driver (default)
    * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * - 'embedded': Use embedded WebDriver server via tauri-plugin-webdriver (no external driver needed)
    * @default 'official'
    */
-  driverProvider?: 'official' | 'crabnebula';
+  driverProvider?: 'official' | 'crabnebula' | 'embedded';
   /**
    * Path to @crabnebula/tauri-driver executable
    * If not provided, will be auto-detected from node_modules
@@ -334,6 +343,13 @@ export interface TauriServiceGlobalOptions {
    * @default 3000
    */
   crabnebulaBackendPort?: number;
+  /**
+   * Port for embedded WebDriver server (when driverProvider is 'embedded')
+   * Defaults to 4445 (tauri-plugin-webdriver default)
+   * Can be overridden via TAURI_WEBDRIVER_PORT env var
+   * @default 4445
+   */
+  embeddedPort?: number;
 }
 
 /**

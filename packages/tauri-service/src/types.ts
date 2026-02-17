@@ -43,9 +43,10 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    * Driver provider to use for WebDriver communication
    * - 'official': Use cargo-installed tauri-driver (default)
    * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
+   * - 'embedded': Use embedded WebDriver server via tauri-plugin-webdriver (no external driver needed)
    * @default 'official'
    */
-  driverProvider?: 'official' | 'crabnebula';
+  driverProvider?: 'official' | 'crabnebula' | 'embedded';
   /**
    * Path to @crabnebula/tauri-driver executable
    * If not provided, will be auto-detected from node_modules

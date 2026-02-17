@@ -14,6 +14,9 @@ export const EnvSchema = z.object({
   TEST_TYPE: z.enum(['standard', 'window', 'multiremote', 'standalone', 'deeplink']).default('standard'),
   BINARY: z.enum(['true', 'false']).default('true'),
 
+  // Driver provider for Tauri (official, crabnebula, embedded)
+  DRIVER_PROVIDER: z.enum(['official', 'crabnebula', 'embedded']).optional(),
+
   // Special modes
   MAC_UNIVERSAL: z.enum(['true', 'false']).default('false'),
   ENABLE_SPLASH_WINDOW: z.enum(['true', 'false']).optional(),
@@ -94,6 +97,10 @@ export class EnvironmentContext {
     return this.env.ENABLE_SPLASH_WINDOW === 'true';
   }
 
+  get driverProvider(): 'official' | 'crabnebula' | 'embedded' | undefined {
+    return this.env.DRIVER_PROVIDER;
+  }
+
   get concurrency(): number {
     return this.env.CONCURRENCY;
   }
@@ -165,6 +172,7 @@ export class EnvironmentContext {
       TEST_TYPE: merged.TEST_TYPE,
       BINARY: merged.BINARY,
       APP_DIR: merged.APP_DIR || '',
+      ...(merged.DRIVER_PROVIDER && { DRIVER_PROVIDER: merged.DRIVER_PROVIDER }),
       ...(merged.MAC_UNIVERSAL === 'true' && { MAC_UNIVERSAL: 'true' }),
       ...(merged.ENABLE_SPLASH_WINDOW === 'true' && { ENABLE_SPLASH_WINDOW: 'true' }),
       ...(merged.WDIO_VERBOSE === 'true' && { WDIO_VERBOSE: 'true' }),
@@ -178,6 +186,7 @@ export class EnvironmentContext {
   toString(): string {
     const parts = [this.framework, this.app, this.testType, this.isBinary ? 'binary' : 'script'];
 
+    if (this.driverProvider) parts.push(`provider-${this.driverProvider}`);
     if (this.isMacUniversal) parts.push('mac-universal');
     if (this.isSplashEnabled) parts.push('splash');
 
