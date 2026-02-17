@@ -1,4 +1,4 @@
-use tauri::{command, Manager, Runtime, WebviewWindow, Listener, Emitter};
+use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
@@ -50,7 +50,6 @@ pub(crate) async fn execute<R: Runtime>(
     log::debug!("Execute command called");
     log::trace!("Script length: {} chars", request.script.len());
 
-    let app_handle = window.app_handle().clone();
     let window_label = window.label().to_owned();
 
     use std::sync::mpsc;
@@ -66,7 +65,6 @@ pub(crate) async fn execute<R: Runtime>(
     let error_tx = tx;
 
     // Listen for the result event from the frontend - must listen on the window for window.emit to work
-    let window_clone = window.clone();
     let listener_id = window.listen(&event_id, move |event| {
         log::trace!("Received result event payload: {}", event.payload());
 

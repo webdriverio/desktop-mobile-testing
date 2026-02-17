@@ -44,46 +44,38 @@ fn js_value_to_json(js_value: &javascriptcore::Value) -> Result<Value, String> {
         return Ok(Value::Bool(js_value.to_boolean()));
     }
 
-    // Strategy 4: Handle numbers
+    // Strategy 4: Handle numbers - use to_string then parse
     if js_value.is_number() {
-        if let Some(n) = js_value.to_number() {
+        let num_str = js_value.to_string();
+        if let Ok(n) = num_str.parse::<f64>() {
+            // Handle NaN and Infinity
+            if n.is_nan() || n.is_infinite() {
+                return Ok(Value::Null);
+            }
             // Check if it's an integer
-            if n == n.trunc() && n.is_finite() {
-                if n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                    return Ok(Value::Number(serde_json::Number::from(n as i64)));
-                }
+            if n == n.trunc() && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+                return Ok(Value::Number(serde_json::Number::from(n as i64)));
             }
             // Handle as floating point
             match serde_json::Number::from_f64(n) {
                 Some(num) => return Ok(Value::Number(num)),
-                None => return Ok(Value::Null), // NaN or Infinity
+                None => return Ok(Value::Null),
             }
         }
+        return Ok(Value::Null);
     }
 
-    // Strategy 5: Handle strings
+    // Strategy 5: Handle strings - to_string() returns String directly
     if js_value.is_string() {
-        if let Some(s) = js_value.to_string() {
-            return Ok(Value::String(s.to_string()));
-        }
+        return Ok(Value::String(js_value.to_string()));
     }
 
-    // Strategy 6: Handle arrays by iterating elements
-    if js_value.is_array() {
-        let mut array_values = Vec::new();
-        // Try to get array length and iterate
-        // Note: This is a best-effort approach for arrays
-        return Ok(Value::Array(array_values));
+    // Strategy 6: For arrays, objects, functions, etc. - convert to string
+    let string_repr = js_value.to_string();
+    if string_repr.is_empty() {
+        return Ok(Value::Null);
     }
-
-    // Strategy 7: Handle objects by converting to string representation
-    if js_value.is_object() {
-        // Try to get a string representation via toString()
-        return Ok(Value::String("[object Object]".to_string()));
-    }
-
-    // Final fallback: return null for unhandled types (functions, symbols, etc.)
-    Ok(Value::Null)
+    Ok(Value::String(string_repr))
 }
 
 /// Linux `WebKitGTK` executor
@@ -275,11 +267,24 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
 
                 let response: Result<String, String> = match result {
                     Ok(surface) => {
-                        // Write Cairo surface to PNG in memory
-                        let mut png_data: Vec<u8> = Vec::new();
-                        match surface.write_to_png(&mut png_data) {
-                            Ok(()) => Ok(BASE64_STANDARD.encode(&png_data)),
-                            Err(e) => Err(format!("Failed to write PNG: {e}")),
+                        // Convert gdk::Surface to Pixbuf, then encode as PNG
+                        // In gtk 0.18+, use gdk_pixbuf for encoding
+                        use gdk::SurfaceExt;
+                        use gdk_pixbuf::{Pixbuf, PixbufFormat};
+
+                        let width = surface.width();
+                        let height = surface.height();
+
+                        // Create a pixbuf from the surface
+                        match Pixbuf::from_surface(&surface, 0, 0, 0, 0, width, height, width * 4, None) {
+                            Ok(pixbuf) => {
+                                // Encode to PNG using pixbuf
+                                match pixbuf.save_to_bufferv("png", &[]) {
+                                    Ok(png_data) => Ok(BASE64_STANDARD.encode(png_data)),
+                                    Err(e) => Err(format!("Failed to encode PNG: {}", e)),
+                                }
+                            }
+                            Err(e) => Err(format!("Failed to create pixbuf: {}", e)),
                         }
                     }
                     Err(e) => Err(e.to_string()),
