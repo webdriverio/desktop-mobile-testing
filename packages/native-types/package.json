@@ -36,12 +36,12 @@
     "@wdio/native-spy": "workspace:*"
   },
   "devDependencies": {
-    "@electron-forge/shared-types": "^7.10.2",
-    "@electron/packager": "^19.0.1",
-    "@types/node": "^25.0.3",
+    "@electron-forge/shared-types": "^7.11.1",
+    "@electron/packager": "^19.0.5",
+    "@types/node": "^25.2.3",
     "@wdio/globals": "catalog:default",
     "@wdio/types": "catalog:default",
-    "builder-util": "^26.3.4",
+    "builder-util": "^26.4.1",
     "electron": "catalog:default",
     "read-package-up": "^11.0.0",
     "shx": "^0.4.0",

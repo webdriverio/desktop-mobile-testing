@@ -1,6 +1,4 @@
 import type { spawn } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import getPort from 'get-port';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriCapabilities } from '../../src/types.js';

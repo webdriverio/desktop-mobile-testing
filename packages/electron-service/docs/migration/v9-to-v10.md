@@ -78,9 +78,30 @@ See the [Debugging documentation](../debugging.md#electron-log-capture) for deta
 
 ## Breaking Changes
 
-### None
+### `createElectronCapabilities()` API change
 
-There are no breaking API changes in v10 beyond the package name. All existing functionality remains the same.
+The `createElectronCapabilities()` helper now accepts a single `ElectronServiceOptions` object instead of positional arguments.
+
+**Before (v9):**
+
+```ts
+const caps = createElectronCapabilities('/path/to/binary', undefined, {
+  appArgs: ['--headless'],
+});
+const browser = await startWdioSession([caps]);
+```
+
+**After (v10):**
+
+```ts
+const caps = createElectronCapabilities({
+  appBinaryPath: '/path/to/binary',
+  appArgs: ['--headless'],
+});
+const browser = await startWdioSession([caps]);
+```
+
+The function now returns an `ElectronStandaloneCapability` (a single object) instead of `ElectronServiceCapabilities` (a union type). All `ElectronServiceOptions` fields are accepted directly, including `captureMainProcessLogs`, `logDir`, `clearMocks`, etc.
 
 ## Verification
 

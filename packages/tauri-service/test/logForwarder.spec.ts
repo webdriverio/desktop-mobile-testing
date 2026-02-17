@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LogLevel } from '../src/logForwarder.js';
 
 const mockLoggerMethods = {
   debug: vi.fn(),

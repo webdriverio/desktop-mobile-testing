@@ -384,6 +384,13 @@ export type ElectronServiceCapabilities =
   | ElectronServiceRequestedMultiremoteCapabilities
   | ElectronServiceRequestedMultiremoteCapabilities[];
 
+export interface ElectronStandaloneCapability {
+  browserName: 'electron';
+  'goog:chromeOptions'?: { binary?: string; args?: string[] };
+  'wdio:electronServiceOptions'?: ElectronServiceOptions;
+  'wdio:chromiumVersion'?: string;
+}
+
 export type WdioElectronConfig = Omit<Options.Testrunner, 'capabilities'> & {
   capabilities: ElectronServiceCapabilities | ElectronServiceCapabilities[];
 };

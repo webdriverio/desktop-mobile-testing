@@ -163,10 +163,10 @@ describe('Session Management', () => {
   });
 
   describe('createElectronCapabilities()', () => {
-    it('should create capabilities with required fields', () => {
-      const caps = createElectronCapabilities('/path/to/app');
+    it('should create capabilities with appBinaryPath', () => {
+      const caps = createElectronCapabilities({ appBinaryPath: '/path/to/app' });
 
-      expect(caps).toMatchObject({
+      expect(caps).toStrictEqual({
         browserName: 'electron',
         'goog:chromeOptions': {
           binary: '/path/to/app',
@@ -178,30 +178,51 @@ describe('Session Management', () => {
       });
     });
 
-    it('should include appEntryPoint when provided', () => {
-      const caps = createElectronCapabilities('/path/to/app', './main.js');
+    it('should create capabilities with appEntryPoint', () => {
+      const caps = createElectronCapabilities({ appEntryPoint: './main.js' });
 
-      expect(caps).toMatchObject({
+      expect(caps).toStrictEqual({
+        browserName: 'electron',
         'wdio:electronServiceOptions': {
-          appBinaryPath: '/path/to/app',
           appEntryPoint: './main.js',
         },
       });
+      expect(caps['goog:chromeOptions']).toBeUndefined();
     });
 
-    it('should include appArgs when provided', () => {
-      const caps = createElectronCapabilities('/path/to/app', undefined, {
+    it('should include appArgs in both chromeOptions and serviceOptions', () => {
+      const caps = createElectronCapabilities({
+        appBinaryPath: '/path/to/app',
         appArgs: ['--flag', '--other'],
       });
 
-      expect(caps).toMatchObject({
-        'goog:chromeOptions': {
-          args: ['--flag', '--other'],
-        },
-        'wdio:electronServiceOptions': {
-          appArgs: ['--flag', '--other'],
-        },
+      expect(caps['goog:chromeOptions']).toStrictEqual({
+        binary: '/path/to/app',
+        args: ['--flag', '--other'],
       });
+      expect(caps['wdio:electronServiceOptions']?.appArgs).toStrictEqual(['--flag', '--other']);
+    });
+
+    it('should pass through all service options', () => {
+      const caps = createElectronCapabilities({
+        appBinaryPath: '/path/to/app',
+        captureMainProcessLogs: true,
+        mainProcessLogLevel: 'debug',
+        logDir: './logs',
+        clearMocks: true,
+      });
+
+      expect(caps['wdio:electronServiceOptions']).toMatchObject({
+        appBinaryPath: '/path/to/app',
+        captureMainProcessLogs: true,
+        mainProcessLogLevel: 'debug',
+        logDir: './logs',
+        clearMocks: true,
+      });
+    });
+
+    it('should throw when neither appBinaryPath nor appEntryPoint is provided', () => {
+      expect(() => createElectronCapabilities({})).toThrow('Either appBinaryPath or appEntryPoint must be provided');
     });
   });
 });

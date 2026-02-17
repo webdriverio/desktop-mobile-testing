@@ -1,4 +1,5 @@
 import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:fs', () => ({
@@ -130,10 +131,11 @@ describe('logWriter', () => {
 
       const { getStandaloneLogWriter } = await import('../src/logWriter.js');
       const writer = getStandaloneLogWriter();
-      writer.initialize('/tmp/logs');
+      const testLogDir = join(process.cwd(), 'test-logs');
+      writer.initialize(testLogDir);
 
       expect(writer.getLogFile()).toBeDefined();
-      expect(writer.getLogFile()).toContain('/tmp/logs');
+      expect(writer.getLogFile()).toContain(testLogDir);
       expect(writer.getLogFile()).toContain('wdio-');
       expect(writer.getLogFile()).toContain('.log');
     });
@@ -159,7 +161,8 @@ describe('logWriter', () => {
 
       const { getStandaloneLogWriter, isStandaloneLogWriterInitialized } = await import('../src/logWriter.js');
       const writer = getStandaloneLogWriter();
-      writer.initialize('/tmp/logs');
+      const testLogDir = join(process.cwd(), 'test-logs');
+      writer.initialize(testLogDir);
 
       expect(isStandaloneLogWriterInitialized()).toBe(true);
     });
@@ -176,7 +179,8 @@ describe('logWriter', () => {
         '../src/logWriter.js'
       );
       const writer = getStandaloneLogWriter();
-      writer.initialize('/tmp/logs');
+      const testLogDir = join(process.cwd(), 'test-logs');
+      writer.initialize(testLogDir);
 
       expect(isStandaloneLogWriterInitialized()).toBe(true);
 

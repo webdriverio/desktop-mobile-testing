@@ -2,6 +2,7 @@ import type {
   ElectronServiceCapabilities,
   ElectronServiceGlobalOptions,
   ElectronServiceOptions,
+  ElectronStandaloneCapability,
 } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 
@@ -98,25 +99,24 @@ export async function cleanup(browser: WebdriverIO.Browser): Promise<void> {
 }
 
 /**
- * Create Electron capabilities
+ * Create Electron capabilities for standalone mode
  */
-export function createElectronCapabilities(
-  appBinaryPath: string,
-  appEntryPoint?: string,
-  options: {
-    appArgs?: string[];
-  } = {},
-): ElectronServiceCapabilities {
-  return {
+export function createElectronCapabilities(options: ElectronServiceOptions): ElectronStandaloneCapability {
+  if (!options.appBinaryPath && !options.appEntryPoint) {
+    throw new Error('Either appBinaryPath or appEntryPoint must be provided');
+  }
+
+  const capability: ElectronStandaloneCapability = {
     browserName: 'electron',
-    'goog:chromeOptions': {
-      binary: appBinaryPath,
+    'wdio:electronServiceOptions': { ...options },
+  };
+
+  if (options.appBinaryPath) {
+    capability['goog:chromeOptions'] = {
+      binary: options.appBinaryPath,
       args: options.appArgs || [],
-    },
-    'wdio:electronServiceOptions': {
-      appBinaryPath,
-      appEntryPoint,
-      appArgs: options.appArgs || [],
-    },
-  } as unknown as ElectronServiceCapabilities;
+    };
+  }
+
+  return capability;
 }

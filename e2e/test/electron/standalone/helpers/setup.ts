@@ -8,8 +8,7 @@ import {
   getElectronBinaryPath,
   startWdioSession,
 } from '@wdio/electron-service';
-import type { ElectronServiceOptions } from '@wdio/native-types';
-import type { Capabilities } from '@wdio/types';
+import type { ElectronStandaloneCapability } from '@wdio/native-types';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -32,10 +31,6 @@ export interface StandaloneTestSession {
   cleanup: () => Promise<void>;
 }
 
-type StandaloneCapability = Capabilities.RequestedStandaloneCapabilities & {
-  'wdio:electronServiceOptions'?: ElectronServiceOptions;
-};
-
 /**
  * Set up a standalone Electron test session with shared configuration
  */
@@ -55,50 +50,23 @@ export async function setupStandaloneTest(options: StandaloneTestOptions = {}): 
   const isScript = appDirName.includes('script');
   const entryPoint = path.join(appDir, 'dist', 'main', 'index.js');
 
-  let sessionOptions: StandaloneCapability;
+  let sessionOptions: ElectronStandaloneCapability;
 
   if (isScript && fs.existsSync(entryPoint)) {
     // Script mode: use entry point
-    sessionOptions = {
-      browserName: 'electron',
-      'wdio:electronServiceOptions': {
-        appEntryPoint: entryPoint,
-        appArgs: ['foo', 'bar=baz'],
-      },
-    };
+    sessionOptions = createElectronCapabilities({
+      appEntryPoint: entryPoint,
+      appArgs: ['foo', 'bar=baz'],
+      ...options.logConfig,
+    });
   } else {
     // Binary mode: resolve binary path
     const appBinaryPath = await getElectronBinaryPath(appDir);
-    const capabilities = createElectronCapabilities(appBinaryPath, appDir, {
+    sessionOptions = createElectronCapabilities({
+      appBinaryPath,
       appArgs: ['foo', 'bar=baz'],
+      ...options.logConfig,
     });
-    // createElectronCapabilities returns an array, unwrap it
-    sessionOptions = Array.isArray(capabilities) ? capabilities[0] : capabilities;
-  }
-
-  // Apply log configuration if provided
-  if (options.logConfig) {
-    const serviceOptions = (sessionOptions as Record<string, unknown>)['wdio:electronServiceOptions'] as Record<
-      string,
-      unknown
-    >;
-    if (serviceOptions) {
-      if (options.logConfig.captureMainProcessLogs !== undefined) {
-        serviceOptions.captureMainProcessLogs = options.logConfig.captureMainProcessLogs;
-      }
-      if (options.logConfig.captureRendererLogs !== undefined) {
-        serviceOptions.captureRendererLogs = options.logConfig.captureRendererLogs;
-      }
-      if (options.logConfig.mainProcessLogLevel) {
-        serviceOptions.mainProcessLogLevel = options.logConfig.mainProcessLogLevel;
-      }
-      if (options.logConfig.rendererLogLevel) {
-        serviceOptions.rendererLogLevel = options.logConfig.rendererLogLevel;
-      }
-      if (options.logConfig.logDir) {
-        serviceOptions.logDir = options.logConfig.logDir;
-      }
-    }
   }
 
   // Start the session
