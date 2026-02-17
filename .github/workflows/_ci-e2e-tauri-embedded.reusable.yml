@@ -322,7 +322,7 @@ jobs:
           # Disable AT-SPI accessibility bus warnings
           NO_AT_BRIDGE: '1'
           # Use embedded WebDriver configuration
-          WDIO_TAURI_DRIVER_PROVIDER: 'embedded'
+          DRIVER_PROVIDER: 'embedded'
         run: |
           if ($env:RUNNER_OS -eq "Linux") {
             # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit
