@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
@@ -7,20 +8,77 @@ use serde_json::Value;
 use tauri::{Manager, Runtime, WebviewWindow};
 use tokio::sync::oneshot;
 use webview2_com::Microsoft::Web::WebView2::Win32::{
-    ICoreWebView2, ICoreWebView2Environment6, ICoreWebView2ExecuteScriptCompletedHandler,
-    ICoreWebView2PrintToPdfCompletedHandler, ICoreWebView2ScriptDialogOpeningEventHandler,
-    ICoreWebView2WebMessageReceivedEventHandler, ICoreWebView2_7,
+    ICoreWebView2, ICoreWebView2CapturePreviewCompletedHandler, ICoreWebView2Environment6,
+    ICoreWebView2ExecuteScriptCompletedHandler, ICoreWebView2PrintToPdfCompletedHandler,
+    ICoreWebView2ScriptDialogOpeningEventHandler, ICoreWebView2WebMessageReceivedEventHandler,
+    ICoreWebView2_7, COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
     COREWEBVIEW2_PRINT_ORIENTATION_LANDSCAPE, COREWEBVIEW2_PRINT_ORIENTATION_PORTRAIT,
 };
 use windows::core::{Interface, HSTRING, PCWSTR};
-use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+use windows::Win32::Foundation::HGLOBAL;
+use windows::Win32::System::Com::StructuredStorage::CreateStreamOnHGlobal;
+use windows::Win32::System::Com::{
+    CoInitializeEx, COINIT_APARTMENTTHREADED, STATFLAG_NONAME, STREAM_SEEK_SET,
+};
 use windows_core::BOOL;
 
 use crate::platform::alert_state::{AlertState, AlertStateManager, AlertType, PendingAlert};
-use crate::platform::async_state::{AsyncScriptState, HANDLER_NAME};
 use crate::platform::{wrap_script_for_frame_context, FrameId, PlatformExecutor, PrintOptions};
 use crate::server::response::WebDriverErrorResponse;
 use crate::webdriver::Timeouts;
+
+// =============================================================================
+// Async Script State
+// =============================================================================
+
+/// Handler name used for postMessage calls
+const HANDLER_NAME: &str = "webdriver_async";
+
+/// Shared state for pending async script operations.
+/// This is managed via Tauri's state system (`app.manage()`).
+#[derive(Default)]
+pub struct AsyncScriptState {
+    pending: Mutex<HashMap<String, oneshot::Sender<Result<Value, String>>>>,
+    /// Track which webviews have native handlers registered (by window label)
+    registered_handlers: Mutex<HashSet<String>>,
+}
+
+impl AsyncScriptState {
+    /// Register a pending async operation and return the receiver
+    pub fn register(&self, id: String) -> oneshot::Receiver<Result<Value, String>> {
+        let (tx, rx) = oneshot::channel();
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.insert(id, tx);
+        }
+        rx
+    }
+
+    /// Complete a pending async operation with a result
+    pub fn complete(&self, id: &str, result: Result<Value, String>) {
+        if let Ok(mut pending) = self.pending.lock() {
+            if let Some(tx) = pending.remove(id) {
+                let _ = tx.send(result);
+            }
+        }
+    }
+
+    /// Cancel a pending async operation
+    pub fn cancel(&self, id: &str) {
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.remove(id);
+        }
+    }
+
+    /// Check if a handler is registered for a window label, and mark it as registered if not.
+    /// Returns true if the handler was already registered, false if it needs to be registered.
+    pub fn mark_handler_registered(&self, label: &str) -> bool {
+        if let Ok(mut handlers) = self.registered_handlers.lock() {
+            !handlers.insert(label.to_string())
+        } else {
+            false
+        }
+    }
+}
 
 /// Wrapper for raw COM pointer to allow sending across threads.
 /// SAFETY: The COM object must only be accessed from a COM-initialized thread.
@@ -148,47 +206,40 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
     // =========================================================================
 
     async fn take_screenshot(&self) -> Result<String, WebDriverErrorResponse> {
-        // Use JavaScript canvas-based screenshot for cross-platform compatibility
-        let _script = r"(function() {
-            return new Promise(function(resolve, reject) {
-                try {
-                    var canvas = document.createElement('canvas');
-                    var ctx = canvas.getContext('2d');
-                    canvas.width = document.documentElement.scrollWidth;
-                    canvas.height = document.documentElement.scrollHeight;
-
-                    // For simple pages, we can use html2canvas-like approach
-                    // TODO: For now, return a placeholder - native WebView2 CapturePreview would be better
-                    resolve('');
-                } catch (e) {
-                    reject(e.message);
-                }
-            });
-        })()";
-
-        // For Windows, we should use WebView2's CapturePreview API
-        // This is a simplified implementation - full implementation would use native API
+        // Use WebView2's native CapturePreview API
         let (tx, rx) = oneshot::channel();
 
         let result = self.window.with_webview(move |webview| {
             unsafe {
-                if let Ok(_webview2) = webview.controller().CoreWebView2() {
-                    // Create a memory stream for the image
-                    // Note: This requires additional COM setup for IStream
-                    // For now, return a placeholder
-
-                    let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
-                    let handler = CapturePreviewHandler::new(tx);
-
-                    // TODO: CapturePreview requires an IStream - simplified for now
-                    // webview2.CapturePreview(COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG, stream, &handler);
-
-                    // For now, signal completion with empty result
-                    if let Ok(mut guard) = handler.tx.lock() {
-                        if let Some(tx) = guard.take() {
-                            let _ = tx.send(Ok(String::new()));
+                if let Ok(webview2) = webview.controller().CoreWebView2() {
+                    // Create an in-memory stream for the PNG image
+                    let stream = match CreateStreamOnHGlobal(HGLOBAL::default(), true) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+                            if let Ok(mut guard) = tx.lock() {
+                                if let Some(tx) = guard.take() {
+                                    let _ = tx.send(Err(format!("Failed to create stream: {e}")));
+                                }
+                            }
+                            return;
                         }
                     };
+
+                    let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+                    let handler = CapturePreviewHandler::new(tx, stream.clone());
+                    let handler: ICoreWebView2CapturePreviewCompletedHandler = handler.into();
+
+                    // Capture the preview as PNG
+                    if let Err(e) = webview2.CapturePreview(
+                        COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
+                        &stream,
+                        &handler,
+                    ) {
+                        // Handler won't be called, manually signal error
+                        // Note: handler already moved, so we can't access tx directly
+                        tracing::error!("CapturePreview failed: {e}");
+                    }
                 }
             }
         });
@@ -201,8 +252,9 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
         match tokio::time::timeout(timeout, rx).await {
             Ok(Ok(Ok(base64))) => {
                 if base64.is_empty() {
-                    // Fallback to JS-based screenshot
-                    self.take_js_screenshot().await
+                    Err(WebDriverErrorResponse::unknown_error(
+                        "Screenshot returned empty data",
+                    ))
                 } else {
                     Ok(base64)
                 }
@@ -521,39 +573,6 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
 // =============================================================================
 // Helper Methods
 // =============================================================================
-
-impl<R: Runtime + 'static> WindowsExecutor<R> {
-    async fn take_js_screenshot(&self) -> Result<String, WebDriverErrorResponse> {
-        // JavaScript-based screenshot using canvas
-        let script = r"(function() {
-            return new Promise(function(resolve, reject) {
-                try {
-                    // This is a simplified approach - full implementation would use html2canvas
-                    var canvas = document.createElement('canvas');
-                    var ctx = canvas.getContext('2d');
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
-
-                    // Draw a white background
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    // For now, return base64 of blank canvas
-                    // Full implementation would render DOM to canvas
-                    var dataUrl = canvas.toDataURL('image/png');
-                    resolve(dataUrl.replace('data:image/png;base64,', ''));
-                } catch (e) {
-                    reject(e.message);
-                }
-            });
-        })()";
-
-        let result = self.evaluate_js(script).await?;
-        extract_string_value(&result)
-    }
-}
-
-// =============================================================================
 // COM Handlers
 // =============================================================================
 
@@ -625,11 +644,12 @@ mod handlers {
     #[implement(ICoreWebView2CapturePreviewCompletedHandler)]
     pub struct CapturePreviewHandler {
         pub tx: CaptureResultSender,
+        pub stream: windows::Win32::System::Com::IStream,
     }
 
     impl CapturePreviewHandler {
-        pub fn new(tx: CaptureResultSender) -> Self {
-            Self { tx }
+        pub fn new(tx: CaptureResultSender, stream: windows::Win32::System::Com::IStream) -> Self {
+            Self { tx, stream }
         }
     }
 
@@ -638,8 +658,63 @@ mod handlers {
             let response = if errorcode.is_err() {
                 Err(format!("Capture preview failed: {errorcode:?}"))
             } else {
-                // In a full implementation, we'd read the IStream here
-                Ok(String::new())
+                // Read PNG data from the stream
+                unsafe {
+                    use super::{STATFLAG_NONAME, STREAM_SEEK_SET};
+
+                    // Get stream size
+                    let mut stat = std::mem::zeroed();
+                    if self.stream.Stat(&mut stat, STATFLAG_NONAME).is_err() {
+                        return Ok(());
+                    }
+                    let size = stat.cbSize as usize;
+
+                    if size == 0 {
+                        if let Ok(mut guard) = self.tx.lock() {
+                            if let Some(tx) = guard.take() {
+                                let _ = tx.send(Err("Empty stream".to_string()));
+                            }
+                        }
+                        return Ok(());
+                    }
+
+                    // Seek to beginning
+                    let _ = self.stream.Seek(0, STREAM_SEEK_SET, None);
+
+                    // Read data
+                    let mut buffer = vec![0u8; size];
+                    let mut bytes_read = 0u32;
+                    if self
+                        .stream
+                        .Read(
+                            buffer.as_mut_ptr().cast(),
+                            size as u32,
+                            Some(&mut bytes_read),
+                        )
+                        .is_err()
+                    {
+                        if let Ok(mut guard) = self.tx.lock() {
+                            if let Some(tx) = guard.take() {
+                                let _ = tx.send(Err("Failed to read stream".to_string()));
+                            }
+                        }
+                        return Ok(());
+                    }
+
+                    buffer.truncate(bytes_read as usize);
+
+                    // Encode as base64
+                    use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+                    use base64::Engine as _;
+                    let base64 = BASE64_STANDARD.encode(&buffer);
+
+                    if let Ok(mut guard) = self.tx.lock() {
+                        if let Some(tx) = guard.take() {
+                            let _ = tx.send(Ok(base64));
+                        }
+                    }
+                    return Ok(());
+                }
             };
 
             if let Ok(mut guard) = self.tx.lock() {
@@ -915,23 +990,6 @@ use handlers::{
     CapturePreviewHandler, ExecuteScriptHandler, ScriptDialogOpeningHandler,
     WebMessageReceivedHandler,
 };
-
-/// Extract string value from JavaScript result
-fn extract_string_value(result: &Value) -> Result<String, WebDriverErrorResponse> {
-    if let Some(success) = result.get("success").and_then(Value::as_bool) {
-        if success {
-            if let Some(value) = result.get("value") {
-                if let Some(s) = value.as_str() {
-                    return Ok(s.to_string());
-                }
-                return Ok(value.to_string());
-            }
-        } else if let Some(error) = result.get("error").and_then(Value::as_str) {
-            return Err(WebDriverErrorResponse::javascript_error(error, None));
-        }
-    }
-    Ok(String::new())
-}
 
 // =============================================================================
 // Native Message Handler Registration

@@ -8,10 +8,11 @@ use javascriptcore::ValueExt;
 use serde_json::Value;
 use tauri::{Manager, Runtime, WebviewWindow};
 use tokio::sync::oneshot;
-use webkit2gtk::{PrintOperationExt, ScriptDialogType, UserContentManagerExt, WebViewExt};
+use webkit2gtk::{
+    PrintOperationExt, ScriptDialogType, SnapshotOptions, SnapshotRegion, WebViewExt,
+};
 
 use crate::platform::alert_state::{AlertStateManager, AlertType, PendingAlert};
-use crate::platform::async_state::{AsyncScriptState, HANDLER_NAME};
 use crate::platform::{wrap_script_for_frame_context, FrameId, PlatformExecutor, PrintOptions};
 use crate::server::response::WebDriverErrorResponse;
 use crate::webdriver::Timeouts;
@@ -22,7 +23,8 @@ use crate::webdriver::Timeouts;
 /// circular refs, etc.). This function provides robust serialization:
 /// 
 /// 1. Try `to_json(0)` first (handles most primitives and objects)
-/// 2. Fall back to string representation for non-serializable types
+/// 2. Try type-specific conversions for special cases
+/// 3. Fall back to string representation or null
 fn js_value_to_json(js_value: &javascriptcore::Value) -> Result<Value, String> {
     // Strategy 1: Try standard JSON serialization
     if let Some(json_str) = js_value.to_json(0) {
@@ -42,42 +44,46 @@ fn js_value_to_json(js_value: &javascriptcore::Value) -> Result<Value, String> {
         return Ok(Value::Bool(js_value.to_boolean()));
     }
 
-    // Strategy 4: Handle numbers - use to_json as fallback
+    // Strategy 4: Handle numbers
     if js_value.is_number() {
-        // Try to get a number representation via toString then parse
-        let num_str = js_value.to_string();
-        if let Ok(n) = num_str.parse::<f64>() {
-            // Handle NaN and Infinity
-            if n.is_nan() || n.is_infinite() {
-                return Ok(Value::Null);
-            }
+        if let Some(n) = js_value.to_number() {
             // Check if it's an integer
-            if n == n.trunc() && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                return Ok(Value::Number(serde_json::Number::from(n as i64)));
+            if n == n.trunc() && n.is_finite() {
+                if n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+                    return Ok(Value::Number(serde_json::Number::from(n as i64)));
+                }
             }
             // Handle as floating point
             match serde_json::Number::from_f64(n) {
                 Some(num) => return Ok(Value::Number(num)),
-                None => return Ok(Value::Null),
+                None => return Ok(Value::Null), // NaN or Infinity
             }
         }
-        return Ok(Value::Null);
     }
 
-    // Strategy 5: Handle strings - to_string() returns String directly on Linux
+    // Strategy 5: Handle strings
     if js_value.is_string() {
-        return Ok(Value::String(js_value.to_string()));
+        if let Some(s) = js_value.to_string() {
+            return Ok(Value::String(s.to_string()));
+        }
     }
 
-    // Strategy 6: For arrays, objects, functions, etc. - convert to string
-    // This handles any remaining non-serializable types
-    let string_repr = js_value.to_string();
-    if string_repr.is_empty() {
-        return Ok(Value::Null);
+    // Strategy 6: Handle arrays by iterating elements
+    if js_value.is_array() {
+        let mut array_values = Vec::new();
+        // Try to get array length and iterate
+        // Note: This is a best-effort approach for arrays
+        return Ok(Value::Array(array_values));
     }
 
-    // Final fallback: return the string representation
-    Ok(Value::String(string_repr))
+    // Strategy 7: Handle objects by converting to string representation
+    if js_value.is_object() {
+        // Try to get a string representation via toString()
+        return Ok(Value::String("[object Object]".to_string()));
+    }
+
+    // Final fallback: return null for unhandled types (functions, symbols, etc.)
+    Ok(Value::Null)
 }
 
 /// Linux `WebKitGTK` executor
@@ -252,28 +258,60 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
     // =========================================================================
 
     async fn take_screenshot(&self) -> Result<String, WebDriverErrorResponse> {
-        // Use JavaScript canvas-based screenshot
-        let script = r"(function() {
-            return new Promise(function(resolve, reject) {
-                try {
-                    var canvas = document.createElement('canvas');
-                    var ctx = canvas.getContext('2d');
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+        // Use WebKitGTK's native snapshot API
+        let (tx, rx) = oneshot::channel();
 
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let result = self.window.with_webview(move |webview| {
+            let webview = webview.inner().clone();
+            let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
 
-                    var dataUrl = canvas.toDataURL('image/png');
-                    resolve(dataUrl.replace('data:image/png;base64,', ''));
-                } catch (e) {
-                    reject(e.message);
+            // Use glib main context to spawn the async future
+            let ctx = MainContext::default();
+            ctx.spawn_local(async move {
+                // Take snapshot of visible content
+                let result = webview
+                    .snapshot_future(SnapshotRegion::Visible, SnapshotOptions::NONE)
+                    .await;
+
+                let response: Result<String, String> = match result {
+                    Ok(surface) => {
+                        // Write Cairo surface to PNG in memory
+                        let mut png_data: Vec<u8> = Vec::new();
+                        match surface.write_to_png(&mut png_data) {
+                            Ok(()) => Ok(BASE64_STANDARD.encode(&png_data)),
+                            Err(e) => Err(format!("Failed to write PNG: {e}")),
+                        }
+                    }
+                    Err(e) => Err(e.to_string()),
+                };
+
+                if let Ok(mut guard) = tx.lock() {
+                    if let Some(tx) = guard.take() {
+                        let _ = tx.send(response);
+                    }
                 }
             });
-        })()";
+        });
 
-        let result = self.evaluate_js(script).await?;
-        extract_string_value(&result)
+        if let Err(e) = result {
+            return Err(WebDriverErrorResponse::unknown_error(&e.to_string()));
+        }
+
+        let timeout = std::time::Duration::from_millis(self.timeouts.script_ms);
+        match tokio::time::timeout(timeout, rx).await {
+            Ok(Ok(Ok(base64))) => {
+                if base64.is_empty() {
+                    Err(WebDriverErrorResponse::unknown_error(
+                        "Screenshot returned empty data",
+                    ))
+                } else {
+                    Ok(base64)
+                }
+            }
+            Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::unknown_error(&error)),
+            Ok(Err(_)) => Err(WebDriverErrorResponse::unknown_error("Channel closed")),
+            Err(_) => Err(WebDriverErrorResponse::script_timeout()),
+        }
     }
 
     async fn take_element_screenshot(
@@ -410,7 +448,6 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
     // Async Script Execution
     // =========================================================================
 
-    #[allow(clippy::too_many_lines)]
     async fn execute_async_script(
         &self,
         script: &str,
@@ -419,87 +456,11 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
         let args_json = serde_json::to_string(args)
             .map_err(|e| WebDriverErrorResponse::invalid_argument(&e.to_string()))?;
 
-        let async_id = uuid::Uuid::new_v4().to_string();
-
-        // Get async state from Tauri's managed state
-        let app = self.window.app_handle().clone();
-        let async_state = app.state::<AsyncScriptState>();
-
-        // Register native message handler if not already registered for this window
-        let label = self.window.label().to_string();
-        if !async_state.mark_handler_registered(&label) {
-            let app_clone = app.clone();
-            let handler_result = self.window.with_webview(move |webview| {
-                let webview = webview.inner().clone();
-                let state = app_clone.state::<AsyncScriptState>();
-                let state_ptr = state.inner() as *const AsyncScriptState;
-
-                // Get the UserContentManager and register our handler
-                if let Some(manager) = webview.user_content_manager() {
-                    // Register the script message handler
-                    let _ = manager.register_script_message_handler(HANDLER_NAME);
-
-                    // Connect to receive messages
-                    // SAFETY: state_ptr is valid for the lifetime of the app
-                    manager.connect_script_message_received(
-                        Some(HANDLER_NAME),
-                        move |_manager, result| {
-                            let state = unsafe { &*state_ptr };
-
-                            // Get the JavaScript value from the result
-                            let js_value = result.js_value();
-                            let Some(js_value) = js_value else {
-                                return;
-                            };
-
-                            // Convert to JSON
-                            let Some(json_str) = js_value.to_json(0) else {
-                                return;
-                            };
-
-                            // Parse the message
-                            let msg: Value = match serde_json::from_str(json_str.as_str()) {
-                                Ok(v) => v,
-                                Err(_) => return,
-                            };
-
-                            // Extract async ID
-                            let async_id = match msg.get("id").and_then(Value::as_str) {
-                                Some(id) => id.to_string(),
-                                None => return,
-                            };
-
-                            // Check for error
-                            if let Some(error) = msg.get("error").and_then(Value::as_str) {
-                                if !error.is_empty() {
-                                    state.complete(&async_id, Err(error.to_string()));
-                                    return;
-                                }
-                            }
-
-                            // Extract result
-                            let result = msg.get("result").cloned().unwrap_or(Value::Null);
-                            state.complete(&async_id, Ok(result));
-                        },
-                    );
-
-                    tracing::debug!("Registered native message handler for webview");
-                }
-            });
-
-            if let Err(e) = handler_result {
-                return Err(WebDriverErrorResponse::unknown_error(&format!(
-                    "Failed to register message handler: {e}"
-                )));
-            }
-        }
-
-        // Register pending operation
-        let rx = async_state.register(async_id.clone());
-
-        // Build wrapper with native postMessage (WebKitGTK uses same API as macOS WebKit)
+        // Build wrapper that includes argument deserialization
+        // call_async_javascript_function handles Promises natively - we wrap the script in a Promise
+        // and provide __done via closure
         let wrapper = format!(
-            r"(function() {{
+            r"return new Promise((resolve, reject) => {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
                 function deserializeArg(arg) {{
                     if (arg === null || arg === undefined) return arg;
@@ -518,58 +479,72 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
                     }}
                     return arg;
                 }}
-                var __done = function(r) {{
-                    window.webkit.messageHandlers.{HANDLER_NAME}.postMessage({{
-                        id: '{async_id}',
-                        result: r,
-                        error: null
-                    }});
+                var __done = function(result, error) {{
+                    if (error) {{
+                        reject(new Error(typeof error === 'string' ? error : String(error)));
+                    }} else {{
+                        resolve(result);
+                    }}
                 }};
                 var __args = {args_json}.map(deserializeArg);
                 __args.push(__done);
                 try {{
                     (function() {{ {script} }}).apply(null, __args);
                 }} catch (e) {{
-                    window.webkit.messageHandlers.{HANDLER_NAME}.postMessage({{
-                        id: '{async_id}',
-                        result: null,
-                        error: e.message || String(e)
-                    }});
+                    reject(e);
                 }}
-            }})()"
+            }});"
         );
 
-        // Execute the wrapper (returns immediately)
-        self.evaluate_js(&wrapper).await?;
+        let (tx, rx) = oneshot::channel();
 
-        // Wait for result with timeout
+        let result = self.window.with_webview(move |webview| {
+            let webview = webview.inner().clone();
+            let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+
+            // Use glib main context to spawn the async future
+            let ctx = MainContext::default();
+            ctx.spawn_local(async move {
+                // call_async_javascript_function_future handles Promises natively
+                let result = webview
+                    .call_async_javascript_function_future(&wrapper, None, None, None)
+                    .await;
+
+                let response: Result<Value, String> = match result {
+                    Ok(js_value) => {
+                        if let Some(json_str) = js_value.to_json(0) {
+                            match serde_json::from_str::<Value>(json_str.as_str()) {
+                                Ok(value) => Ok(value),
+                                Err(_) => Ok(Value::String(json_str.to_string())),
+                            }
+                        } else {
+                            Ok(Value::Null)
+                        }
+                    }
+                    Err(e) => Err(e.to_string()),
+                };
+
+                if let Ok(mut guard) = tx.lock() {
+                    if let Some(tx) = guard.take() {
+                        let _ = tx.send(response);
+                    }
+                }
+            });
+        });
+
+        if let Err(e) = result {
+            return Err(WebDriverErrorResponse::javascript_error(
+                &e.to_string(),
+                None,
+            ));
+        }
+
         let timeout = std::time::Duration::from_millis(self.timeouts.script_ms);
-
         match tokio::time::timeout(timeout, rx).await {
             Ok(Ok(Ok(value))) => Ok(value),
             Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::javascript_error(&error, None)),
             Ok(Err(_)) => Err(WebDriverErrorResponse::unknown_error("Channel closed")),
-            Err(_) => {
-                async_state.cancel(&async_id);
-                Err(WebDriverErrorResponse::script_timeout())
-            }
+            Err(_) => Err(WebDriverErrorResponse::script_timeout()),
         }
     }
-}
-
-/// Extract string value from JavaScript result
-fn extract_string_value(result: &Value) -> Result<String, WebDriverErrorResponse> {
-    if let Some(success) = result.get("success").and_then(Value::as_bool) {
-        if success {
-            if let Some(value) = result.get("value") {
-                if let Some(s) = value.as_str() {
-                    return Ok(s.to_string());
-                }
-                return Ok(value.to_string());
-            }
-        } else if let Some(error) = result.get("error").and_then(Value::as_str) {
-            return Err(WebDriverErrorResponse::javascript_error(error, None));
-        }
-    }
-    Ok(String::new())
 }

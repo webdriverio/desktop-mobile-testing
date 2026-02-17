@@ -2,7 +2,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::webview::Cookie as TauriCookie;
-use tauri::{PhysicalPosition, PhysicalSize, Runtime, WebviewWindow};
+use tauri::{Runtime, WebviewWindow};
+
+#[cfg(desktop)]
+use tauri::{PhysicalPosition, PhysicalSize};
 
 use tauri::Manager;
 
@@ -21,7 +24,9 @@ pub struct ElementRect {
 /// Window rectangle (position and size)
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WindowRect {
+    #[serde(default)]
     pub x: i32,
+    #[serde(default)]
     pub y: i32,
     pub width: u32,
     pub height: u32,
@@ -1369,6 +1374,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
     // =========================================================================
 
     /// Get window rectangle (position and size)
+    #[cfg(desktop)]
     async fn get_window_rect(&self) -> Result<WindowRect, WebDriverErrorResponse> {
         if let Ok(position) = self.window().outer_position() {
             if let Ok(size) = self.window().outer_size() {
@@ -1383,7 +1389,11 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
         Ok(WindowRect::default())
     }
 
+    #[cfg(mobile)]
+    async fn get_window_rect(&self) -> Result<WindowRect, WebDriverErrorResponse>;
+
     /// Set window rectangle (position and size)
+    #[cfg(desktop)]
     async fn set_window_rect(
         &self,
         rect: WindowRect,
@@ -1427,6 +1437,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
     }
 
     /// Maximize window
+    #[cfg(desktop)]
     async fn maximize_window(&self) -> Result<WindowRect, WebDriverErrorResponse> {
         let _ = self.window().maximize();
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -1434,16 +1445,53 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
     }
 
     /// Minimize window
+    #[cfg(desktop)]
     async fn minimize_window(&self) -> Result<(), WebDriverErrorResponse> {
         let _ = self.window().minimize();
         Ok(())
     }
 
     /// Set window to fullscreen
+    #[cfg(desktop)]
     async fn fullscreen_window(&self) -> Result<WindowRect, WebDriverErrorResponse> {
         let _ = self.window().set_fullscreen(true);
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         self.get_window_rect().await
+    }
+
+    /// Set window rectangle (mobile unsupported)
+    #[cfg(mobile)]
+    async fn set_window_rect(
+        &self,
+        _rect: WindowRect,
+    ) -> Result<WindowRect, WebDriverErrorResponse> {
+        Err(WebDriverErrorResponse::unsupported_operation(
+            "Setting window rect is not supported on mobile platforms",
+        ))
+    }
+
+    /// Maximize window (mobile unsupported)
+    #[cfg(mobile)]
+    async fn maximize_window(&self) -> Result<WindowRect, WebDriverErrorResponse> {
+        Err(WebDriverErrorResponse::unsupported_operation(
+            "Maximizing window is not supported on mobile platforms",
+        ))
+    }
+
+    /// Minimize window (mobile unsupported)
+    #[cfg(mobile)]
+    async fn minimize_window(&self) -> Result<(), WebDriverErrorResponse> {
+        Err(WebDriverErrorResponse::unsupported_operation(
+            "Minimizing window is not supported on mobile platforms",
+        ))
+    }
+
+    /// Set window to fullscreen (mobile unsupported)
+    #[cfg(mobile)]
+    async fn fullscreen_window(&self) -> Result<WindowRect, WebDriverErrorResponse> {
+        Err(WebDriverErrorResponse::unsupported_operation(
+            "Fullscreen window is not supported on mobile platforms",
+        ))
     }
 
     // =========================================================================
