@@ -1,7 +1,8 @@
 name: Release Publish (Reusable)
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 on:
   workflow_call:
