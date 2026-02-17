@@ -22,8 +22,7 @@ use crate::webdriver::Timeouts;
 /// circular refs, etc.). This function provides robust serialization:
 /// 
 /// 1. Try `to_json(0)` first (handles most primitives and objects)
-/// 2. Try type-specific conversions for special cases
-/// 3. Fall back to string representation or null
+/// 2. Fall back to string representation for non-serializable types
 fn js_value_to_json(js_value: &javascriptcore::Value) -> Result<Value, String> {
     // Strategy 1: Try standard JSON serialization
     if let Some(json_str) = js_value.to_json(0) {
@@ -43,46 +42,42 @@ fn js_value_to_json(js_value: &javascriptcore::Value) -> Result<Value, String> {
         return Ok(Value::Bool(js_value.to_boolean()));
     }
 
-    // Strategy 4: Handle numbers
+    // Strategy 4: Handle numbers - use to_json as fallback
     if js_value.is_number() {
-        if let Some(n) = js_value.to_number() {
+        // Try to get a number representation via toString then parse
+        let num_str = js_value.to_string();
+        if let Ok(n) = num_str.parse::<f64>() {
+            // Handle NaN and Infinity
+            if n.is_nan() || n.is_infinite() {
+                return Ok(Value::Null);
+            }
             // Check if it's an integer
-            if n == n.trunc() && n.is_finite() {
-                if n >= i64::MIN as f64 && n <= i64::MAX as f64 {
-                    return Ok(Value::Number(serde_json::Number::from(n as i64)));
-                }
+            if n == n.trunc() && n >= i64::MIN as f64 && n <= i64::MAX as f64 {
+                return Ok(Value::Number(serde_json::Number::from(n as i64)));
             }
             // Handle as floating point
             match serde_json::Number::from_f64(n) {
                 Some(num) => return Ok(Value::Number(num)),
-                None => return Ok(Value::Null), // NaN or Infinity
+                None => return Ok(Value::Null),
             }
         }
+        return Ok(Value::Null);
     }
 
-    // Strategy 5: Handle strings
+    // Strategy 5: Handle strings - to_string() returns String directly on Linux
     if js_value.is_string() {
-        if let Some(s) = js_value.to_string() {
-            return Ok(Value::String(s.to_string()));
-        }
+        return Ok(Value::String(js_value.to_string()));
     }
 
-    // Strategy 6: Handle arrays by iterating elements
-    if js_value.is_array() {
-        let mut array_values = Vec::new();
-        // Try to get array length and iterate
-        // Note: This is a best-effort approach for arrays
-        return Ok(Value::Array(array_values));
+    // Strategy 6: For arrays, objects, functions, etc. - convert to string
+    // This handles any remaining non-serializable types
+    let string_repr = js_value.to_string();
+    if string_repr.is_empty() {
+        return Ok(Value::Null);
     }
 
-    // Strategy 7: Handle objects by converting to string representation
-    if js_value.is_object() {
-        // Try to get a string representation via toString()
-        return Ok(Value::String("[object Object]".to_string()));
-    }
-
-    // Final fallback: return null for unhandled types (functions, symbols, etc.)
-    Ok(Value::Null)
+    // Final fallback: return the string representation
+    Ok(Value::String(string_repr))
 }
 
 /// Linux `WebKitGTK` executor
