@@ -65,7 +65,8 @@ pub(crate) async fn execute<R: Runtime>(
     let error_tx = tx;
 
     // Listen for the result event from the frontend - must listen on the window for window.emit to work
-    let listener_id = window.listen(&event_id, move |event| {
+    let window_clone = window.clone();
+    let listener_id = window_clone.listen(&event_id, move |event| {
         log::trace!("Received result event payload: {}", event.payload());
 
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
@@ -96,7 +97,7 @@ pub(crate) async fn execute<R: Runtime>(
     // Wrap the script to:
     // 1. Wait for window.__TAURI__.core.invoke to be available (handles race condition)
     // 2. Execute the user's script
-    // 3. Emit the result via window.emit (not app-level emit)
+    // 3. Emit the result via getCurrentWindow().emit (window-specific event)
     let script_with_result = format!(
         r#"
         (async () => {{
@@ -114,11 +115,18 @@ pub(crate) async fn execute<R: Runtime>(
                 // Execute the user's script
                 const result = await ({});
 
-                // Emit the result via window.emit (webview window event)
-                window.emit('{}', {{ success: true, value: result }});
+                // Emit the result via getCurrentWindow().emit (window-specific event)
+                // This matches window.listen() on the Rust side
+                const {{ getCurrentWindow }} = await import('@tauri-apps/api/window');
+                await getCurrentWindow().emit('{}', {{ success: true, value: result }});
             }} catch (error) {{
-                // Emit error via window.emit
-                window.emit('{}', {{ success: false, error: error.message || String(error) }});
+                // Emit error via getCurrentWindow().emit
+                try {{
+                    const {{ getCurrentWindow }} = await import('@tauri-apps/api/window');
+                    await getCurrentWindow().emit('{}', {{ success: false, error: error.message || String(error) }});
+                }} catch (emitError) {{
+                    console.error('[WDIO Execute] Failed to emit result:', emitError);
+                }}
             }}
         }})();
         "#,
@@ -130,7 +138,7 @@ pub(crate) async fn execute<R: Runtime>(
     // Evaluate the script
     if let Err(e) = window.eval(&script_with_result) {
         log::error!("Failed to eval script: {}", e);
-        window.unlisten(listener_id);
+        window_clone.unlisten(listener_id);
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
     }
 
@@ -141,18 +149,18 @@ pub(crate) async fn execute<R: Runtime>(
         Ok(Ok(result)) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
-            window.unlisten(listener_id);
+            window_clone.unlisten(listener_id);
             Ok(result)
         }
         Ok(Err(e)) => {
             log::error!("JS error during execution: {}", e);
-            window.unlisten(listener_id);
+            window_clone.unlisten(listener_id);
             Err(e)
         }
         Err(_) => {
             log::error!("Timeout waiting for execute result after 10s. Event ID: {}. Window: {}",
                 event_id, window_label);
-            window.unlisten(listener_id);
+            window_clone.unlisten(listener_id);
             Err(crate::Error::ExecuteError(format!(
                 "Script execution timed out after 10s. Event ID: {}. Window: {}",
                 event_id, window_label
