@@ -193,9 +193,26 @@ jobs:
             for target_dir in $TARGET_DIRS; do
               echo "=== $target_dir ==="
               ls -la "$target_dir/" 2>/dev/null | head -10 || echo "Cannot list directory"
+              echo ""
+              echo "=== $target_dir/release/ ==="
+              ls -la "$target_dir/release/" 2>/dev/null | head -20 || echo "Cannot list release directory"
               if [ "${{ runner.os }}" = "macOS" ]; then
+                echo ""
                 echo "Looking for .app bundles..."
                 find "$target_dir" -name "*.app" -type d 2>/dev/null | head -5 || echo "No .app bundles found"
+                echo ""
+                echo "Looking for bundle directories..."
+                find "$target_dir" -type d -name "bundle" 2>/dev/null | head -5 || echo "No bundle directories found"
+                if [ -d "$target_dir/release/bundle" ]; then
+                  echo ""
+                  echo "=== $target_dir/release/bundle/ ==="
+                  ls -la "$target_dir/release/bundle/" 2>/dev/null || echo "Cannot list bundle directory"
+                  if [ -d "$target_dir/release/bundle/macos" ]; then
+                    echo ""
+                    echo "=== $target_dir/release/bundle/macos/ ==="
+                    ls -la "$target_dir/release/bundle/macos/" 2>/dev/null || echo "Cannot list macos directory"
+                  fi
+                fi
               fi
             done
             exit 1
