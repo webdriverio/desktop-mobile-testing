@@ -353,7 +353,7 @@ jobs:
       - name: 🐛 Debug Information
         if: always()
         shell: bash
-        run: pnpm run ci:e2e:logs
+        run: pnpm exec tsx e2e/scripts/show-logs.ts
 
       # Upload logs as artifacts for later analysis
       - name: 📦 Upload Test Logs

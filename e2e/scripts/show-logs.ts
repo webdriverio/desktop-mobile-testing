@@ -2,13 +2,15 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Cross-platform script to display E2E test logs
  * Works on Windows, macOS, and Linux
  */
 
-const LOGS_DIR = './logs';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LOGS_DIR = path.resolve(__dirname, '../logs');
 
 function showLogs(follow = false): void {
   // Check if logs directory exists
