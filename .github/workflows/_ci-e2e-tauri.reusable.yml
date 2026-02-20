@@ -194,16 +194,22 @@ jobs:
                 echo "  ✅ Found Windows binary in $target_dir/release/"
               fi
             elif [ "${{ runner.os }}" = "macOS" ]; then
-              # macOS: look for .app bundles (tauri build creates these)
-              # Check multiple possible locations for the app bundle
-              for search_path in "$target_dir/release/bundle/macos" "$target_dir/aarch64-apple-darwin/release/bundle/macos" "$target_dir/x86_64-apple-darwin/release/bundle/macos" "$target_dir/universal-apple-darwin/release/bundle/macos"; do
-                if compgen -G "$search_path/*.app" > /dev/null 2>&1; then
-                  BINARY_COUNT=$((BINARY_COUNT + 1))
-                  echo "  ✅ Found macOS app bundle in $search_path/"
-                  ls -la "$search_path/"*.app 2>/dev/null | head -3
-                  break
-                fi
-              done
+              # macOS: look for raw binary or .app bundles
+              # Check for raw binary first (tauri build without bundling)
+              if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
+                BINARY_COUNT=$((BINARY_COUNT + 1))
+                echo "  ✅ Found macOS raw binary in $target_dir/release/"
+              else
+                # Check multiple possible locations for the app bundle
+                for search_path in "$target_dir/release/bundle/macos" "$target_dir/aarch64-apple-darwin/release/bundle/macos" "$target_dir/x86_64-apple-darwin/release/bundle/macos" "$target_dir/universal-apple-darwin/release/bundle/macos"; do
+                  if compgen -G "$search_path/*.app" > /dev/null 2>&1; then
+                    BINARY_COUNT=$((BINARY_COUNT + 1))
+                    echo "  ✅ Found macOS app bundle in $search_path/"
+                    ls -la "$search_path/"*.app 2>/dev/null | head -3
+                    break
+                  fi
+                done
+              fi
             else
               # Linux: look for executable files
               if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
