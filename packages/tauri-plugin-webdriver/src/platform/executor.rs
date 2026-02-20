@@ -1887,6 +1887,10 @@ fn webdriver_cookie_to_tauri(cookie: &Cookie) -> TauriCookie<'static> {
         builder = builder.domain(domain.clone());
     }
 
+    // SECURITY: Intentionally allows non-secure cookies for test flexibility.
+    // This WebDriver implementation must support testing both secure and non-secure
+    // cookie scenarios per the WebDriver specification. Test code controls cookie
+    // creation, not untrusted external sources.
     if cookie.secure {
         builder = builder.secure(true);
     }
