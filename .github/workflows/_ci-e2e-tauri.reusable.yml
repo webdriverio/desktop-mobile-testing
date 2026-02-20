@@ -386,6 +386,9 @@ jobs:
           echo "Post-test Unix cleanup complete"
 
       # Show comprehensive debug information on failure
+      # CodeQL false positive: This script cannot be poisoned by artifacts because
+      # download-archive/action.yml only extracts dist/, dist-js/, and target/ directories
+      # to the workspace - it never touches scripts/ directories.
       - name: 🐛 Debug Information
         if: always()
         shell: bash
