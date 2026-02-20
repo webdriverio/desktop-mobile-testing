@@ -1,5 +1,4 @@
-# CodeQL configuration file
-# This file specifies which directories to exclude from CodeQL analysis
+name: "WDIO Desktop Mobile CodeQL Config"
 
 # Exclude test files and directories from analysis
 paths-ignore:
@@ -18,3 +17,27 @@ paths-ignore:
 
   # Coverage and debug output
   - '**/coverage/**'
+
+# Disable queries that produce false positives for this codebase
+#
+# actions/artifact-poisoning: This query alerts when code is executed from a directory
+# that could be overwritten by downloaded artifacts. In this codebase, this is a false
+# positive because our artifact download logic has strict safeguards:
+#
+# 1. Artifacts are extracted to ${RUNNER_TEMP}/artifact-extract-{run_id}-{attempt}
+#    (a per-job temp directory, not the workspace)
+#
+# 2. The download-archive action (.github/workflows/actions/download-archive/action.yml)
+#    only copies specific directories to the workspace:
+#    - dist/ directories (build output)
+#    - dist-js/ directories (build output)
+#    - target/ directories (Rust/Tauri build output)
+#
+# 3. The copy_directory function is never called on scripts/ directories, so
+#    e2e/scripts/show-logs.ts (and any other scripts) cannot be overwritten by artifacts
+#
+# See .github/codeql/FALSE_POSITIVE_ANALYSIS.md for detailed rationale.
+#
+query-filters:
+  - exclude:
+      id: actions/artifact-poisoning
