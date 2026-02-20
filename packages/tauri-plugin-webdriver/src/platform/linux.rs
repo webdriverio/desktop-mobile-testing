@@ -267,24 +267,13 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
 
                 let response: Result<String, String> = match result {
                     Ok(surface) => {
-                        // Convert gdk::Surface to Pixbuf, then encode as PNG
-                        // In gtk 0.18+, use gdk_pixbuf for encoding
-                        use gdk::SurfaceExt;
-                        use gdk_pixbuf::{Pixbuf, PixbufFormat};
-
-                        let width = surface.width();
-                        let height = surface.height();
-
-                        // Create a pixbuf from the surface
-                        match Pixbuf::from_surface(&surface, 0, 0, 0, 0, width, height, width * 4, None) {
-                            Ok(pixbuf) => {
-                                // Encode to PNG using pixbuf
-                                match pixbuf.save_to_bufferv("png", &[]) {
-                                    Ok(png_data) => Ok(BASE64_STANDARD.encode(png_data)),
-                                    Err(e) => Err(format!("Failed to encode PNG: {}", e)),
-                                }
-                            }
-                            Err(e) => Err(format!("Failed to create pixbuf: {}", e)),
+                        let mut png_data: Vec<u8> = Vec::new();
+                        match gtk::cairo::ImageSurface::try_from(surface) {
+                            Ok(image_surface) => match image_surface.write_to_png(&mut png_data) {
+                                Ok(()) => Ok(BASE64_STANDARD.encode(&png_data)),
+                                Err(e) => Err(format!("Failed to write PNG: {e}")),
+                            },
+                            Err(e) => Err(format!("Failed to downcast to ImageSurface: {e:?}")),
                         }
                     }
                     Err(e) => Err(e.to_string()),

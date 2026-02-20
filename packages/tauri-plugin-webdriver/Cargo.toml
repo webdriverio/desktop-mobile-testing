@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-webdriver"
-version = "0.1.2"
+version = "0.2.1"
 authors = ["You"]
 description = "W3C WebDriver implementation for Tauri applications"
 license = "MIT"
@@ -42,7 +42,7 @@ webkit2gtk = "2.0"
 javascriptcore-rs = "1.1"
 glib = "0.21"
 gtk = "0.18"
-gdk-pixbuf = "0.18"
+cairo-rs = { version = "0.18", features = ["png"] }
 
 [build-dependencies]
 tauri-plugin = { version = "2.5.3", features = ["build"] }

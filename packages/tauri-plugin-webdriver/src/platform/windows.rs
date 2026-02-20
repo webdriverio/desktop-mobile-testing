@@ -661,13 +661,15 @@ mod handlers {
                 // Read PNG data from the stream
                 unsafe {
                     use super::{STATFLAG_NONAME, STREAM_SEEK_SET};
+                    use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+                    use base64::Engine as _;
 
                     // Get stream size
                     let mut stat = std::mem::zeroed();
-                    if self.stream.Stat(&mut stat, STATFLAG_NONAME).is_err() {
+                    if self.stream.Stat(&raw mut stat, STATFLAG_NONAME).is_err() {
                         return Ok(());
                     }
-                    let size = stat.cbSize as usize;
+                    let size = usize::try_from(stat.cbSize).unwrap_or(0);
 
                     if size == 0 {
                         if let Ok(mut guard) = self.tx.lock() {
@@ -688,8 +690,8 @@ mod handlers {
                         .stream
                         .Read(
                             buffer.as_mut_ptr().cast(),
-                            size as u32,
-                            Some(&mut bytes_read),
+                            u32::try_from(size).unwrap_or(u32::MAX),
+                            Some(&raw mut bytes_read),
                         )
                         .is_err()
                     {
@@ -704,8 +706,6 @@ mod handlers {
                     buffer.truncate(bytes_read as usize);
 
                     // Encode as base64
-                    use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
-                    use base64::Engine as _;
                     let base64 = BASE64_STANDARD.encode(&buffer);
 
                     if let Ok(mut guard) = self.tx.lock() {
