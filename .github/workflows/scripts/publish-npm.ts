@@ -130,7 +130,8 @@ async function main() {
         published.push(scopedName);
       } else {
         // Use pnpm publish with the specific package filter
-        const publishCmd = `pnpm --filter ${scopedName} publish --tag ${npmTag} --access public --no-git-checks`;
+        // --provenance flag enables OIDC trusted publishing
+        const publishCmd = `pnpm --filter ${scopedName} publish --tag ${npmTag} --access public --no-git-checks --provenance`;
         runCommand(publishCmd);
         console.log(`   ✅ Published successfully`);
         published.push(scopedName);
