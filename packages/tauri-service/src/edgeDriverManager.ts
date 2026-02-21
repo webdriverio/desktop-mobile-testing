@@ -340,42 +340,20 @@ try {
  * Ensure msedgedriver is available and matches Edge version
  * This is the main entry point for Edge driver management
  */
-export async function ensureMsEdgeDriver(tauriBinaryPath?: string, autoDownload = true): Promise<EdgeDriverResult> {
+export async function ensureMsEdgeDriver(_tauriBinaryPath?: string, autoDownload = true): Promise<EdgeDriverResult> {
   if (process.platform !== 'win32') {
     return Ok({ method: 'skipped' as const });
   }
 
   log.info('Checking Edge WebDriver compatibility...');
 
-  let edgeVersion: string | undefined;
-
-  // First, try to detect WebView2 runtime version (most accurate for Tauri apps)
-  edgeVersion = await detectWebView2Version();
-  if (edgeVersion) {
-    log.info(`Detected WebView2 runtime version: ${edgeVersion}`);
-  }
-
-  // Fallback: Try to get version from Tauri binary (may not be accurate)
-  if (!edgeVersion && tauriBinaryPath) {
-    edgeVersion = await detectWebView2VersionFromBinary(tauriBinaryPath);
-    if (edgeVersion) {
-      log.info(`Detected version from Tauri binary: ${edgeVersion}`);
-    }
-  }
-
-  // Final fallback: Use system Edge version
+  const edgeVersion = await detectWebView2Version();
   if (!edgeVersion) {
-    edgeVersion = await detectEdgeVersion();
-    if (edgeVersion) {
-      log.info(`Detected system Edge version: ${edgeVersion}`);
-      log.warn('Using system Edge version as fallback. This may not match the WebView2 runtime in your Tauri app.');
-    }
-  }
-
-  if (!edgeVersion) {
-    log.warn('Could not detect Edge/WebView2 version - skipping driver check');
+    log.warn('Could not detect WebView2 runtime version - skipping driver check');
     return Ok({ method: 'skipped' as const });
   }
+
+  log.info(`Detected WebView2 runtime version: ${edgeVersion}`);
   const edgeMajor = getMajorVersion(edgeVersion);
 
   const existing = await findMsEdgeDriver();
