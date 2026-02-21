@@ -313,11 +313,14 @@ export default class TauriWorkerService {
       const scriptString = typeof script === 'function' ? script.toString() : script;
       const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
 
+      // For embedded WebDriver: the script body is evaluated directly, so we need to
+      // return a function expression that WebDriver will call with arguments
+      // For standard WebDriver: scripts are wrapped in a function automatically
       const wrappedScript = isEmbedded
-        ? `((...args) => {
+        ? `(function(...args) {
             ${consoleWrapperScript}
             return (${scriptString}).apply(null, args);
-          })(...arguments)`
+          })`
         : `
             ${consoleWrapperScript}
             return (${scriptString}).apply(null, arguments);
