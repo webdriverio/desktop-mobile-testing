@@ -313,25 +313,9 @@ export default class TauriWorkerService {
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
-        // For embedded WebDriver: use executeAsync under the hood.
-        // Embedded WebDriver wraps async scripts in a function body (so 'return' is valid),
-        // but evaluates sync scripts directly (causing "return outside function" errors).
-        // The done callback is appended by WebDriver to the arguments array.
-        const wrappedScript = `((...allArgs) => {
-  const done = allArgs[allArgs.length - 1];
-  const userArgs = allArgs.slice(0, -1);
-  try {
-    const result = (${scriptString})(...userArgs);
-    if (result && typeof result.then === 'function') {
-      result.then(done).catch(e => done({ __wdio_error__: e.message }));
-    } else {
-      done(result);
-    }
-  } catch (e) {
-    done({ __wdio_error__: e.message });
-  }
-}).apply(null, arguments)`;
-        return browser.executeAsync(wrappedScript, ...args) as Promise<ReturnValue>;
+        // For embedded WebDriver: skip console wrapper as console forwarding
+        // is handled by tauri-plugin-webdriver.
+        return originalExecute(scriptString, ...args) as Promise<ReturnValue>;
       }
 
       // For tauri-driver: use sync execute with console wrapper

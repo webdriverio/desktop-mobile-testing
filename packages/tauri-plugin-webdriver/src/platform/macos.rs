@@ -165,9 +165,11 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for MacOSExecutor<R> {
 
         // Build wrapper that includes argument deserialization
         // callAsyncJavaScript handles Promises natively - we wrap the script in a Promise
-        // and provide __done via closure
+        // and provide __done via closure.
+        // Note: NO 'return' keyword at top level - callAsyncJavaScript evaluates expressions,
+        // not statements. The Promise expression below evaluates to the result.
         let wrapper = format!(
-            r"return new Promise((resolve, reject) => {{
+            r"new Promise((resolve, reject) => {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
                 function deserializeArg(arg) {{
                     if (arg === null || arg === undefined) return arg;
@@ -200,7 +202,7 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for MacOSExecutor<R> {
                 }} catch (e) {{
                     reject(e);
                 }}
-            }});"
+            }})"
         );
 
         let (tx, rx) = oneshot::channel();

@@ -451,10 +451,12 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
             .map_err(|e| WebDriverErrorResponse::invalid_argument(&e.to_string()))?;
 
         // Build wrapper that includes argument deserialization
-        // call_async_javascript_function handles Promises natively - we wrap the script in a Promise
-        // and provide __done via closure
+        // evaluate_javascript_future handles Promises natively - we wrap the script in a Promise
+        // and provide __done via closure.
+        // Note: NO 'return' keyword at top level - evaluate_javascript_future evaluates expressions,
+        // not statements. The Promise expression below evaluates to the result.
         let wrapper = format!(
-            r"return new Promise((resolve, reject) => {{
+            r"new Promise((resolve, reject) => {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
                 function deserializeArg(arg) {{
                     if (arg === null || arg === undefined) return arg;
@@ -487,7 +489,7 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
                 }} catch (e) {{
                     reject(e);
                 }}
-            }});"
+            }})"
         );
 
         let (tx, rx) = oneshot::channel();
