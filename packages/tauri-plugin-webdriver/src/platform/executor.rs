@@ -130,6 +130,9 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
     /// Get a reference to the underlying window
     fn window(&self) -> &WebviewWindow<R>;
 
+    /// Get the script timeout in milliseconds
+    fn script_timeout_ms(&self) -> u64;
+
     // =========================================================================
     // Core JavaScript Execution
     // =========================================================================
@@ -877,15 +880,21 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
         let args_json = serde_json::to_string(args)
             .map_err(|e| WebDriverErrorResponse::invalid_argument(&e.to_string()))?;
 
-        // Wrapper script that uses Promise for async handling
-        // callAsyncJavaScript expects a script that is an expression evaluating to a Promise
-        // Note: NO 'return' keyword at top level - callAsyncJavaScript evaluates expressions,
-        // not statements. The IIFE below IS the expression that evaluates to a Promise.
+        // Generate unique result variable name
+        let result_var = format!("__wdio_exec_{}", uuid::Uuid::new_v4());
+
+        // Wrapper script that:
+        // 1. Executes the user's script (handles both function expressions and function bodies)
+        // 2. Stores result in a global variable for polling
+        // Note: We use an IIFE that returns `undefined` to avoid Promise serialization issues
+        // 
+        // WDIO sends scripts as function expressions like: "() => { return x; }"
+        // WebDriver spec expects function bodies like: "return x;"
+        // We handle both by wrapping the script in a way that works for both cases
         let wrapper = format!(
-            r"(async function() {{
+            r"(function() {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
                 
-                /// Serialize a value to ensure it's JSON-compatible
                 function serializeValue(value) {{
                     if (value === null || value === undefined) return null;
                     if (typeof value === 'boolean') return value;
@@ -901,15 +910,8 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                         return value.map(serializeValue);
                     }}
                     if (typeof value === 'object') {{
-                        // Handle element references
-                        if (value[ELEMENT_KEY]) {{
-                            return value;
-                        }}
-                        // Handle DOM elements - convert to null
-                        if (value && value.nodeType && value.nodeType === 1) {{
-                            return null;
-                        }}
-                        // Serialize object properties
+                        if (value[ELEMENT_KEY]) return value;
+                        if (value && value.nodeType && value.nodeType === 1) return null;
                         var result = {{}};
                         for (var key in value) {{
                             if (value.hasOwnProperty(key)) {{
@@ -938,19 +940,57 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                     }}
                     return arg;
                 }}
-                try {{
-                    var args = {args_json}.map(deserializeArg);
-                    var fn = function() {{ {script} }};
-                    var raw_result = await fn.apply(null, args);
-                    var serialized = serializeValue(raw_result);
-                    return {{ __wd_success: true, __wd_value: serialized }};
-                }} catch (e) {{
-                    return {{ __wd_success: false, __wd_error: e.message || String(e) }};
-                }}
-            }})()"
+                
+                // Start async execution (fire and forget)
+                (async function() {{
+                    try {{
+                        var args = {args_json}.map(deserializeArg);
+                        // The script from WDIO is a function expression which we call directly
+                        var raw_result = await ({script}).apply(null, args);
+                        var serialized = serializeValue(raw_result);
+                        window['{result_var}'] = {{ __wd_success: true, __wd_value: serialized }};
+                    }} catch (e) {{
+                        window['{result_var}'] = {{ __wd_success: false, __wd_error: e.message || String(e) }};
+                    }}
+                }})();
+                
+                // Return undefined to avoid Promise serialization issues
+                return undefined;
+            }})()",
         );
-        let result = self.evaluate_js(&wrapper).await?;
-        extract_script_result(&result)
+
+        // Execute the wrapper script (fire and forget, returns undefined)
+        self.evaluate_js(&wrapper).await?;
+
+        // Poll for the result with timeout
+        let poll_script = format!("window['{}']", result_var);
+        let timeout = std::time::Duration::from_millis(self.script_timeout_ms());
+        let start = std::time::Instant::now();
+        let poll_interval = std::time::Duration::from_millis(50);
+
+        loop {
+            let poll_result = self.evaluate_js(&poll_script).await?;
+            let inner = poll_result.get("value").cloned().unwrap_or(Value::Null);
+            
+            // Check if we have a result
+            if !inner.is_null() && inner.get("__wd_success").is_some() {
+                // Clean up the global variable
+                let cleanup_script = format!("delete window['{}']", result_var);
+                let _ = self.evaluate_js(&cleanup_script).await;
+                
+                return extract_script_result_from_inner(&inner);
+            }
+
+            if start.elapsed() > timeout {
+                // Clean up on timeout
+                let cleanup_script = format!("delete window['{}']", result_var);
+                let _ = self.evaluate_js(&cleanup_script).await;
+                
+                return Err(WebDriverErrorResponse::script_timeout());
+            }
+
+            tokio::time::sleep(poll_interval).await;
+        }
     }
 
     /// Execute asynchronous JavaScript with callback.
@@ -1762,7 +1802,12 @@ fn extract_script_result(result: &Value) -> Result<Value, WebDriverErrorResponse
         Value::Null
     };
 
-    // Now check the script execution result
+    extract_script_result_from_inner(&inner)
+}
+
+/// Extract result from inner value (the __wd_success/__wd_value object)
+fn extract_script_result_from_inner(inner: &Value) -> Result<Value, WebDriverErrorResponse> {
+    // Check the script execution result
     if let Some(success) = inner.get("__wd_success").and_then(Value::as_bool) {
         if success {
             return Ok(inner.get("__wd_value").cloned().unwrap_or(Value::Null));
@@ -1771,7 +1816,7 @@ fn extract_script_result(result: &Value) -> Result<Value, WebDriverErrorResponse
         }
     }
 
-    // If we got null or no wrapper structure, it's likely a syntax error (WebView2 returns null)
+    // If we got null or no wrapper structure, it's likely a syntax error
     if inner.is_null() || inner.get("__wd_success").is_none() {
         return Err(WebDriverErrorResponse::javascript_error(
             "Script execution failed (possible syntax error)",

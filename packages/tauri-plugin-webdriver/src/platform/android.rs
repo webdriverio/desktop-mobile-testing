@@ -89,6 +89,10 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for AndroidExecutor<R> {
         &self.window
     }
 
+    fn script_timeout_ms(&self) -> u64 {
+        self.timeouts.script_ms
+    }
+
     async fn evaluate_js(&self, script: &str) -> Result<Value, WebDriverErrorResponse> {
         let wrapped_script = wrap_script_for_frame_context(script, &self.frame_context);
 
