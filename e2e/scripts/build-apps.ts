@@ -204,9 +204,8 @@ export class BuildManager {
       if (process.platform === 'win32') {
         binaryPath = join(tauriTargetDir, 'tauri-e2e-app.exe');
       } else if (process.platform === 'darwin') {
-        // Skip macOS Tauri tests due to WKWebView limitations
-        console.log(`🔍 Debug: Skipping macOS Tauri binary check due to WKWebView limitations`);
-        return false;
+        // macOS: check for raw binary (tauri build without bundling)
+        binaryPath = join(tauriTargetDir, 'tauri-e2e-app');
       } else if (process.platform === 'linux') {
         binaryPath = join(tauriTargetDir, 'tauri-e2e-app');
       } else {
