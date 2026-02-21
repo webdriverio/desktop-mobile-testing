@@ -315,10 +315,13 @@ export default class TauriWorkerService {
 
       // Wrap the script with console forwarding setup executed IN THE SAME CONTEXT
       // The forwarding code wraps console methods, then the test script runs with wrapped console
+      // Wrap in IIFE to ensure return statement is valid in all WebDriver implementations
       const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
       const wrappedScript = `
-        ${consoleWrapperScript}
-        return (${scriptString}).apply(null, arguments);
+        (function() {
+          ${consoleWrapperScript}
+          return (${scriptString}).apply(null, arguments);
+        }).apply(null, arguments)
       `;
 
       // Execute the wrapped script
