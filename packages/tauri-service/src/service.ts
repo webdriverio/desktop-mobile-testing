@@ -25,6 +25,7 @@ export default class TauriWorkerService {
   private resetMocksPrefix?: string;
   private restoreMocks: boolean;
   private restoreMocksPrefix?: string;
+  private driverProvider?: 'official' | 'crabnebula' | 'embedded';
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
@@ -33,6 +34,7 @@ export default class TauriWorkerService {
     this.resetMocksPrefix = options.resetMocksPrefix;
     this.restoreMocks = options.restoreMocks ?? false;
     this.restoreMocksPrefix = options.restoreMocksPrefix;
+    this.driverProvider = options.driverProvider;
     log.debug('TauriWorkerService initialized');
   }
 
@@ -301,34 +303,29 @@ export default class TauriWorkerService {
       return;
     }
 
-    // Store the original execute method
     const originalExecute = browser.execute.bind(browser);
+    const isEmbedded = this.driverProvider === 'embedded';
 
-    // Override execute to inject console forwarding using Object.defineProperty
-    // to handle readonly property
     const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
       script: string | ((...args: InnerArguments) => ReturnValue),
       ...args: InnerArguments
     ): Promise<ReturnValue> {
-      // Convert script to string if it's a function
       const scriptString = typeof script === 'function' ? script.toString() : script;
-
-      // Wrap the script with console forwarding setup executed IN THE SAME CONTEXT
-      // The forwarding code wraps console methods, then the test script runs with wrapped console
-      // IMPORTANT: Must wrap in IIFE because WebDriver may evaluate script at top level
-      // where 'return' statements are invalid outside function context
-      // Capture outer arguments before IIFE to ensure they're passed correctly
       const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
-      const wrappedScript = `((...args) => {
-        ${consoleWrapperScript}
-        return (${scriptString}).apply(null, args);
-      })(...arguments)`;
 
-      // Execute the wrapped script
+      const wrappedScript = isEmbedded
+        ? `((...args) => {
+            ${consoleWrapperScript}
+            return (${scriptString}).apply(null, args);
+          })(...arguments)`
+        : `
+            ${consoleWrapperScript}
+            return (${scriptString}).apply(null, arguments);
+          `;
+
       return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
     };
 
-    // Use Object.defineProperty to override readonly property
     Object.defineProperty(browser, 'execute', {
       value: patchedExecute,
       writable: true,
