@@ -304,7 +304,6 @@ export default class TauriWorkerService {
     }
 
     const originalExecute = browser.execute.bind(browser);
-    const originalExecuteAsync = browser.executeAsync.bind(browser);
     const isEmbedded = this.driverProvider === 'embedded';
 
     const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
@@ -314,10 +313,11 @@ export default class TauriWorkerService {
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
-        // For embedded WebDriver: use executeAsync because execute/sync evaluates scripts
-        // directly without wrapping in a function body, causing "return outside function" errors.
-        // executeAsync works correctly. WebDriver appends 'done' callback to arguments.
-        const asyncWrapper = `((...allArgs) => {
+        // For embedded WebDriver: use executeAsync under the hood.
+        // Embedded WebDriver wraps async scripts in a function body (so 'return' is valid),
+        // but evaluates sync scripts directly (causing "return outside function" errors).
+        // The done callback is appended by WebDriver to the arguments array.
+        const wrappedScript = `((...allArgs) => {
   const done = allArgs[allArgs.length - 1];
   const userArgs = allArgs.slice(0, -1);
   try {
@@ -330,8 +330,8 @@ export default class TauriWorkerService {
   } catch (e) {
     done({ __wdio_error__: e.message });
   }
-})`;
-        return originalExecuteAsync(asyncWrapper, ...args) as Promise<ReturnValue>;
+}).apply(null, arguments)`;
+        return browser.executeAsync(wrappedScript, ...args) as Promise<ReturnValue>;
       }
 
       // For tauri-driver: use sync execute with console wrapper
