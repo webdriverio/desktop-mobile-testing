@@ -314,11 +314,10 @@ export default class TauriWorkerService {
       const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
 
       // For embedded WebDriver: skip console wrapper as it contains return statements
-      // that cause syntax errors. Also, don't add 'return' prefix - just pass the script
-      // directly since the WebDriver may wrap it in its own function.
+      // that cause syntax errors. Wrap function declarations in IIFE so they get called.
       // Console forwarding for embedded is handled by tauri-plugin-webdriver.
       const wrappedScript = isEmbedded
-        ? scriptString
+        ? `return (${scriptString}).apply(null, arguments);`
         : `
             ${consoleWrapperScript}
             return (${scriptString}).apply(null, arguments);
