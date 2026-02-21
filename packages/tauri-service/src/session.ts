@@ -151,6 +151,7 @@ export function createTauriCapabilities(
     logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
     commandTimeout?: number;
     startTimeout?: number;
+    driverProvider?: 'official' | 'crabnebula' | 'embedded';
   } = {},
 ): TauriCapabilities {
   return {
@@ -166,6 +167,7 @@ export function createTauriCapabilities(
       logLevel: options.logLevel || 'info',
       commandTimeout: options.commandTimeout || 30000,
       startTimeout: options.startTimeout || 30000,
+      driverProvider: options.driverProvider,
     },
   };
 }

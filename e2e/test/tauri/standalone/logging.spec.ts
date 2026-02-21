@@ -21,9 +21,13 @@ if (!fs.existsSync(appDir)) {
 // Resolve binary path
 const appBinaryPath = await getTauriBinaryPath(appDir);
 
+// Get driver provider from environment
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+
 // Create session options with log capture enabled
 const sessionOptions = createTauriCapabilities(appBinaryPath, {
   appArgs: ['foo', 'bar=baz'],
+  driverProvider,
 });
 
 // Enable log capture
@@ -45,9 +49,7 @@ if (process.platform === 'linux') {
 
 console.log('🔍 Debug: Starting Tauri standalone logging test');
 
-const browser = await startWdioSession(sessionOptions, {
-  autoInstallTauriDriver: true,
-});
+const browser = await startWdioSession(sessionOptions);
 
 // Wait for browser to be fully initialized and logs to be ready
 await browser.tauri.execute(({ core }) => core.invoke('get_platform_info'));

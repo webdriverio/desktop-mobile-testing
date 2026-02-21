@@ -490,7 +490,8 @@ export default class TauriLaunchService {
     }
 
     // Per-worker mode: spawn dedicated driver for this worker
-    if (this.perWorkerMode && !instanceId) {
+    // Skip for embedded provider - driver is already spawned in onPrepare
+    if (this.perWorkerMode && !instanceId && !this.isEmbeddedMode) {
       log.info(`Per-worker mode: spawning tauri-driver for worker ${cid}`);
 
       // Allocate ports for this worker

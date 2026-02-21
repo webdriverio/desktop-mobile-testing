@@ -25,8 +25,10 @@ const appBinaryPath = await getTauriBinaryPath(appDir);
 console.log(`🔍 Using Tauri binary: ${appBinaryPath}`);
 
 // Create session options
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
 const sessionOptions = createTauriCapabilities(appBinaryPath, {
   appArgs: ['foo', 'bar=baz'],
+  driverProvider,
 });
 
 // Initialize xvfb if running on Linux
@@ -36,9 +38,7 @@ if (process.platform === 'linux') {
 }
 
 console.log('🔍 Debug: Starting session with options:', JSON.stringify(sessionOptions, null, 2));
-const browser = await startWdioSession(sessionOptions, {
-  autoInstallTauriDriver: true,
-});
+const browser = await startWdioSession(sessionOptions);
 
 // Wait a moment to ensure browser is fully initialized with all service capabilities
 await new Promise((resolve) => setTimeout(resolve, 1000));
