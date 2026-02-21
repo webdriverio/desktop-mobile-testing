@@ -169,7 +169,8 @@ jobs:
             elif [ "${{ runner.os }}" = "macOS" ]; then
               # macOS: look for raw binary or .app bundles
               # Check for raw binary first (tauri build without bundling)
-              if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
+              # Use -perm +111 for macOS/BSD find (not -executable which is GNU-only)
+              if find "$target_dir/release" -maxdepth 1 -type f -perm +111 2>/dev/null | grep -q .; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
                 echo "  ✅ Found macOS raw binary in $target_dir/release/"
               else
