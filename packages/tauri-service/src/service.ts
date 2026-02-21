@@ -304,6 +304,7 @@ export default class TauriWorkerService {
     }
 
     const originalExecute = browser.execute.bind(browser);
+    const originalExecuteAsync = browser.executeAsync.bind(browser);
     const isEmbedded = this.driverProvider === 'embedded';
 
     const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
@@ -311,15 +312,31 @@ export default class TauriWorkerService {
       ...args: InnerArguments
     ): Promise<ReturnValue> {
       const scriptString = typeof script === 'function' ? script.toString() : script;
-      const consoleWrapperScript = CONSOLE_WRAPPER_SCRIPT;
 
-      // For embedded WebDriver: skip console wrapper as it contains return statements
-      // that cause syntax errors. Wrap function declarations in IIFE so they get called.
-      // Console forwarding for embedded is handled by tauri-plugin-webdriver.
-      const wrappedScript = isEmbedded
-        ? `return (${scriptString}).apply(null, arguments);`
-        : `
-            ${consoleWrapperScript}
+      if (isEmbedded) {
+        // For embedded WebDriver: use executeAsync because execute/sync evaluates scripts
+        // directly without wrapping in a function body, causing "return outside function" errors.
+        // executeAsync works correctly. WebDriver appends 'done' callback to arguments.
+        const asyncWrapper = `((...allArgs) => {
+  const done = allArgs[allArgs.length - 1];
+  const userArgs = allArgs.slice(0, -1);
+  try {
+    const result = (${scriptString})(...userArgs);
+    if (result && typeof result.then === 'function') {
+      result.then(done).catch(e => done({ __wdio_error__: e.message }));
+    } else {
+      done(result);
+    }
+  } catch (e) {
+    done({ __wdio_error__: e.message });
+  }
+})`;
+        return originalExecuteAsync(asyncWrapper, ...args) as Promise<ReturnValue>;
+      }
+
+      // For tauri-driver: use sync execute with console wrapper
+      const wrappedScript = `
+            ${CONSOLE_WRAPPER_SCRIPT}
             return (${scriptString}).apply(null, arguments);
           `;
 
