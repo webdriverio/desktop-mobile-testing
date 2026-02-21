@@ -5853,6 +5853,12 @@
           "type": "string",
           "const": "wdio:deny-switch-to-main",
           "markdownDescription": "Denies the switch_to_main command without any pre-configured scope."
+        },
+        {
+          "description": "Default permissions for the plugin",
+          "type": "string",
+          "const": "webdriver:default",
+          "markdownDescription": "Default permissions for the plugin"
         }
       ]
     },

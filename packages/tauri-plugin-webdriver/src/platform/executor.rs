@@ -877,8 +877,10 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
         let args_json = serde_json::to_string(args)
             .map_err(|e| WebDriverErrorResponse::invalid_argument(&e.to_string()))?;
 
+        // Wrapper script that uses Promise for async handling
+        // callAsyncJavaScript expects a script that returns a Promise
         let wrapper = format!(
-            r"(function() {{
+            r"return (async function() {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
                 
                 /// Serialize a value to ensure it's JSON-compatible
@@ -937,13 +939,13 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                 try {{
                     var args = {args_json}.map(deserializeArg);
                     var fn = function() {{ {script} }};
-                    var raw_result = fn.apply(null, args);
+                    var raw_result = await fn.apply(null, args);
                     var serialized = serializeValue(raw_result);
                     return {{ __wd_success: true, __wd_value: serialized }};
                 }} catch (e) {{
                     return {{ __wd_success: false, __wd_error: e.message || String(e) }};
                 }}
-            }})()"
+            }})();"
         );
         let result = self.evaluate_js(&wrapper).await?;
         extract_script_result(&result)

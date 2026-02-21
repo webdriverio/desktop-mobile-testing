@@ -97,6 +97,11 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for MacOSExecutor<R> {
         let result = self.window.with_webview(move |webview| unsafe {
             let wk_webview: &WKWebView = &*webview.inner().cast();
             let ns_script = NSString::from_str(&script_owned);
+            let mtm = MainThreadMarker::new_unchecked();
+
+            // Use callAsyncJavaScript which properly handles Promises and async functions
+            let empty_dict: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
+            let content_world = WKContentWorld::pageWorld(mtm);
 
             let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
             let block = RcBlock::new(move |result: *mut AnyObject, error: *mut NSError| {
@@ -118,7 +123,13 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for MacOSExecutor<R> {
                 }
             });
 
-            wk_webview.evaluateJavaScript_completionHandler(&ns_script, Some(&block));
+            wk_webview.callAsyncJavaScript_arguments_inFrame_inContentWorld_completionHandler(
+                &ns_script,
+                Some(&empty_dict),
+                None,
+                &content_world,
+                Some(&block),
+            );
         });
 
         if let Err(e) = result {

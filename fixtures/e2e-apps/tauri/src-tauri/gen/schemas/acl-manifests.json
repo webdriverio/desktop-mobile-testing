@@ -3633,5 +3633,15 @@
     },
     "permission_sets": {},
     "global_scope_schema": null
+  },
+  "webdriver": {
+    "default_permission": {
+      "identifier": "default",
+      "description": "Default permissions for the plugin",
+      "permissions": []
+    },
+    "permissions": {},
+    "permission_sets": {},
+    "global_scope_schema": null
   }
 }
