@@ -152,6 +152,7 @@ export function createTauriCapabilities(
     commandTimeout?: number;
     startTimeout?: number;
     driverProvider?: 'official' | 'crabnebula' | 'embedded';
+    autoInstallTauriDriver?: boolean;
   } = {},
 ): TauriCapabilities {
   return {
@@ -168,6 +169,7 @@ export function createTauriCapabilities(
       commandTimeout: options.commandTimeout || 30000,
       startTimeout: options.startTimeout || 30000,
       driverProvider: options.driverProvider,
+      autoInstallTauriDriver: options.autoInstallTauriDriver,
     },
   };
 }

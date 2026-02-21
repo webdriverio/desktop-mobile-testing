@@ -28,6 +28,7 @@ const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' 
 const sessionOptions = createTauriCapabilities(appBinaryPath, {
   appArgs: ['foo', 'bar=baz'],
   driverProvider,
+  autoInstallTauriDriver: true,
 });
 
 // Enable log capture
