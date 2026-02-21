@@ -20,8 +20,49 @@ export interface EdgeDriverSuccess {
 export type EdgeDriverResult = Result<EdgeDriverSuccess, Error>;
 
 /**
- * Detect WebView2 version from Tauri binary
+ * Detect WebView2 runtime version from Windows registry
+ * WebView2 runtime is separate from the Edge browser and is what Tauri apps actually use
+ */
+export async function detectWebView2Version(): Promise<string | undefined> {
+  if (process.platform !== 'win32') {
+    return undefined;
+  }
+
+  try {
+    const registryPaths = [
+      'HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+      'HKLM\\SOFTWARE\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+      'HKCU\\SOFTWARE\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+    ];
+
+    for (const regPath of registryPaths) {
+      try {
+        const { stdout } = await execAsync(`reg query "${regPath}" /v pv 2>nul`, {
+          encoding: 'utf8',
+        });
+
+        const match = stdout.match(/pv\s+REG_SZ\s+([\d.]+)/);
+        if (match) {
+          log.debug(`Found WebView2 runtime version ${match[1]} at ${regPath}`);
+          return match[1];
+        }
+      } catch {
+        // Try next path
+      }
+    }
+
+    log.debug('Could not detect WebView2 runtime version from registry');
+    return undefined;
+  } catch (error) {
+    log.debug('Error detecting WebView2 version:', error);
+    return undefined;
+  }
+}
+
+/**
+ * Detect WebView2 version from Tauri binary (legacy method - may not work correctly)
  * Tauri apps use an embedded/fixed WebView2 runtime, not the system Edge
+ * @deprecated Use detectWebView2Version() instead for more reliable detection
  */
 export async function detectWebView2VersionFromBinary(binaryPath?: string): Promise<string | undefined> {
   if (process.platform !== 'win32' || !binaryPath) {
@@ -29,8 +70,6 @@ export async function detectWebView2VersionFromBinary(binaryPath?: string): Prom
   }
 
   try {
-    // Use PowerShell to extract version info from the binary.
-    // Pass the binary path as an argument to avoid interpolating it into the script.
     const { stdout } = await execFileAsync(
       'powershell.exe',
       ['-Command', '(Get-Item $args[0]).VersionInfo.FileVersion', binaryPath],
@@ -42,11 +81,11 @@ export async function detectWebView2VersionFromBinary(binaryPath?: string): Prom
 
     const version = stdout.trim();
     if (version && /^\d+\.\d+\.\d+/.test(version)) {
-      log.debug(`Detected WebView2 version ${version} from Tauri binary ${binaryPath}`);
+      log.debug(`Detected file version ${version} from Tauri binary ${binaryPath}`);
       return version;
     }
   } catch (error) {
-    log.debug(`Could not extract WebView2 version from binary: ${error}`);
+    log.debug(`Could not extract version from binary: ${error}`);
   }
 
   return undefined;
@@ -310,18 +349,26 @@ export async function ensureMsEdgeDriver(tauriBinaryPath?: string, autoDownload 
 
   let edgeVersion: string | undefined;
 
-  if (tauriBinaryPath) {
+  // First, try to detect WebView2 runtime version (most accurate for Tauri apps)
+  edgeVersion = await detectWebView2Version();
+  if (edgeVersion) {
+    log.info(`Detected WebView2 runtime version: ${edgeVersion}`);
+  }
+
+  // Fallback: Try to get version from Tauri binary (may not be accurate)
+  if (!edgeVersion && tauriBinaryPath) {
     edgeVersion = await detectWebView2VersionFromBinary(tauriBinaryPath);
     if (edgeVersion) {
-      log.info(`Detected WebView2 version from Tauri binary: ${edgeVersion}`);
+      log.info(`Detected version from Tauri binary: ${edgeVersion}`);
     }
   }
 
+  // Final fallback: Use system Edge version
   if (!edgeVersion) {
     edgeVersion = await detectEdgeVersion();
     if (edgeVersion) {
       log.info(`Detected system Edge version: ${edgeVersion}`);
-      log.warn('Using system Edge version as fallback. This may not match the WebView2 version in your Tauri app.');
+      log.warn('Using system Edge version as fallback. This may not match the WebView2 runtime in your Tauri app.');
     }
   }
 
