@@ -26,20 +26,20 @@ describe('Tauri Execute - Advanced Patterns', () => {
   });
 
   it('should handle functions with inner function declarations', async () => {
-    const result = await browser.tauri.execute((_tauri) => {
-      function helper(x: number): number {
-        return x * 2;
-      }
+    // Note: Using string form to avoid TypeScript/esbuild __name transpilation issues
+    const result = await browser.tauri.execute(`(tauri) => {
+      function helper(x) { return x * 2; }
       return helper(21);
-    });
+    }`);
     expect(result).toBe(42);
   });
 
   it('should handle functions with inner arrow functions', async () => {
-    const result = await browser.tauri.execute((_tauri) => {
-      const helper = (x: number): number => x * 2;
+    // Note: Using string form to avoid TypeScript/esbuild __name transpilation issues
+    const result = await browser.tauri.execute(`(tauri) => {
+      const helper = (x) => x * 2;
       return helper(21);
-    });
+    }`);
     expect(result).toBe(42);
   });
 
