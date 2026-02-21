@@ -13,7 +13,6 @@ describe('TauriWorkerService', () => {
       // Create a mock browser object
       const mockBrowser = {
         execute: vi.fn().mockReturnValue('original'),
-        executeAsync: vi.fn().mockReturnValue('original'),
         isMultiremote: false,
         instances: [],
         getInstance: vi.fn(),
@@ -39,7 +38,6 @@ describe('TauriWorkerService', () => {
       const mockExecute = vi.fn().mockReturnValue('original');
       const mockBrowser = {
         execute: mockExecute,
-        executeAsync: vi.fn().mockReturnValue('original'),
         isMultiremote: false,
         instances: [],
         getInstance: vi.fn(),
