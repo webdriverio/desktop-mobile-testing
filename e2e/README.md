@@ -1,6 +1,6 @@
 # E2E Testing Framework
 
-This directory contains end-to-end tests for WebdriverIO desktop services, supporting both Electron and Tauri applications.
+This directory contains end-to-end tests for WebdriverIO desktop & mobile services, supporting both Electron and Tauri applications.
 
 ## Overview
 

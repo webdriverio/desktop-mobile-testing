@@ -558,7 +558,7 @@ function parseCommandLineArgs(): void {
  */
 function printUsage(): void {
   console.log(`
-🚀 WebdriverIO Desktop Service E2E Test Matrix
+🚀 WebdriverIO Desktop & Mobile E2E Test Matrix
 
 USAGE:
   tsx scripts/run-matrix.ts [options]
@@ -622,7 +622,7 @@ async function main(): Promise<void> {
   }
   process.env.WDIO_MATRIX_EXECUTING = 'true';
 
-  console.log('🚀 WebdriverIO Desktop Service E2E Test Matrix');
+  console.log('🚀 WebdriverIO Desktop & Mobile E2E Test Matrix');
   console.log('Arguments:', process.argv.slice(2));
 
   // Parse command line arguments
