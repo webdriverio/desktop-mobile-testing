@@ -1,8 +1,55 @@
 import { type ChildProcess, spawn } from 'node:child_process';
+import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
+import type { Readable } from 'node:stream';
 import { createLogger } from '@wdio/native-utils';
+import { forwardLog, type LogLevel } from './logForwarder.js';
+import { parseLogLine } from './logParser.js';
 import type { TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
+
+interface StreamLogHandlerOptions {
+  stream: Readable | null;
+  streamName: string;
+  identifier: string;
+  options: TauriServiceOptions;
+  instanceId?: string;
+}
+
+function setupStreamLogHandler(handlerOptions: StreamLogHandlerOptions): ReadlineInterface | undefined {
+  const { stream, streamName, identifier, options, instanceId } = handlerOptions;
+
+  if (!stream) {
+    return undefined;
+  }
+
+  const rl = createInterface({
+    input: stream,
+    crlfDelay: Infinity,
+  });
+
+  rl.on('line', (line: string) => {
+    if (options.captureBackendLogs || options.captureFrontendLogs) {
+      const parsedLog = parseLogLine(line);
+      if (parsedLog) {
+        if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
+          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
+          forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
+        }
+        if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
+          const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
+          forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
+        }
+      }
+    }
+  });
+
+  rl.on('error', (err) => {
+    log.warn(`[${identifier}] ${streamName} stream error: ${err.message}`);
+  });
+
+  return rl;
+}
 
 /**
  * Sleep for a given number of milliseconds
@@ -61,6 +108,11 @@ function spawnTauriApp(appBinaryPath: string, args: string[], env: NodeJS.Proces
   return child;
 }
 
+export interface EmbeddedDriverInfo {
+  proc: ChildProcess;
+  logHandlers: ReadlineInterface[];
+}
+
 /**
  * Start the embedded WebDriver provider
  * Spawns the Tauri app directly and polls for the embedded WebDriver server
@@ -69,7 +121,8 @@ export async function startEmbeddedDriver(
   appBinaryPath: string,
   port: number,
   options: TauriServiceOptions,
-): Promise<ChildProcess> {
+  instanceId?: string,
+): Promise<EmbeddedDriverInfo> {
   const appArgs = options.appArgs || [];
 
   // Set TAURI_WEBDRIVER_PORT env var to configure the embedded server port
@@ -82,23 +135,59 @@ export async function startEmbeddedDriver(
   // Spawn the app directly
   const child = spawnTauriApp(appBinaryPath, appArgs, env);
 
+  // Set up log handlers for stdout/stderr
+  const logHandlers: ReadlineInterface[] = [];
+  const identifier = `embedded-${port}`;
+
+  const stdoutHandler = setupStreamLogHandler({
+    stream: child.stdout,
+    streamName: 'stdout',
+    identifier,
+    options,
+    instanceId,
+  });
+  if (stdoutHandler) logHandlers.push(stdoutHandler);
+
+  const stderrHandler = setupStreamLogHandler({
+    stream: child.stderr,
+    streamName: 'stderr',
+    identifier,
+    options,
+    instanceId,
+  });
+  if (stderrHandler) logHandlers.push(stderrHandler);
+
   // Wait for the embedded WebDriver server to be ready
   const startTimeout = options.startTimeout || 30000;
   try {
     await pollWebDriverStatus(port, startTimeout);
   } catch (error) {
-    // Clean up the process if startup fails
+    // Clean up the process and handlers if startup fails
+    for (const handler of logHandlers) {
+      handler.close();
+    }
     child.kill('SIGTERM');
     throw error;
   }
 
-  return child;
+  return { proc: child, logHandlers };
 }
 
 /**
- * Stop the embedded driver (kill the app process)
+ * Stop the embedded driver (kill the app process and close log handlers)
  */
-export async function stopEmbeddedDriver(child: ChildProcess): Promise<void> {
+export async function stopEmbeddedDriver(info: EmbeddedDriverInfo): Promise<void> {
+  const { proc: child, logHandlers } = info;
+
+  // Close log handlers first
+  for (const handler of logHandlers) {
+    try {
+      handler.close();
+    } catch {
+      // Ignore errors on close
+    }
+  }
+
   if (!child.pid) {
     log.debug('No PID available for embedded driver');
     return;

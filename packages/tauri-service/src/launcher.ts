@@ -10,7 +10,13 @@ import { diagnoseTauriEnvironment, formatDiagnosticResults } from './diagnostics
 import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
 import { DriverPool } from './driverPool.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
-import { getEmbeddedPort, isEmbeddedProvider, startEmbeddedDriver, stopEmbeddedDriver } from './embeddedProvider.js';
+import {
+  type EmbeddedDriverInfo,
+  getEmbeddedPort,
+  isEmbeddedProvider,
+  startEmbeddedDriver,
+  stopEmbeddedDriver,
+} from './embeddedProvider.js';
 import type { LogLevel } from './logForwarder.js';
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import { PortManager } from './portManager.js';
@@ -64,7 +70,7 @@ export default class TauriLaunchService {
   private perWorkerMode: boolean = false;
   private portManager: PortManager;
   private driverPool: DriverPool;
-  private embeddedProcesses: Map<string, ChildProcess> = new Map();
+  private embeddedProcesses: Map<string, EmbeddedDriverInfo> = new Map();
   private isEmbeddedMode: boolean = false;
 
   constructor(
@@ -249,8 +255,8 @@ export default class TauriLaunchService {
           log.info(`Starting embedded WebDriver for ${key} on port ${embeddedPort}`);
 
           // Spawn the app with embedded WebDriver
-          const child = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions);
-          this.embeddedProcesses.set(instanceId, child);
+          const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, instanceId);
+          this.embeddedProcesses.set(instanceId, driverInfo);
 
           // Update capabilities to connect to the embedded WebDriver server
           (value as { port?: number; hostname?: string }).port = embeddedPort;
@@ -333,8 +339,8 @@ export default class TauriLaunchService {
         log.info(`Starting embedded WebDriver for instance ${i} on port ${embeddedPort}`);
 
         // Spawn the app with embedded WebDriver
-        const child = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions);
-        this.embeddedProcesses.set(String(i), child);
+        const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, String(i));
+        this.embeddedProcesses.set(String(i), driverInfo);
 
         // Update capabilities to connect to the embedded WebDriver server
         (cap as { port?: number; hostname?: string }).port = embeddedPort;
