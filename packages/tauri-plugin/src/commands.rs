@@ -44,7 +44,7 @@ pub(crate) async fn log_frontend<R: Runtime>(
 /// It extracts the script from the request, evaluates it, and returns the result
 #[command]
 pub(crate) async fn execute<R: Runtime>(
-    _app: tauri::AppHandle<R>,
+    app: tauri::AppHandle<R>,
     window: WebviewWindow<R>,
     request: ExecuteRequest,
 ) -> Result<JsonValue> {
@@ -56,7 +56,7 @@ pub(crate) async fn execute<R: Runtime>(
 
     let (tx, rx) = mpsc::channel();
 
-    // Build the script with args if provided
+    // Build the script with args if offered
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
@@ -72,9 +72,10 @@ pub(crate) async fn execute<R: Runtime>(
     let result_tx = tx.clone();
     let error_tx = tx;
 
-    // Listen for the result event using the window's event listener
-    // This listens on the window target which matches where emit sends
-    let listener_id = window.listen(&event_id, move |event| {
+    // Listen for the result event using the app's event listener
+    // The JavaScript uses window.__TAURI__.event.emit() which emits to the APP target
+    // So we need to listen on the app target, not the window target
+    let listener_id = app.listen(&event_id, move |event| {
         log::trace!("Received result event payload: {}", event.payload());
 
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
@@ -155,7 +156,7 @@ pub(crate) async fn execute<R: Runtime>(
     // Evaluate the script
     if let Err(e) = window.eval(&script_with_result) {
         log::error!("Failed to eval script: {}", e);
-        window.unlisten(listener_id);
+        app.unlisten(listener_id);
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
     }
 
@@ -167,18 +168,18 @@ pub(crate) async fn execute<R: Runtime>(
         Ok(Ok(result)) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
-            window.unlisten(listener_id);
+            app.unlisten(listener_id);
             Ok(result)
         }
         Ok(Err(e)) => {
             log::error!("JS error during execution: {}", e);
-            window.unlisten(listener_id);
+            app.unlisten(listener_id);
             Err(e)
         }
         Err(_) => {
             log::error!("Timeout waiting for execute result after 10s. Event ID: {}. Window: {}",
                 event_id, window_label);
-            window.unlisten(listener_id);
+            app.unlisten(listener_id);
             Err(crate::Error::ExecuteError(format!(
                 "Script execution timed out after 10s. Event ID: {}. Window: {}",
                 event_id, window_label
