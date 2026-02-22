@@ -33,7 +33,9 @@ const sessionOptions = createTauriCapabilities(appBinaryPath, {
 
 // Enable log capture
 const appDirName = path.basename(appDir);
-const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
+const testType = 'standalone';
+const logDirName = driverProvider ? `${driverProvider}-${testType}-${appDirName}` : `${testType}-${appDirName}`;
+const logDir = path.join(__dirname, '..', '..', '..', 'logs', logDirName);
 if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].captureBackendLogs = true;
   sessionOptions['wdio:tauriServiceOptions'].captureFrontendLogs = true;
@@ -63,8 +65,6 @@ await browser.waitUntil(
 );
 
 try {
-  // For standalone tests, logs go to logs/standalone-{appDirName}/
-  // Since standalone tests don't run through WDIO, we need to construct the path manually
   console.log(`[DEBUG] Test will read logs from: ${logDir}`);
   console.log(`[DEBUG] appDir: ${appDir}`);
   console.log(`[DEBUG] appDirName: ${appDirName}`);

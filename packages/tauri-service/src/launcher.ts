@@ -218,11 +218,14 @@ export default class TauriLaunchService {
     // Uses WDIO's outputDir config option for log file location
     if (mergedOptions.captureBackendLogs || mergedOptions.captureFrontendLogs) {
       try {
-        const { getLogWriter } = await import('./logWriter.js');
-        // Use WDIO outputDir, fall back to './logs'
-        const logDir = _config.outputDir || join(process.cwd(), 'logs');
-        getLogWriter().initialize(logDir);
-        log.info(`Log capture initialized: ${logDir}`);
+        const { getLogWriter, isLogWriterInitialized } = await import('./logWriter.js');
+        if (isLogWriterInitialized()) {
+          log.debug('Log writer already initialized, skipping re-initialization');
+        } else {
+          const logDir = _config.outputDir || join(process.cwd(), 'logs');
+          getLogWriter().initialize(logDir);
+          log.info(`Log capture initialized: ${logDir}`);
+        }
       } catch (error) {
         log.warn(`Failed to initialize log writer, logs will go to stdout: ${error}`);
       }
