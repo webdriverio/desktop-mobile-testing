@@ -51,10 +51,13 @@ pub(crate) async fn execute<R: Runtime>(
     log::debug!("Execute command called");
     log::trace!("Script length: {} chars", request.script.len());
 
-    use std::sync::mpsc;
+    use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
-    let (tx, rx) = mpsc::channel();
+    // Use tokio's async oneshot channel for async waiting
+    // Wrap sender in Arc<Mutex<Option>> so the Fn closure can take it once
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let tx = Arc::new(Mutex::new(Some(tx)));
 
     // Build the script with args if offered
     let script = if !request.args.is_empty() {
@@ -69,26 +72,33 @@ pub(crate) async fn execute<R: Runtime>(
     let event_id = format!("wdio-result-{}", Uuid::new_v4());
     log::trace!("Generated event_id for result: {}", event_id);
 
-    let result_tx = tx.clone();
-    let error_tx = tx;
-
     // Listen for the result event using the app's event listener
     // The JavaScript uses window.__TAURI__.event.emit() which emits to the APP target
     // So we need to listen on the app target, not the window target
+    let tx_clone = Arc::clone(&tx);
     let listener_id = app.listen(&event_id, move |event| {
         log::trace!("Received result event payload: {}", event.payload());
+
+        // Take the sender from the Option (only the first call will succeed)
+        let tx = match tx_clone.lock().ok().and_then(|mut guard| guard.take()) {
+            Some(tx) => tx,
+            None => {
+                log::warn!("Event received but sender already taken, ignoring");
+                return;
+            }
+        };
 
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
             if let Some(success) = payload.get("success").and_then(|s| s.as_bool()) {
                 if success {
                     let value: JsonValue = payload.get("value").unwrap_or(&JsonValue::Null).clone();
-                    let _ = result_tx.send(Ok(value));
+                    let _ = tx.send(Ok(value));
                 } else {
                     let error_msg = payload.get("error")
                         .and_then(|e| e.as_str())
                         .unwrap_or("Unknown error")
                         .to_string();
-                    let _ = error_tx.send(Err(crate::Error::ExecuteError(error_msg)));
+                    let _ = tx.send(Err(crate::Error::ExecuteError(error_msg)));
                 }
             }
         }
@@ -162,20 +172,32 @@ pub(crate) async fn execute<R: Runtime>(
 
     log::trace!("Waiting for execute result (30s timeout)");
 
-    // Wait for the result event with 30s timeout
+    // Wait for the result event with 30s timeout using async
+    // This allows the async runtime to process other tasks (like IPC) while waiting
     // This matches the WebDriver default script timeout
     let window_label = window.label().to_owned();
-    match rx.recv_timeout(Duration::from_secs(30)) {
-        Ok(Ok(result)) => {
+    let timeout_duration = Duration::from_secs(30);
+    
+    match tokio::time::timeout(timeout_duration, rx).await {
+        Ok(Ok(Ok(result))) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
             app.unlisten(listener_id);
             Ok(result)
         }
-        Ok(Err(e)) => {
+        Ok(Ok(Err(e))) => {
             log::error!("JS error during execution: {}", e);
             app.unlisten(listener_id);
             Err(e)
+        }
+        Ok(Err(_)) => {
+            // Channel closed without sending (shouldn't happen)
+            log::error!("Channel closed unexpectedly. Event ID: {}. Window: {}", event_id, window_label);
+            app.unlisten(listener_id);
+            Err(crate::Error::ExecuteError(format!(
+                "Channel closed unexpectedly. Event ID: {}. Window: {}",
+                event_id, window_label
+            )))
         }
         Err(_) => {
             log::error!("Timeout waiting for execute result after 30s. Event ID: {}. Window: {}",
