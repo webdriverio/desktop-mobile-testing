@@ -1,11 +1,9 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
-import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
-import type { Readable } from 'node:stream';
+import type { Interface as ReadlineInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
-import { forwardLog, type LogLevel } from './logForwarder.js';
-import { parseLogLine } from './logParser.js';
+import { createLogCapture } from './logCapture.js';
 import type { TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
@@ -114,9 +112,8 @@ export class DriverProcess {
         }, this.startTimeout);
 
         // Setup stream handlers
-        const stdoutHandler = this.setupStreamLogHandler({
+        const stdoutHandler = createLogCapture({
           stream: this._proc.stdout,
-          streamName: 'stdout',
           identifier,
           options: serviceOptions,
           onErrorDetected: (message: string) => {
@@ -125,9 +122,8 @@ export class DriverProcess {
           instanceId: options.instanceId,
         });
 
-        const stderrHandler = this.setupStreamLogHandler({
+        const stderrHandler = createLogCapture({
           stream: this._proc.stderr,
-          streamName: 'stderr',
           identifier,
           options: serviceOptions,
           instanceId: options.instanceId,
@@ -345,61 +341,5 @@ export class DriverProcess {
       clearTimeout(this.pollTimer);
       this.pollTimer = undefined;
     }
-  }
-
-  private setupStreamLogHandler({
-    stream,
-    streamName,
-    identifier,
-    options,
-    onStartupDetected,
-    onErrorDetected,
-    instanceId,
-  }: {
-    stream: Readable | null;
-    streamName: 'stdout' | 'stderr';
-    identifier: string;
-    options: TauriServiceOptions;
-    onStartupDetected?: () => void;
-    onErrorDetected?: (message: string) => void;
-    instanceId?: string;
-  }): ReadlineInterface | undefined {
-    if (!stream) return undefined;
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    rl.on('line', (line: string) => {
-      // Log raw output for debugging
-      if (streamName === 'stdout') {
-        log.info(`[STDOUT] ${identifier} line: ${line.substring(0, 200)}`);
-      } else {
-        log.error(`[${identifier}] stderr: ${line}`);
-      }
-
-      // Check for startup messages
-      if (onStartupDetected && (line.includes('tauri-driver started') || line.includes('listening on'))) {
-        onStartupDetected();
-      }
-
-      // Detect bind failure
-      if (onErrorDetected && line.includes('can not listen')) {
-        onErrorDetected(`tauri-driver [${identifier}] failed to bind: ${line}`);
-      }
-
-      // Parse and forward log
-      const parsedLog = parseLogLine(line);
-      if (parsedLog) {
-        if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-          forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-        }
-        if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-          const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-          forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-        }
-      }
-    });
-
-    return rl;
   }
 }

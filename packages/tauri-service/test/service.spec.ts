@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { parseLogLines } from '../src/logParser.js';
-import {
-  closeStandaloneLogWriter,
-  getStandaloneLogWriter,
-  isStandaloneLogWriterInitialized,
-} from '../src/logWriter.js';
+import { closeLogWriter, getLogWriter, isLogWriterInitialized } from '../src/logWriter.js';
 import TauriWorkerService from '../src/service.js';
 
 describe('TauriWorkerService', () => {
@@ -75,21 +71,21 @@ describe('LogParser', () => {
 
 describe('LogWriter', () => {
   describe('exports', () => {
-    it('should export closeStandaloneLogWriter function', () => {
-      expect(typeof closeStandaloneLogWriter).toBe('function');
+    it('should export closeLogWriter function', () => {
+      expect(typeof closeLogWriter).toBe('function');
     });
 
-    it('should export getStandaloneLogWriter function', () => {
-      expect(typeof getStandaloneLogWriter).toBe('function');
+    it('should export getLogWriter function', () => {
+      expect(typeof getLogWriter).toBe('function');
     });
 
-    it('should export isStandaloneLogWriterInitialized function', () => {
-      expect(typeof isStandaloneLogWriterInitialized).toBe('function');
+    it('should export isLogWriterInitialized function', () => {
+      expect(typeof isLogWriterInitialized).toBe('function');
     });
 
-    it('should handle closeStandaloneLogWriter when not initialized', () => {
+    it('should handle closeLogWriter when not initialized', () => {
       // Should not throw when writer is not initialized
-      expect(() => closeStandaloneLogWriter()).not.toThrow();
+      expect(() => closeLogWriter()).not.toThrow();
     });
   });
 });

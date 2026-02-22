@@ -1,55 +1,10 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
-import type { Readable } from 'node:stream';
+import type { Interface as ReadlineInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
-import { forwardLog, type LogLevel } from './logForwarder.js';
-import { parseLogLine } from './logParser.js';
+import { createLogCapture } from './logCapture.js';
 import type { TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service', 'launcher');
-
-interface StreamLogHandlerOptions {
-  stream: Readable | null;
-  streamName: string;
-  identifier: string;
-  options: TauriServiceOptions;
-  instanceId?: string;
-}
-
-function setupStreamLogHandler(handlerOptions: StreamLogHandlerOptions): ReadlineInterface | undefined {
-  const { stream, streamName, identifier, options, instanceId } = handlerOptions;
-
-  if (!stream) {
-    return undefined;
-  }
-
-  const rl = createInterface({
-    input: stream,
-    crlfDelay: Infinity,
-  });
-
-  rl.on('line', (line: string) => {
-    if (options.captureBackendLogs || options.captureFrontendLogs) {
-      const parsedLog = parseLogLine(line);
-      if (parsedLog) {
-        if (options.captureBackendLogs && parsedLog.source !== 'frontend') {
-          const minLevel = (options.backendLogLevel ?? 'info') as LogLevel;
-          forwardLog('backend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-        }
-        if (options.captureFrontendLogs && parsedLog.source === 'frontend') {
-          const minLevel = (options.frontendLogLevel ?? 'info') as LogLevel;
-          forwardLog('frontend', parsedLog.level, parsedLog.message, minLevel, parsedLog.prefixedMessage, instanceId);
-        }
-      }
-    }
-  });
-
-  rl.on('error', (err) => {
-    log.warn(`[${identifier}] ${streamName} stream error: ${err.message}`);
-  });
-
-  return rl;
-}
 
 /**
  * Sleep for a given number of milliseconds
@@ -139,18 +94,16 @@ export async function startEmbeddedDriver(
   const logHandlers: ReadlineInterface[] = [];
   const identifier = `embedded-${port}`;
 
-  const stdoutHandler = setupStreamLogHandler({
+  const stdoutHandler = createLogCapture({
     stream: child.stdout,
-    streamName: 'stdout',
     identifier,
     options,
     instanceId,
   });
   if (stdoutHandler) logHandlers.push(stdoutHandler);
 
-  const stderrHandler = setupStreamLogHandler({
+  const stderrHandler = createLogCapture({
     stream: child.stderr,
-    streamName: 'stderr',
     identifier,
     options,
     instanceId,

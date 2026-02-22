@@ -1,5 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
-import { getStandaloneLogWriter, isStandaloneLogWriterInitialized } from './logWriter.js';
+import { getLogWriter, isLogWriterInitialized } from './logWriter.js';
 
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
@@ -129,10 +129,10 @@ export function forwardLog(
     : undefined;
   const formattedMessage = transformedPrefixed || formatLogMessage(source, message, instanceId);
 
-  // Check if we're in standalone mode (log writer initialized)
-  const isInitialized = isStandaloneLogWriterInitialized();
+  // Check if we're in file logging mode (log writer initialized)
+  const isInitialized = isLogWriterInitialized();
   if (isInitialized) {
-    const writer = getStandaloneLogWriter();
+    const writer = getLogWriter();
     writer.write(formattedMessage);
   } else {
     // Use cached WDIO logger (normal test runner mode)

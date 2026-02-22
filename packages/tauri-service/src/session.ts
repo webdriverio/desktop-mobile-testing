@@ -2,7 +2,7 @@ import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { remote } from 'webdriverio';
 import TauriLaunchService from './launcher.js';
-import { getStandaloneLogWriter } from './logWriter.js';
+import { closeLogWriter, getLogWriter } from './logWriter.js';
 import TauriWorkerService from './service.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions } from './types.js';
 
@@ -25,11 +25,11 @@ export async function init(
   if (serviceOptions?.captureBackendLogs || serviceOptions?.captureFrontendLogs) {
     if (serviceOptions.logDir) {
       // Use explicit logDir if provided
-      const writer = getStandaloneLogWriter();
-      console.log(`[DEBUG] Initializing standalone log writer with logDir: ${serviceOptions.logDir}`);
+      const writer = getLogWriter();
+      console.log(`[DEBUG] Initializing log writer with logDir: ${serviceOptions.logDir}`);
       writer.initialize(serviceOptions.logDir);
       console.log(`[DEBUG] Log writer initialized. Directory: ${writer.getLogDir()}, File: ${writer.getLogFile()}`);
-      log.debug(`Standalone log writer initialized at ${writer.getLogDir()}`);
+      log.debug(`Log writer initialized at ${writer.getLogDir()}`);
     } else {
       log.warn('Standalone logging enabled but logDir not specified - logs will not be captured');
     }
@@ -128,9 +128,8 @@ export async function cleanup(browser: WebdriverIO.Browser): Promise<void> {
     } as Options.Testrunner;
     await launcher.onComplete(0, minimalConfig, []);
 
-    // Close standalone log writer
-    const writer = getStandaloneLogWriter();
-    writer.close();
+    // Close log writer
+    closeLogWriter();
 
     // Remove from active launchers
     activeLaunchers.delete(browser);

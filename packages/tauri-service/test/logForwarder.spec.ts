@@ -12,8 +12,8 @@ vi.mock('@wdio/native-utils', () => ({
 }));
 
 vi.mock('../src/logWriter.js', () => ({
-  isStandaloneLogWriterInitialized: vi.fn(() => false),
-  getStandaloneLogWriter: vi.fn(),
+  isLogWriterInitialized: vi.fn(() => false),
+  getLogWriter: vi.fn(),
 }));
 
 describe('logForwarder', () => {
@@ -129,9 +129,9 @@ describe('logForwarder', () => {
     });
   });
 
-  describe('standalone mode', () => {
-    it('should use standalone log writer when initialized', async () => {
-      const { isStandaloneLogWriterInitialized, getStandaloneLogWriter } = await import('../src/logWriter.js');
+  describe('file logging mode', () => {
+    it('should use log writer when initialized', async () => {
+      const { isLogWriterInitialized, getLogWriter } = await import('../src/logWriter.js');
       const mockWriter = {
         write: vi.fn(),
         initialize: vi.fn(),
@@ -140,15 +140,15 @@ describe('logForwarder', () => {
         getLogFile: vi.fn().mockReturnValue('/tmp/logs/wdio.log'),
       };
 
-      vi.mocked(isStandaloneLogWriterInitialized).mockReturnValue(true);
-      vi.mocked(getStandaloneLogWriter).mockReturnValue(mockWriter);
+      vi.mocked(isLogWriterInitialized).mockReturnValue(true);
+      vi.mocked(getLogWriter).mockReturnValue(mockWriter);
 
       // Re-import to pick up new mock values
       vi.resetModules();
       const { forwardLog: forwardLogFresh } = await import('../src/logForwarder.js');
 
-      forwardLogFresh('backend', 'info', 'standalone message', 'info');
-      expect(mockWriter.write).toHaveBeenCalledWith('[Tauri:Backend] standalone message');
+      forwardLogFresh('backend', 'info', 'file message', 'info');
+      expect(mockWriter.write).toHaveBeenCalledWith('[Tauri:Backend] file message');
     });
   });
 });

@@ -214,6 +214,20 @@ export default class TauriLaunchService {
       log.info('Using embedded WebDriver provider (tauri-plugin-webdriver) - no external driver needed');
     }
 
+    // Initialize file log writer if log capture is enabled
+    // Uses WDIO's outputDir config option for log file location
+    if (mergedOptions.captureBackendLogs || mergedOptions.captureFrontendLogs) {
+      try {
+        const { getLogWriter } = await import('./logWriter.js');
+        // Use WDIO outputDir, fall back to './logs'
+        const logDir = _config.outputDir || join(process.cwd(), 'logs');
+        getLogWriter().initialize(logDir);
+        log.info(`Log capture initialized: ${logDir}`);
+      } catch (error) {
+        log.warn(`Failed to initialize log writer, logs will go to stdout: ${error}`);
+      }
+    }
+
     // Auto-detect per-worker mode based on maxInstances
     // When maxInstances > 1, enable per-worker spawning for parallelism
     // When maxInstances === 1, use single shared driver for optimal performance
@@ -596,8 +610,8 @@ export default class TauriLaunchService {
     log.debug('Completing Tauri service...');
 
     try {
-      const { closeStandaloneLogWriter } = await import('./logWriter.js');
-      closeStandaloneLogWriter();
+      const { closeLogWriter } = await import('./logWriter.js');
+      closeLogWriter();
     } catch {
       // Log writer may not have been initialized
     }
