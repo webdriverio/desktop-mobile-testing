@@ -256,7 +256,7 @@ export function getConsoleForwardingCode(): string {
 }
 
 /**
- * Forward console logs to Tauri log plugin
+ * Forward console logs to Tauri log plugin or WDIO plugin's log_frontend command
  * This allows WebDriverIO to capture frontend console logs via the backend stdout
  */
 function setupConsoleForwarding(): void {
@@ -264,15 +264,27 @@ function setupConsoleForwarding(): void {
     return;
   }
 
-  // Helper function to safely forward to Tauri log plugin
-  // Uses window.__TAURI__.log directly - the log plugin outputs to stdout with target="frontend"
+  // Helper function to safely forward to Tauri log plugin or WDIO plugin
+  // Uses window.__TAURI__.log if available (requires tauri-plugin-log)
+  // Falls back to WDIO plugin's log_frontend command (writes directly to stderr)
   async function forwardToTauri(level: 'trace' | 'debug' | 'info' | 'warn' | 'error', message: string): Promise<void> {
     try {
+      // Try Tauri log plugin first
       if (window.__TAURI__?.log?.[level]) {
         await window.__TAURI__.log[level](message);
+        return;
+      }
+
+      // Fallback to WDIO plugin's log_frontend command
+      // This writes directly to stderr with [WDIO-FRONTEND] prefix
+      if (window.__TAURI__?.core?.invoke) {
+        await window.__TAURI__.core.invoke('plugin:wdio|log_frontend', {
+          message,
+          level,
+        });
       }
     } catch {
-      // Silently ignore if log plugin not available
+      // Silently ignore if neither log plugin is available
     }
   }
 
