@@ -356,8 +356,8 @@ jobs:
         id: upload-archive
         uses: ./.github/workflows/actions/upload-archive
         with:
-          name: tauri-e2e-app-${{ runner.os }}
-          output: tauri-e2e-app-${{ runner.os }}/artifact.zip
+          name: tauri-e2e-app-${{ runner.os }}-${{ runner.arch }}
+          output: tauri-e2e-app-${{ runner.os }}-${{ runner.arch }}/artifact.zip
           paths: fixtures/e2e-apps/tauri/src-tauri/target
           cache_key_prefix: tauri-e2e-app
           retention_days: '90'
