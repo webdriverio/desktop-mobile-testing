@@ -136,8 +136,17 @@ switch (envContext.testType) {
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
-    // Exclude mocking tests, window tests (require splash), and deeplink tests (require single-instance)
-    exclude = ['./test/tauri/mocking.spec.ts', './test/tauri/window.spec.ts', './test/tauri/deeplink.spec.ts'];
+    // Exclude:
+    // - mocking tests (require special setup)
+    // - window tests (require splash)
+    // - deeplink tests (require single-instance)
+    // - embedded limitation tests (not applicable to tauri-driver)
+    exclude = [
+      './test/tauri/mocking.spec.ts',
+      './test/tauri/window.spec.ts',
+      './test/tauri/deeplink.spec.ts',
+      './test/tauri/logging.embedded.spec.ts',
+    ];
     break;
 }
 
