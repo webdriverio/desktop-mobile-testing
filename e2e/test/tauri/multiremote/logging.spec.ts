@@ -1,13 +1,21 @@
 import { expect, multiRemoteBrowser } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
+import process from 'node:process';
 import url from 'node:url';
 import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+// Get driver provider from environment
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+const isEmbedded = driverProvider === 'embedded';
+
 function getMultiremoteLogDir() {
-  return path.join(__dirname, '..', '..', '..', 'logs', 'multiremote-tauri');
+  // For embedded provider, logs go to logs/embedded-multiremote-tauri
+  // For tauri-driver, logs go to logs/multiremote-tauri
+  const dirName = isEmbedded ? 'embedded-multiremote-tauri' : 'multiremote-tauri';
+  return path.join(__dirname, '..', '..', '..', 'logs', dirName);
 }
 
 describe('Tauri Log Integration - Multiremote', () => {
