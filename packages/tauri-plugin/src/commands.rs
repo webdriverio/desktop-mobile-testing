@@ -160,11 +160,12 @@ pub(crate) async fn execute<R: Runtime>(
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
     }
 
-    log::trace!("Waiting for execute result (10s timeout)");
+    log::trace!("Waiting for execute result (30s timeout)");
 
-    // Wait for the result event with 10s timeout
+    // Wait for the result event with 30s timeout
+    // This matches the WebDriver default script timeout
     let window_label = window.label().to_owned();
-    match rx.recv_timeout(Duration::from_secs(10)) {
+    match rx.recv_timeout(Duration::from_secs(30)) {
         Ok(Ok(result)) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
@@ -177,11 +178,11 @@ pub(crate) async fn execute<R: Runtime>(
             Err(e)
         }
         Err(_) => {
-            log::error!("Timeout waiting for execute result after 10s. Event ID: {}. Window: {}",
+            log::error!("Timeout waiting for execute result after 30s. Event ID: {}. Window: {}",
                 event_id, window_label);
             app.unlisten(listener_id);
             Err(crate::Error::ExecuteError(format!(
-                "Script execution timed out after 10s. Event ID: {}. Window: {}",
+                "Script execution timed out after 30s. Event ID: {}. Window: {}",
                 event_id, window_label
             )))
         }
