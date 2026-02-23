@@ -182,11 +182,13 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
                 if let Ok(webview2) = webview.controller().CoreWebView2() {
                     let script_hstring = HSTRING::from(&script_owned);
 
+                    // Clone tx for the handler - we keep a reference for error handling
                     let handler: ICoreWebView2ExecuteScriptCompletedHandler =
-                        ExecuteScriptHandler::new(tx).into();
+                        ExecuteScriptHandler::new(tx.clone()).into();
 
                     if let Err(e) = webview2.ExecuteScript(PCWSTR(script_hstring.as_ptr()), &handler) {
                         // Failed to start script execution - send error through channel
+                        // The handler won't be called, so we need to send the error ourselves
                         tracing::error!("ExecuteScript call failed for script '{}...': {e:?}", script_preview);
                         if let Ok(mut guard) = tx.lock() {
                             if let Some(tx) = guard.take() {
