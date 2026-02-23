@@ -106,7 +106,7 @@ export default class TauriLaunchService {
     if (!mergedOptions.driverProvider && !isEmbedded) {
       throw new Error(
         'No driverProvider configured and no embedded WebDriver server detected. ' +
-          'If you have installed tauri-plugin-wdio-webdriver, set the TAURI_WEBDRIVER_PORT ' +
+          'If you have installed tauri-plugin-wdio-server, set the TAURI_WEBDRIVER_PORT ' +
           "environment variable or add driverProvider: 'embedded' to your service options. " +
           "To use tauri-driver instead, set driverProvider: 'official'.",
       );

@@ -96,7 +96,8 @@ export const config = {
     [
       '@wdio/tauri-service',
       {
-        autoInstallTauriDriver: true, // Automatically install tauri-driver if not found
+        driverProvider: 'official',
+        autoInstallTauriDriver: true,
       },
     ],
   ],
