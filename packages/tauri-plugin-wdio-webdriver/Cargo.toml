@@ -1,16 +1,16 @@
 [package]
-name = "tauri-plugin-webdriver"
-version = "0.2.1"
+name = "tauri-plugin-wdio-webdriver"
+version = "0.0.1"
 authors = ["You"]
-description = "W3C WebDriver implementation for Tauri applications"
+description = "Embedded WebDriver server for WDIO Tauri testing"
 license = "MIT"
-repository = "https://github.com/Choochmeque/tauri-plugin-webdriver"
-keywords = ["tauri", "webdriver", "selenium", "testing", "automation"]
+repository = "https://github.com/Choochmeque/wdio-desktop-mobile"
+keywords = ["tauri", "webdriver", "wdio", "testing", "automation"]
 categories = ["development-tools::testing", "gui"]
 edition = "2021"
 rust-version = "1.90"
 exclude = ["/examples"]
-links = "tauri-plugin-webdriver"
+links = "tauri-plugin-wdio-webdriver"
 
 [dependencies]
 tauri = { version = "2.10.0" }

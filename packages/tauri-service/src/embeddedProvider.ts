@@ -114,6 +114,13 @@ export async function startEmbeddedDriver(
   const startTimeout = options.startTimeout || 30000;
   try {
     await pollWebDriverStatus(port, startTimeout);
+
+    // On Windows, add a small delay after ready to allow WebView2 to fully stabilize
+    // This helps prevent "Channel closed" errors when executing scripts too quickly
+    // after the HTTP server reports ready but before WebView2 is fully initialized
+    if (process.platform === 'win32') {
+      await sleep(500);
+    }
   } catch (error) {
     // Clean up the process and handlers if startup fails
     for (const handler of logHandlers) {

@@ -270,7 +270,7 @@ fn main() {
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_wdio::init())
-        .plugin(tauri_plugin_webdriver::init());
+        .plugin(tauri_plugin_wdio_webdriver::init());
 
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
     if enable_single_instance {

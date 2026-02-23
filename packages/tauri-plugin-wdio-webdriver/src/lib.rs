@@ -41,7 +41,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 /// This ignores the `TAURI_WEBDRIVER_PORT` environment variable.
 #[must_use]
 pub fn init_with_port<R: Runtime>(port: u16) -> TauriPlugin<R> {
-    Builder::new("webdriver")
+    Builder::new("wdio-webdriver")
         .setup(move |app, api| {
             #[cfg(mobile)]
             let webdriver = mobile::init(app, api)?;
@@ -59,7 +59,7 @@ pub fn init_with_port<R: Runtime>(port: u16) -> TauriPlugin<R> {
             // Start the WebDriver HTTP server
             let app_handle = app.app_handle().clone();
             server::start(app_handle, port);
-            tracing::info!("WebDriver plugin initialized on port {port}");
+            tracing::info!("WDIO WebDriver plugin initialized on port {port}");
 
             Ok(())
         })

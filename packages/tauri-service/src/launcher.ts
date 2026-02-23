@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { createLogger, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
+import { setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { diagnoseTauriEnvironment, formatDiagnosticResults } from './diagnostics.js';
 import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
@@ -211,7 +212,9 @@ export default class TauriLaunchService {
       }
       log.info(`tauri-driver ready: ${driverResult.value.path} (${driverResult.value.method})`);
     } else {
-      log.info('Using embedded WebDriver provider (tauri-plugin-webdriver) - no external driver needed');
+      log.info('Using embedded WebDriver provider (tauri-plugin-wdio-webdriver) - no external driver needed');
+      // Store embedded mode info globally for triggerDeeplink
+      setEmbeddedModeInfo(true, undefined);
     }
 
     // Initialize file log writer if log capture is enabled
@@ -249,6 +252,8 @@ export default class TauriLaunchService {
       if (isEmbedded) {
         // Embedded provider: spawn each app with unique embedded ports
         this.isEmbeddedMode = true;
+        // Store embedded mode info globally for triggerDeeplink
+        setEmbeddedModeInfo(true, undefined);
         log.info(`Starting ${capEntries.length} embedded WebDriver instance(s) for multiremote`);
 
         const hostname = '127.0.0.1';
@@ -270,6 +275,9 @@ export default class TauriLaunchService {
           }
 
           log.info(`Starting embedded WebDriver for ${key} on port ${embeddedPort}`);
+
+          // Store embedded mode info and app binary path globally for triggerDeeplink
+          setEmbeddedModeInfo(true, appBinaryPath);
 
           // Spawn the app with embedded WebDriver
           const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, instanceId);
@@ -338,6 +346,8 @@ export default class TauriLaunchService {
     } else if (isEmbedded) {
       // Embedded provider: spawn app directly with embedded WebDriver server
       this.isEmbeddedMode = true;
+      // Store embedded mode info globally for triggerDeeplink
+      setEmbeddedModeInfo(true, undefined);
       log.info('Embedded provider mode - spawning Tauri app with embedded WebDriver server');
 
       const hostname = '127.0.0.1';
@@ -354,6 +364,9 @@ export default class TauriLaunchService {
         }
 
         log.info(`Starting embedded WebDriver for instance ${i} on port ${embeddedPort}`);
+
+        // Store embedded mode info and app binary path globally for triggerDeeplink
+        setEmbeddedModeInfo(true, appBinaryPath);
 
         // Spawn the app with embedded WebDriver
         const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, String(i));
