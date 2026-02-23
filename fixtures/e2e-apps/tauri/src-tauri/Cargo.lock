@@ -3899,7 +3899,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-single-instance",
  "tauri-plugin-wdio",
- "tauri-plugin-wdio-webdriver",
+ "tauri-plugin-wdio-server",
 ]
 
 [[package]]
@@ -4008,7 +4008,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-wdio-webdriver"
+name = "tauri-plugin-wdio-server"
 version = "0.0.1"
 dependencies = [
  "async-trait",

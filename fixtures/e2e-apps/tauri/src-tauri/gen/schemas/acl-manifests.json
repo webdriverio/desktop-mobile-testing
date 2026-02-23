@@ -3634,7 +3634,7 @@
     "permission_sets": {},
     "global_scope_schema": null
   },
-  "wdio-webdriver": {
+  "wdio-server": {
     "default_permission": {
       "identifier": "default",
       "description": "Default permissions for the plugin",
