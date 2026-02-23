@@ -111,7 +111,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 }, // Multiremote doesn't need maxInstances > 1
       );
