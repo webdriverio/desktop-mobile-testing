@@ -100,6 +100,7 @@ export class DriverProcess {
           stdio: ['ignore', 'pipe', 'pipe'],
           detached: false,
           env: spawnEnv,
+          shell: process.platform === 'win32',
         });
 
         log.info(`[${identifier}] Spawned process with PID: ${this._proc.pid ?? 'unknown'}`);
