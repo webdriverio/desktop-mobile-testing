@@ -196,8 +196,7 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
                     }
                 } else {
                     // Failed to get CoreWebView2 - send error through channel
-                    tracing::error!("Failed to get CoreWebView2 for script execution (window: {})", 
-                        webview.label());
+                    tracing::error!("Failed to get CoreWebView2 for script execution");
                     if let Ok(mut guard) = tx.lock() {
                         if let Some(tx) = guard.take() {
                             let _ = tx.send(Err("Failed to get CoreWebView2".to_string()));
