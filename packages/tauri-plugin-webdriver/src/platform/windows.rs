@@ -168,29 +168,53 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
 
     async fn evaluate_js(&self, script: &str) -> Result<Value, WebDriverErrorResponse> {
         let (tx, rx) = oneshot::channel();
+        let script_preview: String = script.chars().take(100).collect();
         let script_owned = wrap_script_for_frame_context(script, &self.frame_context);
 
-        let result = self.window.with_webview(move |webview| unsafe {
-            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        // Wrap tx in Arc<Mutex<Option<...>>> early so we can send errors from failure paths
+        let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
 
-            if let Ok(webview2) = webview.controller().CoreWebView2() {
-                let script_hstring = HSTRING::from(&script_owned);
+        let result = self.window.with_webview({
+            let tx = tx.clone();
+            move |webview| unsafe {
+                let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
 
-                let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
-                let handler: ICoreWebView2ExecuteScriptCompletedHandler =
-                    ExecuteScriptHandler::new(tx).into();
+                if let Ok(webview2) = webview.controller().CoreWebView2() {
+                    let script_hstring = HSTRING::from(&script_owned);
 
-                webview2
-                    .ExecuteScript(PCWSTR(script_hstring.as_ptr()), &handler)
-                    .ok();
+                    let handler: ICoreWebView2ExecuteScriptCompletedHandler =
+                        ExecuteScriptHandler::new(tx).into();
+
+                    if let Err(e) = webview2.ExecuteScript(PCWSTR(script_hstring.as_ptr()), &handler) {
+                        // Failed to start script execution - send error through channel
+                        tracing::error!("ExecuteScript call failed for script '{}...': {e:?}", script_preview);
+                        if let Ok(mut guard) = tx.lock() {
+                            if let Some(tx) = guard.take() {
+                                let _ = tx.send(Err(format!("ExecuteScript failed: {e:?}")));
+                            }
+                        }
+                    }
+                } else {
+                    // Failed to get CoreWebView2 - send error through channel
+                    tracing::error!("Failed to get CoreWebView2 for script execution (window: {})", 
+                        webview.label());
+                    if let Ok(mut guard) = tx.lock() {
+                        if let Some(tx) = guard.take() {
+                            let _ = tx.send(Err("Failed to get CoreWebView2".to_string()));
+                        }
+                    }
+                }
             }
         });
 
         if let Err(e) = result {
-            return Err(WebDriverErrorResponse::javascript_error(
-                &e.to_string(),
-                None,
-            ));
+            // with_webview itself failed - try to send error if channel still open
+            tracing::error!("with_webview failed: {e}");
+            if let Ok(mut guard) = tx.lock() {
+                if let Some(tx) = guard.take() {
+                    let _ = tx.send(Err(e.to_string()));
+                }
+            }
         }
 
         let timeout = std::time::Duration::from_millis(self.timeouts.script_ms);
@@ -200,7 +224,10 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
                 "value": value
             })),
             Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::javascript_error(&error, None)),
-            Ok(Err(_)) => Err(WebDriverErrorResponse::unknown_error("Channel closed")),
+            Ok(Err(_)) => {
+                tracing::error!("Channel closed unexpectedly during script execution");
+                Err(WebDriverErrorResponse::unknown_error("Channel closed"))
+            },
             Err(_) => Err(WebDriverErrorResponse::script_timeout()),
         }
     }

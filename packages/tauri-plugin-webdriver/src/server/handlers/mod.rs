@@ -23,9 +23,23 @@ pub mod timeouts;
 pub mod window;
 
 /// GET `/status` - `WebDriver` server status
-pub async fn status<R: Runtime>(_state: State<Arc<AppState<R>>>) -> WebDriverResult {
+///
+/// Returns ready=true only when at least one webview window is available.
+/// This ensures the WebView2/WebKit/WKWebView is fully initialized before
+/// clients attempt to create sessions.
+pub async fn status<R: Runtime>(state: State<Arc<AppState<R>>>) -> WebDriverResult {
+    // Check if any webview windows are available
+    // This is a proxy for WebView2 readiness - windows become available
+    // only after the webview is fully initialized
+    let window_labels = state.get_window_labels();
+    let ready = !window_labels.is_empty();
+
     Ok(WebDriverResponse::success(json!({
-        "ready": true,
-        "message": "tauri-plugin-webdriver is ready"
+        "ready": ready,
+        "message": if ready {
+            "tauri-plugin-webdriver is ready"
+        } else {
+            "waiting for webview initialization"
+        }
     })))
 }
