@@ -4,20 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriCapabilities } from '../../src/types.js';
 
-// Mock process.platform to bypass macOS check in tests
-const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-Object.defineProperty(process, 'platform', {
-  value: 'linux',
-  configurable: true,
-});
-
-// Restore original platform after all tests
-afterAll(() => {
-  if (originalPlatform) {
-    Object.defineProperty(process, 'platform', originalPlatform);
-  }
-});
-
 // Mock driver discovery
 vi.mock('../../src/driverManager.js', () => ({
   ensureTauriDriver: vi.fn(),
@@ -160,7 +146,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -200,7 +186,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -230,7 +216,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -268,7 +254,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -305,7 +291,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -339,7 +325,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -355,6 +341,36 @@ describe('Multiremote Mode - Integration', () => {
 
       // Should reject when driver fails to start
       await expect((launcher as any).onPrepare({}, capabilities)).rejects.toThrow();
+    });
+  });
+
+  describe('provider configuration errors', () => {
+    it('throws immediately when no driverProvider is set and no auto-detection signals are present', async () => {
+      // Pin to linux so the macOS platform signal does not trigger auto-detection
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+      delete process.env.TAURI_WEBDRIVER_PORT;
+
+      launcher = new TauriLaunchService(
+        {},
+        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
+        { maxInstances: 1 },
+      );
+
+      const capabilities = {
+        browserA: {
+          capabilities: {
+            browserName: 'tauri',
+            'tauri:options': { application: '/app' },
+          } as TauriCapabilities,
+        },
+      };
+
+      await expect((launcher as any).onPrepare({}, capabilities)).rejects.toThrow(
+        'No driverProvider configured and no embedded WebDriver server detected.',
+      );
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
     });
   });
 });

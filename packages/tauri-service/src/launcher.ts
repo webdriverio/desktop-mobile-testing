@@ -103,16 +103,23 @@ export default class TauriLaunchService {
     const isCrabNebula = mergedOptions.driverProvider === 'crabnebula';
     const isEmbedded = isEmbeddedProvider(mergedOptions);
 
-    // Check for unsupported platforms
-    // Embedded provider works on all platforms including macOS
-    if (process.platform === 'darwin' && !isCrabNebula && !isEmbedded) {
-      const errorMessage =
-        'Tauri testing on macOS requires CrabNebula driver or embedded provider. ' +
-        'Set driverProvider: "crabnebula" in your service options, or ' +
-        'set driverProvider: "embedded" for native macOS support without external drivers, or ' +
-        'run tests on Windows or Linux.';
-      log.error(errorMessage);
-      throw new Error(errorMessage);
+    if (!mergedOptions.driverProvider && !isEmbedded) {
+      throw new Error(
+        'No driverProvider configured and no embedded WebDriver server detected. ' +
+          'If you have installed tauri-plugin-wdio-webdriver, set the TAURI_WEBDRIVER_PORT ' +
+          "environment variable or add driverProvider: 'embedded' to your service options. " +
+          "To use tauri-driver instead, set driverProvider: 'official'.",
+      );
+    }
+
+    if (isEmbedded && !mergedOptions.driverProvider) {
+      const reason = process.env.TAURI_WEBDRIVER_PORT
+        ? `TAURI_WEBDRIVER_PORT=${process.env.TAURI_WEBDRIVER_PORT}`
+        : 'macOS platform';
+      log.info(
+        `Auto-detected embedded WebDriver provider (${reason}, port ${getEmbeddedPort(mergedOptions)}). ` +
+          `Set driverProvider: 'official' to use tauri-driver instead.`,
+      );
     }
 
     // For CrabNebula on macOS, validate prerequisites
@@ -212,7 +219,7 @@ export default class TauriLaunchService {
       }
       log.info(`tauri-driver ready: ${driverResult.value.path} (${driverResult.value.method})`);
     } else {
-      log.info('Using embedded WebDriver provider (tauri-plugin-wdio-webdriver) - no external driver needed');
+      log.info('Using embedded WebDriver provider (tauri-plugin-wdio-server) - no external driver needed');
       // Store embedded mode info globally for triggerDeeplink
       setEmbeddedModeInfo(true, undefined);
     }

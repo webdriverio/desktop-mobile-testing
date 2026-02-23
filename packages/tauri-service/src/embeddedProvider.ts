@@ -42,7 +42,13 @@ async function pollWebDriverStatus(port: number, timeoutMs: number = 30000): Pro
     await sleep(500);
   }
 
-  throw new Error(`WebDriver server did not become ready within ${timeoutMs}ms on port ${port}`);
+  throw new Error(
+    `Embedded WebDriver server did not become ready on port ${port} within ${timeoutMs}ms. ` +
+      `If you have installed tauri-plugin-wdio-webdriver, ensure it is registered in your Tauri app: ` +
+      `app.plugin(tauri_plugin_wdio_webdriver::init()) in lib.rs. ` +
+      `If you are not using the embedded plugin, set driverProvider: 'official' in your service options. ` +
+      `To use a different port, set embeddedPort in your service options or the TAURI_WEBDRIVER_PORT env var.`,
+  );
 }
 
 /**
@@ -179,7 +185,16 @@ export async function stopEmbeddedDriver(info: EmbeddedDriverInfo): Promise<void
  * Check if embedded provider should be used
  */
 export function isEmbeddedProvider(options: TauriServiceOptions): boolean {
-  return options.driverProvider === 'embedded';
+  if (options.driverProvider) {
+    return options.driverProvider === 'embedded';
+  }
+  if (process.env.TAURI_WEBDRIVER_PORT) {
+    return true;
+  }
+  if (process.platform === 'darwin') {
+    return true;
+  }
+  return false;
 }
 
 /**
