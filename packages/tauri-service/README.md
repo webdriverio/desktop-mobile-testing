@@ -4,7 +4,7 @@
 [![Version](https://img.shields.io/npm/v/@wdio/tauri-service?color=28a745&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
 [![Downloads](https://img.shields.io/npm/dw/@wdio/tauri-service?color=6f42c1&labelColor=1a1a1a)](https://www.npmjs.com/package/@wdio/tauri-service)
 
-WebdriverIO service for testing Tauri applications on Windows and Linux.
+WebdriverIO service for testing Tauri applications on Windows, Linux, and macOS.
 
 Enables cross-platform E2E testing of Tauri apps via the extensive WebdriverIO ecosystem.
 

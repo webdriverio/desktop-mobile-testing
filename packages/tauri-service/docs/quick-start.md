@@ -48,7 +48,7 @@ See [Platform Support](./platform-support.md) for detailed distribution support 
 
 #### macOS
 
-⚠️ **Not supported** - Tauri on macOS does not support WebDriver testing due to WKWebView limitations.
+✅ **Supported** - Use the embedded WebDriver provider (`driverProvider: 'embedded'`) for native macOS testing without external dependencies. See [Platform Support](./platform-support.md) for details.
 
 ## Setting Up a Tauri App
 
@@ -241,8 +241,9 @@ export const config = {
   // Tauri service configuration
   services: [['@wdio/tauri-service', {
     appBinaryPath: './src-tauri/target/release/my-app.exe', // Adjust for your OS/app name
-    autoInstallTauriDriver: true,
-    autoDownloadEdgeDriver: true,  // Windows only
+    driverProvider: 'embedded',  // Use embedded WebDriver (recommended, no external drivers needed)
+    // driverProvider: 'official',  // Use external tauri-driver (explicit opt-in)
+    // driverProvider: 'crabnebula',  // Use CrabNebula (requires paid API key)
   }]],
 
   // Capabilities
@@ -348,17 +349,24 @@ The frontend plugin import is failing. Make sure:
 
 2. The import is in your HTML/JS entry point before tests run
 
-### "tauri-driver not found"
+### "tauri-driver not found" or "No driverProvider configured"
 
-The service couldn't find or install tauri-driver. Solutions:
+The service couldn't determine which driver to use, or couldn't find tauri-driver. Solutions:
 
-1. **Install manually**
+1. **Use embedded provider** (no external driver needed):
+   ```typescript
+   driverProvider: 'embedded'
+   ```
+   Requires `tauri-plugin-wdio-webdriver` in your Tauri app. On macOS this is auto-detected.
+
+2. **Install tauri-driver manually** (if using `driverProvider: 'official'`):
    ```bash
    cargo install tauri-driver
    ```
 
-2. **Or enable auto-install** in `wdio.conf.ts`:
+3. **Or enable auto-install** in `wdio.conf.ts`:
    ```typescript
+   driverProvider: 'official',
    autoInstallTauriDriver: true
    ```
 

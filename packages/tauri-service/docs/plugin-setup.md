@@ -9,6 +9,28 @@ The `tauri-plugin-wdio` is a **required** Tauri plugin that enables WebdriverIO 
 - **Log Forwarding** - Capture console logs from both frontend and backend
 - **Invoke Interception** - Enable mocking without backend command modifications
 
+## Two WDIO Plugins
+
+There are two Tauri plugins for WebdriverIO testing:
+
+| Plugin | Package | Purpose | Required |
+|--------|---------|---------|----------|
+| `tauri-plugin-wdio` | Rust + JS | Execute API, mocking, log forwarding | **Yes** |
+| `tauri-plugin-wdio-webdriver` | Rust only | Embedded WebDriver server | Only for embedded provider |
+
+### When You Need Each
+
+- **`tauri-plugin-wdio`** - Always required for:
+  - Executing JavaScript in the frontend (`browser.tauri.execute()`)
+  - Mocking Tauri commands (`browser.tauri.mock()`)
+  - Capturing frontend and backend logs
+
+- **`tauri-plugin-wdio-webdriver`** - Required when using the embedded driver provider:
+  - Provides built-in WebDriver HTTP server
+  - Eliminates need for external tauri-driver
+  - Enables native macOS testing without CrabNebula
+  - Auto-detected on macOS; signal via `TAURI_WEBDRIVER_PORT` on Windows/Linux
+
 ## Why Is It Required?
 
 The `@wdio/tauri-service` explicitly checks for the plugin and will fail if it's not available:
@@ -369,6 +391,86 @@ Once the plugin is installed and verified:
 2. See [API Reference](./api-reference.md) for available functions
 3. Check [Usage Examples](./usage-examples.md) for testing patterns
 4. View [Configuration](./configuration.md) for service options
+
+## Plugin 2: tauri-plugin-wdio-webdriver (Optional - Embedded WebDriver)
+
+This plugin embeds a W3C WebDriver HTTP server directly in your Tauri application. Use it when you want to test on macOS without CrabNebula, or when you prefer not to install an external driver.
+
+### Requirements
+
+- Tauri v2.0+
+- Embedded provider selected (auto-detected on macOS, or set `driverProvider: 'embedded'` / `TAURI_WEBDRIVER_PORT`)
+
+### Installation
+
+#### 1. Add Cargo Dependency
+
+```toml
+[target.'cfg(debug_assertions)'.dependencies]
+tauri-plugin-wdio-webdriver = "0.1"
+```
+
+#### 2. Register Plugin in Rust
+
+```rust
+fn main() {
+    let builder = tauri::Builder::default();
+
+    #[cfg(debug_assertions)]
+    let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
+
+    builder
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+#### 3. Add Permissions
+
+```json
+{
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "webdriver:default"
+  ]
+}
+```
+
+### Configuration
+
+The embedded WebDriver server runs on port `4445` by default. To customize:
+
+```typescript
+// In wdio.conf.ts
+services: [['@wdio/tauri-service', {
+  driverProvider: 'embedded',
+  embeddedPort: 4445,  // Optional, defaults to 4445
+}]]
+```
+
+Or via environment variable (also triggers auto-detection on Windows/Linux):
+```bash
+TAURI_WEBDRIVER_PORT=4445 npx wdio run wdio.conf.ts
+```
+
+### How It Works
+
+1. The service spawns your Tauri app with `TAURI_WEBDRIVER_PORT` environment variable
+2. The app starts an HTTP WebDriver server on that port
+3. WebdriverIO connects directly to that port (no tauri-driver intermediary)
+4. On test completion, the service terminates the app
+
+### Differences from External Driver
+
+| Aspect | External Driver (official/crabnebula) | Embedded Server |
+|--------|--------------------------------------|-----------------|
+| Architecture | Separate driver process | HTTP server in-app |
+| macOS support | Requires CrabNebula | Native |
+| Setup complexity | Higher (driver installation) | Lower (no external deps) |
+| Port management | Service manages | Service + app coordinate |
 
 ## See Also
 
