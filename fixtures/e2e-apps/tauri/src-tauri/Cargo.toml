@@ -17,7 +17,7 @@ tauri-plugin-fs = "2.4.5"
 tauri-plugin-deep-link = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-wdio = { path = "../../../../packages/tauri-plugin" }
-tauri-plugin-wdio-webdriver = { path = "../../../../packages/tauri-plugin-wdio-webdriver" }
+tauri-plugin-wdio-server = { path = "../../../../packages/tauri-plugin-wdio-server" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sysinfo = "0.30.5"
