@@ -25,6 +25,8 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
     throw new Error('test-runner-backend not found. Install with: npm install -D @crabnebula/test-runner-backend');
   }
 
+  log.info(`Found test-runner-backend at: ${backendPath}`);
+
   // Validate CN_API_KEY
   if (!process.env.CN_API_KEY) {
     throw new Error(
@@ -32,6 +34,20 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
         'Contact CrabNebula (https://crabnebula.dev) to obtain an API key.',
     );
   }
+
+  const apiKey = process.env.CN_API_KEY;
+  if (apiKey.trim() === '') {
+    throw new Error(
+      'CN_API_KEY environment variable is set but empty. ' + 'Please provide a valid CrabNebula API key.',
+    );
+  }
+
+  // Log API key with redaction (show first 4 and last 4 chars)
+  const redactedKey =
+    apiKey.length > 12
+      ? `${apiKey.slice(0, 4)}${'*'.repeat(Math.min(apiKey.length - 8, 20))}${apiKey.slice(-4)}`
+      : `${apiKey.slice(0, 2)}${'*'.repeat(apiKey.length - 4)}${apiKey.slice(-2)}`;
+  log.info(`CN_API_KEY detected: ${redactedKey} (${apiKey.length} chars)`);
 
   log.info(`Starting test-runner-backend on port ${port}`);
 
@@ -82,7 +98,19 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
     if (proc.stderr) {
       stderrRl = createInterface({ input: proc.stderr });
       stderrRl.on('line', (line: string) => {
-        log.error(`[test-runner-backend] ${line}`);
+        log.error(`[test-runner-backend stderr] ${line}`);
+      });
+    }
+
+    // Also log stdout at info level for debugging
+    if (proc.stdout) {
+      proc.stdout.on('data', (data: Buffer) => {
+        log.info(`[test-runner-backend stdout] ${data.toString().trim()}`);
+      });
+    }
+    if (proc.stderr) {
+      proc.stderr.on('data', (data: Buffer) => {
+        log.error(`[test-runner-backend stderr] ${data.toString().trim()}`);
       });
     }
 
