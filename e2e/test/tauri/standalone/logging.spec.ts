@@ -150,3 +150,8 @@ try {
 await browser.deleteSession();
 await cleanupWdioSession(browser);
 console.log('✅ Cleanup complete');
+
+// On Windows, webdriverio's remote() leaves internal handles that prevent Node.js
+// from exiting naturally. Call process.exit() to ensure the test terminates.
+// On other platforms, this also ensures clean exit after standalone tests.
+process.exit();

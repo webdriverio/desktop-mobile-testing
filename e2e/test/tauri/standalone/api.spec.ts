@@ -74,6 +74,8 @@ await browser.deleteSession();
 await cleanupWdioSession(browser);
 
 console.log('✅ Cleanup complete');
-// Don't call process.exit() - let Node.js exit naturally after cleanup completes
-// The cleanup delay is now handled in the launcher's onWorkerEnd hook to ensure
-// WDIO waits before starting the next worker
+
+// On Windows, webdriverio's remote() leaves internal handles that prevent Node.js
+// from exiting naturally. Call process.exit() to ensure the test terminates.
+// On other platforms, this also ensures clean exit after standalone tests.
+process.exit();
