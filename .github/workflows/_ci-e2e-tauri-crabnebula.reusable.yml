@@ -99,6 +99,15 @@ jobs:
             libgtk-3-0t64 \
             libayatana-appindicator3-1
 
+      - name: 🌐 Install WebKit WebDriver (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          echo "Installing WebKit WebDriver for Linux..."
+          sudo apt-get install -y webkit2gtk-driver
+          which WebKitWebDriver || echo "WebKitWebDriver not found in PATH"
+          WebKitWebDriver --version || echo "WebKitWebDriver version check failed"
+
       - name: 📦 Download Package Build Artifacts
         uses: ./.github/workflows/actions/download-archive
         with:
