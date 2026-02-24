@@ -402,6 +402,7 @@ jobs:
           RUST_BACKTRACE: '1'
           # Disable AT-SPI accessibility bus warnings
           NO_AT_BRIDGE: '1'
+          DRIVER_PROVIDER: 'official'
         run: |
           if ($env:RUNNER_OS -eq "Linux") {
             # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit

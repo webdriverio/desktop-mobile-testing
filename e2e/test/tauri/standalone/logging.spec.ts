@@ -22,7 +22,7 @@ if (!fs.existsSync(appDir)) {
 const appBinaryPath = await getTauriBinaryPath(appDir);
 
 // Get driver provider from environment
-const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded';
 
 // Create session options with log capture enabled
 const sessionOptions = createTauriCapabilities(appBinaryPath, {
