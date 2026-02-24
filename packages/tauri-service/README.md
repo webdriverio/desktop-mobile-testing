@@ -13,7 +13,7 @@ Enables cross-platform E2E testing of Tauri apps via the extensive WebdriverIO e
 - 🚗 Automatic tauri-driver installation and management
 - 🔧 Automatic Edge WebDriver management on Windows
 - 📦 Automatic Tauri binary path detection
-- 🌐 Cross-platform support (Windows, Linux, macOS🔬)
+- 🌐 Cross-platform support (Windows, Linux, macOS)
 - 🔗 Full Tauri API access via `browser.tauri.execute()`
 - 🧩 Mocking support for Tauri's invoke API
 - 📊 Backend and frontend log capture
@@ -82,15 +82,18 @@ See [Configuration Reference](./docs/configuration.md) for all options.
 
 ## Platform Support
 
-| Platform | Supported | WebDriver | Notes |
-|----------|-----------|-----------|-------|
-| **Windows** | ✅ Yes | Edge WebDriver | Auto-managed |
-| **Linux** | ✅ Yes | WebKitWebDriver | Manual install |
-| **macOS** | 🔬 Experimental | CrabNebula | Requires API key, untested |
+| Platform | Supported | Driver Providers | Notes |
+|----------|-----------|------------------|-------|
+| **Windows** | ✅ Yes | `official`, `crabnebula`, `embedded` | Edge WebDriver auto-managed |
+| **Linux** | ✅ Yes | `official`, `crabnebula`, `embedded` | Requires `webkit2gtk-driver` |
+| **macOS** | ✅ Yes | `embedded`, `crabnebula` | Native via embedded, or CrabNebula |
 
 See [Platform Support](./docs/platform-support.md) for detailed information including distribution support and troubleshooting.
 
-> 🔬 **macOS support via CrabNebula is experimental.** This integration has not been tested due to API key access limitations.
+> **Choosing a driver provider:**
+> - **`embedded`** (recommended) — Native support on all platforms, no external driver needed
+> - **`official`** — Community driver, Windows/Linux only
+> - **`crabnebula`** — All platforms, requires subscription (CN_API_KEY for macOS)
 
 ## Example Projects
 

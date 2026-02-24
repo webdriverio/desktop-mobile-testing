@@ -365,32 +365,49 @@ See [Plugin Setup](./plugin-setup.md) for detailed setup instructions.
 
 ---
 
-### CrabNebula (Experimental)
+### CrabNebula
 
-> 🔬 **Experimental Feature**: macOS testing support via CrabNebula is experimental and has not been tested. This integration requires a paid CrabNebula API key which is not available for testing purposes. Features documented here are based on CrabNebula documentation and may not function as expected.
+[CrabNebula](https://crabnebula.dev)'s `@crabnebula/tauri-driver` is a cross-platform alternative that works on Windows, Linux, and macOS. It's a fork of the official tauri-driver with added macOS support via a proprietary WebDriver implementation.
 
-macOS testing is supported through [CrabNebula](https://crabnebula.dev)'s `@crabnebula/tauri-driver` package. This is a fork of the official tauri-driver that adds macOS support via a proprietary WebDriver implementation.
+#### Platform Support
+
+| Platform | Supported | Requirements |
+|----------|-----------|--------------|
+| **Windows** | ✅ Yes | `@crabnebula/tauri-driver` |
+| **Linux** | ✅ Yes | `@crabnebula/tauri-driver` + `webkit2gtk-driver` |
+| **macOS** | ✅ Yes | `@crabnebula/tauri-driver` + `CN_API_KEY` |
+
+> **Note:** `CN_API_KEY` is only required for macOS. Windows and Linux work without an API key.
+
+#### When to Use CrabNebula
+
+- You already have a CrabNebula subscription
+- You want a single driver configuration across all platforms
+- You need macOS testing without the embedded provider
 
 #### Requirements
 
-1. **CrabNebula Account** with API key
-2. **tauri-plugin-automation** installed in your Tauri app
-3. **@crabnebula/tauri-driver** npm package
-4. **@crabnebula/test-runner-backend** npm package (for local testing)
+1. **@crabnebula/tauri-driver** npm package (all platforms)
+2. **@crabnebula/test-runner-backend** npm package (macOS only, for local testing)
+3. **CN_API_KEY** environment variable (macOS only)
+4. **tauri-plugin-automation** in your Tauri app (macOS only)
+5. **webkit2gtk-driver** (Linux only — see Linux section for installation)
 
 #### Setup
 
 1. Install CrabNebula packages:
    ```bash
-   npm install -D @crabnebula/tauri-driver @crabnebula/test-runner-backend
+   npm install -D @crabnebula/tauri-driver
+   # For macOS, also install:
+   npm install -D @crabnebula/test-runner-backend
    ```
 
-2. Add the automation plugin to your Tauri app:
+2. **For macOS only** — add the automation plugin to your Tauri app:
    ```bash
    cd src-tauri && cargo add tauri-plugin-automation
    ```
 
-3. Register the plugin in your Rust code (debug builds only):
+3. **For macOS only** — register the plugin (debug builds only):
    ```rust
    let mut builder = tauri::Builder::default();
    #[cfg(debug_assertions)]
@@ -399,7 +416,7 @@ macOS testing is supported through [CrabNebula](https://crabnebula.dev)'s `@crab
    }
    ```
 
-4. Set your API key:
+4. **For macOS only** — set your API key:
    ```bash
    export CN_API_KEY="your-api-key"
    ```
@@ -411,7 +428,7 @@ macOS testing is supported through [CrabNebula](https://crabnebula.dev)'s `@crab
    }]]
    ```
 
-See the [CrabNebula documentation](https://docs.crabnebula.dev/tauri/webdriver/) for more details.
+See the [CrabNebula Setup Guide](./crabnebula-setup.md) for detailed instructions.
 
 ### Alternatives for macOS
 

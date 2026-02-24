@@ -267,7 +267,7 @@ driverProvider: 'official'
 |----------|-----------------|--------------------------|-------|
 | `'embedded'` | Windows, Linux, macOS | No | No external deps; auto-detected on macOS or via `TAURI_WEBDRIVER_PORT` |
 | `'official'` | Windows, Linux | Yes (tauri-driver + platform driver) | Explicit opt-in; cargo-installed |
-| `'crabnebula'` | Windows, Linux, macOS | Yes (platform driver; CN_API_KEY for macOS) | Experimental; fork of official driver; good fit if already on CrabNebula platform |
+| `'crabnebula'` | Windows, Linux, macOS | Yes (platform driver; CN_API_KEY for macOS) | Fork of official driver; good fit if already on CrabNebula platform |
 
 **Recommendation:**
 
