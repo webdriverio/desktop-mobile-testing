@@ -38,6 +38,6 @@ paths-ignore:
 #
 # See .github/codeql/FALSE_POSITIVE_ANALYSIS.md for detailed rationale.
 #
-query-filters:
+queries:
   - exclude:
       id: actions/artifact-poisoning
