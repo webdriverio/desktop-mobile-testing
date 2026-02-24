@@ -1,21 +1,13 @@
 name: "WDIO Desktop Mobile CodeQL Config"
 
-# Exclude test files and directories from analysis
 paths-ignore:
-  # Test patterns
   - '**/*.spec.ts'
   - '**/*.spec.js'
   - '**/*.spec.mts'
   - '**/*.spec.cts'
-
-  # Test directories
   - '**/test/**'
   - '**/e2e/**'
-
-  # Fixtures
   - '**/fixtures/**'
-
-  # Coverage and debug output
   - '**/coverage/**'
 
 # Disable queries that produce false positives for this codebase
@@ -37,7 +29,6 @@ paths-ignore:
 #    e2e/scripts/show-logs.ts (and any other scripts) cannot be overwritten by artifacts
 #
 # See .github/codeql/FALSE_POSITIVE_ANALYSIS.md for detailed rationale.
-#
-queries:
+query-filters:
   - exclude:
       id: actions/artifact-poisoning
