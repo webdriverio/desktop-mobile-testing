@@ -1,3 +1,4 @@
+import http from 'node:http';
 import { createLogger } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { remote } from 'webdriverio';
@@ -10,6 +11,20 @@ const log = createLogger('tauri-service', 'service');
 
 // Store launcher instances for cleanup (WeakMap for automatic GC if cleanup() not called)
 const activeLaunchers = new WeakMap<WebdriverIO.Browser, TauriLaunchService>();
+
+async function checkDriverHealth(hostname: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const req = http.get(`http://${hostname}:${port}/status`, (res) => {
+      resolve(res.statusCode === 200);
+      res.resume();
+    });
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.on('error', () => resolve(false));
+  });
+}
 
 /**
  * Initialize Tauri service in standalone mode
@@ -89,15 +104,34 @@ export async function init(
 
   log.debug(`Connection info for remote(): hostname=${hostname}, port=${port}, browserName=wry (display only)`);
 
+  // Verify driver is healthy before session creation
+  const driverHealthy = await checkDriverHealth(hostname, port);
+  if (!driverHealthy) {
+    log.warn('tauri-driver health check failed before session creation');
+  }
+
   // Create worker service
   const service = new TauriWorkerService(capabilities['wdio:tauriServiceOptions'] || {}, capabilities);
 
+  const startTimeout = serviceOptions?.startTimeout || 30000;
+
+  log.debug(`Starting remote session with startTimeout=${startTimeout}ms`);
+
   // Initialize session - connection info must be at top level, not in capabilities
+  // Use extended timeouts for native desktop apps which may take longer to start
   const browser = await remote({
     hostname,
     port,
     capabilities: driverCapabilities,
+    connectionRetryTimeout: startTimeout * 4,
+    connectionRetryCount: 10,
+  }).catch((error: Error) => {
+    log.error(`Failed to create remote session: ${error.message}`);
+    log.error(`This may indicate tauri-driver crashed or the app failed to start`);
+    throw error;
   });
+
+  log.debug('Remote session created successfully, initializing service...');
 
   // Store launcher for cleanup
   activeLaunchers.set(browser, launcher);
