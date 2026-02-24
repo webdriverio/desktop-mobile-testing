@@ -272,6 +272,12 @@ fn main() {
         .plugin(tauri_plugin_wdio::init())
         .plugin(tauri_plugin_wdio_server::init());
 
+    // Add automation plugin for macOS CrabNebula testing (debug builds only)
+    #[cfg(all(debug_assertions, target_os = "macos"))]
+    {
+        builder = builder.plugin(tauri_plugin_automation::init());
+    }
+
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
     if enable_single_instance {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {

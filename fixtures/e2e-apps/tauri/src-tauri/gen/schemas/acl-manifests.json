@@ -1,4 +1,25 @@
 {
+  "automation": {
+    "default_permission": {
+      "identifier": "default",
+      "description": "Default plugin permissions.",
+      "permissions": ["allow-resolve"]
+    },
+    "permissions": {
+      "allow-resolve": {
+        "identifier": "allow-resolve",
+        "description": "Enables the resolve command without any pre-configured scope.",
+        "commands": { "allow": ["resolve"], "deny": [] }
+      },
+      "deny-resolve": {
+        "identifier": "deny-resolve",
+        "description": "Denies the resolve command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["resolve"] }
+      }
+    },
+    "permission_sets": {},
+    "global_scope_schema": null
+  },
   "core": {
     "default_permission": {
       "identifier": "default",

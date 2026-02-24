@@ -1955,6 +1955,24 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Default plugin permissions.\n#### This default permission set includes:\n\n- `allow-resolve`",
+          "type": "string",
+          "const": "automation:default",
+          "markdownDescription": "Default plugin permissions.\n#### This default permission set includes:\n\n- `allow-resolve`"
+        },
+        {
+          "description": "Enables the resolve command without any pre-configured scope.",
+          "type": "string",
+          "const": "automation:allow-resolve",
+          "markdownDescription": "Enables the resolve command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the resolve command without any pre-configured scope.",
+          "type": "string",
+          "const": "automation:deny-resolve",
+          "markdownDescription": "Denies the resolve command without any pre-configured scope."
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",
