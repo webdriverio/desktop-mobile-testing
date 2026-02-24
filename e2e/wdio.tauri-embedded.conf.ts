@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { NormalizedPackageJson } from 'read-package-up';
 
 import { createEnvironmentContext } from './config/envSchema.js';
-import { fileExists, safeJsonParse } from './lib/utils.js';
+import { fileExists, getLogDirName, safeJsonParse } from './lib/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -276,7 +276,8 @@ if (envContext.isMultiremote) {
 }
 
 // Create log directory
-const logDir = join(__dirname, 'logs', `embedded-${envContext.testType}-${envContext.appDirName}`);
+const logDirName = getLogDirName(envContext.testType, envContext.appDirName, 'embedded');
+const logDir = join(__dirname, 'logs', logDirName);
 
 // Export the configuration object directly
 export const config = {

@@ -275,7 +275,10 @@ if (envContext.isMultiremote) {
 }
 
 // Create log directory
-const logDir = join(__dirname, 'logs', `${envContext.testType}-${envContext.appDirName}`);
+import { getLogDirName } from './lib/utils.js';
+
+const logDirName = getLogDirName(envContext.testType, envContext.appDirName, envContext.driverProvider);
+const logDir = join(__dirname, 'logs', logDirName);
 
 // Export the configuration object directly
 export const config = {

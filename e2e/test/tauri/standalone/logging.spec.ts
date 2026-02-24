@@ -5,7 +5,7 @@ import url from 'node:url';
 import { cleanupWdioSession, createTauriCapabilities, getTauriBinaryPath, startWdioSession } from '@wdio/tauri-service';
 import '@wdio/native-types';
 import { xvfb } from '@wdio/xvfb';
-import { assertLogContains, readWdioLogs, waitForLog } from '../../../lib/utils.js';
+import { assertLogContains, getLogDirName, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -34,7 +34,7 @@ const sessionOptions = createTauriCapabilities(appBinaryPath, {
 // Enable log capture
 const appDirName = path.basename(appDir);
 const testType = 'standalone';
-const logDirName = driverProvider ? `${driverProvider}-${testType}-${appDirName}` : `${testType}-${appDirName}`;
+const logDirName = getLogDirName(testType, appDirName, driverProvider);
 const logDir = path.join(__dirname, '..', '..', '..', 'logs', logDirName);
 if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].captureBackendLogs = true;
