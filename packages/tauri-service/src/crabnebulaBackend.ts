@@ -153,49 +153,55 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
  * @param timeoutMs - Maximum time to wait in milliseconds
  * @throws Error if backend doesn't become ready within timeout
  */
-export async function waitTestRunnerBackendReady(port: number = 3000, timeoutMs: number = 30000): Promise<void> {
-  const http = await import('node:http');
+export async function waitTestRunnerBackendReady(
+  host: string = '127.0.0.1',
+  port: number = 3000,
+  timeoutMs: number = 30000,
+): Promise<void> {
+  const net = await import('node:net');
   const started = Date.now();
 
-  log.debug(`Waiting for test-runner-backend on port ${port}...`);
+  log.info(`Waiting for test-runner-backend on ${host}:${port}...`);
 
-  while (Date.now() - started < timeoutMs) {
-    const isReady = await new Promise<boolean>((resolve) => {
-      // Try /health first, fallback to root
-      const tryEndpoint = (path: string) => {
-        const req = http.get(`http://127.0.0.1:${port}${path}`, { timeout: 1000 }, (res) => {
-          // Any successful response means the server is up
-          res.once('data', () => {});
-          res.once('end', () => resolve(res.statusCode === 200));
-        });
-        req.on('error', () => {
-          if (path === '/health') {
-            tryEndpoint('/');
-          } else {
-            resolve(false);
-          }
-        });
-        req.on('timeout', () => {
-          req.destroy();
-          if (path === '/health') {
-            tryEndpoint('/');
-          } else {
-            resolve(false);
-          }
-        });
-      };
-      tryEndpoint('/health');
-    });
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`test-runner-backend did not become ready within ${timeoutMs}ms`));
+    }, timeoutMs);
 
-    if (isReady) {
-      log.debug(`test-runner-backend ready on port ${port}`);
-      return;
-    }
+    const checkPort = () => {
+      const socket = new net.Socket();
 
-    await new Promise((r) => setTimeout(r, 250));
-  }
+      socket.setTimeout(1000);
 
-  throw new Error(`test-runner-backend did not become ready within ${timeoutMs}ms`);
+      socket.on('connect', () => {
+        clearTimeout(timeout);
+        socket.destroy();
+        log.info(`test-runner-backend ready on ${host}:${port}`);
+        resolve();
+      });
+
+      socket.on('error', (err) => {
+        log.debug(`Port check error: ${err.message}`);
+        socket.destroy();
+        // Retry after a short delay
+        if (Date.now() - started < timeoutMs) {
+          setTimeout(checkPort, 200);
+        }
+      });
+
+      socket.on('timeout', () => {
+        socket.destroy();
+        // Retry after a short delay
+        if (Date.now() - started < timeoutMs) {
+          setTimeout(checkPort, 200);
+        }
+      });
+
+      socket.connect(port, host);
+    };
+
+    checkPort();
+  });
 }
 
 /**
@@ -239,21 +245,33 @@ export async function stopTestRunnerBackend(proc: ChildProcess): Promise<void> {
  * Check if test-runner-backend is healthy
  * Useful for health checks during test execution
  *
- * @param port - Port the backend is listening on
- * @returns true if backend is responding to health checks
+ * @param host - Host to connect to (default: 127.0.0.1)
+ * @param port - Port the backend is listening on (default: 3000)
+ * @returns true if backend is accepting connections
  */
-export async function isTestRunnerBackendHealthy(port: number = 3000): Promise<boolean> {
-  const http = await import('node:http');
+export async function isTestRunnerBackendHealthy(host: string = '127.0.0.1', port: number = 3000): Promise<boolean> {
+  const net = await import('node:net');
 
   return new Promise((resolve) => {
-    const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 }, (res) => {
-      res.once('data', () => {});
-      res.once('end', () => resolve(res.statusCode === 200));
+    const socket = new net.Socket();
+
+    socket.setTimeout(2000);
+
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
     });
-    req.on('error', () => resolve(false));
-    req.on('timeout', () => {
-      req.destroy();
+
+    socket.on('error', () => {
+      socket.destroy();
       resolve(false);
     });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+
+    socket.connect(port, host);
   });
 }

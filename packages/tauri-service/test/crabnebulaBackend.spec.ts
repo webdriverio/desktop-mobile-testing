@@ -176,32 +176,4 @@ describe('CrabNebula Backend', () => {
       vi.useRealTimers();
     });
   });
-
-  describe('waitTestRunnerBackendReady', () => {
-    it('should resolve when health endpoint responds', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-
-    it('should throw on timeout if endpoint never responds', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('isTestRunnerBackendHealthy', () => {
-    it('should return true when health check succeeds', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-
-    it('should return false when health check fails', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-  });
 });

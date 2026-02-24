@@ -408,7 +408,7 @@ export default class TauriLaunchService {
       if (manageBackend) {
         const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
         const { proc } = await startTestRunnerBackend(backendPort);
-        await waitTestRunnerBackendReady(backendPort);
+        await waitTestRunnerBackendReady('127.0.0.1', backendPort);
 
         this.testRunnerBackend = proc;
 
