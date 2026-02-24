@@ -142,10 +142,10 @@ export async function startEmbeddedDriver(
   });
 
   // Create a promise that resolves when the server is ready
-  const readyPromise = pollWebDriverStatus(port, startTimeout).then(() => {
+  const readyPromise = pollWebDriverStatus(port, startTimeout).then(async () => {
     // On Windows, add a small delay after ready to allow WebView2 to fully stabilize
     if (process.platform === 'win32') {
-      return sleep(500);
+      await sleep(500);
     }
   });
 
