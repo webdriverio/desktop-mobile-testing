@@ -206,7 +206,13 @@ async function runTest(
     console.log(`  Environment: ${JSON.stringify(testEnv, null, 2)}`);
 
     // Create log directory for this test
-    const logDir = join(process.cwd(), 'logs', `${envContext.testType}-${appDirName}`);
+    // Match the pattern used in wdio configs:
+    // - Official driver: ${testType}-${appDirName}
+    // - Embedded driver: embedded-${testType}-${appDirName}
+    const logDirName = envContext.driverProvider
+      ? `${envContext.driverProvider}-${envContext.testType}-${appDirName}`
+      : `${envContext.testType}-${appDirName}`;
+    const logDir = join(process.cwd(), 'logs', logDirName);
     const outputLogPath = join(logDir, 'wdio-output.log');
 
     // Ensure log directory exists
@@ -552,7 +558,7 @@ function parseCommandLineArgs(): void {
  */
 function printUsage(): void {
   console.log(`
-🚀 WebdriverIO Desktop Service E2E Test Matrix
+🚀 WebdriverIO Desktop & Mobile E2E Test Matrix
 
 USAGE:
   tsx scripts/run-matrix.ts [options]
@@ -616,7 +622,7 @@ async function main(): Promise<void> {
   }
   process.env.WDIO_MATRIX_EXECUTING = 'true';
 
-  console.log('🚀 WebdriverIO Desktop Service E2E Test Matrix');
+  console.log('🚀 WebdriverIO Desktop & Mobile E2E Test Matrix');
   console.log('Arguments:', process.argv.slice(2));
 
   // Parse command line arguments

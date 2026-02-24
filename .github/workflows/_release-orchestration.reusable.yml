@@ -94,6 +94,9 @@ jobs:
   publish:
     needs: prepare
     uses: ./.github/workflows/_release-publish.reusable.yml
+    permissions:
+      contents: write
+      id-token: write
     with:
       service: ${{ inputs.service }}
       target_branch: ${{ needs.prepare.outputs.target_branch }}
@@ -116,6 +119,8 @@ jobs:
   post:
     needs: [prepare, publish]
     uses: ./.github/workflows/_release-post.reusable.yml
+    permissions:
+      contents: write
     with:
       service: ${{ inputs.service }}
       service_release_tag: ${{ needs.publish.outputs.service_release_tag }}

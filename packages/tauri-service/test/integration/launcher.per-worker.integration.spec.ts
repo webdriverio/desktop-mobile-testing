@@ -3,21 +3,6 @@ import getPort from 'get-port';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriCapabilities } from '../../src/types.js';
 
-// Mock process.platform to bypass macOS check in tests
-// This allows testing with mock drivers on any platform
-const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-Object.defineProperty(process, 'platform', {
-  value: 'linux',
-  configurable: true,
-});
-
-// Restore original platform after all tests
-afterAll(() => {
-  if (originalPlatform) {
-    Object.defineProperty(process, 'platform', originalPlatform);
-  }
-});
-
 // Mock only the driver discovery, not the process itself
 vi.mock('../../src/driverManager.js', () => ({
   ensureTauriDriver: vi.fn(),
@@ -139,7 +124,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -176,7 +161,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -217,7 +202,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -250,7 +235,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -286,7 +271,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -313,7 +298,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 2 },
       );
@@ -345,7 +330,7 @@ describe('Per-Worker Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        { tauriDriverPort: basePort },
+        { tauriDriverPort: basePort, driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );

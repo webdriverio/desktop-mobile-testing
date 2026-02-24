@@ -1,23 +1,36 @@
 import { createWriteStream, existsSync, mkdirSync, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
+
 import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('tauri-service');
 
 /**
- * Log writer for standalone mode (when WDIO test runner is not available)
+ * Context for log file naming
  */
-export class StandaloneLogWriter {
+export interface LogWriterContext {
+  /** Worker ID for multi-worker mode */
+  workerId?: string;
+  /** Spec name for identification */
+  specName?: string;
+}
+
+/**
+ * Log writer for capturing Tauri logs to files
+ * Used in both WDIO test runner mode and standalone mode
+ */
+export class LogWriter {
   private logStream?: WriteStream;
   private logDir?: string;
   private logFile?: string;
 
   /**
-   * Initialize log writer for standalone mode
+   * Initialize log writer
    * Creates log directory and file stream
    * @param logDir - Full path to log directory
+   * @param context - Optional context for filename (worker ID, spec name, etc.)
    */
-  initialize(logDir: string): void {
+  initialize(logDir: string, context?: LogWriterContext): void {
     this.logDir = logDir;
 
     // Create log directory if it doesn't exist
@@ -25,9 +38,10 @@ export class StandaloneLogWriter {
       mkdirSync(this.logDir, { recursive: true });
     }
 
-    // Create log file with timestamp
+    // Create log file with timestamp and optional context
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    this.logFile = join(this.logDir, `wdio-${timestamp}.log`);
+    const contextSuffix = context?.workerId ? `-${context.workerId}` : '';
+    this.logFile = join(this.logDir, `wdio${contextSuffix}-${timestamp}.log`);
 
     // Create write stream
     this.logStream = createWriteStream(this.logFile, { flags: 'a' });
@@ -75,33 +89,33 @@ export class StandaloneLogWriter {
   }
 }
 
-// Singleton instance for standalone mode
-let standaloneWriter: StandaloneLogWriter | undefined;
+// Singleton instance
+let logWriter: LogWriter | undefined;
 
 /**
- * Get or create standalone log writer
+ * Get or create log writer
  */
-export function getStandaloneLogWriter(): StandaloneLogWriter {
-  if (!standaloneWriter) {
-    standaloneWriter = new StandaloneLogWriter();
+export function getLogWriter(): LogWriter {
+  if (!logWriter) {
+    logWriter = new LogWriter();
   }
-  return standaloneWriter;
+  return logWriter;
 }
 
 /**
- * Check if standalone log writer is initialized
+ * Check if log writer is initialized
  */
-export function isStandaloneLogWriterInitialized(): boolean {
-  return !!standaloneWriter?.getLogFile();
+export function isLogWriterInitialized(): boolean {
+  return !!logWriter?.getLogFile();
 }
 
 /**
- * Close the standalone log writer and release resources
+ * Close the log writer and release resources
  */
-export function closeStandaloneLogWriter(): void {
-  if (standaloneWriter) {
-    standaloneWriter.close();
-    standaloneWriter = undefined;
-    log.debug('Standalone log writer closed');
+export function closeLogWriter(): void {
+  if (logWriter) {
+    logWriter.close();
+    logWriter = undefined;
+    log.debug('Log writer closed');
   }
 }

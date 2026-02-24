@@ -376,25 +376,54 @@ Get-Process -Id (Get-NetTCPConnection -LocalPort 4444).OwningProcess | Stop-Proc
 
 ## Platform Issues
 
-### macOS Not Supported
+### "No driverProvider configured and no embedded WebDriver server detected"
 
-WebdriverIO testing of Tauri apps doesn't work on macOS.
+The service cannot determine which driver provider to use.
 
-**Why:** Apple's WKWebView (used by Tauri on macOS) doesn't provide a WebDriver interface.
+**Why this happens:** On Windows and Linux, the service does not default to any driver provider automatically. It auto-detects the embedded provider only when either:
+- `TAURI_WEBDRIVER_PORT` environment variable is set, or
+- You are on macOS
 
-**Workarounds:**
+**Solution 1: Use embedded provider (recommended)**
 
-1. **Use Linux or Windows for testing**
-   - Develop on macOS, test on Linux/Windows
-   - Use GitHub Actions with Ubuntu runners
+1. Install `tauri-plugin-wdio-webdriver` in your Tauri app:
+   ```bash
+   cd src-tauri && cargo add tauri-plugin-wdio-webdriver
+   ```
+2. Register it in your Rust code and set `TAURI_WEBDRIVER_PORT` or configure `driverProvider: 'embedded'`:
+   ```typescript
+   services: [['@wdio/tauri-service', {
+     driverProvider: 'embedded',
+   }]]
+   ```
+   Or signal via environment variable:
+   ```bash
+   TAURI_WEBDRIVER_PORT=4445 npx wdio run wdio.conf.ts
+   ```
 
-2. **Manual Testing on macOS**
-   - Automate on Windows/Linux
-   - Perform manual QA on macOS
+**Solution 2: Use official tauri-driver**
 
-3. **Web Version**
-   - Deploy a web version
-   - Test with traditional WebdriverIO
+```typescript
+services: [['@wdio/tauri-service', {
+  driverProvider: 'official',
+  autoInstallTauriDriver: true,
+}]]
+```
+
+See [Platform Support](./platform-support.md) for per-platform details.
+
+### macOS: Embedded WebDriver Not Ready
+
+On macOS the embedded provider is auto-detected, but if the plugin is not installed the service will time out waiting for the WebDriver server.
+
+**Solution:** Ensure `tauri-plugin-wdio-webdriver` is installed and registered:
+
+```rust
+#[cfg(debug_assertions)]
+let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
+```
+
+See [Plugin Setup](./plugin-setup.md) for the full setup guide.
 
 ## Debug Mode
 

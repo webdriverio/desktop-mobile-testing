@@ -8,6 +8,39 @@ interface TauriServiceContext {
 }
 
 /**
+ * Store embedded mode info for access by triggerDeeplink.
+ * Uses environment variables since launcher and worker run in separate processes.
+ */
+export function setEmbeddedModeInfo(isEmbedded: boolean, appBinaryPath?: string): void {
+  if (isEmbedded) {
+    process.env.__WDIO_TAURI_EMBEDDED__ = 'true';
+    if (appBinaryPath) {
+      process.env.__WDIO_TAURI_APP_BINARY__ = appBinaryPath;
+    }
+    log.info(`Set embedded mode env: isEmbedded=true, appBinaryPath=${appBinaryPath}`);
+  }
+}
+
+/**
+ * Get embedded mode info from environment variables.
+ */
+function getEmbeddedModeInfo(): { isEmbedded: boolean; appBinaryPath?: string } | undefined {
+  const isEmbedded = process.env.__WDIO_TAURI_EMBEDDED__ === 'true';
+  const appBinaryPath = process.env.__WDIO_TAURI_APP_BINARY__;
+  if (!isEmbedded) return undefined;
+  return { isEmbedded, appBinaryPath };
+}
+
+/**
+ * Check if we're running with the embedded WebDriver provider.
+ * Uses globally stored info from the launcher.
+ */
+function isEmbeddedProvider(): boolean {
+  const info = getEmbeddedModeInfo();
+  return info?.isEmbedded ?? false;
+}
+
+/**
  * Validates that the provided URL is a valid deeplink URL.
  * Rejects http/https/file protocols and ensures the URL is properly formatted.
  *
@@ -95,6 +128,7 @@ export function getPlatformCommand(url: string, platform: string): { command: st
  *
  * @param command - The command to execute
  * @param args - The command arguments
+ * @param env - Optional environment variables to pass (defaults to process.env for embedded mode)
  * @returns A promise that resolves when the command has been spawned successfully
  * @throws Error if the command fails to spawn
  *
@@ -103,7 +137,7 @@ export function getPlatformCommand(url: string, platform: string): { command: st
  * await executeDeeplinkCommand('open', ['myapp://test']);
  * ```
  */
-export async function executeDeeplinkCommand(command: string, args: string[]): Promise<void> {
+export async function executeDeeplinkCommand(command: string, args: string[], env?: NodeJS.ProcessEnv): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const fullCommand = `${command} ${args.join(' ')}`;
@@ -112,6 +146,7 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
       const childProcess = spawn(command, args, {
         detached: true,
         stdio: 'ignore',
+        env: env ?? process.env,
       });
 
       const pid = childProcess.pid;
@@ -138,13 +173,17 @@ export async function executeDeeplinkCommand(command: string, args: string[]): P
 /**
  * Triggers a deeplink to the Tauri application for testing protocol handlers.
  *
- * This method uses platform-specific commands to open the deeplink URL:
- * - Windows: Uses `rundll32.exe url.dll,FileProtocolHandler` to trigger the deeplink
- * - macOS: Uses `open` command
- * - Linux: Uses `xdg-open` command
+ * For embedded WebDriver:
+ * - Uses HTTP POST to the WebDriver server's /__wdio/deeplink endpoint
+ * - This bypasses the need for platform-specific single-instance IPC mechanisms
+ *   (D-Bus on Linux, NSDistributedNotificationCenter on macOS) which don't work
+ *   reliably with unbundled binaries in CI environments.
  *
- * Unlike Electron, Tauri does not have the same userData directory issues
- * on Windows because it uses WebView2 instead of Chromium/Electron's process model.
+ * For tauri-driver:
+ * - Uses platform-specific commands to open the deeplink URL
+ * - Windows: Uses `rundll32.exe url.dll,FileProtocolHandler`
+ * - macOS: Uses `open` command
+ * - Linux: Uses `gio open` command
  *
  * @param this - Service context
  * @param url - The deeplink URL to trigger (e.g., 'myapp://open?path=/test')
@@ -161,8 +200,43 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
 
   const validatedUrl = validateDeeplinkUrl(url);
   const platform = process.platform;
-
   log.info(`Platform: ${platform}`);
+
+  // For embedded mode, use HTTP POST to the WebDriver server's deeplink endpoint.
+  // This bypasses the need for platform-specific single-instance IPC mechanisms
+  // (D-Bus on Linux, NSDistributedNotificationCenter on macOS) which don't work
+  // reliably with unbundled binaries in CI environments.
+  if (isEmbeddedProvider()) {
+    const port = process.env.TAURI_WEBDRIVER_PORT || '4445';
+    const endpoint = `http://127.0.0.1:${port}/__wdio/deeplink`;
+
+    log.info(`Embedded mode: forwarding deeplink via HTTP`);
+    log.info(`Endpoint: ${endpoint}`);
+    log.info(`URL: ${validatedUrl}`);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: validatedUrl }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorBody}`);
+      }
+
+      const result = (await response.json()) as { success: boolean; url: string };
+      log.info(`Deeplink forwarded successfully: ${result.url}`);
+      return;
+    } catch (error) {
+      log.error(`Failed to forward deeplink via HTTP: ${error}`);
+      throw new Error(`Failed to forward deeplink: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Standard approach for tauri-driver: use platform-specific commands
   const { command, args } = getPlatformCommand(validatedUrl, platform);
   const fullCommand = `${command} ${args.join(' ')}`;
   log.info(`Full deeplink command: "${fullCommand}"`);

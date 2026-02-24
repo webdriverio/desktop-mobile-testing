@@ -4,20 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriCapabilities } from '../../src/types.js';
 
-// Mock process.platform to bypass macOS check in tests
-const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-Object.defineProperty(process, 'platform', {
-  value: 'linux',
-  configurable: true,
-});
-
-// Restore original platform after all tests
-afterAll(() => {
-  if (originalPlatform) {
-    Object.defineProperty(process, 'platform', originalPlatform);
-  }
-});
-
 // Mock driver discovery
 vi.mock('../../src/driverManager.js', () => ({
   ensureTauriDriver: vi.fn(),
@@ -125,7 +111,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 }, // Multiremote doesn't need maxInstances > 1
       );
@@ -160,7 +146,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -200,7 +186,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -230,7 +216,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -268,7 +254,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -305,7 +291,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -339,7 +325,7 @@ describe('Multiremote Mode - Integration', () => {
       });
 
       launcher = new TauriLaunchService(
-        {},
+        { driverProvider: 'official' },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
         { maxInstances: 1 },
       );
@@ -355,6 +341,53 @@ describe('Multiremote Mode - Integration', () => {
 
       // Should reject when driver fails to start
       await expect((launcher as any).onPrepare({}, capabilities)).rejects.toThrow();
+    });
+  });
+
+  describe('provider configuration', () => {
+    it('defaults to embedded provider when no driverProvider is set', async () => {
+      launcher = new TauriLaunchService(
+        { startTimeout: 5000 },
+        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
+        { maxInstances: 1 },
+      );
+
+      const capabilities = {
+        browserA: {
+          capabilities: {
+            browserName: 'tauri',
+            'tauri:options': { application: '/app' },
+          } as TauriCapabilities,
+        },
+      };
+
+      await expect((launcher as any).onPrepare({}, capabilities)).rejects.toThrow();
+    });
+
+    it('uses official provider when explicitly set', async () => {
+      vi.mocked(ensureTauriDriver).mockResolvedValue({
+        ok: true,
+        value: { path: mockSuccessPath, method: 'found' },
+      });
+
+      launcher = new TauriLaunchService(
+        { driverProvider: 'official' },
+        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
+        { maxInstances: 1 },
+      );
+
+      const capabilities = {
+        browserA: {
+          capabilities: {
+            browserName: 'tauri',
+            'tauri:options': { application: '/app' },
+          } as TauriCapabilities,
+        },
+      };
+
+      await (launcher as any).onPrepare({}, capabilities);
+
+      expect((launcher as any).getTauriDriverStatus().running).toBe(true);
     });
   });
 });

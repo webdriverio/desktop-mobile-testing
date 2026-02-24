@@ -21,14 +21,21 @@ if (!fs.existsSync(appDir)) {
 // Resolve binary path
 const appBinaryPath = await getTauriBinaryPath(appDir);
 
+// Get driver provider from environment
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded';
+
 // Create session options with log capture enabled
 const sessionOptions = createTauriCapabilities(appBinaryPath, {
   appArgs: ['foo', 'bar=baz'],
+  driverProvider,
+  autoInstallTauriDriver: true,
 });
 
 // Enable log capture
 const appDirName = path.basename(appDir);
-const logDir = path.join(__dirname, '..', '..', '..', 'logs', `standalone-${appDirName}`);
+const testType = 'standalone';
+const logDirName = driverProvider ? `${driverProvider}-${testType}-${appDirName}` : `${testType}-${appDirName}`;
+const logDir = path.join(__dirname, '..', '..', '..', 'logs', logDirName);
 if (sessionOptions['wdio:tauriServiceOptions']) {
   sessionOptions['wdio:tauriServiceOptions'].captureBackendLogs = true;
   sessionOptions['wdio:tauriServiceOptions'].captureFrontendLogs = true;
@@ -45,9 +52,7 @@ if (process.platform === 'linux') {
 
 console.log('🔍 Debug: Starting Tauri standalone logging test');
 
-const browser = await startWdioSession(sessionOptions, {
-  autoInstallTauriDriver: true,
-});
+const browser = await startWdioSession(sessionOptions);
 
 // Wait for browser to be fully initialized and logs to be ready
 await browser.tauri.execute(({ core }) => core.invoke('get_platform_info'));
@@ -60,8 +65,6 @@ await browser.waitUntil(
 );
 
 try {
-  // For standalone tests, logs go to logs/standalone-{appDirName}/
-  // Since standalone tests don't run through WDIO, we need to construct the path manually
   console.log(`[DEBUG] Test will read logs from: ${logDir}`);
   console.log(`[DEBUG] appDir: ${appDir}`);
   console.log(`[DEBUG] appDirName: ${appDirName}`);
@@ -147,3 +150,8 @@ try {
 await browser.deleteSession();
 await cleanupWdioSession(browser);
 console.log('✅ Cleanup complete');
+
+// On Windows, webdriverio's remote() leaves internal handles that prevent Node.js
+// from exiting naturally. Call process.exit() to ensure the test terminates.
+// On other platforms, this also ensures clean exit after standalone tests.
+process.exit();

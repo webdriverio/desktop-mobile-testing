@@ -9,8 +9,7 @@ describe('isMockFunction Command', () => {
       tauri: {
         execute: vi.fn(),
       },
-      execute: vi.fn(),
-      executeAsync: vi.fn().mockResolvedValue(true),
+      execute: vi.fn().mockResolvedValue(true),
     } as unknown as WebdriverIO.Browser;
   });
 

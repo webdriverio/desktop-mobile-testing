@@ -153,8 +153,8 @@ jobs:
       - name: 📦 Download Tauri E2E App Binary
         uses: ./.github/workflows/actions/download-archive
         with:
-          name: tauri-e2e-app-${{ runner.os }}
-          path: tauri-e2e-app-${{ runner.os }}
+          name: tauri-e2e-app-${{ runner.os }}-${{ runner.arch }}
+          path: tauri-e2e-app-${{ runner.os }}-${{ runner.arch }}
           filename: artifact.zip
           cache_key_prefix: tauri-e2e-app
           exact_cache_key: ${{ inputs.tauri_cache_key }}
@@ -188,12 +188,31 @@ jobs:
           BINARY_COUNT=0
           for target_dir in $TARGET_DIRS; do
             if [ "${{ runner.os }}" = "Windows" ]; then
-              if [ -f "$target_dir/release/*.exe" ] || compgen -G "$target_dir/release/*.exe" > /dev/null; then
+              # Windows: look for .exe files
+              if compgen -G "$target_dir/release/*.exe" > /dev/null 2>&1; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
                 echo "  ✅ Found Windows binary in $target_dir/release/"
               fi
+            elif [ "${{ runner.os }}" = "macOS" ]; then
+              # macOS: look for raw binary or .app bundles
+              # Check for raw binary first (tauri build without bundling)
+              # Use -perm +111 for macOS/BSD find (not -executable which is GNU-only)
+              if find "$target_dir/release" -maxdepth 1 -type f -perm +111 2>/dev/null | grep -q .; then
+                BINARY_COUNT=$((BINARY_COUNT + 1))
+                echo "  ✅ Found macOS raw binary in $target_dir/release/"
+              else
+                # Check multiple possible locations for the app bundle
+                for search_path in "$target_dir/release/bundle/macos" "$target_dir/aarch64-apple-darwin/release/bundle/macos" "$target_dir/x86_64-apple-darwin/release/bundle/macos" "$target_dir/universal-apple-darwin/release/bundle/macos"; do
+                  if compgen -G "$search_path/*.app" > /dev/null 2>&1; then
+                    BINARY_COUNT=$((BINARY_COUNT + 1))
+                    echo "  ✅ Found macOS app bundle in $search_path/"
+                    ls -la "$search_path/"*.app 2>/dev/null | head -3
+                    break
+                  fi
+                done
+              fi
             else
-              # Check for executable files on Linux/Mac
+              # Linux: look for executable files
               if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
                 echo "  ✅ Found binary in $target_dir/release/"
@@ -203,6 +222,33 @@ jobs:
 
           if [ "$BINARY_COUNT" -eq 0 ]; then
             echo "::error::No binaries found in target directories!"
+            echo ""
+            echo "Directory structure for debugging:"
+            for target_dir in $TARGET_DIRS; do
+              echo "=== $target_dir ==="
+              ls -la "$target_dir/" 2>/dev/null | head -10 || echo "Cannot list directory"
+              echo ""
+              echo "=== $target_dir/release/ ==="
+              ls -la "$target_dir/release/" 2>/dev/null | head -20 || echo "Cannot list release directory"
+              if [ "${{ runner.os }}" = "macOS" ]; then
+                echo ""
+                echo "Looking for .app bundles..."
+                find "$target_dir" -name "*.app" -type d 2>/dev/null | head -5 || echo "No .app bundles found"
+                echo ""
+                echo "Looking for bundle directories..."
+                find "$target_dir" -type d -name "bundle" 2>/dev/null | head -5 || echo "No bundle directories found"
+                if [ -d "$target_dir/release/bundle" ]; then
+                  echo ""
+                  echo "=== $target_dir/release/bundle/ ==="
+                  ls -la "$target_dir/release/bundle/" 2>/dev/null || echo "Cannot list bundle directory"
+                  if [ -d "$target_dir/release/bundle/macos" ]; then
+                    echo ""
+                    echo "=== $target_dir/release/bundle/macos/ ==="
+                    ls -la "$target_dir/release/bundle/macos/" 2>/dev/null || echo "Cannot list macos directory"
+                  fi
+                fi
+              fi
+            done
             exit 1
           fi
 
@@ -356,6 +402,7 @@ jobs:
           RUST_BACKTRACE: '1'
           # Disable AT-SPI accessibility bus warnings
           NO_AT_BRIDGE: '1'
+          DRIVER_PROVIDER: 'official'
         run: |
           if ($env:RUNNER_OS -eq "Linux") {
             # Use 16-bit color depth to avoid pixbuf issues with GTK/WebKit
@@ -386,10 +433,13 @@ jobs:
           echo "Post-test Unix cleanup complete"
 
       # Show comprehensive debug information on failure
+      # CodeQL false positive: This script cannot be poisoned by artifacts because
+      # download-archive/action.yml only extracts dist/, dist-js/, and target/ directories
+      # to the workspace - it never touches scripts/ directories.
       - name: 🐛 Debug Information
         if: always()
         shell: bash
-        run: pnpm run ci:e2e:logs
+        run: pnpm exec tsx e2e/scripts/show-logs.ts
 
       # Upload logs as artifacts for later analysis
       # This helps debug issues without cluttering the GitHub Actions console

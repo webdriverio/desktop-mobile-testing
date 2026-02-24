@@ -1,9 +1,16 @@
 {
   "default": {
     "identifier": "default",
-    "description": "Default capability - includes core app commands, WDIO plugin, and deep-link permissions",
+    "description": "Default capability - includes core app commands, WDIO plugin, WebDriver, and deep-link permissions",
     "local": true,
     "windows": ["splash", "main"],
-    "permissions": ["core:default", "core:window:default", "core:event:default", "deep-link:default", "wdio:default"]
+    "permissions": [
+      "core:default",
+      "core:window:default",
+      "core:event:default",
+      "deep-link:default",
+      "wdio:default",
+      "wdio-server:default"
+    ]
   }
 }

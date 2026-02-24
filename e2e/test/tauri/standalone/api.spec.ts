@@ -25,8 +25,11 @@ const appBinaryPath = await getTauriBinaryPath(appDir);
 console.log(`🔍 Using Tauri binary: ${appBinaryPath}`);
 
 // Create session options
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded';
 const sessionOptions = createTauriCapabilities(appBinaryPath, {
   appArgs: ['foo', 'bar=baz'],
+  driverProvider,
+  autoInstallTauriDriver: true,
 });
 
 // Initialize xvfb if running on Linux
@@ -36,9 +39,7 @@ if (process.platform === 'linux') {
 }
 
 console.log('🔍 Debug: Starting session with options:', JSON.stringify(sessionOptions, null, 2));
-const browser = await startWdioSession(sessionOptions, {
-  autoInstallTauriDriver: true,
-});
+const browser = await startWdioSession(sessionOptions);
 
 // Wait a moment to ensure browser is fully initialized with all service capabilities
 await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -73,6 +74,8 @@ await browser.deleteSession();
 await cleanupWdioSession(browser);
 
 console.log('✅ Cleanup complete');
-// Don't call process.exit() - let Node.js exit naturally after cleanup completes
-// The cleanup delay is now handled in the launcher's onWorkerEnd hook to ensure
-// WDIO waits before starting the next worker
+
+// On Windows, webdriverio's remote() leaves internal handles that prevent Node.js
+// from exiting naturally. Call process.exit() to ensure the test terminates.
+// On other platforms, this also ensures clean exit after standalone tests.
+process.exit();

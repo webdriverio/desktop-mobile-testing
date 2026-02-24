@@ -269,7 +269,8 @@ fn main() {
     let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok() || has_deeplink_arg;
 
     let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_wdio::init());
+        .plugin(tauri_plugin_wdio::init())
+        .plugin(tauri_plugin_wdio_server::init());
 
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
     if enable_single_instance {

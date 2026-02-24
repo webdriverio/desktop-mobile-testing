@@ -231,10 +231,13 @@ jobs:
         run: pnpm exec turbo run $TEST_TASKS --only --log-order=stream
 
       # Show logs on failure for debugging
+      # CodeQL false positive: This script cannot be poisoned by artifacts because
+      # download-archive/action.yml only extracts dist/, dist-js/, and target/ directories
+      # to the workspace - it never touches scripts/ directories.
       - name: 🐛 Show Logs on Failure
         shell: bash
         if: failure()
-        run: pnpm run ci:e2e:logs
+        run: pnpm exec tsx e2e/scripts/show-logs.ts
 
       # Upload logs as artifacts for later analysis
       # This helps debug issues without cluttering the GitHub Actions console

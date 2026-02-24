@@ -31,12 +31,12 @@ describe('logWriter', () => {
     vi.resetModules();
   });
 
-  describe('StandaloneLogWriter', () => {
+  describe('LogWriter', () => {
     it('should initialize and create log directory', async () => {
       vi.mocked(existsSync).mockReturnValue(false);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.initialize('/tmp/test-logs');
 
       expect(mkdirSync).toHaveBeenCalledWith('/tmp/test-logs', { recursive: true });
@@ -46,8 +46,8 @@ describe('logWriter', () => {
     it('should not create directory if it exists', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.initialize('/tmp/existing-logs');
 
       expect(mkdirSync).not.toHaveBeenCalled();
@@ -56,8 +56,8 @@ describe('logWriter', () => {
     it('should write message to console when not initialized', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.write('test message');
 
       expect(consoleSpy).toHaveBeenCalledWith('test message');
@@ -72,8 +72,8 @@ describe('logWriter', () => {
       vi.mocked(createWriteStream).mockReturnValue(mockStream as unknown as WriteStream);
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.initialize('/tmp/logs');
       writer.write('test message');
 
@@ -90,8 +90,8 @@ describe('logWriter', () => {
       vi.mocked(createWriteStream).mockReturnValue(mockStream as unknown as WriteStream);
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.initialize('/tmp/logs');
       writer.write('regular message', '[Tauri:Backend] prefixed message');
 
@@ -108,8 +108,8 @@ describe('logWriter', () => {
       vi.mocked(createWriteStream).mockReturnValue(mockStream as unknown as WriteStream);
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.initialize('/tmp/logs');
       writer.close();
 
@@ -119,8 +119,8 @@ describe('logWriter', () => {
     it('should return log directory', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       writer.initialize('/tmp/my-logs');
 
       expect(writer.getLogDir()).toBe('/tmp/my-logs');
@@ -129,8 +129,8 @@ describe('logWriter', () => {
     it('should return log file path', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       const testLogDir = join(process.cwd(), 'test-logs');
       writer.initialize(testLogDir);
 
@@ -142,29 +142,29 @@ describe('logWriter', () => {
   });
 
   describe('singleton functions', () => {
-    it('should return same instance from getStandaloneLogWriter', async () => {
-      const { getStandaloneLogWriter } = await import('../src/logWriter.js');
-      const writer1 = getStandaloneLogWriter();
-      const writer2 = getStandaloneLogWriter();
+    it('should return same instance from getLogWriter', async () => {
+      const { getLogWriter } = await import('../src/logWriter.js');
+      const writer1 = getLogWriter();
+      const writer2 = getLogWriter();
 
       expect(writer1).toBe(writer2);
     });
 
     it('should report not initialized before initialize()', async () => {
-      const { isStandaloneLogWriterInitialized } = await import('../src/logWriter.js');
+      const { isLogWriterInitialized } = await import('../src/logWriter.js');
 
-      expect(isStandaloneLogWriterInitialized()).toBe(false);
+      expect(isLogWriterInitialized()).toBe(false);
     });
 
     it('should report initialized after initialize()', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter, isStandaloneLogWriterInitialized } = await import('../src/logWriter.js');
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter, isLogWriterInitialized } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       const testLogDir = join(process.cwd(), 'test-logs');
       writer.initialize(testLogDir);
 
-      expect(isStandaloneLogWriterInitialized()).toBe(true);
+      expect(isLogWriterInitialized()).toBe(true);
     });
 
     it('should close writer and reset singleton', async () => {
@@ -175,18 +175,16 @@ describe('logWriter', () => {
       vi.mocked(createWriteStream).mockReturnValue(mockStream as unknown as WriteStream);
       vi.mocked(existsSync).mockReturnValue(true);
 
-      const { getStandaloneLogWriter, closeStandaloneLogWriter, isStandaloneLogWriterInitialized } = await import(
-        '../src/logWriter.js'
-      );
-      const writer = getStandaloneLogWriter();
+      const { getLogWriter, closeLogWriter, isLogWriterInitialized } = await import('../src/logWriter.js');
+      const writer = getLogWriter();
       const testLogDir = join(process.cwd(), 'test-logs');
       writer.initialize(testLogDir);
 
-      expect(isStandaloneLogWriterInitialized()).toBe(true);
+      expect(isLogWriterInitialized()).toBe(true);
 
-      closeStandaloneLogWriter();
+      closeLogWriter();
 
-      expect(isStandaloneLogWriterInitialized()).toBe(false);
+      expect(isLogWriterInitialized()).toBe(false);
       expect(mockStream.end).toHaveBeenCalled();
     });
   });

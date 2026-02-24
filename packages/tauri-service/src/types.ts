@@ -40,12 +40,23 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    */
   logDir?: string;
   /**
-   * Driver provider to use for WebDriver communication
-   * - 'official': Use cargo-installed tauri-driver (default)
-   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
-   * @default 'official'
+   * Driver provider to use for WebDriver communication.
+   * - 'embedded': Use embedded WebDriver server via tauri-plugin-wdio-server (default)
+   * - 'official': Use cargo-installed tauri-driver
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm
+   *
+   * Defaults to 'embedded' on all platforms. The embedded provider requires
+   * tauri-plugin-wdio-server to be installed and registered in your Tauri app.
+   * If you are not using the embedded plugin, set this to 'official'.
+   *
+   * Port used by the embedded provider (in priority order):
+   * 1. embeddedPort option
+   * 2. TAURI_WEBDRIVER_PORT environment variable
+   * 3. Default: 4445
+   *
+   * @default 'embedded'
    */
-  driverProvider?: 'official' | 'crabnebula';
+  driverProvider?: 'official' | 'crabnebula' | 'embedded';
   /**
    * Path to @crabnebula/tauri-driver executable
    * If not provided, will be auto-detected from node_modules

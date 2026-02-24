@@ -31,35 +31,26 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   // Check cache first using WeakMap - automatically cleans up when browser is GC'd
   if (!pluginAvailabilityCache.get(browser)) {
     // Check if plugin is available with retry logic (handles async module loading)
-    const pluginAvailable = await browser.executeAsync((done) => {
-      const checkPlugin = () => {
+    // Use execute (sync) since executeAsync has issues with some embedded providers
+    const maxAttempts = 100; // 100 attempts * 50ms = 5 seconds max
+    const retryInterval = 50; // ms
+    let pluginAvailable = false;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const result: unknown = await browser.execute(() => {
         // @ts-expect-error - Plugin API injected at runtime
         return typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.execute === 'function';
-      };
+      });
+      pluginAvailable = result === true;
 
-      // If already available, return immediately
-      if (checkPlugin()) {
-        done(true);
-        return;
+      if (pluginAvailable) {
+        break;
       }
 
-      // Otherwise, poll for up to 5 seconds
-      const startTime = Date.now();
-      const timeout = 5000;
-      const interval = 50;
-
-      const poll = () => {
-        if (checkPlugin()) {
-          done(true);
-        } else if (Date.now() - startTime > timeout) {
-          done(false);
-        } else {
-          setTimeout(poll, interval);
-        }
-      };
-
-      poll();
-    });
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, retryInterval));
+    }
 
     if (!pluginAvailable) {
       throw new Error(

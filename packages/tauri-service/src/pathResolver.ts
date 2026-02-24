@@ -66,6 +66,9 @@ export async function getTauriBinaryPath(
       }
     }
   } else if (platform === 'darwin') {
+    // Try raw binary first (from tauri build without bundling)
+    possiblePaths.push(join(appInfo.targetDir, appInfo.name));
+    // Fall back to bundled .app if raw binary doesn't exist
     possiblePaths.push(join(appInfo.targetDir, 'bundle', 'macos', `${appInfo.name}.app`));
   } else if (platform === 'linux') {
     // Try raw binary first (from cargo build or tauri build without bundling)

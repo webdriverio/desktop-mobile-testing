@@ -4,11 +4,11 @@ Complete guide to platform-specific requirements, limitations, and WebDriver set
 
 ## Platform Support Overview
 
-| Platform | Supported | WebDriver | Setup | Notes |
-|----------|-----------|-----------|-------|-------|
-| **Windows** | ✅ Yes | Microsoft Edge WebDriver | Auto-managed | Stable, fully tested |
-| **Linux** | ✅ Yes | WebKitWebDriver | Manual install | Full feature support |
-| **macOS** | 🔬 Experimental | CrabNebula WebDriver | API key required, untested |
+| Platform | Supported | WebDriver | Driver Provider | Setup |
+|----------|-----------|-----------|----------------|-------|
+| **Windows** | ✅ Yes | Microsoft Edge WebDriver | All (official, crabnebula, embedded) | Auto-managed |
+| **Linux** | ✅ Yes | WebKitWebDriver | All (official, crabnebula, embedded) | Manual install |
+| **macOS** | ✅ Yes | Built-in | `'embedded'`, `'crabnebula'` | No external driver needed |
 
 ## Windows
 
@@ -79,6 +79,18 @@ Version mismatch between driver and WebView2. Solutions:
 2. Install or download from [Microsoft Edge WebDriver](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/)
 
 3. Add to PATH or disable auto-download and specify manually
+
+### Alternative Driver Providers on Windows
+
+The default Windows setup uses `tauri-driver` + MSEdgeDriver (the `'official'` provider), but both other providers also work on Windows:
+
+| Provider | Notes |
+|----------|-------|
+| `'official'` | Default — uses tauri-driver + MSEdgeDriver, auto-managed |
+| `'embedded'` | Requires `tauri-plugin-wdio-webdriver` in your app; no external driver |
+| `'crabnebula'` | Requires a paid CrabNebula API key; cross-platform alternative |
+
+Use `'embedded'` if you want a consistent setup across Windows, Linux, and macOS without managing external drivers. Use `'crabnebula'` if you already have a CrabNebula subscription.
 
 ### Windows-Specific Features
 
@@ -258,6 +270,18 @@ Use `sudo` for package installation:
 sudo apt-get install webkit2gtk-driver
 ```
 
+### Alternative Driver Providers on Linux
+
+The default Linux setup uses `tauri-driver` + WebKitWebDriver (the `'official'` provider), but both other providers also work on Linux:
+
+| Provider | Notes |
+|----------|-------|
+| `'official'` | Default — uses tauri-driver + WebKitWebDriver, requires manual install |
+| `'embedded'` | Requires `tauri-plugin-wdio-webdriver` in your app; no external driver |
+| `'crabnebula'` | Requires a paid CrabNebula API key; cross-platform alternative |
+
+Use `'embedded'` if you want a consistent setup across Windows, Linux, and macOS without managing external drivers. Use `'crabnebula'` if you already have a CrabNebula subscription.
+
 ### Linux-Specific Features
 
 - ✅ Full Tauri API support
@@ -271,16 +295,79 @@ sudo apt-get install webkit2gtk-driver
 
 ### Requirements
 
-- **WebKitGTK development libraries** (webkit2gtk-driver)
+- **WebKitGTK development libraries** (webkit2gtk-driver) — only needed for `'official'` provider
 - **Xvfb** (optional, for headless testing)
 - **Rust toolchain** (for building Tauri apps)
 - **Node.js 18+**
 
 ## macOS
 
-> 🔬 **Experimental Feature**: macOS testing support via CrabNebula is experimental and has not been tested. This integration requires a paid CrabNebula API key which is not available for testing purposes. Features documented here are based on CrabNebula documentation and may not function as expected.
+> **Note:** macOS testing is supported natively via the embedded WebDriver provider. On macOS the service **auto-detects** the embedded provider — no explicit `driverProvider` configuration is needed.
 
-### Supported via CrabNebula 🔬 (Experimental)
+### Embedded Provider (Recommended)
+
+The embedded WebDriver provider uses `tauri-plugin-wdio-webdriver` to provide native macOS support without requiring CrabNebula.
+
+#### Requirements
+
+1. Install `tauri-plugin-wdio-webdriver` in your Tauri app:
+   ```bash
+   cd src-tauri && cargo add tauri-plugin-wdio-webdriver
+   ```
+
+2. Register the plugin in your Rust code (debug builds only):
+   ```rust
+   fn main() {
+       let builder = tauri::Builder::default();
+
+       #[cfg(debug_assertions)]
+       let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
+
+       builder
+           .run(tauri::generate_context!())
+           .expect("error while running tauri application");
+   }
+   ```
+
+3. Add permissions in `src-tauri/capabilities/default.json`:
+   ```json
+   {
+     "permissions": [
+       "core:default",
+       "core:window:default",
+       "webdriver:default"
+     ]
+   }
+   ```
+
+4. Configure WebdriverIO — no explicit `driverProvider` needed on macOS:
+   ```typescript
+   services: [['@wdio/tauri-service', {
+     // driverProvider auto-detected as 'embedded' on macOS
+   }]]
+   ```
+
+   You can also set it explicitly if you prefer:
+   ```typescript
+   services: [['@wdio/tauri-service', {
+     driverProvider: 'embedded',
+   }]]
+   ```
+
+#### Advantages
+
+- ✅ No external driver needed (no CrabNebula subscription)
+- ✅ Works natively on macOS — auto-detected, zero config
+- ✅ Same plugin setup works on Windows and Linux too
+- ✅ Simpler CI/CD configuration
+
+See [Plugin Setup](./plugin-setup.md) for detailed setup instructions.
+
+---
+
+### CrabNebula (Experimental)
+
+> 🔬 **Experimental Feature**: macOS testing support via CrabNebula is experimental and has not been tested. This integration requires a paid CrabNebula API key which is not available for testing purposes. Features documented here are based on CrabNebula documentation and may not function as expected.
 
 macOS testing is supported through [CrabNebula](https://crabnebula.dev)'s `@crabnebula/tauri-driver` package. This is a fork of the official tauri-driver that adds macOS support via a proprietary WebDriver implementation.
 
@@ -328,34 +415,27 @@ See the [CrabNebula documentation](https://docs.crabnebula.dev/tauri/webdriver/)
 
 ### Alternatives for macOS
 
-If you cannot use CrabNebula, consider:
+If you cannot use the embedded provider or CrabNebula, consider:
 
-1. **UI Testing Framework**
-   - Use XCTest (Apple's native testing framework)
-   - Or Xcode's UI testing capabilities
-
-2. **Manual Testing**
-   - Develop and test on Windows/Linux with WebdriverIO
+1. **Cross-Platform Testing**
+   - Develop on macOS, run automated tests on Linux/Windows
    - Perform manual QA on macOS
 
-3. **Web Version**
+2. **Web Version**
    - Deploy a web version of your app
    - Test with traditional WebdriverIO setup
 
-4. **Cross-Platform Testing**
-   - Write once, test on Windows/Linux
-   - Rely on platform coverage for macOS
-
 ### Building on macOS
 
-You can **build** Tauri apps on macOS:
+Build and test Tauri apps on macOS:
 
 ```bash
 npm install
 npm run tauri build
+npx wdio run wdio.conf.ts
 ```
 
-Testing requires either CrabNebula (see above) or an alternative approach.
+The service auto-detects the embedded provider on macOS. Make sure `tauri-plugin-wdio-webdriver` is installed and registered in your app.
 
 ### Example CI Configuration
 
@@ -409,8 +489,9 @@ export const config = {
         // WebKitWebDriver auto-detected
       }]];
     } else if (platform === 'darwin') {
-      console.warn('macOS testing not supported - skipping E2E tests');
-      process.exit(0);
+      config.services = [['@wdio/tauri-service', {
+        // embedded provider auto-detected on macOS
+      }]];
     }
   },
 };
@@ -442,9 +523,9 @@ describe('Platform-specific features', () => {
 
 - **Windows** - Fully supported with auto-managed Edge WebDriver ✅
 - **Linux** - Fully supported with manual WebKitWebDriver setup ✅
-- **macOS** - Experimental (CrabNebula, untested) 🔬
+- **macOS** - Fully supported via embedded WebDriver (no external drivers needed) ✅
 
-Choose Windows or Linux for automated testing, or use Docker containers for consistent cross-platform testing.
+Choose any platform for automated testing. Use `'embedded'` driver provider for the simplest setup.
 
 ## See Also
 
