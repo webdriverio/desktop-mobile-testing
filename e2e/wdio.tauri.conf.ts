@@ -26,14 +26,16 @@ interface TauriConfigContext {
 async function getTauriConfigContext(): Promise<TauriConfigContext> {
   console.log('🔍 Creating WDIO Tauri configuration context...');
 
-  // Check platform first - skip macOS Tauri tests due to WKWebView limitations
-  if (process.platform === 'darwin') {
-    console.log('⚠️ Skipping Tauri tests on macOS due to WKWebView WebDriver limitations');
+  // Parse and validate environment first (needed to check driverProvider)
+  const envContext = createEnvironmentContext();
+
+  // Skip macOS Tauri tests only for official tauri-driver
+  // CrabNebula and embedded providers support macOS
+  if (process.platform === 'darwin' && envContext.driverProvider === 'official') {
+    console.log('⚠️ Skipping Tauri tests on macOS with official driver due to WKWebView WebDriver limitations');
+    console.log('💡 Use driverProvider: "crabnebula" or "embedded" for macOS support');
     process.exit(78); // Exit code 78 indicates skipped tests
   }
-
-  // Parse and validate environment
-  const envContext = createEnvironmentContext();
 
   // Ensure we're using Tauri framework
   if (envContext.framework !== 'tauri') {
@@ -91,6 +93,9 @@ async function getTauriConfigContext(): Promise<TauriConfigContext> {
     appBinaryPath = join(tauriTargetDir, `${productName}.exe`);
   } else if (process.platform === 'linux') {
     appBinaryPath = join(tauriTargetDir, productName.toLowerCase());
+  } else if (process.platform === 'darwin') {
+    // macOS: CrabNebula and embedded providers support macOS
+    appBinaryPath = join(tauriTargetDir, productName);
   } else {
     throw new Error(`Unsupported platform for Tauri: ${process.platform}`);
   }
@@ -296,8 +301,8 @@ export const config = {
     [
       '@wdio/tauri-service',
       {
-        driverProvider: 'official',
-        autoInstallTauriDriver: true,
+        driverProvider: envContext.driverProvider || 'official',
+        autoInstallTauriDriver: envContext.driverProvider !== 'crabnebula',
       },
     ],
   ],
