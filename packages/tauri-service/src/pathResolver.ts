@@ -21,7 +21,7 @@ export async function getTauriBinaryPath(
   let appDir: string;
   if (appPath.includes('target') && (appPath.includes('release') || appPath.includes('debug'))) {
     // Extract app directory from binary path
-    // Go up from target/release to src-tauri, then up one more to the app root
+    // Go up from target/debug to src-tauri, then up one more to the app root
     const pathParts = appPath.split(sep);
     const targetIndex = pathParts.indexOf('target');
     if (targetIndex > 0) {
@@ -131,7 +131,9 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
     // Tauri v2 has productName and version at root level
     const productName = config.productName || config.package?.productName || 'tauri-app';
     const version = config.version || config.package?.version || '1.0.0';
-    const targetDir = join(appPath, 'src-tauri', 'target', 'release');
+
+    // Use debug builds for testing (includes tauri-plugin-automation for CrabNebula macOS)
+    const targetDir = join(appPath, 'src-tauri', 'target', 'debug');
 
     // Debug logging to help diagnose the issue
     log.debug(`Tauri config debug - appPath: ${appPath}`);
@@ -139,6 +141,7 @@ export async function getTauriAppInfo(appPath: string): Promise<TauriAppInfo> {
     log.debug(`Tauri config debug - config.productName: ${config.productName}`);
     log.debug(`Tauri config debug - config.package?.productName: ${config.package?.productName}`);
     log.debug(`Tauri config debug - resolved productName: ${productName}`);
+    log.debug(`Tauri config debug - targetDir: ${targetDir}`);
 
     return {
       name: productName,

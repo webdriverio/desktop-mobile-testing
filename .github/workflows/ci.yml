@@ -85,6 +85,7 @@ jobs:
     secrets: inherit
     with:
       os: 'ubuntu-latest'
+      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
@@ -97,12 +98,11 @@ jobs:
     secrets: inherit
     with:
       os: 'windows-latest'
-      build-command: 'build:debug'  # Use debug build on Windows to preserve stdout/stderr for log capture
+      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # macOS build for embedded provider - supports native WKWebView automation
   build-tauri-e2e-app-macos-arm:
     name: Build Tauri E2E App [macOS-ARM]
     needs: [detect-changes, build]
@@ -111,6 +111,7 @@ jobs:
     secrets: inherit
     with:
       os: 'macos-latest'
+      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
@@ -123,6 +124,7 @@ jobs:
     secrets: inherit
     with:
       os: 'macos-15-intel'
+      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}

@@ -65,8 +65,8 @@ async function getTauriEmbeddedConfigContext(): Promise<TauriEmbeddedConfigConte
 
   console.log('🔍 Setting up Tauri Embedded test with app binary path');
 
-  // For Tauri, we need to find the built binary in src-tauri/target/release
-  const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'release');
+  // Use debug builds for testing (includes tauri-plugin-automation for CrabNebula macOS)
+  const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'debug');
   const tauriConfigPath = join(appPath, 'src-tauri', 'tauri.conf.json');
 
   if (!fileExists(tauriConfigPath)) {
