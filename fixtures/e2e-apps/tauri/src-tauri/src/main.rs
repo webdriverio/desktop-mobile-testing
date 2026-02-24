@@ -272,10 +272,17 @@ fn main() {
         .plugin(tauri_plugin_wdio::init())
         .plugin(tauri_plugin_wdio_server::init());
 
-    // Add automation plugin for macOS CrabNebula testing (debug builds only)
-    #[cfg(all(debug_assertions, target_os = "macos"))]
+    // Add automation plugin for macOS CrabNebula testing.
+    // Included when: debug builds OR (release builds with CN_API_KEY set)
+    // CN_API_KEY indicates CrabNebula WebDriver provider is in use.
+    // This allows CI to run CrabNebula tests with release builds while keeping
+    // production builds secure (plugin excluded by default in release).
+    #[cfg(target_os = "macos")]
     {
-        builder = builder.plugin(tauri_plugin_automation::init());
+        let include_automation = cfg!(debug_assertions) || std::env::var("CN_API_KEY").is_ok();
+        if include_automation {
+            builder = builder.plugin(tauri_plugin_automation::init());
+        }
     }
 
     // Add single-instance plugin only when explicitly enabled (deeplink tests)
