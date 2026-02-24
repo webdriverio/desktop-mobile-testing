@@ -103,21 +103,9 @@ export default class TauriLaunchService {
     const isCrabNebula = mergedOptions.driverProvider === 'crabnebula';
     const isEmbedded = isEmbeddedProvider(mergedOptions);
 
-    if (!mergedOptions.driverProvider && !isEmbedded) {
-      throw new Error(
-        'No driverProvider configured and no embedded WebDriver server detected. ' +
-          'If you have installed tauri-plugin-wdio-server, set the TAURI_WEBDRIVER_PORT ' +
-          "environment variable or add driverProvider: 'embedded' to your service options. " +
-          "To use tauri-driver instead, set driverProvider: 'official'.",
-      );
-    }
-
     if (isEmbedded && !mergedOptions.driverProvider) {
-      const reason = process.env.TAURI_WEBDRIVER_PORT
-        ? `TAURI_WEBDRIVER_PORT=${process.env.TAURI_WEBDRIVER_PORT}`
-        : 'macOS platform';
       log.info(
-        `Auto-detected embedded WebDriver provider (${reason}, port ${getEmbeddedPort(mergedOptions)}). ` +
+        `No driverProvider configured — defaulting to embedded WebDriver provider (port ${getEmbeddedPort(mergedOptions)}). ` +
           `Set driverProvider: 'official' to use tauri-driver instead.`,
       );
     }

@@ -116,23 +116,44 @@ export async function startEmbeddedDriver(
   });
   if (stderrHandler) logHandlers.push(stderrHandler);
 
-  // Wait for the embedded WebDriver server to be ready
-  const startTimeout = options.startTimeout || 30000;
-  try {
-    await pollWebDriverStatus(port, startTimeout);
-
-    // On Windows, add a small delay after ready to allow WebView2 to fully stabilize
-    // This helps prevent "Channel closed" errors when executing scripts too quickly
-    // after the HTTP server reports ready but before WebView2 is fully initialized
-    if (process.platform === 'win32') {
-      await sleep(500);
-    }
-  } catch (error) {
-    // Clean up the process and handlers if startup fails
+  // Helper to clean up resources
+  const cleanup = () => {
     for (const handler of logHandlers) {
       handler.close();
     }
     child.kill('SIGTERM');
+  };
+
+  // Wait for the embedded WebDriver server to be ready
+  const startTimeout = options.startTimeout || 30000;
+
+  // Create a promise that rejects on spawn error (e.g., ENOENT)
+  const spawnErrorPromise = new Promise<never>((_, reject) => {
+    child.once('error', (err) => {
+      cleanup();
+      reject(
+        new Error(
+          `Failed to spawn Tauri app "${appBinaryPath}": ${err.message}. ` +
+            `Ensure the application binary exists and is executable. ` +
+            `If you are not using the embedded plugin, set driverProvider: 'official' in your service options.`,
+        ),
+      );
+    });
+  });
+
+  // Create a promise that resolves when the server is ready
+  const readyPromise = pollWebDriverStatus(port, startTimeout).then(() => {
+    // On Windows, add a small delay after ready to allow WebView2 to fully stabilize
+    if (process.platform === 'win32') {
+      return sleep(500);
+    }
+  });
+
+  try {
+    // Race between ready, spawn error, and timeout
+    await Promise.race([readyPromise, spawnErrorPromise]);
+  } catch (error) {
+    cleanup();
     throw error;
   }
 
@@ -183,18 +204,13 @@ export async function stopEmbeddedDriver(info: EmbeddedDriverInfo): Promise<void
 
 /**
  * Check if embedded provider should be used
+ * Returns true when no driverProvider is configured (embedded is the default)
  */
 export function isEmbeddedProvider(options: TauriServiceOptions): boolean {
   if (options.driverProvider) {
     return options.driverProvider === 'embedded';
   }
-  if (process.env.TAURI_WEBDRIVER_PORT) {
-    return true;
-  }
-  if (process.platform === 'darwin') {
-    return true;
-  }
-  return false;
+  return true;
 }
 
 /**

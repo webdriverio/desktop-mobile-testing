@@ -155,7 +155,6 @@ export function createTauriCapabilities(
   } = {},
 ): TauriCapabilities {
   return {
-    // Don't set browserName - tauri-driver doesn't need it
     'tauri:options': {
       application: appBinaryPath,
       args: options.appArgs || [],
