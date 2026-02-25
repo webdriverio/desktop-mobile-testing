@@ -52,7 +52,9 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
   log.info(`Starting test-runner-backend on port ${port}`);
 
   return new Promise((resolve, reject) => {
-    const proc = spawn(backendPath, [], {
+    // Use --port flag with fallback to PORT env var
+    const args = ['--port', port.toString()];
+    const proc = spawn(backendPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
         ...process.env,

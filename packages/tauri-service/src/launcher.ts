@@ -70,9 +70,11 @@ export default class TauriLaunchService {
   private instanceOptions: Map<string, TauriServiceOptions> = new Map();
   private perWorkerMode: boolean = false;
   private portManager: PortManager;
+  private backendPortManager: PortManager;
   private driverPool: DriverPool;
   private embeddedProcesses: Map<string, EmbeddedDriverInfo> = new Map();
   private isEmbeddedMode: boolean = false;
+  private workerBackends: Map<string, { proc: ChildProcess; port: number }> = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -85,6 +87,7 @@ export default class TauriLaunchService {
 
     const basePort = options.tauriDriverPort || 4444;
     this.portManager = new PortManager(basePort, 4445);
+    this.backendPortManager = new PortManager(options.crabnebulaBackendPort ?? 3000, 3001);
     this.driverPool = new DriverPool(options, options.nativeDriverPath || getWebKitWebDriverPath());
   }
 
@@ -232,34 +235,22 @@ export default class TauriLaunchService {
     // Auto-detect per-worker mode based on maxInstances
     // When maxInstances > 1, enable per-worker spawning for parallelism
     // When maxInstances === 1, use single shared driver for optimal performance
-    // NOTE: CrabNebula on macOS cannot use per-worker mode because test-runner-backend
-    // only supports binding to port 3000 and cannot run multiple instances.
     const maxInstances = _config.maxInstances || 100; // WDIO default is 100
     const isMultiremote = !Array.isArray(capabilities);
-    const canUsePerWorker = !(process.platform === 'darwin' && isCrabNebula);
-    this.perWorkerMode = maxInstances > 1 && !isMultiremote && canUsePerWorker;
-
-    if (maxInstances > 1 && !isMultiremote && !canUsePerWorker) {
-      log.warn(
-        'Per-worker mode disabled for CrabNebula on macOS: test-runner-backend only supports port 3000, ' +
-          'cannot run multiple backends in parallel. Also note that maxInstances > 1 is not supported ' +
-          'with CrabNebula on macOS - multiple workers cannot share a single tauri-driver session. ' +
-          'Set maxInstances=1 in your WDIO config to avoid session errors.',
-      );
-    }
+    this.perWorkerMode = maxInstances > 1 && !isMultiremote;
 
     log.info(
       `Per-worker mode: ${this.perWorkerMode ? 'enabled' : 'disabled'} (maxInstances=${maxInstances}, multiremote=${isMultiremote})`,
     );
 
-    // Start test-runner-backend for CrabNebula on macOS BEFORE spawning tauri-driver
-    // tauri-driver needs REMOTE_WEBDRIVER_URL to be set, which requires the backend to be running
-    // NOTE: CrabNebula's test-runner-backend only supports port 3000, so we cannot
-    // run multiple backends in parallel. Per-worker mode is disabled for CrabNebula.
-    if (process.platform === 'darwin' && isCrabNebula) {
+    // Start shared test-runner-backend for CrabNebula on macOS (single-driver mode only)
+    // In per-worker mode, each worker spawns its own backend in onWorkerStart()
+    if (process.platform === 'darwin' && isCrabNebula && !this.perWorkerMode) {
       const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
       if (manageBackend) {
         const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
+        // Allocate port to prevent collision with worker backends
+        await this.backendPortManager.allocatePortPair(backendPort, backendPort + 1);
         const { proc } = await startTestRunnerBackend(backendPort);
         await waitTestRunnerBackendReady('127.0.0.1', backendPort);
 
@@ -553,6 +544,27 @@ export default class TauriLaunchService {
       const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
       const workerEnv: NodeJS.ProcessEnv = { ...process.env, [envVarName]: dataDir };
 
+      // CrabNebula on macOS: spawn dedicated test-runner-backend per worker
+      if (process.platform === 'darwin' && workerOptions.driverProvider === 'crabnebula') {
+        const manageBackend = workerOptions.crabnebulaManageBackend ?? true;
+        if (manageBackend) {
+          // Allocate unique port for this worker's backend using PortManager
+          const backendPort = await this.backendPortManager.allocatePort();
+          log.info(`Spawning test-runner-backend for worker ${cid} on port ${backendPort}`);
+
+          try {
+            const { proc } = await startTestRunnerBackend(backendPort);
+            await waitTestRunnerBackendReady('127.0.0.1', backendPort);
+            this.workerBackends.set(cid, { proc, port: backendPort });
+            workerEnv.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
+            log.info(`Worker ${cid} backend ready on port ${backendPort}`);
+          } catch (error) {
+            log.error(`Failed to start test-runner-backend for worker ${cid}: ${error}`);
+            throw error;
+          }
+        }
+      }
+
       // Spawn tauri-driver for this worker with updated env
       await this.startTauriDriverForWorker(cid, port, nativePort, workerOptions, workerEnv);
 
@@ -625,6 +637,14 @@ export default class TauriLaunchService {
   async onWorkerEnd(cid: string): Promise<void> {
     log.debug(`Ending Tauri worker session: ${cid}`);
 
+    // Stop worker's test-runner-backend if spawned (CrabNebula per-worker mode)
+    const workerBackend = this.workerBackends.get(cid);
+    if (workerBackend) {
+      log.info(`Stopping test-runner-backend for worker ${cid}`);
+      await stopTestRunnerBackend(workerBackend.proc);
+      this.workerBackends.delete(cid);
+    }
+
     if (this.perWorkerMode) {
       await this.driverPool.stopDriver(cid);
     }
@@ -641,6 +661,20 @@ export default class TauriLaunchService {
       closeLogWriter();
     } catch {
       // Log writer may not have been initialized
+    }
+
+    // Stop all worker test-runner-backends (per-worker mode)
+    if (this.workerBackends.size > 0) {
+      log.info(`Stopping ${this.workerBackends.size} worker test-runner-backend(s)...`);
+      for (const [workerId, backend] of this.workerBackends) {
+        try {
+          await stopTestRunnerBackend(backend.proc);
+          log.debug(`Stopped test-runner-backend for worker ${workerId}`);
+        } catch (error) {
+          log.warn(`Failed to stop test-runner-backend for worker ${workerId}: ${error}`);
+        }
+      }
+      this.workerBackends.clear();
     }
 
     // Stop shared test-runner-backend (if any)
@@ -666,6 +700,7 @@ export default class TauriLaunchService {
     await this.driverPool.stopAll();
     this.instanceOptions.clear();
     this.portManager.clear();
+    this.backendPortManager.clear();
 
     log.debug('Tauri service completed');
   }

@@ -121,9 +121,7 @@ const { envContext, appBinaryPath } = context;
 let specs: string[] = [];
 let exclude: string[] = [];
 // Default to 5 parallel workers for most tests
-// CrabNebula on macOS requires maxInstances=1 due to test-runner-backend limitations
-// (only supports port 3000 and cannot multiplex multiple WebDriver sessions)
-const defaultMaxInstances = envContext.driverProvider === 'crabnebula' && process.platform === 'darwin' ? 1 : 5;
+const defaultMaxInstances = 5;
 let maxInstances = defaultMaxInstances;
 switch (envContext.testType) {
   case 'multiremote':

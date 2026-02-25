@@ -81,7 +81,7 @@ describe('CrabNebula Backend', () => {
 
       expect(spawn).toHaveBeenCalledWith(
         '/mock/backend',
-        [],
+        ['--port', '3000'],
         expect.objectContaining({
           stdio: ['ignore', 'pipe', 'pipe'],
           env: expect.objectContaining({
