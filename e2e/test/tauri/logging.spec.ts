@@ -10,20 +10,34 @@ function getLogDir() {
   return path.join(__dirname, '..', '..', 'logs');
 }
 
+// Detect driver provider - backend logs from app stderr are not captured by CrabNebula
+// because test-runner-backend doesn't forward app stderr to tauri-driver
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+const isCrabNebula = driverProvider === 'crabnebula';
+
 describe('Tauri Log Integration', () => {
   describe('Command Execution', () => {
-    it('should capture backend logs via generate_test_logs command', async () => {
+    it('should capture backend logs via generate_test_logs command', async function () {
+      // Skip for CrabNebula - app stderr is not forwarded by test-runner-backend
+      // See: https://github.com/crabnebula-dev/test-runner-backend/issues/XXX
+      if (isCrabNebula) {
+        this.skip();
+        return;
+      }
+
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
       await browser.waitUntil(
         async () => {
           const logs = await readWdioLogs(getLogDir());
+          // Match [Tauri:Backend] or [Tauri:Backend:worker-id] format
           return logs.includes('[Tauri:Backend');
         },
         { timeout: 5000, timeoutMsg: 'Backend logs not captured' },
       );
 
       const logs = await readWdioLogs(getLogDir());
+      // Match [Tauri:Backend] or [Tauri:Backend:worker-id] format (with optional worker suffix)
       expect(logs).toMatch(/\[Tauri:Backend[^\]]*\].*INFO level log/s);
       expect(logs).toMatch(/\[Tauri:Backend[^\]]*\].*WARN level log/s);
       expect(logs).toMatch(/\[Tauri:Backend[^\]]*\].*ERROR level log/s);
