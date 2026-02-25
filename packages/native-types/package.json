@@ -38,10 +38,10 @@
   "devDependencies": {
     "@electron-forge/shared-types": "^7.11.1",
     "@electron/packager": "^19.0.5",
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.0",
     "@wdio/globals": "catalog:default",
     "@wdio/types": "catalog:default",
-    "builder-util": "^26.4.1",
+    "builder-util": "^26.8.1",
     "electron": "catalog:default",
     "read-package-up": "^11.0.0",
     "shx": "^0.4.0",
