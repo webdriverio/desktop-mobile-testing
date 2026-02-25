@@ -250,6 +250,25 @@ export default class TauriLaunchService {
       `Per-worker mode: ${this.perWorkerMode ? 'enabled' : 'disabled'} (maxInstances=${maxInstances}, multiremote=${isMultiremote})`,
     );
 
+    // Start test-runner-backend for CrabNebula on macOS BEFORE spawning tauri-driver
+    // tauri-driver needs REMOTE_WEBDRIVER_URL to be set, which requires the backend to be running
+    // NOTE: CrabNebula's test-runner-backend only supports port 3000, so we cannot
+    // run multiple backends in parallel. Per-worker mode is disabled for CrabNebula.
+    if (process.platform === 'darwin' && isCrabNebula) {
+      const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
+      if (manageBackend) {
+        const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
+        const { proc } = await startTestRunnerBackend(backendPort);
+        await waitTestRunnerBackendReady('127.0.0.1', backendPort);
+
+        this.testRunnerBackend = proc;
+
+        // Set environment variable for tauri-driver
+        process.env.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
+        log.info(`CrabNebula backend ready on port ${backendPort}`);
+      }
+    }
+
     // Multiremote: spawn a dedicated driver per instance on unique ports
     if (isMultiremote) {
       const capEntries = Object.entries(capabilities);
@@ -409,24 +428,6 @@ export default class TauriLaunchService {
           (cap as { port?: number; hostname?: string }).hostname = hostname;
           log.info(`Set tauri-driver connection on capabilities: ${hostname}:${port}`);
         }
-      }
-    }
-
-    // Start test-runner-backend for CrabNebula on macOS
-    // NOTE: CrabNebula's test-runner-backend only supports port 3000, so we cannot
-    // run multiple backends in parallel. Per-worker mode is disabled for CrabNebula.
-    if (process.platform === 'darwin' && isCrabNebula) {
-      const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
-      if (manageBackend) {
-        const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
-        const { proc } = await startTestRunnerBackend(backendPort);
-        await waitTestRunnerBackendReady('127.0.0.1', backendPort);
-
-        this.testRunnerBackend = proc;
-
-        // Set environment variable for tauri-driver
-        process.env.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
-        log.info(`CrabNebula backend ready on port ${backendPort}`);
       }
     }
 
