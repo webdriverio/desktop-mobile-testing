@@ -196,7 +196,7 @@ importers:
         specifier: catalog:default
         version: 40.4.1
       electron-builder:
-        specifier: ^26.7.0
+        specifier: 26.7.0
         version: 26.7.0(electron-builder-squirrel-windows@26.0.12)
       electron-vite:
         specifier: ^5.0.0
@@ -344,7 +344,7 @@ importers:
         specifier: 40.4.1
         version: 40.4.1
       electron-builder:
-        specifier: ^26.7.0
+        specifier: 26.7.0
         version: 26.7.0(electron-builder-squirrel-windows@26.0.12)
       electron-vite:
         specifier: ^5.0.0
@@ -383,7 +383,7 @@ importers:
         specifier: 40.4.1
         version: 40.4.1
       electron-builder:
-        specifier: ^26.7.0
+        specifier: 26.7.0
         version: 26.7.0(electron-builder-squirrel-windows@26.0.12)
       electron-vite:
         specifier: ^5.0.0
