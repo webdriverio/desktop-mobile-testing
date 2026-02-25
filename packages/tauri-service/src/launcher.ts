@@ -242,7 +242,9 @@ export default class TauriLaunchService {
     if (maxInstances > 1 && !isMultiremote && !canUsePerWorker) {
       log.warn(
         'Per-worker mode disabled for CrabNebula on macOS: test-runner-backend only supports port 3000, ' +
-          'cannot run multiple backends in parallel. Using shared driver with maxInstances=1 equivalent.',
+          'cannot run multiple backends in parallel. Also note that maxInstances > 1 is not supported ' +
+          'with CrabNebula on macOS - multiple workers cannot share a single tauri-driver session. ' +
+          'Set maxInstances=1 in your WDIO config to avoid session errors.',
       );
     }
 

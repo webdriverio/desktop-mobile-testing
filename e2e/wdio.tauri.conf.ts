@@ -120,7 +120,11 @@ const { envContext, appBinaryPath } = context;
 // Configure specs based on test type
 let specs: string[] = [];
 let exclude: string[] = [];
-let maxInstances = 5;
+// Default to 5 parallel workers for most tests
+// CrabNebula on macOS requires maxInstances=1 due to test-runner-backend limitations
+// (only supports port 3000 and cannot multiplex multiple WebDriver sessions)
+const defaultMaxInstances = envContext.driverProvider === 'crabnebula' && process.platform === 'darwin' ? 1 : 5;
+let maxInstances = defaultMaxInstances;
 switch (envContext.testType) {
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
