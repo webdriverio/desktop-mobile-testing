@@ -244,6 +244,17 @@ async function testExample(
       '@wdio/native-utils': `file:${packages.utilsPath}`,
       '@wdio/native-spy': `file:${packages.spyPath}`,
     };
+
+    // Pin critical dependencies as overrides to prevent transitive resolution issues
+    // without a lockfile. Versions are read from the fixture's package.json, not hardcoded.
+    const depsToPin = ['electron', 'electron-builder'];
+    for (const dep of depsToPin) {
+      const version = packageJson.devDependencies?.[dep];
+      if (version) {
+        overrides[dep] = version;
+        log(`  Pinning ${dep} to ${version} via override`);
+      }
+    }
     const packagesToInstall: string[] = [packages.utilsPath, packages.spyPath];
 
     // Add @wdio/utils override if the tarball exists
