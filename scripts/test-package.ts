@@ -279,7 +279,7 @@ async function testExample(
     writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
     // Install all dependencies with pnpm
-    execCommand('pnpm install --frozen-lockfile', packageDir, `Installing dependencies for ${packageName}`);
+    execCommand('pnpm install', packageDir, `Installing dependencies for ${packageName}`);
 
     // Install local packages
     const addCommand = `pnpm add ${packagesToInstall.join(' ')}`;
