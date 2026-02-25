@@ -87,10 +87,12 @@ export async function startEmbeddedDriver(
   const appArgs = options.appArgs || [];
 
   // Set TAURI_WEBDRIVER_PORT env var to configure the embedded server port
+  // Set WDIO_EMBEDDED_SERVER to signal the app to load tauri-plugin-wdio-server
   const env = {
     ...process.env,
     ...options.env,
     TAURI_WEBDRIVER_PORT: String(port),
+    WDIO_EMBEDDED_SERVER: 'true',
   };
 
   // Spawn the app directly

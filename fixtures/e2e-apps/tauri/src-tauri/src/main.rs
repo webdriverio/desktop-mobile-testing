@@ -268,9 +268,17 @@ fn main() {
     let has_deeplink_arg = std::env::args().any(|a| a.starts_with("testapp://"));
     let enable_single_instance = std::env::var("ENABLE_SINGLE_INSTANCE").is_ok() || has_deeplink_arg;
 
+    // Only load embedded WebDriver server for embedded driver provider
+    // CrabNebula uses tauri-driver + test-runner-backend instead
+    let use_embedded_server = std::env::var("WDIO_EMBEDDED_SERVER").is_ok();
+
     let mut builder = tauri::Builder::default()
-        .plugin(tauri_plugin_wdio::init())
-        .plugin(tauri_plugin_wdio_server::init());
+        .plugin(tauri_plugin_wdio::init());
+
+    // Conditionally load embedded WebDriver server
+    if use_embedded_server {
+        builder = builder.plugin(tauri_plugin_wdio_server::init());
+    }
 
     // Add automation plugin for macOS CrabNebula testing (debug builds only)
     #[cfg(all(debug_assertions, target_os = "macos"))]
