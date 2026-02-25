@@ -149,16 +149,16 @@ jobs:
           BINARY_COUNT=0
           for target_dir in $TARGET_DIRS; do
             if [ "${{ runner.os }}" = "Windows" ]; then
-              if compgen -G "$target_dir/release/*.exe" > /dev/null 2>&1; then
+              if compgen -G "$target_dir/debug/*.exe" > /dev/null 2>&1; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
-                echo "  ✅ Found Windows binary in $target_dir/release/"
+                echo "  ✅ Found Windows binary in $target_dir/debug/"
               fi
             elif [ "${{ runner.os }}" = "macOS" ]; then
-              if find "$target_dir/release" -maxdepth 1 -type f -perm +111 2>/dev/null | grep -q .; then
+              if find "$target_dir/debug" -maxdepth 1 -type f -perm +111 2>/dev/null | grep -q .; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
-                echo "  ✅ Found macOS raw binary in $target_dir/release/"
+                echo "  ✅ Found macOS raw binary in $target_dir/debug/"
               else
-                for search_path in "$target_dir/release/bundle/macos" "$target_dir/aarch64-apple-darwin/release/bundle/macos" "$target_dir/x86_64-apple-darwin/release/bundle/macos" "$target_dir/universal-apple-darwin/release/bundle/macos"; do
+                for search_path in "$target_dir/debug/bundle/macos" "$target_dir/aarch64-apple-darwin/debug/bundle/macos" "$target_dir/x86_64-apple-darwin/debug/bundle/macos" "$target_dir/universal-apple-darwin/debug/bundle/macos"; do
                   if compgen -G "$search_path/*.app" > /dev/null 2>&1; then
                     BINARY_COUNT=$((BINARY_COUNT + 1))
                     echo "  ✅ Found macOS app bundle in $search_path/"
@@ -167,9 +167,9 @@ jobs:
                 done
               fi
             else
-              if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
+              if find "$target_dir/debug" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
-                echo "  ✅ Found binary in $target_dir/release/"
+                echo "  ✅ Found binary in $target_dir/debug/"
               fi
             fi
           done

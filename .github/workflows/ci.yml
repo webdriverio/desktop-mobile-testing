@@ -85,7 +85,6 @@ jobs:
     secrets: inherit
     with:
       os: 'ubuntu-latest'
-      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
@@ -98,7 +97,6 @@ jobs:
     secrets: inherit
     with:
       os: 'windows-latest'
-      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
@@ -111,7 +109,6 @@ jobs:
     secrets: inherit
     with:
       os: 'macos-latest'
-      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
@@ -124,7 +121,6 @@ jobs:
     secrets: inherit
     with:
       os: 'macos-15-intel'
-      build-command: 'build:debug'
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}

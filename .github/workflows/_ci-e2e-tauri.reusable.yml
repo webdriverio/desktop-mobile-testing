@@ -170,7 +170,6 @@ jobs:
             exit 1
           fi
 
-          # Find all target directories
           TARGET_DIRS=$(find fixtures/e2e-apps/tauri -name "target" -type d 2>/dev/null || true)
 
           if [ -z "$TARGET_DIRS" ]; then
@@ -184,38 +183,30 @@ jobs:
           echo "✅ Found target directories:"
           echo "$TARGET_DIRS"
 
-          # Verify binaries exist
           BINARY_COUNT=0
           for target_dir in $TARGET_DIRS; do
             if [ "${{ runner.os }}" = "Windows" ]; then
-              # Windows: look for .exe files
-              if compgen -G "$target_dir/release/*.exe" > /dev/null 2>&1; then
+              if compgen -G "$target_dir/debug/*.exe" > /dev/null 2>&1; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
-                echo "  ✅ Found Windows binary in $target_dir/release/"
+                echo "  ✅ Found Windows binary in $target_dir/debug/"
               fi
             elif [ "${{ runner.os }}" = "macOS" ]; then
-              # macOS: look for raw binary or .app bundles
-              # Check for raw binary first (tauri build without bundling)
-              # Use -perm +111 for macOS/BSD find (not -executable which is GNU-only)
-              if find "$target_dir/release" -maxdepth 1 -type f -perm +111 2>/dev/null | grep -q .; then
+              if find "$target_dir/debug" -maxdepth 1 -type f -perm +111 2>/dev/null | grep -q .; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
-                echo "  ✅ Found macOS raw binary in $target_dir/release/"
+                echo "  ✅ Found macOS raw binary in $target_dir/debug/"
               else
-                # Check multiple possible locations for the app bundle
-                for search_path in "$target_dir/release/bundle/macos" "$target_dir/aarch64-apple-darwin/release/bundle/macos" "$target_dir/x86_64-apple-darwin/release/bundle/macos" "$target_dir/universal-apple-darwin/release/bundle/macos"; do
+                for search_path in "$target_dir/debug/bundle/macos" "$target_dir/aarch64-apple-darwin/debug/bundle/macos" "$target_dir/x86_64-apple-darwin/debug/bundle/macos" "$target_dir/universal-apple-darwin/debug/bundle/macos"; do
                   if compgen -G "$search_path/*.app" > /dev/null 2>&1; then
                     BINARY_COUNT=$((BINARY_COUNT + 1))
                     echo "  ✅ Found macOS app bundle in $search_path/"
-                    ls -la "$search_path/"*.app 2>/dev/null | head -3
                     break
                   fi
                 done
               fi
             else
-              # Linux: look for executable files
-              if find "$target_dir/release" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
+              if find "$target_dir/debug" -maxdepth 1 -type f -executable 2>/dev/null | grep -q .; then
                 BINARY_COUNT=$((BINARY_COUNT + 1))
-                echo "  ✅ Found binary in $target_dir/release/"
+                echo "  ✅ Found binary in $target_dir/debug/"
               fi
             fi
           done
@@ -228,8 +219,8 @@ jobs:
               echo "=== $target_dir ==="
               ls -la "$target_dir/" 2>/dev/null | head -10 || echo "Cannot list directory"
               echo ""
-              echo "=== $target_dir/release/ ==="
-              ls -la "$target_dir/release/" 2>/dev/null | head -20 || echo "Cannot list release directory"
+              echo "=== $target_dir/debug/ ==="
+              ls -la "$target_dir/debug/" 2>/dev/null | head -20 || echo "Cannot list debug directory"
               if [ "${{ runner.os }}" = "macOS" ]; then
                 echo ""
                 echo "Looking for .app bundles..."
@@ -237,14 +228,14 @@ jobs:
                 echo ""
                 echo "Looking for bundle directories..."
                 find "$target_dir" -type d -name "bundle" 2>/dev/null | head -5 || echo "No bundle directories found"
-                if [ -d "$target_dir/release/bundle" ]; then
+                if [ -d "$target_dir/debug/bundle" ]; then
                   echo ""
-                  echo "=== $target_dir/release/bundle/ ==="
-                  ls -la "$target_dir/release/bundle/" 2>/dev/null || echo "Cannot list bundle directory"
-                  if [ -d "$target_dir/release/bundle/macos" ]; then
+                  echo "=== $target_dir/debug/bundle/ ==="
+                  ls -la "$target_dir/debug/bundle/" 2>/dev/null || echo "Cannot list bundle directory"
+                  if [ -d "$target_dir/debug/bundle/macos" ]; then
                     echo ""
-                    echo "=== $target_dir/release/bundle/macos/ ==="
-                    ls -la "$target_dir/release/bundle/macos/" 2>/dev/null || echo "Cannot list macos directory"
+                    echo "=== $target_dir/debug/bundle/macos/ ==="
+                    ls -la "$target_dir/debug/bundle/macos/" 2>/dev/null || echo "Cannot list macos directory"
                   fi
                 fi
               fi

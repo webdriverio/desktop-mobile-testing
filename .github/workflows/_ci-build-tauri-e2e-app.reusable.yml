@@ -329,7 +329,7 @@ jobs:
           if [ -d "$APP_DIR/target" ]; then
             echo "App target directory exists"
             echo "Looking for plugin permissions in app's dependency build output..."
-            echo "These should be at: target/release/build/tauri-plugin-wdio-*/out/permissions/wdio/"
+            echo "These should be at: target/debug/build/tauri-plugin-wdio-*/out/permissions/wdio/"
             find "$APP_DIR/target" -path "*/build/tauri-plugin-wdio-*/out/permissions/wdio/*" -type f | head -10 || echo "❌ No plugin permissions found in app's dependency OUT_DIR"
 
             echo ""

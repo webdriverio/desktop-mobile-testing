@@ -149,7 +149,7 @@ jobs:
           echo "build_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
 
       # Build all Tauri test applications using Turbo
-      # This creates the binaries in src-tauri/target/release (or debug)
+      # This creates the binaries in src-tauri/target/debug
       # Build both E2E app and package test app
       - name: 🏗️ Build All Tauri Apps
         run: pnpm exec turbo run ${{ inputs.build-command }} --filter=tauri-e2e-app --filter=tauri-app-example --only --parallel
