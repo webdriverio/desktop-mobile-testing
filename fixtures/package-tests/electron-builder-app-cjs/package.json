@@ -54,7 +54,8 @@
   "pnpm": {
     "onlyBuiltDependencies": ["electron", "esbuild"],
     "overrides": {
-      "@wdio/utils": "file:../../../../wdio-utils-9.23.0.tgz"
+      "@wdio/utils": "file:../../../../wdio-utils-9.23.0.tgz",
+      "minimatch": "10.2.2"
     }
   }
 }

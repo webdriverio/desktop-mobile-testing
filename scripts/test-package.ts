@@ -239,22 +239,24 @@ async function testExample(
 
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
 
+    // Carry over non-file overrides from the source package.json
+    // File-path overrides (like @wdio/utils) won't resolve from the temp dir and are
+    // replaced by the dynamic overrides below.
+    const sourceOverrides: Record<string, string> = packageJson.pnpm?.overrides ?? {};
+    const preservedOverrides: Record<string, string> = {};
+    for (const [key, value] of Object.entries(sourceOverrides)) {
+      if (!value.startsWith('file:')) {
+        preservedOverrides[key] = value;
+        log(`  Preserving source override: ${key}@${value}`);
+      }
+    }
+
     // Build overrides and packages to install based on service type
     const overrides: Record<string, string> = {
+      ...preservedOverrides,
       '@wdio/native-utils': `file:${packages.utilsPath}`,
       '@wdio/native-spy': `file:${packages.spyPath}`,
     };
-
-    // Pin critical dependencies as overrides to prevent transitive resolution issues
-    // without a lockfile. Versions are read from the fixture's package.json, not hardcoded.
-    const depsToPin = ['electron', 'electron-builder'];
-    for (const dep of depsToPin) {
-      const version = packageJson.devDependencies?.[dep];
-      if (version) {
-        overrides[dep] = version;
-        log(`  Pinning ${dep} to ${version} via override`);
-      }
-    }
     const packagesToInstall: string[] = [packages.utilsPath, packages.spyPath];
 
     // Add @wdio/utils override if the tarball exists
