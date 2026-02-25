@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 import { createLogger, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
-import { setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
+import { setCrabnebulaModeInfo, setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { diagnoseTauriEnvironment, formatDiagnosticResults } from './diagnostics.js';
 import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
@@ -113,9 +113,10 @@ export default class TauriLaunchService {
       );
     }
 
-    // For CrabNebula on macOS, validate prerequisites
+    // For CrabNebula on macOS, validate prerequisites and set mode info
     if (process.platform === 'darwin' && isCrabNebula) {
       await this.validateCrabNebulaPrerequisites(mergedOptions);
+      setCrabnebulaModeInfo(true);
     }
 
     // Handle both standard array and multiremote object capabilities
