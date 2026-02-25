@@ -78,7 +78,7 @@
     "@types/node": "^25.3.0",
     "@vitest/coverage-v8": "^4.0.18",
     "@wdio/types": "catalog:default",
-    "builder-util": "^26.4.1",
+    "builder-util": "^26.8.0",
     "electron": "catalog:default",
     "jsdom": "^28.1.0",
     "nock": "^14.0.11",

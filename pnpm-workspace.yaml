@@ -46,5 +46,5 @@ catalogs:
     '@wdio/spec-reporter': latest
     '@wdio/types': latest
     '@wdio/xvfb': latest
-    electron-nightly: 42.0.0-nightly.20260216
+    electron-nightly: 42.0.0-nightly.20260224
     webdriverio: latest
