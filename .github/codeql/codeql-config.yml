@@ -10,25 +10,10 @@ paths-ignore:
   - '**/fixtures/**'
   - '**/coverage/**'
 
-# Disable queries that produce false positives for this codebase
-#
-# actions/artifact-poisoning: This query alerts when code is executed from a directory
-# that could be overwritten by downloaded artifacts. In this codebase, this is a false
-# positive because our artifact download logic has strict safeguards:
-#
-# 1. Artifacts are extracted to ${RUNNER_TEMP}/artifact-extract-{run_id}-{attempt}
-#    (a per-job temp directory, not the workspace)
-#
-# 2. The download-archive action (.github/workflows/actions/download-archive/action.yml)
-#    only copies specific directories to the workspace:
-#    - dist/ directories (build output)
-#    - dist-js/ directories (build output)
-#    - target/ directories (Rust/Tauri build output)
-#
-# 3. The copy_directory function is never called on scripts/ directories, so
-#    e2e/scripts/show-logs.ts (and any other scripts) cannot be overwritten by artifacts
-#
-# See .github/codeql/FALSE_POSITIVE_ANALYSIS.md for detailed rationale.
+# Exclude artifact-poisoning queries - these are false positives in our codebase.
+# See artifact-poisoning-analysis.md in this directory for rationale.
 query-filters:
   - exclude:
-      id: actions/artifact-poisoning
+      id: actions/artifact-poisoning/critical
+  - exclude:
+      id: actions/artifact-poisoning/medium
