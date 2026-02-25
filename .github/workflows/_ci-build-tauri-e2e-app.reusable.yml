@@ -171,7 +171,7 @@ jobs:
       # Install dependencies to ensure workspace is properly set up
       # This is needed after downloading artifacts to ensure all workspace links are correct
       - name: 📦 Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         shell: bash
 
       # Build the Tauri plugin's JavaScript first
