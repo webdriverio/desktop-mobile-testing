@@ -6,7 +6,7 @@ import type { LogLevel } from '@wdio/native-types';
 import { createLogger, formatDiagnosticResults, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { SevereServiceError } from 'webdriverio';
-import { setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
+import { setCrabnebulaModeInfo, setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { diagnoseTauriEnvironment } from './diagnostics.js';
 import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
