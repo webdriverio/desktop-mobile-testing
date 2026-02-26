@@ -72,61 +72,61 @@ try {
   console.log(`[DEBUG] driverProvider: ${driverProvider}`);
 
   // Test 1: Capture backend logs in standalone session
-  // Skip for CrabNebula - app stderr is not forwarded by test-runner-backend
-  // See: https://github.com/crabnebula-dev/test-runner-backend/issues/XXX
-  if (driverProvider === 'crabnebula') {
-    console.log('⚠️  Skipping backend log test for CrabNebula - app stderr not captured');
-  } else {
-    console.log('Test 1: Backend logs...');
-    await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
+  // Backend logs via browser.tauri.execute() work with CrabNebula
+  console.log('Test 1: Backend logs...');
+  await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
-    // Wait for backend logs to appear (match [Tauri:Backend] or [Tauri:Backend:worker-id])
-    const backendLogsFound = await waitForLog(logDir, /\[Tauri:Backend[^\]]*\].*INFO level log/i, 10000);
-    if (!backendLogsFound) {
-      throw new Error('Backend logs not captured within timeout');
-    }
-
-    // Verify logs were captured with correct prefix
-    console.log(`[DEBUG] Reading logs from: ${logDir}`);
-    console.log(`[DEBUG] Directory exists: ${fs.existsSync(logDir)}`);
-    if (fs.existsSync(logDir)) {
-      const files = fs.readdirSync(logDir, { withFileTypes: true });
-      console.log(
-        `[DEBUG] Files in directory: ${files.map((f) => `${f.name} (${f.isDirectory() ? 'dir' : 'file'})`).join(', ')}`,
-      );
-    }
-    const logs1 = await readWdioLogs(logDir);
-    if (!logs1) {
-      throw new Error('No logs found in output directory');
-    }
-    // Match [Tauri:Backend] or [Tauri:Backend:worker-id] format (with optional worker suffix)
-    assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*INFO level log/i);
-    assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*WARN level log/i);
-    assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*ERROR level log/i);
-    console.log('✅ Backend logs test passed');
+  // Wait for backend logs to appear (match [Tauri:Backend] or [Tauri:Backend:worker-id])
+  const backendLogsFound = await waitForLog(logDir, /\[Tauri:Backend[^\]]*\].*INFO level log/i, 10000);
+  if (!backendLogsFound) {
+    throw new Error('Backend logs not captured within timeout');
   }
+
+  // Verify logs were captured with correct prefix
+  console.log(`[DEBUG] Reading logs from: ${logDir}`);
+  console.log(`[DEBUG] Directory exists: ${fs.existsSync(logDir)}`);
+  if (fs.existsSync(logDir)) {
+    const files = fs.readdirSync(logDir, { withFileTypes: true });
+    console.log(
+      `[DEBUG] Files in directory: ${files.map((f) => `${f.name} (${f.isDirectory() ? 'dir' : 'file'})`).join(', ')}`,
+    );
+  }
+  const logs1 = await readWdioLogs(logDir);
+  if (!logs1) {
+    throw new Error('No logs found in output directory');
+  }
+  // Match [Tauri:Backend] or [Tauri:Backend:worker-id] format (with optional worker suffix)
+  assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*INFO level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*WARN level log/i);
+  assertLogContains(logs1, /\[Tauri:Backend[^\]]*\].*ERROR level log/i);
+  console.log('✅ Backend logs test passed');
 
   // Test 2: Capture frontend logs in standalone session
   // Frontend logs are captured via the event bridge: console → frontend-log event → Rust → stderr
+  // Skip for CrabNebula - browser.execute() not supported
   console.log('Test 2: Frontend logs...');
-  await browser.execute(() => {
-    console.info('[Test] Standalone frontend INFO log');
-    console.warn('[Test] Standalone frontend WARN log');
-    console.error('[Test] Standalone frontend ERROR log');
-  });
+  if (driverProvider === 'crabnebula') {
+    console.log('⚠️  Skipping frontend log test for CrabNebula - browser.execute() not supported');
+  } else {
+    await browser.execute(() => {
+      console.info('[Test] Standalone frontend INFO log');
+      console.warn('[Test] Standalone frontend WARN log');
+      console.error('[Test] Standalone frontend ERROR log');
+    });
 
-  // Wait for frontend logs to appear
-  const frontendLogsFound = await waitForLog(logDir, /\[Tauri:Frontend[^\]]*\].*Standalone frontend INFO/i, 10000);
-  if (!frontendLogsFound) {
-    throw new Error('Frontend logs not captured within timeout');
+    // Wait for frontend logs to appear
+    const frontendLogsFound = await waitForLog(logDir, /\[Tauri:Frontend[^\]]*\].*Standalone frontend INFO/i, 10000);
+    if (!frontendLogsFound) {
+      throw new Error('Frontend logs not captured within timeout');
+    }
+
+    // Verify frontend logs were captured with correct prefix
+    const logs2 = await readWdioLogs(logDir);
+    assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend INFO/i);
+    assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend WARN/i);
+    assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend ERROR/i);
+    console.log('✅ Frontend logs test passed');
   }
-
-  // Verify frontend logs were captured with correct prefix
-  const logs2 = await readWdioLogs(logDir);
-  assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend INFO/i);
-  assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend WARN/i);
-  assertLogContains(logs2, /\[Tauri:Frontend[^\]]*\].*Standalone frontend ERROR/i);
-  console.log('✅ Frontend logs test passed');
 
   // Test 3: Log level filtering - Using backend logs for verification
   console.log('Test 3: Backend log level filtering...');
