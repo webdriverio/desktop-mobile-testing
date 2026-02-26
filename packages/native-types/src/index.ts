@@ -45,13 +45,19 @@ export type {
 export type {
   AbstractFn,
   AsyncFn,
+  BaseServiceGlobalOptions,
+  BaseServiceOptions,
   BaseWithExecute,
   BrowserBase,
-  ElementBase,
+  DriverProviderConfig,
   Fn,
+  LogCaptureConfig,
+  LogLevel,
   MockContext,
+  MockLifecycleConfig,
   MockOverride,
   MockResult,
+  Result,
   SelectorsBase,
 } from './shared.js';
 export { MockResultType } from './shared.js';
@@ -60,6 +66,7 @@ export { MockResultType } from './shared.js';
 export type {
   TauriAPIs,
   TauriBrowserExtension,
+  TauriCapabilities,
   TauriMock,
   TauriMockInstance,
   TauriResult,

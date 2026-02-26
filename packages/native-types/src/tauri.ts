@@ -1,6 +1,17 @@
 import type { Mock } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
-import type { AbstractFn, BrowserBase, MockContext, MockOverride, MockResult } from './shared.js';
+import type {
+  AbstractFn,
+  BaseServiceGlobalOptions,
+  BaseServiceOptions,
+  BrowserBase,
+  DriverProviderConfig,
+  LogLevel,
+  MockContext,
+  MockOverride,
+  MockResult,
+  Result,
+} from './shared.js';
 
 // ============================================================================
 // Tauri-Specific Types
@@ -167,16 +178,9 @@ export interface TauriServiceAPI {
 
 /**
  * The options for the Tauri Service.
+ * Extends base service options with Tauri-specific configuration.
  */
-export interface TauriServiceOptions {
-  /**
-   * The path to the Tauri binary of the app for testing.
-   */
-  appBinaryPath?: string;
-  /**
-   * An array of string arguments to be passed through to the app on execution of the test run.
-   */
-  appArgs?: string[];
+export interface TauriServiceOptions extends BaseServiceOptions, DriverProviderConfig {
   /**
    * The port for tauri-driver to listen on.
    */
@@ -188,43 +192,7 @@ export interface TauriServiceOptions {
   /**
    * Log level for tauri-driver.
    */
-  logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Timeout for command execution.
-   */
-  commandTimeout?: number;
-  /**
-   * Timeout for app startup.
-   */
-  startTimeout?: number;
-  /**
-   * Enable/disable capturing Rust backend logs from stdout
-   * @default false
-   */
-  captureBackendLogs?: boolean;
-  /**
-   * Enable/disable capturing frontend console logs from webview
-   * @default false
-   */
-  captureFrontendLogs?: boolean;
-  /**
-   * Minimum log level for backend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Minimum log level for frontend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Driver provider to use for WebDriver communication
-   * - 'official': Use cargo-installed tauri-driver (default)
-   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
-   * - 'embedded': Use embedded WebDriver server via tauri-plugin-webdriver (no external driver needed)
-   * @default 'official'
-   */
-  driverProvider?: 'official' | 'crabnebula' | 'embedded';
+  logLevel?: LogLevel;
   /**
    * Path to @crabnebula/tauri-driver executable
    * If not provided, will be auto-detected from node_modules
@@ -241,92 +209,16 @@ export interface TauriServiceOptions {
    * @default 3000
    */
   crabnebulaBackendPort?: number;
-  /**
-   * Port for embedded WebDriver server (when driverProvider is 'embedded')
-   * Defaults to 4445 (tauri-plugin-webdriver default)
-   * Can be overridden via TAURI_WEBDRIVER_PORT env var
-   * @default 4445
-   */
-  embeddedPort?: number;
 }
 
 /**
  * Tauri service global options
+ * Extends base global options with Tauri-specific configuration
  */
-export interface TauriServiceGlobalOptions {
-  rootDir?: string;
-  logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  commandTimeout?: number;
-  startTimeout?: number;
+export interface TauriServiceGlobalOptions extends BaseServiceGlobalOptions, DriverProviderConfig {
+  logLevel?: LogLevel;
   tauriDriverPort?: number;
   nativeDriverPath?: string;
-  /**
-   * If true, all mock call history will be cleared before each test.
-   * Equivalent to calling `browser.tauri.clearAllMocks()` before each test.
-   * @default false
-   */
-  clearMocks?: boolean;
-  /**
-   * Optional command name prefix to filter which mocks to clear before each test.
-   * Only used when clearMocks is true. If provided, only mocks with command names
-   * starting with this prefix will be cleared.
-   * @default undefined
-   */
-  clearMocksPrefix?: string;
-  /**
-   * If true, all mocks will be reset (implementation + history) before each test.
-   * Equivalent to calling `browser.tauri.resetAllMocks()` before each test.
-   * @default false
-   */
-  resetMocks?: boolean;
-  /**
-   * Optional command name prefix to filter which mocks to reset before each test.
-   * Only used when resetMocks is true. If provided, only mocks with command names
-   * starting with this prefix will be reset.
-   * @default undefined
-   */
-  resetMocksPrefix?: string;
-  /**
-   * If true, all mocks will be restored to their original implementations before each test.
-   * Equivalent to calling `browser.tauri.restoreAllMocks()` before each test.
-   * @default false
-   */
-  restoreMocks?: boolean;
-  /**
-   * Optional command name prefix to filter which mocks to restore before each test.
-   * Only used when restoreMocks is true. If provided, only mocks with command names
-   * starting with this prefix will be restored.
-   * @default undefined
-   */
-  restoreMocksPrefix?: string;
-  /**
-   * Enable/disable capturing Rust backend logs from stdout
-   * @default false
-   */
-  captureBackendLogs?: boolean;
-  /**
-   * Enable/disable capturing frontend console logs from webview
-   * @default false
-   */
-  captureFrontendLogs?: boolean;
-  /**
-   * Minimum log level for backend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  backendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Minimum log level for frontend logs (only logs at this level and above will be captured)
-   * @default 'info'
-   */
-  frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
-  /**
-   * Driver provider to use for WebDriver communication
-   * - 'official': Use cargo-installed tauri-driver (default)
-   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (enables macOS support)
-   * - 'embedded': Use embedded WebDriver server via tauri-plugin-webdriver (no external driver needed)
-   * @default 'official'
-   */
-  driverProvider?: 'official' | 'crabnebula' | 'embedded';
   /**
    * Path to @crabnebula/tauri-driver executable
    * If not provided, will be auto-detected from node_modules
@@ -343,23 +235,13 @@ export interface TauriServiceGlobalOptions {
    * @default 3000
    */
   crabnebulaBackendPort?: number;
-  /**
-   * Port for embedded WebDriver server (when driverProvider is 'embedded')
-   * Defaults to 4445 (tauri-plugin-webdriver default)
-   * Can be overridden via TAURI_WEBDRIVER_PORT env var
-   * @default 4445
-   */
-  embeddedPort?: number;
 }
 
 /**
  * Tauri service result type
+ * Uses the standard Result pattern: check `result.ok`, then access `result.value` or `result.error`
  */
-export interface TauriResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type TauriResult<T = unknown> = Result<T, string>;
 
 /**
  * Tauri service capabilities
@@ -417,3 +299,55 @@ export interface TauriBrowserExtension extends BrowserBase {
 
 // Re-export the custom capability for external use
 export type { TauriServiceCustomCapability };
+
+// ============================================================================
+// Tauri Capabilities (for WDIO configuration)
+// ============================================================================
+
+/**
+ * Tauri capabilities for WebdriverIO configuration
+ * This interface is used in wdio.conf.ts to type the capabilities array
+ */
+export interface TauriCapabilities extends WebdriverIO.Capabilities {
+  browserName?: 'tauri' | 'wry';
+  'tauri:options'?: {
+    application: string;
+    args?: string[];
+    webviewOptions?: {
+      width?: number;
+      height?: number;
+    };
+  };
+  'wdio:tauriServiceOptions'?: TauriServiceOptions;
+}
+
+// ============================================================================
+// Global Window Augmentation
+// ============================================================================
+
+declare global {
+  /**
+   * Tauri APIs available on window.__TAURI__
+   */
+  interface Window {
+    /**
+     * Tauri global API object
+     */
+    __TAURI__?: {
+      core?: {
+        invoke?: (cmd: string, args?: unknown) => Promise<unknown>;
+      };
+      log?: {
+        trace?: (message: string) => Promise<void>;
+        debug?: (message: string) => Promise<void>;
+        info?: (message: string) => Promise<void>;
+        warn?: (message: string) => Promise<void>;
+        error?: (message: string) => Promise<void>;
+      };
+      event?: {
+        listen?: (event: string, callback: (event: { payload: unknown }) => void) => Promise<() => void>;
+        emit?: (event: string, payload: unknown) => Promise<void>;
+      };
+    };
+  }
+}

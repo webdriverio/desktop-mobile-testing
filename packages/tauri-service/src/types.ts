@@ -1,16 +1,17 @@
 import type {
-  TauriResult as BaseTauriResult,
   TauriServiceGlobalOptions as BaseTauriServiceGlobalOptions,
   TauriServiceOptions as BaseTauriServiceOptions,
 } from '@wdio/native-types';
 
-// Re-export the base result type as-is
-export type TauriResult<T = unknown> = BaseTauriResult<T>;
+// Re-export types from native-types for convenience
+export type { TauriResult } from '@wdio/native-types';
 
 /**
  * Extended Tauri service options with implementation-specific fields
  * Extends the base TauriServiceOptions from native-types with:
+ * - env: Environment variables for the driver process
  * - autoInstallTauriDriver: Auto-install driver if not found
+ * - autoDownloadEdgeDriver: Auto-download Edge driver on Windows
  * - logDir: Custom log directory for standalone mode
  */
 export interface TauriServiceOptions extends BaseTauriServiceOptions {
@@ -39,40 +40,6 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    * @default undefined
    */
   logDir?: string;
-  /**
-   * Driver provider to use for WebDriver communication.
-   * - 'embedded': Use embedded WebDriver server via tauri-plugin-wdio-server (default)
-   * - 'official': Use cargo-installed tauri-driver
-   * - 'crabnebula': Use @crabnebula/tauri-driver from npm
-   *
-   * Defaults to 'embedded' on all platforms. The embedded provider requires
-   * tauri-plugin-wdio-server to be installed and registered in your Tauri app.
-   * If you are not using the embedded plugin, set this to 'official'.
-   *
-   * Port used by the embedded provider (in priority order):
-   * 1. embeddedPort option
-   * 2. TAURI_WEBDRIVER_PORT environment variable
-   * 3. Default: 4445
-   *
-   * @default 'embedded'
-   */
-  driverProvider?: 'official' | 'crabnebula' | 'embedded';
-  /**
-   * Path to @crabnebula/tauri-driver executable
-   * If not provided, will be auto-detected from node_modules
-   */
-  crabnebulaDriverPath?: string;
-  /**
-   * Auto-manage test-runner-backend process (macOS only)
-   * Required for macOS testing with CrabNebula
-   * @default true when driverProvider is 'crabnebula' and platform is darwin
-   */
-  crabnebulaManageBackend?: boolean;
-  /**
-   * Port for test-runner-backend (macOS only)
-   * @default 3000
-   */
-  crabnebulaBackendPort?: number;
 }
 
 /**
@@ -96,22 +63,11 @@ export interface TauriServiceGlobalOptions extends BaseTauriServiceGlobalOptions
 }
 
 /**
- * Tauri service capabilities - extends the base with additional options
+ * Extended Tauri capabilities with implementation-specific options
+ * Re-exports the base TauriCapabilities but uses the extended TauriServiceOptions
  */
-export interface TauriCapabilities extends WebdriverIO.Capabilities {
-  // Allow 'tauri' or 'wry' in user config, but browserName will remain undefined
-  // Flow: onPrepare validates browserName (if set)
-  //    -> onWorkerStart removes browserName (tauri-driver doesn't need it)
-  //    -> browserName remains undefined throughout - reporters handle this gracefully
-  browserName?: 'tauri' | 'wry';
-  'tauri:options'?: {
-    application: string;
-    args?: string[];
-    webviewOptions?: {
-      width?: number;
-      height?: number;
-    };
-  };
+export interface TauriCapabilities
+  extends Omit<import('@wdio/native-types').TauriCapabilities, 'wdio:tauriServiceOptions'> {
   'wdio:tauriServiceOptions'?: TauriServiceOptions;
 }
 
