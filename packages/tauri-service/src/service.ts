@@ -66,20 +66,23 @@ export default class TauriWorkerService {
         log.debug(`Instance ${instanceName} ready`);
 
         // Wait for plugin initialization on this instance
-        log.debug(`Waiting for Tauri plugin initialization on ${instanceName}...`);
-        try {
-          await mrInstance.execute(async function checkMultiremotePluginInit() {
-            // @ts-expect-error - window exists in browser context
-            if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+        // Skip for CrabNebula - browser.execute() not supported
+        if (this.driverProvider !== 'crabnebula') {
+          log.debug(`Waiting for Tauri plugin initialization on ${instanceName}...`);
+          try {
+            await mrInstance.execute(async function checkMultiremotePluginInit() {
               // @ts-expect-error - window exists in browser context
-              await window.wdioTauri.waitForInit();
-              return true;
-            }
-            return false;
-          });
-          log.debug(`Tauri plugin initialization complete for ${instanceName}`);
-        } catch (error) {
-          log.warn(`Failed to wait for plugin initialization on ${instanceName}:`, error);
+              if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+                // @ts-expect-error - window exists in browser context
+                await window.wdioTauri.waitForInit();
+                return true;
+              }
+              return false;
+            });
+            log.debug(`Tauri plugin initialization complete for ${instanceName}`);
+          } catch (error) {
+            log.warn(`Failed to wait for plugin initialization on ${instanceName}:`, error);
+          }
         }
       }
     } else {
@@ -92,18 +95,21 @@ export default class TauriWorkerService {
 
     // Wait for the plugin to fully initialize (specifically attachConsole())
     // This ensures frontend console logs will be captured
-    log.debug('Waiting for Tauri plugin initialization...');
-    try {
-      await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
-        // @ts-expect-error - window exists in browser context
-        if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+    // Skip for CrabNebula - browser.execute() not supported
+    if (this.driverProvider !== 'crabnebula') {
+      log.debug('Waiting for Tauri plugin initialization...');
+      try {
+        await (browser as WebdriverIO.Browser).execute(async function checkPluginInit() {
           // @ts-expect-error - window exists in browser context
-          await window.wdioTauri.waitForInit();
-        }
-      });
-      log.debug('Tauri plugin initialization complete');
-    } catch (error) {
-      log.error('Failed to wait for plugin initialization:', error);
+          if (typeof window.wdioTauri !== 'undefined' && typeof window.wdioTauri.waitForInit === 'function') {
+            // @ts-expect-error - window exists in browser context
+            await window.wdioTauri.waitForInit();
+          }
+        });
+        log.debug('Tauri plugin initialization complete');
+      } catch (error) {
+        log.error('Failed to wait for plugin initialization:', error);
+      }
     }
 
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin

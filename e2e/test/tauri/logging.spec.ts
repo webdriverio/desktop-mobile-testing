@@ -58,8 +58,7 @@ describe('Tauri Log Integration', () => {
   describe('Console Log Capture', () => {
     it('should capture frontend console.log from browser.execute', async function () {
       if (isCrabNebula) {
-        this.skip(); // browser.execute() not supported by CrabNebula
-        return;
+        this.skip();
       }
       await browser.execute(() => {
         console.info('Frontend INFO from execute');
