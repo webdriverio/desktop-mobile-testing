@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { LogLevel } from '@wdio/native-types';
 import { createLogger, formatDiagnosticResults, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
+import { SevereServiceError } from 'webdriverio';
 import { setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { diagnoseTauriEnvironment } from './diagnostics.js';
@@ -274,8 +275,12 @@ export default class TauriLaunchService {
           setEmbeddedModeInfo(true, appBinaryPath);
 
           // Spawn the app with embedded WebDriver
-          const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, instanceId);
-          this.embeddedProcesses.set(instanceId, driverInfo);
+          try {
+            const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, instanceId);
+            this.embeddedProcesses.set(instanceId, driverInfo);
+          } catch (error) {
+            throw new SevereServiceError(`Failed to start embedded WebDriver for ${key}: ${(error as Error).message}`);
+          }
 
           // Update capabilities to connect to the embedded WebDriver server
           (value as { port?: number; hostname?: string }).port = embeddedPort;
@@ -363,14 +368,26 @@ export default class TauriLaunchService {
         setEmbeddedModeInfo(true, appBinaryPath);
 
         // Spawn the app with embedded WebDriver
-        const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, String(i));
-        this.embeddedProcesses.set(String(i), driverInfo);
+        try {
+          const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, String(i));
+          this.embeddedProcesses.set(String(i), driverInfo);
+        } catch (error) {
+          throw new SevereServiceError(
+            `Failed to start embedded WebDriver for instance ${i}: ${(error as Error).message}`,
+          );
+        }
 
         // Update capabilities to connect to the embedded WebDriver server
         (cap as { port?: number; hostname?: string }).port = embeddedPort;
         (cap as { port?: number; hostname?: string }).hostname = hostname;
         log.info(`Set embedded WebDriver connection on capabilities: ${hostname}:${embeddedPort}`);
+        log.debug(
+          `Updated capabilities: ${JSON.stringify({ port: (cap as Record<string, unknown>).port, hostname: (cap as Record<string, unknown>).hostname })}`,
+        );
       }
+
+      // Small delay to ensure WebDriver server is fully ready
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } else {
       // Standard session: single shared tauri-driver or per-worker drivers
       if (this.perWorkerMode) {
@@ -389,7 +406,7 @@ export default class TauriLaunchService {
           log.info(`Successfully started tauri-driver on ${hostname}:${port}`);
         } catch (error) {
           log.error(`Failed to start tauri-driver: ${error}`);
-          throw error;
+          throw new SevereServiceError(`Failed to start tauri-driver: ${(error as Error).message}`);
         }
 
         // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
