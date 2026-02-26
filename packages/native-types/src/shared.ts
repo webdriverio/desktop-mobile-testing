@@ -1,3 +1,4 @@
+import type { MockResult } from '@wdio/native-spy';
 import type { ChainablePromiseArray, ChainablePromiseElement } from 'webdriverio';
 
 // ============================================================================
@@ -41,25 +42,15 @@ export type { BaseWithExecute, BrowserBase, ElementBase, SelectorsBase };
 // ============================================================================
 
 /**
- * Mock result type - shared between Electron and Tauri mocking
+ * Mock result type - re-exported from native-spy for consistency
  */
-export enum MockResultType {
-  Return = 'return',
-  Throw = 'throw',
-}
+export type { MockResult, MockResultType } from '@wdio/native-spy';
 
 /**
- * Mock result - shared between Electron and Tauri mocking
+ * Service mock context - shared between Electron and Tauri mocking
+ * Tracks mock call history and results at the service level
  */
-export type MockResult = {
-  type: MockResultType;
-  value: unknown;
-};
-
-/**
- * Mock context - shared between Electron and Tauri mocking
- */
-export interface MockContext {
+export interface ServiceMockContext {
   /**
    * This is an array containing all arguments for each call. Each item of the array is the arguments of that call.
    */
@@ -97,3 +88,148 @@ export type MockOverride =
   | 'mockName'
   | 'withImplementation'
   | 'mock';
+
+// ============================================================================
+// Shared Logging Types
+// ============================================================================
+
+/**
+ * Log level used across services
+ */
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
+
+// ============================================================================
+// Shared Service Configuration Types
+// ============================================================================
+
+/**
+ * Driver provider configuration - shared between Electron and Tauri services
+ */
+export interface DriverProviderConfig {
+  /**
+   * Driver provider to use for WebDriver communication
+   * - 'official': Use official driver (cargo-installed tauri-driver or electron-chromedriver)
+   * - 'crabnebula': Use @crabnebula/tauri-driver from npm (Tauri only, enables macOS support)
+   * - 'embedded': Use embedded WebDriver server via plugin (no external driver needed)
+   * @default 'official'
+   */
+  driverProvider?: 'official' | 'crabnebula' | 'embedded';
+  /**
+   * Port for embedded WebDriver server (when driverProvider is 'embedded')
+   * Can be overridden via environment variable (TAURI_WEBDRIVER_PORT or WDIO_EMBEDDED_PORT)
+   * @default 4445
+   */
+  embeddedPort?: number;
+}
+
+/**
+ * Log capture configuration - shared between Electron and Tauri services
+ */
+export interface LogCaptureConfig {
+  /**
+   * Enable/disable capturing backend logs from stdout
+   * @default false
+   */
+  captureBackendLogs?: boolean;
+  /**
+   * Enable/disable capturing frontend console logs from webview
+   * @default false
+   */
+  captureFrontendLogs?: boolean;
+  /**
+   * Minimum log level for backend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  backendLogLevel?: LogLevel;
+  /**
+   * Minimum log level for frontend logs (only logs at this level and above will be captured)
+   * @default 'info'
+   */
+  frontendLogLevel?: LogLevel;
+}
+
+/**
+ * Mock lifecycle configuration - shared between Electron and Tauri services
+ */
+export interface MockLifecycleConfig {
+  /**
+   * If true, all mock call history will be cleared before each test.
+   * Equivalent to calling `clearAllMocks()` before each test.
+   * @default false
+   */
+  clearMocks?: boolean;
+  /**
+   * Optional prefix to filter which mocks to clear before each test.
+   * Only used when clearMocks is true.
+   * @default undefined
+   */
+  clearMocksPrefix?: string;
+  /**
+   * If true, all mocks will be reset (implementation + history) before each test.
+   * Equivalent to calling `resetAllMocks()` before each test.
+   * @default false
+   */
+  resetMocks?: boolean;
+  /**
+   * Optional prefix to filter which mocks to reset before each test.
+   * Only used when resetMocks is true.
+   * @default undefined
+   */
+  resetMocksPrefix?: string;
+  /**
+   * If true, all mocks will be restored to their original implementations before each test.
+   * Equivalent to calling `restoreAllMocks()` before each test.
+   * @default false
+   */
+  restoreMocks?: boolean;
+  /**
+   * Optional prefix to filter which mocks to restore before each test.
+   * Only used when restoreMocks is true.
+   * @default undefined
+   */
+  restoreMocksPrefix?: string;
+}
+
+/**
+ * Base service options shared between Electron and Tauri
+ */
+export interface BaseServiceOptions extends LogCaptureConfig, MockLifecycleConfig {
+  /**
+   * The path to the application binary for testing
+   */
+  appBinaryPath?: string;
+  /**
+   * An array of string arguments to be passed through to the app on execution
+   */
+  appArgs?: string[];
+  /**
+   * Timeout for command execution (in milliseconds)
+   * @default 30000
+   */
+  commandTimeout?: number;
+  /**
+   * Timeout for app startup (in milliseconds)
+   * @default 60000
+   */
+  startTimeout?: number;
+}
+
+/**
+ * Base global options shared between Electron and Tauri services
+ */
+export interface BaseServiceGlobalOptions extends LogCaptureConfig, MockLifecycleConfig {
+  /**
+   * Root directory of the project
+   */
+  rootDir?: string;
+}
+
+// ============================================================================
+// Shared Utility Types
+// ============================================================================
+
+/**
+ * Result type for operations that can fail
+ * Use `result.ok` to check success, then `result.value` or `result.error` to access
+ */
+export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };

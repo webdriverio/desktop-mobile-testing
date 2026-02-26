@@ -155,28 +155,30 @@ export function generateBinaryPaths(
     // Platform validation
     if (!isSupportedPlatform(p.platform)) {
       return {
-        success: false,
-        paths: [],
-        errors: [
-          {
-            type: 'UNSUPPORTED_PLATFORM',
-            message: `Unsupported platform: ${p.platform}`,
-          },
-        ],
+        ok: false,
+        error: {
+          errors: [
+            {
+              type: 'UNSUPPORTED_PLATFORM',
+              message: `Unsupported platform: ${p.platform}`,
+            },
+          ],
+        },
       };
     }
 
     // Build tool validation
     if (!appBuildInfo.isForge && !appBuildInfo.isBuilder) {
       return {
-        success: false,
-        paths: [],
-        errors: [
-          {
-            type: 'NO_BUILD_TOOL',
-            message: 'Configurations that are neither Forge nor Builder are not supported.',
-          },
-        ],
+        ok: false,
+        error: {
+          errors: [
+            {
+              type: 'NO_BUILD_TOOL',
+              message: 'Configurations that are neither Forge nor Builder are not supported.',
+            },
+          ],
+        },
       };
     }
 
@@ -217,36 +219,51 @@ export function generateBinaryPaths(
     } catch (error) {
       const buildTool = appBuildInfo.isForge ? 'electron-forge' : 'electron-builder';
       return {
-        success: false,
-        paths: [],
-        errors: [
-          {
-            type: 'CONFIG_INVALID',
-            message: `Failed to generate binary paths from ${buildTool} configuration: ${(error as Error).message}`,
-            buildTool,
-            details: (error as Error).stack,
-          },
-        ],
+        ok: false,
+        error: {
+          errors: [
+            {
+              type: 'CONFIG_INVALID',
+              message: `Failed to generate binary paths from ${buildTool} configuration: ${(error as Error).message}`,
+              buildTool,
+              details: (error as Error).stack,
+            },
+          ],
+        },
       };
     }
   } catch (error) {
     return {
-      success: false,
-      paths: [],
-      errors: [
-        {
-          type: 'CONFIG_INVALID',
-          message: `Unexpected error during path generation: ${(error as Error).message}`,
-          details: (error as Error).stack,
-        },
-      ],
+      ok: false,
+      error: {
+        errors: [
+          {
+            type: 'CONFIG_INVALID',
+            message: `Unexpected error during path generation: ${(error as Error).message}`,
+            details: (error as Error).stack,
+          },
+        ],
+      },
     };
   }
 
+  if (paths.length === 0) {
+    return {
+      ok: false,
+      error: {
+        errors: errors.length > 0 ? errors : [{ type: 'CONFIG_INVALID', message: 'No paths generated' }],
+      },
+    };
+  }
+
+  const result: { paths: string[]; warnings?: PathGenerationError[] } = { paths };
+  if (errors.length > 0) {
+    result.warnings = errors;
+  }
+
   return {
-    success: paths.length > 0,
-    paths,
-    errors,
+    ok: true,
+    value: result,
   };
 }
 
@@ -271,25 +288,35 @@ export async function getBinaryPath(
   // Phase 2: Validate generated paths
   let pathValidation: PathValidationResult;
 
-  if (!pathGeneration.success || pathGeneration.paths.length === 0) {
+  if (!pathGeneration.ok || pathGeneration.value.paths.length === 0) {
     pathValidation = {
-      success: false,
-      validPath: undefined,
-      attempts: [],
+      ok: false,
+      error: {
+        attempts: [],
+      },
     };
   } else {
-    pathValidation = await validateBinaryPaths(pathGeneration.paths);
+    pathValidation = await validateBinaryPaths(pathGeneration.value.paths);
   }
 
-  // Combine results
-  const success = pathGeneration.success && pathValidation.success;
-  const binaryPath = pathValidation.validPath;
+  // Combine results - TypeScript needs explicit narrowing
+  if (pathGeneration.ok && pathValidation.ok) {
+    return {
+      ok: true,
+      value: {
+        binaryPath: pathValidation.value.validPath,
+        pathGeneration,
+        pathValidation,
+      },
+    };
+  }
 
   return {
-    success,
-    binaryPath,
-    pathGeneration,
-    pathValidation,
+    ok: false,
+    error: {
+      pathGeneration,
+      pathValidation,
+    },
   };
 }
 

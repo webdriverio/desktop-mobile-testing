@@ -1,4 +1,4 @@
-import type { LogLevel } from './logForwarder.js';
+import type { LogLevel } from '@wdio/native-types';
 
 /**
  * CDP Runtime.RemoteObject type

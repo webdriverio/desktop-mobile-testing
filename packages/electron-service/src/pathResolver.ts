@@ -202,14 +202,9 @@ export async function getElectronBinaryPath(appDir: string): Promise<string> {
   // Get binary path using native-utils
   const binaryResult = await getBinaryPath(pkgResult.path, appBuildInfo, electronVersion);
 
-  // Extract the actual path string from the result object
-  if (typeof binaryResult === 'string') {
-    return binaryResult;
-  }
-
-  if (!binaryResult.binaryPath) {
+  if (!binaryResult.ok) {
     throw new Error(`Failed to resolve Electron binary path for ${appDir}`);
   }
 
-  return binaryResult.binaryPath;
+  return binaryResult.value.binaryPath;
 }

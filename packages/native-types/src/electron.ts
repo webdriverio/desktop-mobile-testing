@@ -1,11 +1,19 @@
 import type { OfficialArch } from '@electron/packager';
 import type { ForgeConfig as ElectronForgeConfig } from '@electron-forge/shared-types';
-import type { Mock, fn as vitestFn } from '@wdio/native-spy';
+import type { Mock, MockResultType, fn as vitestFn } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { ArchType } from 'builder-util';
 import type * as Electron from 'electron';
 import type { PackageJson } from 'read-package-up';
-import type { AbstractFn, BrowserBase, MockContext, MockOverride, MockResultType } from './shared.js';
+import type {
+  AbstractFn,
+  BaseServiceGlobalOptions,
+  BaseServiceOptions,
+  BrowserBase,
+  LogLevel,
+  MockOverride,
+  ServiceMockContext,
+} from './shared.js';
 
 // ============================================================================
 // Electron-Specific Types
@@ -105,35 +113,13 @@ export interface ElectronServiceAPI {
 
 /**
  * The options for the Electron Service.
+ * Extends base service options with Electron-specific configuration.
  */
-export interface ElectronServiceOptions {
-  /**
-   * An array of string arguments to be passed through to the app on execution of the test run.
-   * Electron [command line switches](https://www.electronjs.org/docs/latest/api/command-line-switches)
-   * and some [Chromium switches](https://peter.sh/experiments/chromium-command-line-switches) can be
-   * used here.
-   */
-  appArgs?: string[];
-  /**
-   * The path to the electron binary of the app for testing.
-   */
-  appBinaryPath?: string;
+export interface ElectronServiceOptions extends BaseServiceOptions {
   /**
    * The path to the electron entry point of the app for testing.
    */
   appEntryPoint?: string;
-  /**
-   * Calls .mockClear() on all mocked APIs before each test. This will clear mock history, but not reset its implementation.
-   */
-  clearMocks?: boolean;
-  /**
-   * Calls .mockReset() on all mocked APIs before each test. This will clear mock history and reset its implementation to an empty function (will return undefined).
-   */
-  resetMocks?: boolean;
-  /**
-   * Calls .mockRestore() on all mocked APIs before each test. This will restore the original API function, the mock will be removed.
-   */
-  restoreMocks?: boolean;
   /**
    * Enable capture of main process console logs via CDP
    * @default false
@@ -148,12 +134,12 @@ export interface ElectronServiceOptions {
    * Minimum log level for main process logs
    * @default 'info'
    */
-  mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  mainProcessLogLevel?: LogLevel;
   /**
    * Minimum log level for renderer process logs
    * @default 'info'
    */
-  rendererLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  rendererLogLevel?: LogLevel;
   /**
    * Directory for standalone mode logs (when WDIO runner not available)
    * @default './logs'
@@ -173,21 +159,48 @@ export interface ElectronServiceOptions {
   electronBuilderConfig?: string;
 }
 
-export type ElectronServiceGlobalOptions = Pick<
-  ElectronServiceOptions,
-  | 'clearMocks'
-  | 'resetMocks'
-  | 'restoreMocks'
-  | 'captureMainProcessLogs'
-  | 'captureRendererLogs'
-  | 'mainProcessLogLevel'
-  | 'rendererLogLevel'
-  | 'logDir'
-  | 'appBinaryPath'
-  | 'appEntryPoint'
-  | 'electronBuilderConfig'
-> & {
-  rootDir?: string;
+/**
+ * Global options for the Electron Service
+ * Extends base global options with Electron-specific configuration
+ */
+export interface ElectronServiceGlobalOptions extends BaseServiceGlobalOptions {
+  /**
+   * The path to the electron binary of the app for testing.
+   */
+  appBinaryPath?: string;
+  /**
+   * The path to the electron entry point of the app for testing.
+   */
+  appEntryPoint?: string;
+  /**
+   * Directory for standalone mode logs (when WDIO runner not available)
+   * @default './logs'
+   */
+  logDir?: string;
+  /**
+   * Path to a custom electron-builder configuration file (relative to project root).
+   */
+  electronBuilderConfig?: string;
+  /**
+   * Enable capture of main process console logs via CDP
+   * @default false
+   */
+  captureMainProcessLogs?: boolean;
+  /**
+   * Enable capture of renderer process console logs via CDP
+   * @default false
+   */
+  captureRendererLogs?: boolean;
+  /**
+   * Minimum log level for main process logs
+   * @default 'info'
+   */
+  mainProcessLogLevel?: LogLevel;
+  /**
+   * Minimum log level for renderer process logs
+   * @default 'info'
+   */
+  rendererLogLevel?: LogLevel;
   /**
    * Timeout for any request using CdpBridge to a node debugger.
    */
@@ -202,14 +215,10 @@ export type ElectronServiceGlobalOptions = Pick<
   cdpBridgeRetryCount?: number;
   /**
    * Control automatic installation of AppArmor profiles on Linux if needed.
-   * When false, the service will warn and continue without installing.
    * @default false
-   * - false (default): never install; warn and continue without AppArmor profile
-   * - true: install only if running as root (no sudo)
-   * - 'sudo': install if root or via non-interactive sudo (`sudo -n`) if available
    */
   apparmorAutoInstall?: boolean | 'sudo';
-};
+}
 
 export type ApiCommand = { name: string; bridgeProp: string };
 export type WebdriverClientFunc = (this: WebdriverIO.Browser, ...args: unknown[]) => Promise<unknown>;
@@ -282,24 +291,32 @@ export interface PathValidationAttempt {
   error?: PathValidationError;
 }
 
-export interface PathGenerationResult {
-  success: boolean;
-  paths: string[];
-  errors: PathGenerationError[];
-}
+/**
+ * Path generation result using standard Result pattern
+ * Check `result.ok` to determine success, then access `result.value` or `result.error`
+ */
+export type PathGenerationResult =
+  | { ok: true; value: { paths: string[]; warnings?: PathGenerationError[] } }
+  | { ok: false; error: { errors: PathGenerationError[] } };
 
-export interface PathValidationResult {
-  success: boolean;
-  validPath?: string;
-  attempts: PathValidationAttempt[];
-}
+/**
+ * Path validation result using standard Result pattern
+ * Check `result.ok` to determine success, then access `result.value` or `result.error`
+ */
+export type PathValidationResult =
+  | { ok: true; value: { validPath: string; attempts: PathValidationAttempt[] } }
+  | { ok: false; error: { attempts: PathValidationAttempt[] } };
 
-export interface BinaryPathResult {
-  success: boolean;
-  binaryPath?: string;
-  pathGeneration: PathGenerationResult;
-  pathValidation: PathValidationResult;
-}
+/**
+ * Binary path resolution result using standard Result pattern
+ * Check `result.ok` to determine success, then access `result.value` or `result.error`
+ */
+export type BinaryPathResult =
+  | {
+      ok: true;
+      value: { binaryPath: string; pathGeneration: PathGenerationResult; pathValidation: PathValidationResult };
+    }
+  | { ok: false; error: { pathGeneration: PathGenerationResult; pathValidation: PathValidationResult } };
 
 export type ExecuteOpts = {
   internal?: boolean;
@@ -314,7 +331,7 @@ type ElectronMockResult = {
   value: unknown;
 };
 
-interface ElectronMockContext extends MockContext {
+interface ElectronMockContext extends ServiceMockContext {
   results: ElectronMockResult[];
 }
 

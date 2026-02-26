@@ -145,11 +145,11 @@ function testBinaryPath(options: TestBinaryPathOptions) {
     );
 
     // Verify the result is successful
-    expect(result.success).toBe(true);
-    expect(result.binaryPath).toBeDefined();
+    expect(result.ok).toBe(true);
+    expect(result.value.binaryPath).toBeDefined();
 
     // Normalize path separators for cross-platform compatibility
-    const normalizedActual = result.binaryPath?.replace(/\\/g, '/');
+    const normalizedActual = result.value.binaryPath.replace(/\\/g, '/');
     const normalizedExpected = binaryPath.replace(/\\/g, '/');
 
     expect(normalizedActual).toBe(normalizedExpected);
@@ -181,10 +181,9 @@ describe('getBinaryPath', () => {
 
     const result = await getBinaryPath(pkgJSONPath, generateAppBuildInfo(false, true), '29.3.1', currentProcess);
 
-    expect(result.success).toBe(false);
-    expect(result.binaryPath).toBeUndefined();
-    expect(result.pathGeneration.success).toBe(false);
-    expect(result.pathGeneration.errors).toContainEqual({
+    expect(result.ok).toBe(false);
+    expect(result.error.pathGeneration.ok).toBe(false);
+    expect(result.error.pathGeneration.error?.errors).toContainEqual({
       type: 'UNSUPPORTED_PLATFORM',
       message: 'Unsupported platform: not-supported',
     });
@@ -196,10 +195,9 @@ describe('getBinaryPath', () => {
 
     const result = await getBinaryPath(pkgJSONPath, generateAppBuildInfo(false, false), '29.3.1', currentProcess);
 
-    expect(result.success).toBe(false);
-    expect(result.binaryPath).toBeUndefined();
-    expect(result.pathGeneration.success).toBe(false);
-    expect(result.pathGeneration.errors).toContainEqual({
+    expect(result.ok).toBe(false);
+    expect(result.error.pathGeneration.ok).toBe(false);
+    expect(result.error.pathGeneration.error?.errors).toContainEqual({
       type: 'NO_BUILD_TOOL',
       message: 'Configurations that are neither Forge nor Builder are not supported.',
     });

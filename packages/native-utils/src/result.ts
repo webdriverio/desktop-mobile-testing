@@ -1,4 +1,6 @@
-export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
+import type { Result } from '@wdio/native-types';
+
+export type { Result };
 
 export function Ok<T>(value: T): Result<T, never> {
   return { ok: true, value };

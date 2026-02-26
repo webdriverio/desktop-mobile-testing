@@ -1,9 +1,9 @@
 import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import type { Readable } from 'node:stream';
-
+import type { LogLevel } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 
-import { forwardLog, type LogLevel } from './logForwarder.js';
+import { forwardLog } from './logForwarder.js';
 import { parseLogLine } from './logParser.js';
 import type { TauriServiceOptions } from './types.js';
 

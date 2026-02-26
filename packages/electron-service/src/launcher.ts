@@ -5,7 +5,13 @@ import type {
   ElectronServiceGlobalOptions,
   PathGenerationError,
 } from '@wdio/native-types';
-import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
+import {
+  createLogger,
+  formatDiagnosticResults,
+  getAppBuildInfo,
+  getBinaryPath,
+  getElectronVersion,
+} from '@wdio/native-utils';
 
 const log = createLogger('wdio-electron-service', 'launcher');
 
@@ -21,7 +27,7 @@ import {
   getElectronCapabilities,
 } from './capabilities.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
-import { diagnoseElectronEnvironment, formatDiagnosticResults } from './diagnostics.js';
+import { diagnoseElectronEnvironment } from './diagnostics.js';
 import { resolveAppPaths } from './pathResolver.js';
 import { getChromiumVersion } from './versions.js';
 
@@ -32,58 +38,63 @@ function generateBinaryPathErrorMessage(result: BinaryPathResult, appBuildInfo: 
   const buildToolName = appBuildInfo.isForge ? 'Electron Forge' : 'electron-builder';
   const suggestedCompileCommand = `npx ${appBuildInfo.isForge ? 'electron-forge make' : 'electron-builder build'}`;
 
-  // Path generation failed
-  if (!result.pathGeneration.success) {
-    const generationErrors = result.pathGeneration.errors;
-    const primaryError = generationErrors[0];
+  // Handle error case
+  if (!result.ok) {
+    const { pathGeneration, pathValidation } = result.error;
 
-    switch (primaryError?.type) {
-      case 'UNSUPPORTED_PLATFORM':
-        return `Unsupported platform: ${process.platform}. This service only supports Windows, macOS, and Linux.`;
+    // Path generation failed
+    if (!pathGeneration.ok) {
+      const generationErrors = pathGeneration.error.errors;
+      const primaryError = generationErrors[0];
 
-      case 'NO_BUILD_TOOL':
-        return 'No supported build tool configuration found. Please configure either Electron Forge or electron-builder in your package.json.';
+      switch (primaryError?.type) {
+        case 'UNSUPPORTED_PLATFORM':
+          return `Unsupported platform: ${process.platform}. This service only supports Windows, macOS, and Linux.`;
 
-      case 'CONFIG_INVALID':
-        return `Invalid ${buildToolName} configuration: ${primaryError.message}. Please check your build tool configuration.`;
+        case 'NO_BUILD_TOOL':
+          return 'No supported build tool configuration found. Please configure either Electron Forge or electron-builder in your package.json.';
 
-      case 'CONFIG_MISSING':
-        return `Missing ${buildToolName} configuration. Please ensure your build tool is properly configured in package.json.`;
+        case 'CONFIG_INVALID':
+          return `Invalid ${buildToolName} configuration: ${primaryError.message}. Please check your build tool configuration.`;
 
-      default:
-        return `Failed to determine binary paths: ${primaryError?.message || 'Unknown error'}`;
-    }
-  }
+        case 'CONFIG_MISSING':
+          return `Missing ${buildToolName} configuration. Please ensure your build tool is properly configured in package.json.`;
 
-  // Path generation succeeded but validation failed
-  if (!result.pathValidation.success) {
-    const attempts = result.pathValidation.attempts;
-
-    let errorDetails = `Checked ${attempts.length} possible location(s):`;
-
-    for (const attempt of attempts) {
-      errorDetails += `\n  - ${attempt.path}`;
-      if (attempt.error) {
-        switch (attempt.error.type) {
-          case 'FILE_NOT_FOUND':
-            errorDetails += ' (file not found)';
-            break;
-          case 'NOT_EXECUTABLE':
-            errorDetails += ' (not executable)';
-            break;
-          case 'PERMISSION_DENIED':
-            errorDetails += ' (permission denied)';
-            break;
-          case 'IS_DIRECTORY':
-            errorDetails += ' (is a directory)';
-            break;
-          default:
-            errorDetails += ` (${attempt.error.message})`;
-        }
+        default:
+          return `Failed to determine binary paths: ${primaryError?.message || 'Unknown error'}`;
       }
     }
 
-    return `Could not find Electron app built with ${buildToolName}!\n\n${errorDetails}\n\nIf the application is not compiled, please do so before running your tests:\n  ${suggestedCompileCommand}\n\nOtherwise if the application is compiled at a different location, please specify the \`appBinaryPath\` option in your capabilities.`;
+    // Path generation succeeded but validation failed
+    if (!pathValidation.ok) {
+      const attempts = pathValidation.error.attempts;
+
+      let errorDetails = `Checked ${attempts.length} possible location(s):`;
+
+      for (const attempt of attempts) {
+        errorDetails += `\n  - ${attempt.path}`;
+        if (attempt.error) {
+          switch (attempt.error.type) {
+            case 'FILE_NOT_FOUND':
+              errorDetails += ' (file not found)';
+              break;
+            case 'NOT_EXECUTABLE':
+              errorDetails += ' (not executable)';
+              break;
+            case 'PERMISSION_DENIED':
+              errorDetails += ' (permission denied)';
+              break;
+            case 'IS_DIRECTORY':
+              errorDetails += ' (is a directory)';
+              break;
+            default:
+              errorDetails += ` (${attempt.error.message})`;
+          }
+        }
+      }
+
+      return `Could not find Electron app built with ${buildToolName}!\n\n${errorDetails}\n\nIf the application is not compiled, please do so before running your tests:\n  ${suggestedCompileCommand}\n\nOtherwise if the application is compiled at a different location, please specify the \`appBinaryPath\` option in your capabilities.`;
+    }
   }
 
   return 'Unknown error occurred while detecting binary path.';
@@ -178,17 +189,19 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
               // Use the detailed binary path function for better error handling
               const binaryResult = await getBinaryPath(pkg.path, appBuildInfo, electronVersion);
 
-              if (binaryResult.success && binaryResult.binaryPath) {
-                appBinaryPath = binaryResult.binaryPath;
+              if (binaryResult.ok) {
+                appBinaryPath = binaryResult.value.binaryPath;
                 log.info(`Detected app binary at ${appBinaryPath}`);
 
                 // Log any warnings from path generation
-                const warnings = binaryResult.pathGeneration.errors.filter(
-                  (e: PathGenerationError) => e.type === 'CONFIG_WARNING',
-                );
-                warnings.forEach((warning: PathGenerationError) => {
-                  log.warn(warning.message);
-                });
+                if (binaryResult.value.pathGeneration.ok && binaryResult.value.pathGeneration.value.warnings) {
+                  const warnings = binaryResult.value.pathGeneration.value.warnings.filter(
+                    (e: PathGenerationError) => e.type === 'CONFIG_WARNING',
+                  );
+                  warnings.forEach((warning: PathGenerationError) => {
+                    log.warn(warning.message);
+                  });
+                }
               } else {
                 // Generate comprehensive error message based on what failed
                 const errorMessage = generateBinaryPathErrorMessage(binaryResult, appBuildInfo);

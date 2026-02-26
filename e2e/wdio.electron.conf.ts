@@ -80,7 +80,7 @@ async function getElectronConfigContext(): Promise<ElectronConfigContext> {
 
     try {
       // Import async utilities and resolve binary path directly
-      const { getBinaryPath, getAppBuildInfo, getElectronVersion } = await import('@wdio/native-utils');
+      const { getBinaryPath, getAppBuildInfo, getElectronVersion, isOk } = await import('@wdio/native-utils');
 
       const pkg = { packageJson, path: packageJsonPath };
       const electronVersion = await getElectronVersion(pkg);
@@ -88,7 +88,10 @@ async function getElectronConfigContext(): Promise<ElectronConfigContext> {
       const binaryResult = await getBinaryPath(packageJsonPath, appBuildInfo, electronVersion);
 
       // Extract the actual path string from the result object
-      appBinaryPath = typeof binaryResult === 'string' ? binaryResult : binaryResult.binaryPath;
+      if (!isOk(binaryResult)) {
+        throw new Error(`Failed to resolve binary path: ${binaryResult.error}`);
+      }
+      appBinaryPath = binaryResult.value.binaryPath;
 
       console.log('🔍 Found app binary at:', appBinaryPath);
     } catch (error) {

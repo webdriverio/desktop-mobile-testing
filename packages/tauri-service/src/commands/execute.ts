@@ -147,15 +147,15 @@ export async function executeTauriCommand<T = unknown>(
     const result = await execute(browser, ({ core }) => core.invoke(command, ...args));
 
     return {
-      success: true,
-      data: result as T,
+      ok: true,
+      value: result as T,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     log.error(`Tauri command failed: ${errorMessage}`);
 
     return {
-      success: false,
+      ok: false,
       error: errorMessage,
     };
   }
@@ -187,7 +187,7 @@ export async function executeTauriCommandWithTimeout<T = unknown>(
     log.error(`Tauri command timeout or error: ${errorMessage}`);
 
     return {
-      success: false,
+      ok: false,
       error: errorMessage,
     };
   }
@@ -212,7 +212,7 @@ export async function executeTauriCommands<T = unknown>(
     results.push(result);
 
     // Stop on first failure
-    if (!result.success) {
+    if (!result.ok) {
       log.warn(`Stopping command execution due to failure: ${result.error}`);
       break;
     }

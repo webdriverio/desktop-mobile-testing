@@ -1,6 +1,6 @@
+import type { LogLevel } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { FRONTEND_MARKER, PREFIXES } from './constants/logging.js';
-import type { LogLevel } from './logForwarder.js';
 
 const log = createLogger('tauri-service', 'service');
 

@@ -1,7 +1,8 @@
+import type { LogLevel } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import type { CDPSession, Browser as PuppeteerBrowser } from 'puppeteer-core';
 import type { ElectronCdpBridge } from './bridge.js';
-import { forwardLog, type LogLevel, shouldLog } from './logForwarder.js';
+import { forwardLog, shouldLog } from './logForwarder.js';
 import type { ConsoleAPICalledEvent } from './logParser.js';
 import { parseConsoleEvent } from './logParser.js';
 
