@@ -159,7 +159,9 @@ export default class TauriWorkerService {
 
     // Restore and clear mocks to prevent memory leaks
     try {
-      await restoreAllMocks.call({ browser: this.browser });
+      if (this.browser) {
+        await restoreAllMocks.call({ browser: this.browser });
+      }
       mockStore.clear();
       log.debug('Mock store cleared');
     } catch (error) {
