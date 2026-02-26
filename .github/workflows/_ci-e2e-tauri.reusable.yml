@@ -59,7 +59,7 @@ jobs:
   # - Test type (standard, multiremote, standalone)
   # Note: macOS tests are skipped due to WKWebView limitations
   e2e-tauri:
-    name: Tauri E2E Tests
+    name: Tauri Official E2E Tests
     runs-on: ${{ inputs.os }}
     # Skip Tauri E2E tests on macOS due to WKWebView WebDriver limitations
     if: inputs.os != 'macos-latest' && inputs.os != 'macos-15-intel'
