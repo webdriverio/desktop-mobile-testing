@@ -125,7 +125,8 @@ export async function startEmbeddedDriver(
   };
 
   // Wait for the embedded WebDriver server to be ready
-  const startTimeout = options.startTimeout || 30000;
+  // Use 60s timeout for CI environments where apps can take longer to start
+  const startTimeout = options.startTimeout || 60000;
 
   // Create a promise that rejects on spawn error (e.g., ENOENT)
   const spawnErrorPromise = new Promise<never>((_, reject) => {
