@@ -9,13 +9,10 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 // Get driver provider from environment
 const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
-const isEmbedded = driverProvider === 'embedded';
+const isCrabNebula = driverProvider === 'crabnebula';
 
 function getMultiremoteLogDir() {
-  // For embedded provider, logs go to logs/embedded-multiremote-tauri
-  // For tauri-driver, logs go to logs/multiremote-tauri
-  const dirName = isEmbedded ? 'embedded-multiremote-tauri' : 'multiremote-tauri';
-  return path.join(__dirname, '..', '..', '..', 'logs', dirName);
+  return path.join(__dirname, '..', '..', '..', 'logs', `${driverProvider}-multiremote-tauri`);
 }
 
 describe('Tauri Log Integration - Multiremote', () => {
@@ -59,6 +56,9 @@ describe('Tauri Log Integration - Multiremote', () => {
   });
 
   it('should capture frontend logs per instance', async () => {
+    if (isCrabNebula) {
+      return; // browser.execute() not supported by CrabNebula
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
@@ -99,6 +99,9 @@ describe('Tauri Log Integration - Multiremote', () => {
   });
 
   it('should capture logs independently per instance', async () => {
+    if (isCrabNebula) {
+      return; // browser.execute() not supported by CrabNebula
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
