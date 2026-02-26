@@ -33,9 +33,11 @@ vi.mock('@wdio/native-utils', () => ({
 
 vi.mock('../../src/edgeDriverManager.js', () => ({
   ensureMsEdgeDriver: vi.fn().mockResolvedValue({
-    success: true,
-    method: 'found',
-    driverVersion: '120.0.0',
+    ok: true,
+    value: {
+      method: 'found',
+      driverVersion: '120.0.0',
+    },
   }),
 }));
 

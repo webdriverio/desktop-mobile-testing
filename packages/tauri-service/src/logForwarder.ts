@@ -1,7 +1,6 @@
+import type { LogLevel } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { getLogWriter, isLogWriterInitialized } from './logWriter.js';
-
-export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
 type WdioLogger = ReturnType<typeof createLogger>;
 

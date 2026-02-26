@@ -6,7 +6,6 @@ import {
   diagnoseDisplay,
   diagnoseLinuxDependencies,
   diagnosePlatform,
-  formatDiagnosticResults,
   isErr,
 } from '@wdio/native-utils';
 import { ensureTauriDriver, ensureWebKitWebDriver } from './driverManager.js';
@@ -26,9 +25,6 @@ const TAURI_LINUX_PACKAGES = [
   'libxdamage1',
   'libxrandr2',
 ];
-
-export type { DiagnosticResult };
-export { formatDiagnosticResults };
 
 export async function diagnoseTauriEnvironment(
   binaryPath: string,

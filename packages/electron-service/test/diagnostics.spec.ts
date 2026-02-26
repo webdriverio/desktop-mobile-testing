@@ -62,7 +62,8 @@ vi.mock('@wdio/native-utils', () => ({
   formatDiagnosticResults: vi.fn(),
 }));
 
-import { type DiagnosticResult, diagnoseElectronEnvironment, formatDiagnosticResults } from '../src/diagnostics.js';
+import { type DiagnosticResult, formatDiagnosticResults } from '@wdio/native-utils';
+import { diagnoseElectronEnvironment } from '../src/diagnostics.js';
 
 describe('diagnoseElectronEnvironment', () => {
   beforeEach(() => {
