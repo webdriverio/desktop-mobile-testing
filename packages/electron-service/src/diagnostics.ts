@@ -6,7 +6,6 @@ import {
   diagnoseDisplay,
   diagnoseLinuxDependencies,
   diagnosePlatform,
-  formatDiagnosticResults,
 } from '@wdio/native-utils';
 
 const log = createLogger('electron-service');
@@ -32,9 +31,6 @@ export interface ElectronDiagnosticsOptions {
   electronVersion?: string;
   chromiumVersion?: string;
 }
-
-export type { DiagnosticResult };
-export { formatDiagnosticResults };
 
 export async function diagnoseElectronEnvironment(
   options: ElectronDiagnosticsOptions = {},

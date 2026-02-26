@@ -2,12 +2,12 @@ import type { ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
-import { createLogger, isErr } from '@wdio/native-utils';
+import type { LogLevel } from '@wdio/native-types';
+import { createLogger, formatDiagnosticResults, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
-import { diagnoseTauriEnvironment, formatDiagnosticResults } from './diagnostics.js';
+import { diagnoseTauriEnvironment } from './diagnostics.js';
 import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
 import { DriverPool } from './driverPool.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
@@ -18,7 +18,6 @@ import {
   startEmbeddedDriver,
   stopEmbeddedDriver,
 } from './embeddedProvider.js';
-import type { LogLevel } from './logForwarder.js';
 import { getTauriAppInfo, getTauriBinaryPath, getWebKitWebDriverPath } from './pathResolver.js';
 import { PortManager } from './portManager.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';

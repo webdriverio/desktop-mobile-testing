@@ -5,7 +5,13 @@ import type {
   ElectronServiceGlobalOptions,
   PathGenerationError,
 } from '@wdio/native-types';
-import { createLogger, getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
+import {
+  createLogger,
+  formatDiagnosticResults,
+  getAppBuildInfo,
+  getBinaryPath,
+  getElectronVersion,
+} from '@wdio/native-utils';
 
 const log = createLogger('wdio-electron-service', 'launcher');
 
@@ -21,7 +27,7 @@ import {
   getElectronCapabilities,
 } from './capabilities.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
-import { diagnoseElectronEnvironment, formatDiagnosticResults } from './diagnostics.js';
+import { diagnoseElectronEnvironment } from './diagnostics.js';
 import { resolveAppPaths } from './pathResolver.js';
 import { getChromiumVersion } from './versions.js';
 
