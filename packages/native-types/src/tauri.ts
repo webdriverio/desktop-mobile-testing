@@ -7,10 +7,10 @@ import type {
   BrowserBase,
   DriverProviderConfig,
   LogLevel,
-  MockContext,
   MockOverride,
   MockResult,
   Result,
+  ServiceMockContext,
 } from './shared.js';
 
 // ============================================================================
@@ -36,7 +36,7 @@ export interface TauriAPIs {
 /**
  * Tauri mock context
  */
-interface TauriMockContext extends MockContext {
+interface TauriMockContext extends ServiceMockContext {
   results: MockResult[];
 }
 

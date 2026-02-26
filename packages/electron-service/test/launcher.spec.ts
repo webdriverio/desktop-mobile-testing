@@ -65,24 +65,29 @@ beforeEach(async () => {
   getAppBuildInfo = nativeUtils.getAppBuildInfo as Mock<() => Promise<AppBuildInfo>>;
   getElectronVersion = nativeUtils.getElectronVersion as Mock<() => Promise<string>>;
   getBinaryPath.mockResolvedValue({
-    success: true,
-    binaryPath: 'workspace/my-test-app/dist/my-test-app',
-    pathGeneration: {
-      success: true,
-      paths: ['workspace/my-test-app/dist/my-test-app'],
-      errors: [],
-    },
-    pathValidation: {
-      success: true,
-      validPath: 'workspace/my-test-app/dist/my-test-app',
-      attempts: [
-        {
-          path: 'workspace/my-test-app/dist/my-test-app',
-          valid: true,
+    ok: true,
+    value: {
+      binaryPath: 'workspace/my-test-app/dist/my-test-app',
+      pathGeneration: {
+        ok: true,
+        value: {
+          paths: ['workspace/my-test-app/dist/my-test-app'],
         },
-      ],
+      },
+      pathValidation: {
+        ok: true,
+        value: {
+          validPath: 'workspace/my-test-app/dist/my-test-app',
+          attempts: [
+            {
+              path: 'workspace/my-test-app/dist/my-test-app',
+              valid: true,
+            },
+          ],
+        },
+      },
     },
-  });
+  } as unknown as BinaryPathResult);
 
   getAppBuildInfo.mockResolvedValue({
     appName: 'my-test-app',
@@ -274,51 +279,54 @@ describe('Electron Launch Service', () => {
       it('should throw an error when the detected app path does not exist for a Forge dependency', async () => {
         delete options.appBinaryPath;
         (getBinaryPath as Mock).mockResolvedValueOnce({
-          success: false,
-          binaryPath: undefined,
-          pathGeneration: {
-            success: true,
-            paths: [
-              '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-x64/my-test-app.app/Contents/MacOS/my-test-app',
-              '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-arm64/my-test-app.app/Contents/MacOS/my-test-app',
-              '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-universal/my-test-app.app/Contents/MacOS/my-test-app',
-            ],
-            errors: [],
+          ok: false,
+          error: {
+            pathGeneration: {
+              ok: true,
+              value: {
+                paths: [
+                  '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-x64/my-test-app.app/Contents/MacOS/my-test-app',
+                  '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-arm64/my-test-app.app/Contents/MacOS/my-test-app',
+                  '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-universal/my-test-app.app/Contents/MacOS/my-test-app',
+                ],
+              },
+            },
+            pathValidation: {
+              ok: false,
+              error: {
+                attempts: [
+                  {
+                    path: '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-x64/my-test-app.app/Contents/MacOS/my-test-app',
+                    valid: false,
+                    error: {
+                      type: 'FILE_NOT_FOUND',
+                      message: 'ENOENT: no such file or directory',
+                      code: 'ENOENT',
+                    },
+                  },
+                  {
+                    path: '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-arm64/my-test-app.app/Contents/MacOS/my-test-app',
+                    valid: false,
+                    error: {
+                      type: 'FILE_NOT_FOUND',
+                      message: 'ENOENT: no such file or directory',
+                      code: 'ENOENT',
+                    },
+                  },
+                  {
+                    path: '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-universal/my-test-app.app/Contents/MacOS/my-test-app',
+                    valid: false,
+                    error: {
+                      type: 'FILE_NOT_FOUND',
+                      message: 'ENOENT: no such file or directory',
+                      code: 'ENOENT',
+                    },
+                  },
+                ],
+              },
+            },
           },
-          pathValidation: {
-            success: false,
-            validPath: undefined,
-            attempts: [
-              {
-                path: '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-x64/my-test-app.app/Contents/MacOS/my-test-app',
-                valid: false,
-                error: {
-                  type: 'FILE_NOT_FOUND',
-                  message: 'ENOENT: no such file or directory',
-                  code: 'ENOENT',
-                },
-              },
-              {
-                path: '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-arm64/my-test-app.app/Contents/MacOS/my-test-app',
-                valid: false,
-                error: {
-                  type: 'FILE_NOT_FOUND',
-                  message: 'ENOENT: no such file or directory',
-                  code: 'ENOENT',
-                },
-              },
-              {
-                path: '/Users/sam/Workspace/wdio-electron-service/fixtures/config-formats/forge-dependency-inline-config/out/my-test-app-darwin-universal/my-test-app.app/Contents/MacOS/my-test-app',
-                valid: false,
-                error: {
-                  type: 'FILE_NOT_FOUND',
-                  message: 'ENOENT: no such file or directory',
-                  code: 'ENOENT',
-                },
-              },
-            ],
-          },
-        } as BinaryPathResult);
+        } as unknown as BinaryPathResult);
         instance = new LaunchService(
           options,
           [] as never,
@@ -344,29 +352,32 @@ describe('Electron Launch Service', () => {
       it('should throw an error when the detected app path does not exist for an electron-builder dependency', async () => {
         delete options.appBinaryPath;
         (getBinaryPath as Mock).mockResolvedValueOnce({
-          success: false,
-          binaryPath: undefined,
-          pathGeneration: {
-            success: true,
-            paths: ['<expected binary path>'],
-            errors: [],
-          },
-          pathValidation: {
-            success: false,
-            validPath: undefined,
-            attempts: [
-              {
-                path: '<expected binary path>',
-                valid: false,
-                error: {
-                  type: 'FILE_NOT_FOUND',
-                  message: 'ENOENT: no such file or directory',
-                  code: 'ENOENT',
-                },
+          ok: false,
+          error: {
+            pathGeneration: {
+              ok: true,
+              value: {
+                paths: ['<expected binary path>'],
               },
-            ],
+            },
+            pathValidation: {
+              ok: false,
+              error: {
+                attempts: [
+                  {
+                    path: '<expected binary path>',
+                    valid: false,
+                    error: {
+                      type: 'FILE_NOT_FOUND',
+                      message: 'ENOENT: no such file or directory',
+                      code: 'ENOENT',
+                    },
+                  },
+                ],
+              },
+            },
           },
-        } as BinaryPathResult);
+        } as unknown as BinaryPathResult);
         (getAppBuildInfo as Mock).mockResolvedValueOnce({
           appName: 'my-test-app',
           isForge: false,
@@ -657,24 +668,29 @@ describe('Electron Launch Service', () => {
       it('should set the expected capabilities when the detected app path exists for a Forge dependency', async () => {
         delete options.appBinaryPath;
         (getBinaryPath as Mock).mockResolvedValueOnce({
-          success: true,
-          binaryPath: 'workspace/my-test-app/out/my-test-app',
-          pathGeneration: {
-            success: true,
-            paths: ['workspace/my-test-app/out/my-test-app'],
-            errors: [],
-          },
-          pathValidation: {
-            success: true,
-            validPath: 'workspace/my-test-app/out/my-test-app',
-            attempts: [
-              {
-                path: 'workspace/my-test-app/out/my-test-app',
-                valid: true,
+          ok: true,
+          value: {
+            binaryPath: 'workspace/my-test-app/out/my-test-app',
+            pathGeneration: {
+              ok: true,
+              value: {
+                paths: ['workspace/my-test-app/out/my-test-app'],
               },
-            ],
+            },
+            pathValidation: {
+              ok: true,
+              value: {
+                validPath: 'workspace/my-test-app/out/my-test-app',
+                attempts: [
+                  {
+                    path: 'workspace/my-test-app/out/my-test-app',
+                    valid: true,
+                  },
+                ],
+              },
+            },
           },
-        } as BinaryPathResult);
+        } as unknown as BinaryPathResult);
         instance = new LaunchService(
           options,
           [] as never,
@@ -709,24 +725,29 @@ describe('Electron Launch Service', () => {
       it('should set the expected capabilities when the detected app path exists for an electron-builder dependency', async () => {
         delete options.appBinaryPath;
         (getBinaryPath as Mock).mockResolvedValueOnce({
-          success: true,
-          binaryPath: 'workspace/my-test-app/dist/my-test-app',
-          pathGeneration: {
-            success: true,
-            paths: ['workspace/my-test-app/dist/my-test-app'],
-            errors: [],
-          },
-          pathValidation: {
-            success: true,
-            validPath: 'workspace/my-test-app/dist/my-test-app',
-            attempts: [
-              {
-                path: 'workspace/my-test-app/dist/my-test-app',
-                valid: true,
+          ok: true,
+          value: {
+            binaryPath: 'workspace/my-test-app/dist/my-test-app',
+            pathGeneration: {
+              ok: true,
+              value: {
+                paths: ['workspace/my-test-app/dist/my-test-app'],
               },
-            ],
+            },
+            pathValidation: {
+              ok: true,
+              value: {
+                validPath: 'workspace/my-test-app/dist/my-test-app',
+                attempts: [
+                  {
+                    path: 'workspace/my-test-app/dist/my-test-app',
+                    valid: true,
+                  },
+                ],
+              },
+            },
           },
-        } as BinaryPathResult);
+        } as unknown as BinaryPathResult);
         (getAppBuildInfo as Mock).mockResolvedValueOnce({
           appName: 'my-test-app',
           isForge: false,

@@ -82,27 +82,38 @@ export async function validateBinaryPaths(binaryPaths: string[]): Promise<PathVa
     }
   }
 
-  const success = validPath !== undefined;
+  const ok = validPath !== undefined;
 
-  if (success && attempts.filter((a) => a.valid).length > 1) {
+  if (ok && attempts.filter((a) => a.valid).length > 1) {
     const executablePaths = attempts.filter((a) => a.valid).map((a) => a.path);
     log.info(`Detected multiple app binaries, using the first one: \n${executablePaths.join(', \n')}`);
   }
 
+  if (ok && validPath) {
+    return {
+      ok: true,
+      value: {
+        validPath,
+        attempts,
+      },
+    };
+  }
+
   return {
-    success,
-    validPath,
-    attempts,
+    ok: false,
+    error: {
+      attempts,
+    },
   };
 }
 
 export async function selectExecutable(binaryPaths: string[]): Promise<string> {
   const result = await validateBinaryPaths(binaryPaths);
 
-  if (!result.success || !result.validPath) {
+  if (!result.ok) {
     const pathsList = binaryPaths.join(', \n');
     throw new Error(`No executable binary found, checked: \n${pathsList}`);
   }
 
-  return result.validPath;
+  return result.value.validPath;
 }

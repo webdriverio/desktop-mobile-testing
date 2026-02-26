@@ -1,3 +1,4 @@
+import type { MockResult } from '@wdio/native-spy';
 import type { ChainablePromiseArray, ChainablePromiseElement } from 'webdriverio';
 
 // ============================================================================
@@ -41,25 +42,15 @@ export type { BaseWithExecute, BrowserBase, ElementBase, SelectorsBase };
 // ============================================================================
 
 /**
- * Mock result type - shared between Electron and Tauri mocking
+ * Mock result type - re-exported from native-spy for consistency
  */
-export enum MockResultType {
-  Return = 'return',
-  Throw = 'throw',
-}
+export type { MockResult, MockResultType } from '@wdio/native-spy';
 
 /**
- * Mock result - shared between Electron and Tauri mocking
+ * Service mock context - shared between Electron and Tauri mocking
+ * Tracks mock call history and results at the service level
  */
-export type MockResult = {
-  type: MockResultType;
-  value: unknown;
-};
-
-/**
- * Mock context - shared between Electron and Tauri mocking
- */
-export interface MockContext {
+export interface ServiceMockContext {
   /**
    * This is an array containing all arguments for each call. Each item of the array is the arguments of that call.
    */

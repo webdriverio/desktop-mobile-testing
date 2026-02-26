@@ -1,6 +1,6 @@
 import type { OfficialArch } from '@electron/packager';
 import type { ForgeConfig as ElectronForgeConfig } from '@electron-forge/shared-types';
-import type { Mock, fn as vitestFn } from '@wdio/native-spy';
+import type { Mock, MockResultType, fn as vitestFn } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { ArchType } from 'builder-util';
 import type * as Electron from 'electron';
@@ -11,9 +11,8 @@ import type {
   BaseServiceOptions,
   BrowserBase,
   LogLevel,
-  MockContext,
   MockOverride,
-  MockResultType,
+  ServiceMockContext,
 } from './shared.js';
 
 // ============================================================================
@@ -292,24 +291,32 @@ export interface PathValidationAttempt {
   error?: PathValidationError;
 }
 
-export interface PathGenerationResult {
-  success: boolean;
-  paths: string[];
-  errors: PathGenerationError[];
-}
+/**
+ * Path generation result using standard Result pattern
+ * Check `result.ok` to determine success, then access `result.value` or `result.error`
+ */
+export type PathGenerationResult =
+  | { ok: true; value: { paths: string[]; warnings?: PathGenerationError[] } }
+  | { ok: false; error: { errors: PathGenerationError[] } };
 
-export interface PathValidationResult {
-  success: boolean;
-  validPath?: string;
-  attempts: PathValidationAttempt[];
-}
+/**
+ * Path validation result using standard Result pattern
+ * Check `result.ok` to determine success, then access `result.value` or `result.error`
+ */
+export type PathValidationResult =
+  | { ok: true; value: { validPath: string; attempts: PathValidationAttempt[] } }
+  | { ok: false; error: { attempts: PathValidationAttempt[] } };
 
-export interface BinaryPathResult {
-  success: boolean;
-  binaryPath?: string;
-  pathGeneration: PathGenerationResult;
-  pathValidation: PathValidationResult;
-}
+/**
+ * Binary path resolution result using standard Result pattern
+ * Check `result.ok` to determine success, then access `result.value` or `result.error`
+ */
+export type BinaryPathResult =
+  | {
+      ok: true;
+      value: { binaryPath: string; pathGeneration: PathGenerationResult; pathValidation: PathValidationResult };
+    }
+  | { ok: false; error: { pathGeneration: PathGenerationResult; pathValidation: PathValidationResult } };
 
 export type ExecuteOpts = {
   internal?: boolean;
@@ -324,7 +331,7 @@ type ElectronMockResult = {
   value: unknown;
 };
 
-interface ElectronMockContext extends MockContext {
+interface ElectronMockContext extends ServiceMockContext {
   results: ElectronMockResult[];
 }
 

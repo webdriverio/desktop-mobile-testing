@@ -53,14 +53,13 @@ export type {
   Fn,
   LogCaptureConfig,
   LogLevel,
-  MockContext,
   MockLifecycleConfig,
   MockOverride,
   MockResult,
   Result,
   SelectorsBase,
+  ServiceMockContext,
 } from './shared.js';
-export { MockResultType } from './shared.js';
 
 // Tauri types
 export type {
