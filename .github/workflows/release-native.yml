@@ -14,19 +14,6 @@ on:
           - premajor
           - preminor
           - prepatch
-      packages:
-        description: 'Packages to release'
-        required: false
-        type: choice
-        default: 'all'
-        options:
-          - all
-          - native-types
-          - native-utils
-          - native-spy
-          - native-types,native-utils
-          - native-types,native-spy
-          - native-utils,native-spy
       dry_run:
         description: 'Dry run (show what would happen, make no changes)'
         required: false
@@ -64,49 +51,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Determine packages to release
-        id: packages
-        run: |
-          SELECTED="${{ inputs.packages }}"
-          echo "Selected packages: $SELECTED"
-          echo ""
-          
-          # Function to check if a package is selected
-          is_selected() {
-            case "$SELECTED" in
-              all) return 0 ;;
-              *"$1"*) return 0 ;;
-              *) return 1 ;;
-            esac
-          }
-          
-          # Set output variables for each package
-          if is_selected "native-types"; then
-            echo "types=true" >> $GITHUB_OUTPUT
-            echo "📦 Will release @wdio/native-types"
-          else
-            echo "types=false" >> $GITHUB_OUTPUT
-            echo "📦 Skipping @wdio/native-types"
-          fi
-          
-          if is_selected "native-utils"; then
-            echo "utils=true" >> $GITHUB_OUTPUT
-            echo "📦 Will release @wdio/native-utils"
-          else
-            echo "utils=false" >> $GITHUB_OUTPUT
-            echo "📦 Skipping @wdio/native-utils"
-          fi
-          
-          if is_selected "native-spy"; then
-            echo "spy=true" >> $GITHUB_OUTPUT
-            echo "📦 Will release @wdio/native-spy"
-          else
-            echo "spy=false" >> $GITHUB_OUTPUT
-            echo "📦 Skipping @wdio/native-spy"
-          fi
-
       - name: Build packages
-        run: pnpm turbo run build --filter='@wdio/native-types...' --filter='@wdio/native-utils...' --filter='@wdio/native-spy...'
+        run: pnpm turbo run build --filter='@wdio/native-types...' --filter='@wdio/native-utils...'
 
       - name: Calculate versions
         id: version
@@ -115,51 +61,36 @@ jobs:
           echo "Release type: ${{ inputs.release_version }}"
           echo ""
 
-          # Calculate version for native-types (if selected)
-          if [[ "${{ steps.packages.outputs.types }}" == "true" ]]; then
-            echo "📦 Processing @wdio/native-types..."
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types"
-            TYPES_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types)
-            echo "Raw output:"
-            echo "$TYPES_RESULT" | head -20
-            TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
-            TYPES_CURRENT=$(echo "$TYPES_RESULT" | jq -r '.updates[0].oldVersion // empty')
-            echo "types_version=$TYPES_VERSION" >> $GITHUB_OUTPUT
-            echo "types_current=$TYPES_CURRENT" >> $GITHUB_OUTPUT
-          fi
+          # Calculate version for native-types
+          echo "📦 Processing @wdio/native-types..."
+          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types"
+          TYPES_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types)
+          echo "Raw output:"
+          echo "$TYPES_RESULT" | head -20
+          TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
+          TYPES_CURRENT=$(echo "$TYPES_RESULT" | jq -r '.updates[0].oldVersion // empty')
 
-          # Calculate version for native-utils (if selected)
-          if [[ "${{ steps.packages.outputs.utils }}" == "true" ]]; then
-            echo "📦 Processing @wdio/native-utils..."
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils"
-            UTILS_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils)
-            echo "Raw output:"
-            echo "$UTILS_RESULT" | head -20
-            UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
-            UTILS_CURRENT=$(echo "$UTILS_RESULT" | jq -r '.updates[0].oldVersion // empty')
-            echo "utils_version=$UTILS_VERSION" >> $GITHUB_OUTPUT
-            echo "utils_current=$UTILS_CURRENT" >> $GITHUB_OUTPUT
-          fi
+          # Calculate version for native-utils
+          echo "📦 Processing @wdio/native-utils..."
+          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils"
+          UTILS_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils)
+          echo "Raw output:"
+          echo "$UTILS_RESULT" | head -20
+          UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
+          UTILS_CURRENT=$(echo "$UTILS_RESULT" | jq -r '.updates[0].oldVersion // empty')
 
-          # Calculate version for native-spy (if selected)
-          if [[ "${{ steps.packages.outputs.spy }}" == "true" ]]; then
-            echo "📦 Processing @wdio/native-spy..."
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-spy"
-            SPY_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-spy)
-            echo "Raw output:"
-            echo "$SPY_RESULT" | head -20
-            SPY_VERSION=$(echo "$SPY_RESULT" | jq -r '.updates[0].newVersion // empty')
-            SPY_CURRENT=$(echo "$SPY_RESULT" | jq -r '.updates[0].oldVersion // empty')
-            echo "spy_version=$SPY_VERSION" >> $GITHUB_OUTPUT
-            echo "spy_current=$SPY_CURRENT" >> $GITHUB_OUTPUT
+          if [ -z "$TYPES_VERSION" ] || [ -z "$UTILS_VERSION" ]; then
+            echo "❌ Failed to calculate versions"
+            echo "TYPES_VERSION: '$TYPES_VERSION'"
+            echo "UTILS_VERSION: '$UTILS_VERSION'"
+            exit 1
           fi
 
           echo ""
           echo "📋 VERSION CALCULATION RESULTS:"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          [[ "${{ steps.packages.outputs.types }}" == "true" ]] && echo "📦 @wdio/native-types: ${{ steps.version.outputs.types_current }} → ${{ steps.version.outputs.types_version }}"
-          [[ "${{ steps.packages.outputs.utils }}" == "true" ]] && echo "📦 @wdio/native-utils: ${{ steps.version.outputs.utils_current }} → ${{ steps.version.outputs.utils_version }}"
-          [[ "${{ steps.packages.outputs.spy }}" == "true" ]] && echo "📦 @wdio/native-spy: ${{ steps.version.outputs.spy_current }} → ${{ steps.version.outputs.spy_version }}"
+          echo "📦 @wdio/native-types: $TYPES_CURRENT → $TYPES_VERSION"
+          echo "📦 @wdio/native-utils: $UTILS_CURRENT → $UTILS_VERSION"
           echo ""
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
@@ -173,43 +104,30 @@ jobs:
             echo "📋 Live release would additionally:"
             echo "  • Update package.json versions"
             echo "  • Generate and commit changelogs"
-            echo "  • Create git tags for selected packages"
+            echo "  • Create git tags: @wdio/native-types@v$TYPES_VERSION, @wdio/native-utils@v$UTILS_VERSION"
             echo "  • Push commits to repository"
             echo "  • Actually publish packages to NPM"
             echo "  • Create GitHub releases"
             echo ""
           fi
 
+          echo "types_version=$TYPES_VERSION" >> $GITHUB_OUTPUT
+          echo "utils_version=$UTILS_VERSION" >> $GITHUB_OUTPUT
+
       - name: Update package versions
-        if: ${{ !inputs.dry_run && (steps.packages.outputs.types == 'true' || steps.packages.outputs.utils == 'true' || steps.packages.outputs.spy == 'true') }}
+        if: ${{ !inputs.dry_run }}
         run: |
           # Configure git first (needed by package-versioner for commits)
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           echo "Updating native-types to ${{ steps.version.outputs.types_version }}..."
-          if [[ "${{ steps.packages.outputs.types }}" == "true" ]]; then
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
-          else
-            echo "Skipping (not selected)"
-          fi
+          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
+          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
 
           echo "Updating native-utils to ${{ steps.version.outputs.utils_version }}..."
-          if [[ "${{ steps.packages.outputs.utils }}" == "true" ]]; then
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
-          else
-            echo "Skipping (not selected)"
-          fi
-
-          echo "Updating native-spy to ${{ steps.version.outputs.spy_version }}..."
-          if [[ "${{ steps.packages.outputs.spy }}" == "true" ]]; then
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-spy"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-spy
-          else
-            echo "Skipping (not selected)"
-          fi
+          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
+          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
 
           # Show what was created
           echo ""
@@ -232,7 +150,6 @@ jobs:
           pnpm config set registry "https://registry.npmjs.org/"
 
       - name: Publish to NPM
-        if: ${{ !inputs.dry_run && (steps.packages.outputs.types == 'true' || steps.packages.outputs.utils == 'true' || steps.packages.outputs.spy == 'true') }}
         env:
           NPM_CONFIG_PROVENANCE: true
         run: |
@@ -244,34 +161,8 @@ jobs:
             DRY_RUN_FLAG=""
           fi
 
-          if [[ "${{ steps.packages.outputs.types }}" == "true" ]]; then
-            echo "Publishing @wdio/native-types@${{ steps.version.outputs.types_version }}..."
-            cd packages/native-types
-            pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
-            cd ../..
-          fi
-
-          if [[ "${{ steps.packages.outputs.utils }}" == "true" ]]; then
-            echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
-            cd packages/native-utils
-            pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
-            cd ../..
-          fi
-
-          if [[ "${{ steps.packages.outputs.spy }}" == "true" ]]; then
-            echo "Publishing @wdio/native-spy@${{ steps.version.outputs.spy_version }}..."
-            cd packages/native-spy
-            pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
-            cd ../..
-          fi
-
-          echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
-          cd packages/native-utils
-          pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
-          cd ../..
-
-          echo "Publishing @wdio/native-spy@${{ steps.version.outputs.spy_version }}..."
-          cd packages/native-spy
+          echo "Publishing @wdio/native-types@${{ steps.version.outputs.types_version }}..."
+          cd packages/native-types
           pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
           cd ../..
 
@@ -289,64 +180,35 @@ jobs:
           echo "✅ Version commits and tags pushed successfully"
 
       - name: Create GitHub Releases
-        if: ${{ !inputs.dry_run && (steps.packages.outputs.types == 'true' || steps.packages.outputs.utils == 'true' || steps.packages.outputs.spy == 'true') }}
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "${{ steps.packages.outputs.types }}" == "true" ]]; then
-            gh release create "@wdio/native-types@v${{ steps.version.outputs.types_version }}" \
-              --title "@wdio/native-types v${{ steps.version.outputs.types_version }}" \
-              --notes-file packages/native-types/CHANGELOG.md \
-              --latest=false
-          fi
+          # Create release for native-types
+          gh release create "@wdio/native-types@v${{ steps.version.outputs.types_version }}" \
+            --title "@wdio/native-types v${{ steps.version.outputs.types_version }}" \
+            --notes-file packages/native-types/CHANGELOG.md \
+            --latest=false
 
-          if [[ "${{ steps.packages.outputs.utils }}" == "true" ]]; then
-            gh release create "@wdio/native-utils@v${{ steps.version.outputs.utils_version }}" \
-              --title "@wdio/native-utils v${{ steps.version.outputs.utils_version }}" \
-              --notes-file packages/native-utils/CHANGELOG.md \
-              --latest=false
-          fi
-
-          if [[ "${{ steps.packages.outputs.spy }}" == "true" ]]; then
-            gh release create "@wdio/native-spy@v${{ steps.version.outputs.spy_version }}" \
-              --title "@wdio/native-spy v${{ steps.version.outputs.spy_version }}" \
-              --notes-file packages/native-spy/CHANGELOG.md \
-              --latest=false
-          fi
+          # Create release for native-utils
+          gh release create "@wdio/native-utils@v${{ steps.version.outputs.utils_version }}" \
+            --title "@wdio/native-utils v${{ steps.version.outputs.utils_version }}" \
+            --notes-file packages/native-utils/CHANGELOG.md \
+            --latest=false
 
       - name: Summary
         run: |
           echo "## 📦 Native Packages Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Release Type:** ${{ inputs.release_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Packages:** ${{ inputs.packages }}" >> $GITHUB_STEP_SUMMARY
           echo "**Mode:** ${{ inputs.dry_run && '🧪 Dry Run' || '🚀 Live Release' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 📋 Package Versions" >> $GITHUB_STEP_SUMMARY
           echo "| Package | Target Version | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|----------------|--------|" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ "${{ steps.packages.outputs.types }}" == "true" ]]; then
-            STATUS="${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }}"
-            echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | $STATUS |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @wdio/native-types | - | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [[ "${{ steps.packages.outputs.utils }}" == "true" ]]; then
-            STATUS="${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }}"
-            echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | $STATUS |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @wdio/native-utils | - | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [[ "${{ steps.packages.outputs.spy }}" == "true" ]]; then
-            STATUS="${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }}"
-            echo "| @wdio/native-spy | ${{ steps.version.outputs.spy_version }} | $STATUS |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @wdio/native-spy | - | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | ${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | ${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
