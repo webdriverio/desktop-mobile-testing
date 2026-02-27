@@ -14,7 +14,7 @@ on:
       build-command:
         description: 'Build command for Tauri app (build or build:debug)'
         type: string
-        default: 'build:debug'
+        default: 'build'
       build_id:
         description: 'Build ID from the main build job'
         type: string
