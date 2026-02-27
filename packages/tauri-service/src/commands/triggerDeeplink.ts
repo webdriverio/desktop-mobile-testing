@@ -244,19 +244,23 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
       const charCodes = Array.from(validatedUrl)
         .map((c) => c.charCodeAt(0))
         .join(',');
-      const script = `(function() {
-        var charCodes = [${charCodes}];
-        var url = String.fromCharCode.apply(null, charCodes);
-        if (typeof window.receivedDeeplinks === 'undefined') {
-          window.receivedDeeplinks = [];
+      // Use arrow function format - same as working checks in the test
+      const script = `() => {
+        try {
+          var charCodes = [${charCodes}];
+          var url = String.fromCharCode.apply(null, charCodes);
+          if (typeof window.receivedDeeplinks === 'undefined') {
+            window.receivedDeeplinks = [];
+          }
+          window.receivedDeeplinks.push(url);
+          if (typeof window.deeplinkCount === 'undefined') {
+            window.deeplinkCount = 0;
+          }
+          window.deeplinkCount++;
+        } catch (e) {
+          console.error('[WDIO Deeplink] Error:', e.message);
         }
-        window.receivedDeeplinks.push(url);
-        if (typeof window.deeplinkCount === 'undefined') {
-          window.deeplinkCount = 0;
-        }
-        window.deeplinkCount++;
-        console.log('[WDIO Deeplink] Injected: ' + url);
-      })();`;
+      }`;
       await this.browser.execute(script);
 
       log.info(`Deeplink injected successfully: ${validatedUrl}`);
