@@ -240,29 +240,23 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
     }
 
     try {
-      // Use JSON.stringify to properly escape the URL for JavaScript injection
-      const urlJson = JSON.stringify(validatedUrl);
-      const script = `
-        (function() {
-          const url = ${urlJson};
-          // Push to receivedDeeplinks array (used by test app)
-          if (typeof window.receivedDeeplinks === 'undefined') {
-            window.receivedDeeplinks = [];
-          }
-          window.receivedDeeplinks.push(url);
-
-          // Update count
-          if (typeof window.deeplinkCount === 'undefined') {
-            window.deeplinkCount = 0;
-          }
-          window.deeplinkCount++;
-
-          // Emit event for listeners
-          window.dispatchEvent(new CustomEvent('deeplink-received', { detail: url });
-
-          console.log('[WDIO Deeplink] Injected: ' + url);
-        })();
-      `;
+      // Build URL using char codes to avoid WebKit parsing the URL string literally
+      const charCodes = Array.from(validatedUrl)
+        .map((c) => c.charCodeAt(0))
+        .join(',');
+      const script = `(function() {
+        var charCodes = [${charCodes}];
+        var url = String.fromCharCode.apply(null, charCodes);
+        if (typeof window.receivedDeeplinks === 'undefined') {
+          window.receivedDeeplinks = [];
+        }
+        window.receivedDeeplinks.push(url);
+        if (typeof window.deeplinkCount === 'undefined') {
+          window.deeplinkCount = 0;
+        }
+        window.deeplinkCount++;
+        console.log('[WDIO Deeplink] Injected: ' + url);
+      })();`;
       await this.browser.execute(script);
 
       log.info(`Deeplink injected successfully: ${validatedUrl}`);
