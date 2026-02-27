@@ -258,7 +258,7 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
           window.deeplinkCount++;
 
           // Emit event for listeners
-          window.dispatchEvent(new CustomEvent('deeplink-received', { detail: url }));
+          window.dispatchEvent(new CustomEvent('deeplink-received', { detail: url });
 
           console.log('[WDIO Deeplink] Injected: ' + url);
         })();
