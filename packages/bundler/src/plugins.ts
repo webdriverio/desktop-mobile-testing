@@ -28,8 +28,35 @@ export const getPackageJsonSource = (name: NormalizedPackageJson['name'], type: 
   private: true,
 });
 
-export const emitPackageJsonPlugin = (name: NormalizedPackageJson['name'], type: SourceCodeType): Plugin => {
-  const source = JSON.stringify(getPackageJsonSource(name, type), null, '  ');
+export const emitPackageJsonPlugin = (
+  name: NormalizedPackageJson['name'],
+  type: SourceCodeType,
+  options?: {
+    bundledPackages?: string[];
+    originalDependencies?: Record<string, string>;
+  },
+): Plugin => {
+  let source: string;
+
+  if (options?.bundledPackages && options.bundledPackages.length > 0 && options.originalDependencies) {
+    // Filter out bundled packages from dependencies
+    const filteredDeps: Record<string, string> = {};
+    for (const [key, value] of Object.entries(options.originalDependencies)) {
+      if (!options.bundledPackages.includes(key)) {
+        filteredDeps[key] = value;
+      }
+    }
+
+    const packageJson = {
+      name: `${name}-${type}`,
+      type: getTypeValue(type),
+      private: true,
+      ...(Object.keys(filteredDeps).length > 0 ? { dependencies: filteredDeps } : {}),
+    };
+    source = JSON.stringify(packageJson, null, '  ');
+  } else {
+    source = JSON.stringify(getPackageJsonSource(name, type), null, '  ');
+  }
 
   return {
     name: 'rollup-wdio-emit-package-json',

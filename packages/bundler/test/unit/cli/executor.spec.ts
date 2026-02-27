@@ -311,5 +311,50 @@ describe('RollupExecutor', () => {
         source: '',
       });
     });
+
+    it('should use plugin code when emit-package-json has code property', async () => {
+      const mockConfig = {
+        configs: [
+          {
+            format: 'esm',
+            input: { index: 'src/index.ts' },
+            output: {
+              format: 'esm',
+              dir: 'dist/esm',
+              sourcemap: true,
+              plugins: [
+                {
+                  name: 'emit-package-json',
+                  code: `{
+  name: 'emit-package-json',
+  generateBundle(options, bundle) {
+    const source = { type: 'module', dependencies: { foo: '^1.0.0' } };
+    this.emitFile({ type: 'asset', fileName: 'package.json', source: JSON.stringify(source) });
+  }
+}`,
+                },
+              ],
+            },
+            plugins: [{ name: 'typescript' }],
+          },
+        ],
+      };
+
+      await executor.executeBuild(mockConfig as any, '/test/package', false);
+
+      const rollupCall = mockRollup.mock.calls[0][0];
+      const outputPlugins = (rollupCall.output as any).plugins;
+      expect(outputPlugins[0].name).toBe('emit-package-json');
+
+      const mockThis = {
+        emitFile: vi.fn(),
+      };
+      outputPlugins[0].generateBundle.call(mockThis);
+      expect(mockThis.emitFile).toHaveBeenCalledWith({
+        type: 'asset',
+        fileName: 'package.json',
+        source: JSON.stringify({ type: 'module', dependencies: { foo: '^1.0.0' } }),
+      });
+    });
   });
 });

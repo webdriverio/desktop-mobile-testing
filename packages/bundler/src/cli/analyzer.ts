@@ -58,6 +58,7 @@ export class PackageAnalyzer {
       input,
       outDir,
       dependencies,
+      dependenciesObj: packageJson.dependencies || {},
       devDependencies,
       peerDependencies: Object.keys(packageJson.peerDependencies || {}),
     };
@@ -136,18 +137,43 @@ export class PackageAnalyzer {
   /**
    * Create emit package.json inline plugin
    */
-  createEmitPackageJsonPlugin(_packageName: string, format: 'esm' | 'cjs'): InlinePluginSpec {
-    const packageContent = format === 'esm' ? '{ "type": "module" }' : '{ "type": "commonjs" }';
+  createEmitPackageJsonPlugin(
+    _packageName: string,
+    format: 'esm' | 'cjs',
+    bundledPackages: string[] = [],
+    originalDependencies: Record<string, string> = {},
+  ): InlinePluginSpec {
+    // Pass options to runtime so they can be evaluated when generateBundle is called
+    const optionsJson = JSON.stringify({ bundledPackages, originalDependencies });
+    const formatStr = format;
 
     return {
       name: 'emit-package-json',
       code: `{
   name: 'emit-package-json',
-  generateBundle() {
+  generateBundle(options, bundle) {
+    const opts = ${optionsJson};
+    const deps = opts.originalDependencies || {};
+    const bundled = opts.bundledPackages || [];
+    
+    // Filter out bundled packages
+    const filtered = {};
+    for (const [key, val] of Object.entries(deps)) {
+      if (!bundled.includes(key)) {
+        filtered[key] = val;
+      }
+    }
+    
+    const source = {
+      name: 'emit-package-json-${formatStr}',
+      type: '${formatStr === 'esm' ? 'module' : 'commonjs'}',
+      ...(Object.keys(filtered).length > 0 ? { dependencies: filtered } : {})
+    };
+    
     this.emitFile({
       type: 'asset',
       fileName: 'package.json',
-      source: ${JSON.stringify(packageContent)}
+      source: JSON.stringify(source)
     });
   }
 }`,

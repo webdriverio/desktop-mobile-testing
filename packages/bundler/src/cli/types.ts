@@ -59,6 +59,7 @@ export interface PackageInfo {
     cjs: string;
   };
   dependencies: string[];
+  dependenciesObj: Record<string, string>;
   devDependencies: string[];
   peerDependencies: string[];
 }
