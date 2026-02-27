@@ -3,7 +3,7 @@ import '@wdio/native-types';
 import path from 'node:path';
 import process from 'node:process';
 import url from 'node:url';
-import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../../lib/utils.js';
+import { assertLogContains, findLogEntries, getLogDirName, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
@@ -12,7 +12,8 @@ const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' 
 const isCrabNebula = driverProvider === 'crabnebula';
 
 function getMultiremoteLogDir() {
-  return path.join(__dirname, '..', '..', '..', 'logs', `${driverProvider}-multiremote-tauri`);
+  const logDirName = getLogDirName('multiremote', 'tauri', driverProvider);
+  return path.join(__dirname, '..', '..', '..', 'logs', logDirName);
 }
 
 describe('Tauri Log Integration - Multiremote', () => {
