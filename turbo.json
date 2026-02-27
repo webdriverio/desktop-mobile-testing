@@ -188,14 +188,10 @@
       "outputs": ["dist/**", "out/**"]
     },
     "tauri-e2e-app#build": {
-      "dependsOn": ["@wdio/tauri-plugin#build:js", "tauri-e2e-app#build:web", "^build"],
-      "outputs": ["src-tauri/target/**"]
-    },
-    "tauri-app-example#build": {
       "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
       "outputs": ["src-tauri/target/**"]
     },
-    "tauri-app-example#build:debug": {
+    "tauri-app-example#build": {
       "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
       "outputs": ["src-tauri/target/**"]
     }
