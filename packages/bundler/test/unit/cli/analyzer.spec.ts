@@ -79,6 +79,7 @@ describe('PackageAnalyzer', () => {
         dependencies: ['dep1'],
         devDependencies: ['dev-dep1'],
         peerDependencies: ['peer-dep1'],
+        dependenciesObj: { dep1: '^1.0.0' },
       });
     });
 
@@ -377,18 +378,33 @@ describe('PackageAnalyzer', () => {
   });
 
   describe('createEmitPackageJsonPlugin', () => {
-    it('should create ESM package.json plugin', () => {
+    it('should create ESM package.json plugin with dynamic type detection', () => {
       const plugin = analyzer.createEmitPackageJsonPlugin('@test/package', 'esm');
 
       expect(plugin.name).toBe('emit-package-json');
-      expect(plugin.code).toContain('"{ \\"type\\": \\"module\\" }"');
+      expect(plugin.code).toContain("type: 'module'");
+      expect(plugin.code).toContain('generateBundle');
     });
 
-    it('should create CJS package.json plugin', () => {
+    it('should create CJS package.json plugin with dynamic type detection', () => {
       const plugin = analyzer.createEmitPackageJsonPlugin('@test/package', 'cjs');
 
       expect(plugin.name).toBe('emit-package-json');
-      expect(plugin.code).toContain('"{ \\"type\\": \\"commonjs\\" }"');
+      expect(plugin.code).toContain("type: 'commonjs'");
+      expect(plugin.code).toContain('generateBundle');
+    });
+
+    it('should filter out bundled packages from dependencies', () => {
+      const plugin = analyzer.createEmitPackageJsonPlugin('@test/package', 'esm', ['fast-copy', '@wdio/native-spy'], {
+        'fast-copy': '^2.0.0',
+        '@wdio/native-spy': '^1.0.0',
+        debug: '^4.0.0',
+      });
+
+      expect(plugin.name).toBe('emit-package-json');
+      expect(plugin.code).toContain('bundledPackages');
+      expect(plugin.code).toContain('filtered');
+      expect(plugin.code).toContain('debug');
     });
   });
 });

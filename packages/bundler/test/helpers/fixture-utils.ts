@@ -34,3 +34,12 @@ export function getBundlerFixturePath(moduleType: 'cjs' | 'esm', fixtureName: st
 export function getFixturePackagePath(fixtureType: string, fixtureName: string): string {
   return getFixturePath(fixtureType, fixtureName, 'package.json');
 }
+
+/**
+ * Get path to a package in the monorepo
+ * @param packageName - The package name (e.g., 'electron-service')
+ * @returns Path to the package directory
+ */
+export function getMonorepoPackagePath(packageName: string): string {
+  return path.resolve(__dirname, '..', '..', '..', '..', 'packages', packageName);
+}

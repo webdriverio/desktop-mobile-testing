@@ -166,21 +166,41 @@ export class RollupExecutor {
         exports: 'named', // Always use named exports to avoid mixed export warnings
         dynamicImportInCjs: configSpec.output.dynamicImportInCjs,
         plugins:
-          configSpec.output.plugins?.map((plugin) => ({
-            name: plugin.name,
-            generateBundle() {
-              (this as { emitFile: (options: { type: 'asset'; fileName: string; source: string }) => void }).emitFile({
-                type: 'asset' as const,
-                fileName: 'package.json',
-                source:
-                  plugin.name === 'emit-package-json'
-                    ? configSpec.output.format === 'esm'
-                      ? '{ "type": "module" }'
-                      : '{ "type": "commonjs" }'
-                    : '',
-              });
-            },
-          })) || [],
+          configSpec.output.plugins?.map((plugin) => {
+            if (plugin.name === 'emit-package-json' && plugin.code) {
+              const createPlugin = new Function(`return ${plugin.code}`)();
+              return createPlugin;
+            } else if (plugin.name === 'emit-package-json') {
+              return {
+                name: 'emit-package-json',
+                generateBundle: () => {
+                  (
+                    this as unknown as {
+                      emitFile: (options: { type: 'asset'; fileName: string; source: string }) => void;
+                    }
+                  ).emitFile({
+                    type: 'asset' as const,
+                    fileName: 'package.json',
+                    source: configSpec.output.format === 'esm' ? '{ "type": "module" }' : '{ "type": "commonjs" }',
+                  });
+                },
+              };
+            }
+            return {
+              name: plugin.name,
+              generateBundle() {
+                (
+                  this as unknown as {
+                    emitFile: (options: { type: 'asset'; fileName: string; source: string }) => void;
+                  }
+                ).emitFile({
+                  type: 'asset' as const,
+                  fileName: 'package.json',
+                  source: '',
+                });
+              },
+            };
+          }) || [],
       },
       plugins: plugins as RollupOptions['plugins'],
     };

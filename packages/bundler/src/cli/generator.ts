@@ -64,8 +64,11 @@ export class ConfigGenerator {
     // Build plugins for this format
     const plugins = this.packageAnalyzer.buildPluginSpecs(config, packageInfo, packagePath, format);
 
+    // Extract bundled packages from transformations
+    const bundledPackages = this.extractBundledPackages(config);
+
     // Build output configuration
-    const output = this.buildOutput(packageInfo, format);
+    const output = this.buildOutput(packageInfo, format, bundledPackages);
 
     return {
       input: packageInfo.input,
@@ -76,11 +79,48 @@ export class ConfigGenerator {
   }
 
   /**
+   * Extract package names that are being bundled from transformations
+   */
+  private extractBundledPackages(config: BundlerConfig): string[] {
+    const bundled: string[] = [];
+
+    if (config.transformations) {
+      for (const transformation of config.transformations) {
+        if (transformation.type === 'injectDependency' && transformation.options) {
+          const pkgName = transformation.options.packageName as string;
+          if (pkgName && !bundled.includes(pkgName)) {
+            bundled.push(pkgName);
+          }
+        }
+      }
+    }
+
+    // Also check for bundle lists in format configs
+    if (config.cjs && typeof config.cjs === 'object' && 'bundle' in config.cjs) {
+      const cjsBundle = (config.cjs as { bundle?: string[] }).bundle;
+      if (cjsBundle) {
+        for (const pkg of cjsBundle) {
+          if (!bundled.includes(pkg)) {
+            bundled.push(pkg);
+          }
+        }
+      }
+    }
+
+    return bundled;
+  }
+
+  /**
    * Build output configuration for a format
    */
-  private buildOutput(packageInfo: PackageInfo, format: 'esm' | 'cjs'): OutputSpec {
-    // Create emit package.json plugin
-    const emitPlugin = this.packageAnalyzer.createEmitPackageJsonPlugin(packageInfo.name, format);
+  private buildOutput(packageInfo: PackageInfo, format: 'esm' | 'cjs', bundledPackages: string[]): OutputSpec {
+    // Create emit package.json plugin with bundled packages info
+    const emitPlugin = this.packageAnalyzer.createEmitPackageJsonPlugin(
+      packageInfo.name,
+      format,
+      bundledPackages,
+      packageInfo.dependenciesObj,
+    );
 
     return {
       format,

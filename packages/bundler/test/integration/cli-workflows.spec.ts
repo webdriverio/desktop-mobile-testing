@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { runBundlerBuild } from '../helpers/cli-runner.js';
-import { getBundlerFixturePath } from '../helpers/fixture-utils.js';
+import { getBundlerFixturePath, getMonorepoPackagePath } from '../helpers/fixture-utils.js';
 
 describe('CLI Workflows Integration', () => {
   let tempDir: string;
@@ -148,5 +148,50 @@ describe('CLI Workflows Integration', () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain('Build failed');
     });
+  });
+
+  describe('package.json emission', () => {
+    it('should emit package.json with correct type for ESM', async () => {
+      const fixturePath = getBundlerFixturePath('esm', 'simple-ts-config');
+
+      const result = await runBundlerBuild(fixturePath);
+
+      expect(result.exitCode).toBe(0);
+
+      const pkgJsonPath = path.join(fixturePath, 'dist', 'esm', 'package.json');
+      const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8'));
+
+      expect(pkgJson.type).toBe('module');
+    }, 30000);
+
+    it('should emit package.json with correct type for CJS', async () => {
+      const fixturePath = getBundlerFixturePath('cjs', 'simple-ts-config');
+
+      const result = await runBundlerBuild(fixturePath);
+
+      expect(result.exitCode).toBe(0);
+
+      const pkgJsonPath = path.join(fixturePath, 'dist', 'cjs', 'package.json');
+      const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf-8'));
+
+      expect(pkgJson.type).toBe('commonjs');
+    }, 30000);
+
+    it('should filter out bundled packages from output package.json', async () => {
+      const packagePath = getMonorepoPackagePath('electron-service');
+
+      const result = await runBundlerBuild(packagePath);
+
+      expect(result.exitCode).toBe(0);
+
+      const esmPkgJsonPath = path.join(packagePath, 'dist', 'esm', 'package.json');
+      const esmPkgJson = JSON.parse(await fs.readFile(esmPkgJsonPath, 'utf-8'));
+
+      expect(esmPkgJson).toHaveProperty('type', 'module');
+      expect(esmPkgJson).toHaveProperty('dependencies');
+      expect(esmPkgJson.dependencies).not.toHaveProperty('fast-copy');
+      expect(esmPkgJson.dependencies).not.toHaveProperty('@wdio/native-spy');
+      expect(esmPkgJson.dependencies).toHaveProperty('debug');
+    }, 60000);
   });
 });
