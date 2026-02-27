@@ -9,18 +9,7 @@ declare global {
 
 const { clearDeeplinkState, waitForDeeplink, waitForDeeplinkStability } = createDeeplinkHelpers(() => browser.tauri);
 
-// Skip deeplink tests for CrabNebula - browser.execute() times out due to WebDriver incompatibility
-// See: https://github.com/crabnebula-dev/test-runner-backend/issues/XXX
-const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
-const isCrabNebula = driverProvider === 'crabnebula';
-
 describe('Deeplink Testing (browser.tauri.triggerDeeplink)', () => {
-  before(function () {
-    if (isCrabNebula) {
-      this.skip();
-    }
-  });
-
   beforeEach(async () => {
     await clearDeeplinkState();
   });
