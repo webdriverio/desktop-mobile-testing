@@ -391,7 +391,7 @@ jobs:
 
   # Tauri E2E tests for Linux - only waits for E2E app build
   e2e-tauri-linux-matrix:
-    name: E2E - Tauri [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    name: E2E - Tauri Official [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [detect-changes, build, build-tauri-e2e-app-linux]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
@@ -413,7 +413,7 @@ jobs:
 
   # Tauri E2E tests for Windows
   e2e-tauri-windows-matrix:
-    name: E2E - Tauri [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
+    name: E2E - Tauri Official [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [detect-changes, build, build-tauri-e2e-app-windows]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:
@@ -435,8 +435,9 @@ jobs:
 
   # Tauri E2E tests for macOS - skipped with clear messaging
   # macOS is not supported due to WKWebView WebDriver limitations
+  # Note: Official tauri-driver doesn't work on macOS - use Embedded or CrabNebula provider instead
   e2e-tauri-macos-matrix:
-    name: E2E - Tauri (macOS)
+    name: E2E - Tauri Official [macOS]
     needs: [detect-changes, build]
     if: needs.detect-changes.outputs.run_tauri == 'true'
     strategy:

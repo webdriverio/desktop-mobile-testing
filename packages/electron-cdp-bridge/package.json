@@ -1,9 +1,9 @@
 {
   "name": "@wdio/electron-cdp-bridge",
-  "version": "10.0.0-next.2",
+  "version": "10.0.0-next.3",
   "description": "CDP Bridge for WebdriverIO Electron Service",
   "author": "Sam Maister <goosewobbler@protonmail.com>",
-  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/electron-cdp-bridge",
+  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/electron-cdp-bridge",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -63,7 +63,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio/desktop-mobile.git",
+    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
     "directory": "packages/electron-cdp-bridge"
   }
 }

@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Check repository
         run: |
-          EXPECTED_REPO="webdriverio/desktop-mobile"
+          EXPECTED_REPO="webdriverio/desktop-mobile-testing"
           CURRENT_REPO="${{ github.repository }}"
 
           if [ "$CURRENT_REPO" != "$EXPECTED_REPO" ]; then

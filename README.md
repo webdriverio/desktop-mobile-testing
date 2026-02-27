@@ -49,7 +49,7 @@
   </div>
 </h4>
 
-[`@wdio/tauri-service`](./packages/tauri-service) - Tauri applications (Windows / macOS (experimental) / Linux)
+[`@wdio/tauri-service`](./packages/tauri-service) - Tauri applications (Windows / macOS / Linux)
 
 ## Planned Support
 
