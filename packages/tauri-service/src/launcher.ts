@@ -246,7 +246,8 @@ export default class TauriLaunchService {
 
     // Start shared test-runner-backend for CrabNebula on macOS (single-driver mode only)
     // In per-worker mode, each worker spawns its own backend in onWorkerStart()
-    if (process.platform === 'darwin' && isCrabNebula && !this.perWorkerMode) {
+    // Skip for multiremote - we spawn one backend per instance in the multiremote block below
+    if (process.platform === 'darwin' && isCrabNebula && !this.perWorkerMode && !isMultiremote) {
       const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
       if (manageBackend) {
         const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
@@ -309,6 +310,71 @@ export default class TauriLaunchService {
           (value as { port?: number; hostname?: string }).port = embeddedPort;
           (value as { port?: number; hostname?: string }).hostname = hostname;
           log.info(`Set embedded WebDriver connection for ${key}: ${hostname}:${embeddedPort}`);
+        }
+      } else if (isCrabNebula) {
+        // CrabNebula provider: spawn one test-runner-backend per multiremote instance
+        log.info(`Starting ${capEntries.length} CrabNebula test-runner-backend(s) for multiremote`);
+
+        // Set CrabNebula mode info for triggerDeeplink
+        setCrabnebulaModeInfo(true);
+
+        const hostname = '127.0.0.1';
+        const basePort = mergedOptions.crabnebulaBackendPort ?? 3000;
+
+        // Allocate unique ports for each instance
+        const backendPorts: number[] = [];
+        for (let i = 0; i < capEntries.length; i++) {
+          const port = basePort + i * 2; // Use port, port+1, port+2, etc. (pair per instance)
+          await this.backendPortManager.allocatePortPair(port, port + 1);
+          backendPorts.push(port);
+        }
+
+        for (let i = 0; i < capEntries.length; i++) {
+          const [key, value] = capEntries[i];
+          const cap = value.capabilities;
+          const instanceId = String(key);
+          const instanceOptions = mergeOptions(this.options, cap['wdio:tauriServiceOptions']);
+          this.instanceOptions.set(instanceId, instanceOptions);
+
+          const backendPort = backendPorts[i];
+          log.info(`Starting CrabNebula test-runner-backend for ${key} on port ${backendPort}`);
+
+          // Start test-runner-backend for this instance
+          const { proc } = await startTestRunnerBackend({
+            port: backendPort,
+            serviceOptions: instanceOptions,
+            instanceId,
+          });
+          await waitTestRunnerBackendReady(hostname, backendPort);
+
+          // Store backend for cleanup
+          this.workerBackends.set(instanceId, { proc, port: backendPort });
+
+          // Set instance-specific REMOTE_WEBDRIVER_URL
+          // Note: This gets set on process.env which affects all subsequent tauri-driver spawns
+          // The driverPool uses this env var when spawning drivers, so we need to set it before each driver spawn
+          const originalEnv = { ...process.env };
+          process.env.REMOTE_WEBDRIVER_URL = `http://${hostname}:${backendPort}`;
+
+          // Update capabilities to use this backend
+          (value as { port?: number; hostname?: string }).port = backendPort;
+          (value as { port?: number; hostname?: string }).hostname = hostname;
+
+          // Start tauri-driver for this instance (similar to embedded pattern but uses CrabNebula backend)
+          const dataDir = generateDataDirectory(instanceId);
+          const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+          const env = { ...process.env, [envVarName]: dataDir };
+
+          try {
+            await this.startTauriDriverForInstance(instanceId, backendPort, backendPort + 1, env, instanceOptions);
+          } catch (error) {
+            throw new SevereServiceError(`Failed to start tauri-driver for ${key}: ${(error as Error).message}`);
+          }
+
+          // Restore original env for next iteration
+          process.env.REMOTE_WEBDRIVER_URL = originalEnv.REMOTE_WEBDRIVER_URL;
+
+          log.info(`Set CrabNebula connection for ${key}: ${hostname}:${backendPort}`);
         }
       } else {
         log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);

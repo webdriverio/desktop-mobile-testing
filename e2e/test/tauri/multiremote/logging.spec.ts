@@ -7,7 +7,6 @@ import { assertLogContains, findLogEntries, getLogDirName, readWdioLogs, waitFor
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-// Backend log capture doesn't work in multiremote mode - skip those tests
 const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
 
 function getMultiremoteLogDir() {
@@ -17,10 +16,6 @@ function getMultiremoteLogDir() {
 
 describe('Tauri Log Integration - Multiremote', () => {
   it('should capture backend logs per instance with instance ID', async () => {
-    // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
-    if (driverProvider === 'crabnebula') {
-      return;
-    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
@@ -100,10 +95,6 @@ describe('Tauri Log Integration - Multiremote', () => {
   });
 
   it('should capture logs independently per instance', async () => {
-    // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
-    if (driverProvider === 'crabnebula') {
-      return;
-    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
