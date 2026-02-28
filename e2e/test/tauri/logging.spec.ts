@@ -20,7 +20,7 @@ describe('Tauri Log Integration', () => {
   describe('Command Execution', () => {
     it('should capture backend logs via generate_test_logs command', async function () {
       if (isCrabNebula) {
-        this.skip(); // Backend log capture not supported for CrabNebula
+        this.skip(); // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
       }
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 

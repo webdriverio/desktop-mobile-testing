@@ -17,7 +17,7 @@ function getMultiremoteLogDir() {
 
 describe('Tauri Log Integration - Multiremote', () => {
   it('should capture backend logs per instance with instance ID', async () => {
-    // Backend log capture not supported for CrabNebula
+    // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
     if (driverProvider === 'crabnebula') {
       return;
     }
@@ -100,7 +100,7 @@ describe('Tauri Log Integration - Multiremote', () => {
   });
 
   it('should capture logs independently per instance', async () => {
-    // Backend log capture not supported for CrabNebula
+    // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
     if (driverProvider === 'crabnebula') {
       return;
     }
