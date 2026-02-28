@@ -60,7 +60,10 @@ describe('Tauri Log Integration', () => {
   });
 
   describe('Console Log Capture', () => {
-    it('should capture frontend console.log from browser.execute', async () => {
+    it('should capture frontend console.log from browser.execute', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Frontend logs don't work for CrabNebula - app stderr not forwarded by test-runner-backend
+      }
       await browser.execute(() => {
         console.info('Frontend INFO from execute');
         console.warn('Frontend WARN from execute');
@@ -81,7 +84,10 @@ describe('Tauri Log Integration', () => {
       expect(logs).toMatch(/\[Tauri:Frontend[^\]]*\].*Frontend ERROR from execute/s);
     });
 
-    it('should capture info, warn, error log levels from browser.execute', async () => {
+    it('should capture info, warn, error log levels from browser.execute', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Frontend logs don't work for CrabNebula - app stderr not forwarded by test-runner-backend
+      }
       await browser.execute(() => {
         console.info('INFO from execute');
         console.warn('WARN from execute');
@@ -102,7 +108,10 @@ describe('Tauri Log Integration', () => {
       expect(logs).toMatch(/\[Tauri:Frontend[^\]]*\].*ERROR from execute/s);
     });
 
-    it('should capture console.log with various message types', async () => {
+    it('should capture console.log with various message types', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Frontend logs don't work for CrabNebula - app stderr not forwarded by test-runner-backend
+      }
       // Use console.info for reliable capture across all driver providers
       await browser.execute(() => {
         console.info('String message');
