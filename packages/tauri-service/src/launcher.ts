@@ -340,6 +340,7 @@ export default class TauriLaunchService {
           log.info(`Starting CrabNebula test-runner-backend for ${key} on port ${backendPort}`);
 
           // Start test-runner-backend for this instance
+          // Note: For CrabNebula, we don't spawn tauri-driver - the backend handles WebDriver directly
           const { proc } = await startTestRunnerBackend({
             port: backendPort,
             serviceOptions: instanceOptions,
@@ -350,29 +351,10 @@ export default class TauriLaunchService {
           // Store backend for cleanup
           this.workerBackends.set(instanceId, { proc, port: backendPort });
 
-          // Set instance-specific REMOTE_WEBDRIVER_URL
-          // Note: This gets set on process.env which affects all subsequent tauri-driver spawns
-          // The driverPool uses this env var when spawning drivers, so we need to set it before each driver spawn
-          const originalEnv = { ...process.env };
-          process.env.REMOTE_WEBDRIVER_URL = `http://${hostname}:${backendPort}`;
-
-          // Update capabilities to use this backend
+          // Update capabilities to connect directly to the CrabNebula backend
+          // WDIO will connect to test-runner-backend which handles everything
           (value as { port?: number; hostname?: string }).port = backendPort;
           (value as { port?: number; hostname?: string }).hostname = hostname;
-
-          // Start tauri-driver for this instance (similar to embedded pattern but uses CrabNebula backend)
-          const dataDir = generateDataDirectory(instanceId);
-          const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-          const env = { ...process.env, [envVarName]: dataDir };
-
-          try {
-            await this.startTauriDriverForInstance(instanceId, backendPort, backendPort + 1, env, instanceOptions);
-          } catch (error) {
-            throw new SevereServiceError(`Failed to start tauri-driver for ${key}: ${(error as Error).message}`);
-          }
-
-          // Restore original env for next iteration
-          process.env.REMOTE_WEBDRIVER_URL = originalEnv.REMOTE_WEBDRIVER_URL;
 
           log.info(`Set CrabNebula connection for ${key}: ${hostname}:${backendPort}`);
         }
