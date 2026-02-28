@@ -252,7 +252,7 @@ export default class TauriLaunchService {
         const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
         // Allocate port to prevent collision with worker backends
         await this.backendPortManager.allocatePortPair(backendPort, backendPort + 1);
-        const { proc } = await startTestRunnerBackend(backendPort);
+        const { proc } = await startTestRunnerBackend({ port: backendPort, serviceOptions: mergedOptions });
         await waitTestRunnerBackendReady('127.0.0.1', backendPort);
 
         this.testRunnerBackend = proc;
@@ -570,7 +570,11 @@ export default class TauriLaunchService {
           log.info(`Spawning test-runner-backend for worker ${cid} on port ${backendPort}`);
 
           try {
-            const { proc } = await startTestRunnerBackend(backendPort);
+            const { proc } = await startTestRunnerBackend({
+              port: backendPort,
+              serviceOptions: workerOptions,
+              instanceId: cid,
+            });
             await waitTestRunnerBackendReady('127.0.0.1', backendPort);
             this.workerBackends.set(cid, { proc, port: backendPort });
             workerEnv.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;

@@ -2,6 +2,8 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
 import { findTestRunnerBackend } from './driverManager.js';
+import { createLogCapture } from './logCapture.js';
+import type { TauriServiceOptions } from './types.js';
 
 const log = createLogger('tauri-service');
 
@@ -10,15 +12,23 @@ export interface BackendProcessInfo {
   port: number;
 }
 
+export interface StartBackendOptions {
+  port: number;
+  serviceOptions?: TauriServiceOptions;
+  instanceId?: string;
+}
+
 /**
  * Start the CrabNebula test-runner-backend process
  * Required for macOS testing with CrabNebula driver
  *
  * @param port - Port for the backend to listen on (default: 3000)
+ * @param serviceOptions - Service options for log capture
  * @returns Process info including the ChildProcess and port
  * @throws Error if CN_API_KEY is not set or backend fails to start
  */
-export async function startTestRunnerBackend(port: number = 3000): Promise<BackendProcessInfo> {
+export async function startTestRunnerBackend(options: StartBackendOptions): Promise<BackendProcessInfo> {
+  const { port, serviceOptions } = options;
   const backendPath = findTestRunnerBackend();
 
   if (!backendPath) {
@@ -66,6 +76,7 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
     let startupTimeout: NodeJS.Timeout;
     let stdoutRl: ReturnType<typeof createInterface> | undefined;
     let stderrRl: ReturnType<typeof createInterface> | undefined;
+    const streamHandlers: ReturnType<typeof createInterface>[] = [];
 
     const cleanup = () => {
       clearTimeout(startupTimeout);
@@ -77,7 +88,34 @@ export async function startTestRunnerBackend(port: number = 3000): Promise<Backe
         stderrRl.close();
         stderrRl = undefined;
       }
+      for (const handler of streamHandlers) {
+        handler.close();
+      }
+      streamHandlers.length = 0;
     };
+
+    // Setup log capture for frontend/backend logs if enabled
+    if (serviceOptions?.captureFrontendLogs || serviceOptions?.captureBackendLogs) {
+      if (proc.stdout) {
+        const stdoutHandler = createLogCapture({
+          stream: proc.stdout,
+          identifier: 'crabnebula-backend',
+          options: serviceOptions,
+          instanceId: options.instanceId,
+        });
+        if (stdoutHandler) streamHandlers.push(stdoutHandler);
+      }
+      if (proc.stderr) {
+        const stderrHandler = createLogCapture({
+          stream: proc.stderr,
+          identifier: 'crabnebula-backend',
+          options: serviceOptions,
+          instanceId: options.instanceId,
+        });
+        if (stderrHandler) streamHandlers.push(stderrHandler);
+      }
+      log.debug('Log capture enabled for CrabNebula test-runner-backend');
+    }
 
     // Handle stdout for ready detection
     if (proc.stdout) {
