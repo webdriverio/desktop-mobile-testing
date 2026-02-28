@@ -54,14 +54,14 @@ describe('CrabNebula Backend', () => {
     it('should throw when test-runner-backend is not found', async () => {
       vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue(undefined);
 
-      await expect(startTestRunnerBackend(3000)).rejects.toThrow('test-runner-backend not found');
+      await expect(startTestRunnerBackend({ port: 3000 })).rejects.toThrow('test-runner-backend not found');
     });
 
     it('should throw when CN_API_KEY is not set', async () => {
       vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue('/mock/backend');
       delete process.env.CN_API_KEY;
 
-      await expect(startTestRunnerBackend(3000)).rejects.toThrow('CN_API_KEY');
+      await expect(startTestRunnerBackend({ port: 3000 })).rejects.toThrow('CN_API_KEY');
     });
 
     it('should start backend with correct environment', async () => {
@@ -70,7 +70,7 @@ describe('CrabNebula Backend', () => {
       vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
 
       // Start the backend
-      const promise = startTestRunnerBackend(3000);
+      const promise = startTestRunnerBackend({ port: 3000 });
 
       // Simulate successful startup immediately (synchronously)
       setImmediate(() => {
@@ -101,7 +101,7 @@ describe('CrabNebula Backend', () => {
 
       vi.useFakeTimers();
 
-      const promise = startTestRunnerBackend(3000);
+      const promise = startTestRunnerBackend({ port: 3000 });
 
       // Fast-forward past timeout
       vi.advanceTimersByTime(15000);
@@ -119,7 +119,7 @@ describe('CrabNebula Backend', () => {
       process.env.CN_API_KEY = 'test-api-key';
       vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
 
-      const promise = startTestRunnerBackend(3000);
+      const promise = startTestRunnerBackend({ port: 3000 });
 
       // Simulate process exit
       setTimeout(() => {
