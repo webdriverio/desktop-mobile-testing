@@ -1,23 +1,26 @@
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
+import process from 'node:process';
 import url from 'node:url';
 import { readWdioLogs } from '../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+// Detect driver provider - backend logs from app stderr are not captured by CrabNebula
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+const isCrabNebula = driverProvider === 'crabnebula';
+
 function getLogDir() {
   return path.join(__dirname, '..', '..', 'logs');
 }
 
-// Detect driver provider - backend logs from app stderr are not captured by CrabNebula
-// because test-runner-backend doesn't forward app stderr to tauri-driver
-const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
-const isCrabNebula = driverProvider === 'crabnebula';
-
 describe('Tauri Log Integration', () => {
   describe('Command Execution', () => {
-    it('should capture backend logs via generate_test_logs command', async () => {
+    it('should capture backend logs via generate_test_logs command', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Backend log capture not supported for CrabNebula
+      }
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
       await browser.waitUntil(
@@ -58,7 +61,7 @@ describe('Tauri Log Integration', () => {
   describe('Console Log Capture', () => {
     it('should capture frontend console.log from browser.execute', async function () {
       if (isCrabNebula) {
-        this.skip();
+        this.skip(); // Frontend log capture works in multiremote but not standard mode for CrabNebula
       }
       await browser.execute(() => {
         console.info('Frontend INFO from execute');
@@ -82,8 +85,7 @@ describe('Tauri Log Integration', () => {
 
     it('should capture info, warn, error log levels from browser.execute', async function () {
       if (isCrabNebula) {
-        this.skip(); // browser.execute() not supported by CrabNebula
-        return;
+        this.skip(); // Frontend log capture works in multiremote but not standard mode for CrabNebula
       }
       await browser.execute(() => {
         console.info('INFO from execute');
@@ -107,8 +109,7 @@ describe('Tauri Log Integration', () => {
 
     it('should capture console.log with various message types', async function () {
       if (isCrabNebula) {
-        this.skip(); // browser.execute() not supported by CrabNebula
-        return;
+        this.skip(); // Frontend log capture works in multiremote but not standard mode for CrabNebula
       }
       // Use console.info for reliable capture across all driver providers
       await browser.execute(() => {
