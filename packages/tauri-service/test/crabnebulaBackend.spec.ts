@@ -132,7 +132,7 @@ describe('CrabNebula Backend', () => {
 
   describe('stopTestRunnerBackend', () => {
     it('should return early if process already killed', async () => {
-      mockProc.killed = true;
+      Object.defineProperty(mockProc, 'killed', { value: true, writable: true, configurable: true });
 
       await stopTestRunnerBackend(mockProc as ChildProcess);
 
