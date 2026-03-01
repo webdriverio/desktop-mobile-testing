@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@babel/parser": "^7.29.0",
-    "@electron/fuses": "^2.0.0",
+    "@electron/fuses": "^2.1.0",
     "@puppeteer/browsers": "^2.13.0",
     "@wdio/electron-cdp-bridge": "workspace:*",
     "@wdio/globals": "catalog:default",
