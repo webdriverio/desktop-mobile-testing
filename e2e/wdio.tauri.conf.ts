@@ -157,6 +157,11 @@ switch (envContext.testType) {
     break;
 }
 
+// CrabNebula: exclude logging specs (test-runner-backend doesn't forward app stderr)
+if (envContext.driverProvider === 'crabnebula') {
+  exclude.push('./test/tauri/logging.spec.ts', './test/tauri/multiremote/logging.spec.ts');
+}
+
 // Configure capabilities
 type TauriCapability = {
   browserName?: 'tauri';
