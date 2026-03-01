@@ -422,6 +422,10 @@ describe('Multiremote Mode - Integration', () => {
     });
 
     it('should spawn separate test-runner-backend per multiremote instance', async () => {
+      // Skip on non-macOS
+      if (process.platform !== 'darwin') {
+        return;
+      }
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -455,6 +459,10 @@ describe('Multiremote Mode - Integration', () => {
     });
 
     it('should allocate unique ports for each CrabNebula backend instance', async () => {
+      // Skip on non-macOS (test-runner-backend is macOS only)
+      if (process.platform !== 'darwin') {
+        return;
+      }
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -495,6 +503,10 @@ describe('Multiremote Mode - Integration', () => {
     });
 
     it('should update capabilities with correct ports and hostname', async () => {
+      // Skip on non-macOS (test-runner-backend is macOS only)
+      if (process.platform !== 'darwin') {
+        return;
+      }
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -523,6 +535,10 @@ describe('Multiremote Mode - Integration', () => {
     });
 
     it('should call waitTestRunnerBackendReady for each instance', async () => {
+      // Skip on non-macOS (test-runner-backend is macOS only)
+      if (process.platform !== 'darwin') {
+        return;
+      }
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -556,6 +572,10 @@ describe('Multiremote Mode - Integration', () => {
     });
 
     it('should cleanup all CrabNebula backends in onComplete', async () => {
+      // Skip on non-macOS (test-runner-backend is macOS only)
+      if (process.platform !== 'darwin') {
+        return;
+      }
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
