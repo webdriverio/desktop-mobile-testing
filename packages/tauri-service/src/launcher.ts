@@ -211,7 +211,7 @@ export default class TauriLaunchService {
       }
       log.info(`tauri-driver ready: ${driverResult.value.path} (${driverResult.value.method})`);
     } else {
-      log.info('Using embedded WebDriver provider (tauri-plugin-wdio-server) - no external driver needed');
+      log.info('Using embedded WebDriver provider (tauri-plugin-wdio-webdriver) - no external driver needed');
       // Store embedded mode info globally for triggerDeeplink
       setEmbeddedModeInfo(true, undefined);
     }

@@ -5875,7 +5875,7 @@
         {
           "description": "Default permissions for the plugin",
           "type": "string",
-          "const": "wdio-server:default",
+          "const": "wdio-webdriver:default",
           "markdownDescription": "Default permissions for the plugin"
         }
       ]

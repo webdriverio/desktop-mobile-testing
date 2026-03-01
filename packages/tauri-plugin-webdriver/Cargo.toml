@@ -1,5 +1,5 @@
 [package]
-name = "tauri-plugin-wdio-server"
+name = "tauri-plugin-wdio-webdriver"
 version = "0.0.1"
 authors = ["You"]
 description = "Embedded WebDriver server for WDIO Tauri testing"
@@ -10,7 +10,7 @@ categories = ["development-tools::testing", "gui"]
 edition = "2021"
 rust-version = "1.77"
 exclude = ["/examples"]
-links = "tauri-plugin-wdio-server"
+links = "tauri-plugin-wdio-webdriver"
 
 [dependencies]
 tauri = { version = "2.10.0" }

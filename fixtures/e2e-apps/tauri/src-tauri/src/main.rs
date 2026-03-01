@@ -277,7 +277,7 @@ fn main() {
 
     // Conditionally load embedded WebDriver server
     if use_embedded_server {
-        builder = builder.plugin(tauri_plugin_wdio_server::init());
+        builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
     }
 
     // Add automation plugin for macOS CrabNebula testing (debug builds only)
