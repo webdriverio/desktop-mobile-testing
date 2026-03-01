@@ -7,7 +7,9 @@ import { assertLogContains, findLogEntries, getLogDirName, readWdioLogs, waitFor
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+// Detect driver provider - backend/frontend logs from app stderr are not captured by CrabNebula
 const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+const isCrabNebula = driverProvider === 'crabnebula';
 
 function getMultiremoteLogDir() {
   const logDirName = getLogDirName('multiremote', 'tauri', driverProvider);
@@ -15,7 +17,10 @@ function getMultiremoteLogDir() {
 }
 
 describe('Tauri Log Integration - Multiremote', () => {
-  it('should capture backend logs per instance with instance ID', async () => {
+  it('should capture backend logs per instance with instance ID', async function () {
+    if (isCrabNebula) {
+      this.skip(); // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
@@ -54,7 +59,10 @@ describe('Tauri Log Integration - Multiremote', () => {
     expect(backendLogs.length).toBeGreaterThan(0);
   });
 
-  it('should capture frontend logs per instance', async () => {
+  it('should capture frontend logs per instance', async function () {
+    if (isCrabNebula) {
+      this.skip(); // Frontend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
@@ -94,7 +102,10 @@ describe('Tauri Log Integration - Multiremote', () => {
     console.log(`[DEBUG] Found frontend log markers in multiremote logs`);
   });
 
-  it('should capture logs independently per instance', async () => {
+  it('should capture logs independently per instance', async function () {
+    if (isCrabNebula) {
+      this.skip(); // Log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
