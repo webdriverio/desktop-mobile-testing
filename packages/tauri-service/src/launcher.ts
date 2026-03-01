@@ -6,7 +6,7 @@ import type { LogLevel } from '@wdio/native-types';
 import { createLogger, formatDiagnosticResults, isErr } from '@wdio/native-utils';
 import type { Options } from '@wdio/types';
 import { SevereServiceError } from 'webdriverio';
-import { setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
+import { setCrabnebulaModeInfo, setEmbeddedModeInfo } from './commands/triggerDeeplink.js';
 import { startTestRunnerBackend, stopTestRunnerBackend, waitTestRunnerBackendReady } from './crabnebulaBackend.js';
 import { diagnoseTauriEnvironment } from './diagnostics.js';
 import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
@@ -70,9 +70,11 @@ export default class TauriLaunchService {
   private instanceOptions: Map<string, TauriServiceOptions> = new Map();
   private perWorkerMode: boolean = false;
   private portManager: PortManager;
+  private backendPortManager: PortManager;
   private driverPool: DriverPool;
   private embeddedProcesses: Map<string, EmbeddedDriverInfo> = new Map();
   private isEmbeddedMode: boolean = false;
+  private workerBackends: Map<string, { proc: ChildProcess; port: number }> = new Map();
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -85,6 +87,7 @@ export default class TauriLaunchService {
 
     const basePort = options.tauriDriverPort || 4444;
     this.portManager = new PortManager(basePort, 4445);
+    this.backendPortManager = new PortManager(options.crabnebulaBackendPort ?? 3000, 3001);
     this.driverPool = new DriverPool(options, options.nativeDriverPath || getWebKitWebDriverPath());
   }
 
@@ -110,9 +113,10 @@ export default class TauriLaunchService {
       );
     }
 
-    // For CrabNebula on macOS, validate prerequisites
+    // For CrabNebula on macOS, validate prerequisites and set mode info
     if (process.platform === 'darwin' && isCrabNebula) {
       await this.validateCrabNebulaPrerequisites(mergedOptions);
+      setCrabnebulaModeInfo(true);
     }
 
     // Handle both standard array and multiremote object capabilities
@@ -240,6 +244,26 @@ export default class TauriLaunchService {
       `Per-worker mode: ${this.perWorkerMode ? 'enabled' : 'disabled'} (maxInstances=${maxInstances}, multiremote=${isMultiremote})`,
     );
 
+    // Start shared test-runner-backend for CrabNebula on macOS (single-driver mode only)
+    // In per-worker mode, each worker spawns its own backend in onWorkerStart()
+    // Skip for multiremote - we spawn one backend per instance in the multiremote block below
+    if (process.platform === 'darwin' && isCrabNebula && !this.perWorkerMode && !isMultiremote) {
+      const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
+      if (manageBackend) {
+        const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
+        // Allocate port to prevent collision with worker backends
+        await this.backendPortManager.allocatePortPair(backendPort, backendPort + 1);
+        const { proc } = await startTestRunnerBackend({ port: backendPort, serviceOptions: mergedOptions });
+        await waitTestRunnerBackendReady('127.0.0.1', backendPort);
+
+        this.testRunnerBackend = proc;
+
+        // Set environment variable for tauri-driver
+        process.env.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
+        log.info(`CrabNebula backend ready on port ${backendPort}`);
+      }
+    }
+
     // Multiremote: spawn a dedicated driver per instance on unique ports
     if (isMultiremote) {
       const capEntries = Object.entries(capabilities);
@@ -286,6 +310,73 @@ export default class TauriLaunchService {
           (value as { port?: number; hostname?: string }).port = embeddedPort;
           (value as { port?: number; hostname?: string }).hostname = hostname;
           log.info(`Set embedded WebDriver connection for ${key}: ${hostname}:${embeddedPort}`);
+        }
+      } else if (isCrabNebula) {
+        // CrabNebula provider: spawn tauri-driver per multiremote instance
+        // On macOS: also spawn test-runner-backend per instance (tauri-driver proxies via REMOTE_WEBDRIVER_URL)
+        // On other platforms: tauri-driver works directly without the backend (same as official provider)
+        setCrabnebulaModeInfo(true);
+
+        const hostname = '127.0.0.1';
+        const isMacOS = process.platform === 'darwin';
+
+        // On macOS, spawn test-runner-backends
+        const backendPorts: number[] = [];
+        if (isMacOS) {
+          log.info(`Starting ${capEntries.length} CrabNebula test-runner-backend(s) for multiremote`);
+          const basePort = mergedOptions.crabnebulaBackendPort ?? 3000;
+          for (let i = 0; i < capEntries.length; i++) {
+            const port = basePort + i * 2;
+            await this.backendPortManager.allocatePortPair(port, port + 1);
+            backendPorts.push(port);
+          }
+        }
+
+        // Allocate tauri-driver ports for each instance
+        const driverPortPairs = await this.portManager.allocatePorts(capEntries.length);
+
+        log.info(`Starting ${capEntries.length} CrabNebula tauri-driver instance(s) for multiremote`);
+
+        for (let i = 0; i < capEntries.length; i++) {
+          const [key, value] = capEntries[i];
+          const cap = value.capabilities;
+          const instanceId = String(key);
+          const instanceOptions = mergeOptions(this.options, cap['wdio:tauriServiceOptions']);
+          this.instanceOptions.set(instanceId, instanceOptions);
+
+          const dataDir = generateDataDirectory(instanceId);
+          const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+          const env: NodeJS.ProcessEnv = { ...process.env, [envVarName]: dataDir };
+
+          // On macOS, start backend and set REMOTE_WEBDRIVER_URL for tauri-driver
+          if (isMacOS) {
+            const backendPort = backendPorts[i];
+            log.info(`Starting CrabNebula test-runner-backend for ${key} on port ${backendPort}`);
+
+            const { proc } = await startTestRunnerBackend({
+              port: backendPort,
+              serviceOptions: instanceOptions,
+              instanceId,
+            });
+            await waitTestRunnerBackendReady(hostname, backendPort);
+
+            this.workerBackends.set(instanceId, { proc, port: backendPort });
+            env.REMOTE_WEBDRIVER_URL = `http://${hostname}:${backendPort}`;
+          }
+
+          const { port: driverPort, nativePort: driverNativePort } = driverPortPairs[i];
+
+          log.info(
+            `Starting tauri-driver for ${key} on ${hostname}:${driverPort} ` +
+              `(native port: ${driverNativePort}${isMacOS ? `, backend: ${hostname}:${backendPorts[i]}` : ''})`,
+          );
+
+          await this.startTauriDriverForInstance(instanceId, driverPort, driverNativePort, env, instanceOptions);
+
+          (value as { port?: number; hostname?: string }).port = driverPort;
+          (value as { port?: number; hostname?: string }).hostname = hostname;
+
+          log.info(`Set CrabNebula connection for ${key}: ${hostname}:${driverPort}`);
         }
       } else {
         log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);
@@ -418,22 +509,6 @@ export default class TauriLaunchService {
       }
     }
 
-    // Start test-runner-backend for CrabNebula on macOS
-    if (process.platform === 'darwin' && isCrabNebula) {
-      const manageBackend = mergedOptions.crabnebulaManageBackend ?? true;
-      if (manageBackend) {
-        const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
-        const { proc } = await startTestRunnerBackend(backendPort);
-        await waitTestRunnerBackendReady(backendPort);
-
-        this.testRunnerBackend = proc;
-
-        // Set environment variable for tauri-driver
-        process.env.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
-        log.info(`CrabNebula backend ready on port ${backendPort}`);
-      }
-    }
-
     log.debug('Tauri service prepared successfully');
   }
 
@@ -552,10 +627,35 @@ export default class TauriLaunchService {
 
       // Set up environment variables for data directory isolation
       const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
-      process.env[envVarName] = dataDir;
+      const workerEnv: NodeJS.ProcessEnv = { ...process.env, [envVarName]: dataDir };
 
-      // Spawn tauri-driver for this worker
-      await this.startTauriDriverForWorker(cid, port, nativePort, workerOptions);
+      // CrabNebula on macOS: spawn dedicated test-runner-backend per worker
+      if (process.platform === 'darwin' && workerOptions.driverProvider === 'crabnebula') {
+        const manageBackend = workerOptions.crabnebulaManageBackend ?? true;
+        if (manageBackend) {
+          // Allocate unique port for this worker's backend using PortManager
+          const backendPort = await this.backendPortManager.allocatePort();
+          log.info(`Spawning test-runner-backend for worker ${cid} on port ${backendPort}`);
+
+          try {
+            const { proc } = await startTestRunnerBackend({
+              port: backendPort,
+              serviceOptions: workerOptions,
+              instanceId: cid,
+            });
+            await waitTestRunnerBackendReady('127.0.0.1', backendPort);
+            this.workerBackends.set(cid, { proc, port: backendPort });
+            workerEnv.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
+            log.info(`Worker ${cid} backend ready on port ${backendPort}`);
+          } catch (error) {
+            log.error(`Failed to start test-runner-backend for worker ${cid}: ${error}`);
+            throw error;
+          }
+        }
+      }
+
+      // Spawn tauri-driver for this worker with updated env
+      await this.startTauriDriverForWorker(cid, port, nativePort, workerOptions, workerEnv);
 
       // Update capabilities with allocated port so WDIO connects to correct port
       // This is critical - the worker needs to know which port to connect to
@@ -604,6 +704,7 @@ export default class TauriLaunchService {
     port: number,
     nativePort: number,
     options?: TauriServiceOptions,
+    env?: NodeJS.ProcessEnv,
   ): Promise<void> {
     const workerOptions = options ?? mergeOptions(this.options, undefined);
     const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
@@ -614,7 +715,7 @@ export default class TauriLaunchService {
       port,
       nativePort,
       options: workerOptions,
-      env: { ...process.env, [envVarName]: process.env[envVarName] },
+      env: env ?? { ...process.env, [envVarName]: process.env[envVarName] },
       instanceId: workerId,
     });
   }
@@ -624,6 +725,14 @@ export default class TauriLaunchService {
    */
   async onWorkerEnd(cid: string): Promise<void> {
     log.debug(`Ending Tauri worker session: ${cid}`);
+
+    // Stop worker's test-runner-backend if spawned (CrabNebula per-worker mode)
+    const workerBackend = this.workerBackends.get(cid);
+    if (workerBackend) {
+      log.info(`Stopping test-runner-backend for worker ${cid}`);
+      await stopTestRunnerBackend(workerBackend.proc);
+      this.workerBackends.delete(cid);
+    }
 
     if (this.perWorkerMode) {
       await this.driverPool.stopDriver(cid);
@@ -643,6 +752,21 @@ export default class TauriLaunchService {
       // Log writer may not have been initialized
     }
 
+    // Stop all worker test-runner-backends (per-worker mode)
+    if (this.workerBackends.size > 0) {
+      log.info(`Stopping ${this.workerBackends.size} worker test-runner-backend(s)...`);
+      for (const [workerId, backend] of this.workerBackends) {
+        try {
+          await stopTestRunnerBackend(backend.proc);
+          log.debug(`Stopped test-runner-backend for worker ${workerId}`);
+        } catch (error) {
+          log.warn(`Failed to stop test-runner-backend for worker ${workerId}: ${error}`);
+        }
+      }
+      this.workerBackends.clear();
+    }
+
+    // Stop shared test-runner-backend (if any)
     if (this.testRunnerBackend) {
       await stopTestRunnerBackend(this.testRunnerBackend);
       this.testRunnerBackend = undefined;
@@ -665,6 +789,7 @@ export default class TauriLaunchService {
     await this.driverPool.stopAll();
     this.instanceOptions.clear();
     this.portManager.clear();
+    this.backendPortManager.clear();
 
     log.debug('Tauri service completed');
   }

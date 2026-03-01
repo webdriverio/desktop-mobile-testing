@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import pLimit from 'p-limit';
 import { createEnvironmentContext, type EnvironmentContext } from '../config/envSchema.js';
 import { StatusBar, type TestResult, TestStatusTracker } from '../lib/statusBar.js';
-import { execWdio, formatDuration, getE2EAppDirName } from '../lib/utils.js';
+import { execWdio, formatDuration, getE2EAppDirName, getLogDirName } from '../lib/utils.js';
 import BuildManager from './build-apps.js';
 
 /**
@@ -206,12 +206,7 @@ async function runTest(
     console.log(`  Environment: ${JSON.stringify(testEnv, null, 2)}`);
 
     // Create log directory for this test
-    // Match the pattern used in wdio configs:
-    // - Official driver: ${testType}-${appDirName}
-    // - Embedded driver: embedded-${testType}-${appDirName}
-    const logDirName = envContext.driverProvider
-      ? `${envContext.driverProvider}-${envContext.testType}-${appDirName}`
-      : `${envContext.testType}-${appDirName}`;
+    const logDirName = getLogDirName(envContext.testType, appDirName, envContext.driverProvider);
     const logDir = join(process.cwd(), 'logs', logDirName);
     const outputLogPath = join(logDir, 'wdio-output.log');
 

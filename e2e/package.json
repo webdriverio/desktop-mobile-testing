@@ -33,6 +33,11 @@
     "test:e2e:tauri-basic-embedded:multiremote": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=multiremote DRIVER_PROVIDER=embedded tsx scripts/run-matrix.ts",
     "test:e2e:tauri-basic-embedded:standalone": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standalone DRIVER_PROVIDER=embedded tsx scripts/run-matrix.ts",
     "test:e2e:tauri-basic-embedded:deeplink": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=deeplink DRIVER_PROVIDER=embedded tsx scripts/run-matrix.ts",
+    "test:e2e:tauri-basic-crabnebula": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standard DRIVER_PROVIDER=crabnebula tsx scripts/run-matrix.ts",
+    "test:e2e:tauri-basic-crabnebula:window": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=window ENABLE_SPLASH_WINDOW=true DRIVER_PROVIDER=crabnebula tsx scripts/run-matrix.ts",
+    "test:e2e:tauri-basic-crabnebula:multiremote": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=multiremote DRIVER_PROVIDER=crabnebula tsx scripts/run-matrix.ts",
+    "test:e2e:tauri-basic-crabnebula:standalone": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=standalone DRIVER_PROVIDER=crabnebula tsx scripts/run-matrix.ts",
+    "test:e2e:tauri-basic-crabnebula:deeplink": "cross-env FRAMEWORK=tauri APP=basic TEST_TYPE=deeplink DRIVER_PROVIDER=crabnebula tsx scripts/run-matrix.ts",
     "protocol-install:tauri": "../fixtures/e2e-apps/tauri/scripts/protocol-install.sh",
     "protocol-install:electron-builder": "../fixtures/e2e-apps/electron-builder/scripts/protocol-install.sh",
     "protocol-install:electron-forge": "../fixtures/e2e-apps/electron-forge/scripts/protocol-install.sh"
@@ -51,9 +56,11 @@
     "webdriverio": "catalog:default"
   },
   "devDependencies": {
+    "@crabnebula/tauri-driver": "^2.0.9",
+    "@crabnebula/test-runner-backend": "^0.2.6",
     "@electron-forge/cli": "^7.11.1",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.0",
     "@vitest/spy": "^4.0.18",
     "@wdio/native-types": "workspace:*",
     "@wdio/types": "catalog:",

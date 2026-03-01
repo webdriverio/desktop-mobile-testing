@@ -61,7 +61,7 @@ jobs:
       # Install dependencies for all Electron package test apps
       # This ensures all required packages (like @electron-forge/core) are available before building
       - name: 📦 Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         shell: bash
 
       # Build all Electron package test apps using Turbo

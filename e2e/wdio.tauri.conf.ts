@@ -26,14 +26,16 @@ interface TauriConfigContext {
 async function getTauriConfigContext(): Promise<TauriConfigContext> {
   console.log('🔍 Creating WDIO Tauri configuration context...');
 
-  // Check platform first - skip macOS Tauri tests due to WKWebView limitations
-  if (process.platform === 'darwin') {
-    console.log('⚠️ Skipping Tauri tests on macOS due to WKWebView WebDriver limitations');
+  // Parse and validate environment first (needed to check driverProvider)
+  const envContext = createEnvironmentContext();
+
+  // Skip macOS Tauri tests only for official tauri-driver
+  // CrabNebula and embedded providers support macOS
+  if (process.platform === 'darwin' && envContext.driverProvider === 'official') {
+    console.log('⚠️ Skipping Tauri tests on macOS with official driver due to WKWebView WebDriver limitations');
+    console.log('💡 Use driverProvider: "crabnebula" or "embedded" for macOS support');
     process.exit(78); // Exit code 78 indicates skipped tests
   }
-
-  // Parse and validate environment
-  const envContext = createEnvironmentContext();
 
   // Ensure we're using Tauri framework
   if (envContext.framework !== 'tauri') {
@@ -69,8 +71,8 @@ async function getTauriConfigContext(): Promise<TauriConfigContext> {
 
   console.log('🔍 Setting up Tauri test with app binary path');
 
-  // For Tauri, we need to find the built binary in src-tauri/target/release
-  const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'release');
+  // Use debug builds for testing (includes tauri-plugin-automation for CrabNebula macOS)
+  const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'debug');
   const tauriConfigPath = join(appPath, 'src-tauri', 'tauri.conf.json');
 
   if (!fileExists(tauriConfigPath)) {
@@ -91,6 +93,9 @@ async function getTauriConfigContext(): Promise<TauriConfigContext> {
     appBinaryPath = join(tauriTargetDir, `${productName}.exe`);
   } else if (process.platform === 'linux') {
     appBinaryPath = join(tauriTargetDir, productName.toLowerCase());
+  } else if (process.platform === 'darwin') {
+    // macOS: CrabNebula and embedded providers support macOS
+    appBinaryPath = join(tauriTargetDir, productName);
   } else {
     throw new Error(`Unsupported platform for Tauri: ${process.platform}`);
   }
@@ -115,7 +120,9 @@ const { envContext, appBinaryPath } = context;
 // Configure specs based on test type
 let specs: string[] = [];
 let exclude: string[] = [];
-let maxInstances = 5;
+// Default to 5 parallel workers for most tests
+const defaultMaxInstances = 5;
+let maxInstances = defaultMaxInstances;
 switch (envContext.testType) {
   case 'multiremote':
     specs = ['./test/tauri/multiremote/*.spec.ts'];
@@ -148,6 +155,11 @@ switch (envContext.testType) {
       './test/tauri/logging.embedded.spec.ts',
     ];
     break;
+}
+
+// CrabNebula: exclude logging specs (test-runner-backend doesn't forward app stderr)
+if (envContext.driverProvider === 'crabnebula') {
+  exclude.push('./test/tauri/logging.spec.ts', './test/tauri/multiremote/logging.spec.ts');
 }
 
 // Configure capabilities
@@ -270,7 +282,10 @@ if (envContext.isMultiremote) {
 }
 
 // Create log directory
-const logDir = join(__dirname, 'logs', `${envContext.testType}-${envContext.appDirName}`);
+import { getLogDirName } from './lib/utils.js';
+
+const logDirName = getLogDirName(envContext.testType, envContext.appDirName, envContext.driverProvider);
+const logDir = join(__dirname, 'logs', logDirName);
 
 // Export the configuration object directly
 export const config = {
@@ -296,8 +311,8 @@ export const config = {
     [
       '@wdio/tauri-service',
       {
-        driverProvider: 'official',
-        autoInstallTauriDriver: true,
+        driverProvider: envContext.driverProvider || 'official',
+        autoInstallTauriDriver: envContext.driverProvider !== 'crabnebula',
       },
     ],
   ],

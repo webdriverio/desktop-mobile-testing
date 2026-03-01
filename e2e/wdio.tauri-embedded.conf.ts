@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { NormalizedPackageJson } from 'read-package-up';
 
 import { createEnvironmentContext } from './config/envSchema.js';
-import { fileExists, safeJsonParse } from './lib/utils.js';
+import { fileExists, getLogDirName, safeJsonParse } from './lib/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -65,8 +65,8 @@ async function getTauriEmbeddedConfigContext(): Promise<TauriEmbeddedConfigConte
 
   console.log('🔍 Setting up Tauri Embedded test with app binary path');
 
-  // For Tauri, we need to find the built binary in src-tauri/target/release
-  const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'release');
+  // Use debug builds for testing (includes tauri-plugin-automation for CrabNebula macOS)
+  const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'debug');
   const tauriConfigPath = join(appPath, 'src-tauri', 'tauri.conf.json');
 
   if (!fileExists(tauriConfigPath)) {
@@ -276,7 +276,8 @@ if (envContext.isMultiremote) {
 }
 
 // Create log directory
-const logDir = join(__dirname, 'logs', `embedded-${envContext.testType}-${envContext.appDirName}`);
+const logDirName = getLogDirName(envContext.testType, envContext.appDirName, 'embedded');
+const logDir = join(__dirname, 'logs', logDirName);
 
 // Export the configuration object directly
 export const config = {

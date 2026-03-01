@@ -15,7 +15,7 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.0",
     "@wdio/cli": "^9.24.0",
     "@wdio/electron-service": "workspace:*",
     "@wdio/globals": "^9.23.0",
@@ -23,8 +23,8 @@
     "@wdio/mocha-framework": "^9.24.0",
     "@wdio/spec-reporter": "^9.24.0",
     "cross-env": "^10.1.0",
-    "electron": "40.4.1",
-    "electron-builder": "^26.7.0",
+    "electron": "40.6.1",
+    "electron-builder": "26.8.0",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3"
   },
@@ -54,7 +54,8 @@
   "pnpm": {
     "onlyBuiltDependencies": ["electron", "esbuild"],
     "overrides": {
-      "@wdio/utils": "file:../../../../wdio-utils-9.23.0.tgz"
+      "@wdio/utils": "file:../../../../wdio-utils-9.23.0.tgz",
+      "minimatch": "10.2.2"
     }
   }
 }

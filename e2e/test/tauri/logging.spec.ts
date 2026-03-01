@@ -1,29 +1,40 @@
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
+import process from 'node:process';
 import url from 'node:url';
-import { readWdioLogs } from '../../lib/utils.js';
+import { getLogDirName, readWdioLogs } from '../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+// Detect driver provider - backend logs from app stderr are not captured by CrabNebula
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
+const isCrabNebula = driverProvider === 'crabnebula';
+
 function getLogDir() {
-  return path.join(__dirname, '..', '..', 'logs');
+  const logDirName = getLogDirName('standard', 'tauri', driverProvider);
+  return path.join(__dirname, '..', '..', 'logs', logDirName);
 }
 
 describe('Tauri Log Integration', () => {
   describe('Command Execution', () => {
-    it('should capture backend logs via generate_test_logs command', async () => {
+    it('should capture backend logs via generate_test_logs command', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+      }
       await browser.tauri.execute(({ core }) => core.invoke('generate_test_logs'));
 
       await browser.waitUntil(
         async () => {
           const logs = await readWdioLogs(getLogDir());
+          // Match [Tauri:Backend] or [Tauri:Backend:worker-id] format
           return logs.includes('[Tauri:Backend');
         },
         { timeout: 5000, timeoutMsg: 'Backend logs not captured' },
       );
 
       const logs = await readWdioLogs(getLogDir());
+      // Match [Tauri:Backend] or [Tauri:Backend:worker-id] format (with optional worker suffix)
       expect(logs).toMatch(/\[Tauri:Backend[^\]]*\].*INFO level log/s);
       expect(logs).toMatch(/\[Tauri:Backend[^\]]*\].*WARN level log/s);
       expect(logs).toMatch(/\[Tauri:Backend[^\]]*\].*ERROR level log/s);
@@ -49,7 +60,10 @@ describe('Tauri Log Integration', () => {
   });
 
   describe('Console Log Capture', () => {
-    it('should capture frontend console.log from browser.execute', async () => {
+    it('should capture frontend console.log from browser.execute', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Frontend logs don't work for CrabNebula - app stderr not forwarded by test-runner-backend
+      }
       await browser.execute(() => {
         console.info('Frontend INFO from execute');
         console.warn('Frontend WARN from execute');
@@ -70,7 +84,10 @@ describe('Tauri Log Integration', () => {
       expect(logs).toMatch(/\[Tauri:Frontend[^\]]*\].*Frontend ERROR from execute/s);
     });
 
-    it('should capture info, warn, error log levels from browser.execute', async () => {
+    it('should capture info, warn, error log levels from browser.execute', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Frontend logs don't work for CrabNebula - app stderr not forwarded by test-runner-backend
+      }
       await browser.execute(() => {
         console.info('INFO from execute');
         console.warn('WARN from execute');
@@ -91,7 +108,10 @@ describe('Tauri Log Integration', () => {
       expect(logs).toMatch(/\[Tauri:Frontend[^\]]*\].*ERROR from execute/s);
     });
 
-    it('should capture console.log with various message types', async () => {
+    it('should capture console.log with various message types', async function () {
+      if (isCrabNebula) {
+        this.skip(); // Frontend logs don't work for CrabNebula - app stderr not forwarded by test-runner-backend
+      }
       // Use console.info for reliable capture across all driver providers
       await browser.execute(() => {
         console.info('String message');

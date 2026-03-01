@@ -20,7 +20,7 @@
     "@electron-forge/maker-rpm": "^7.11.1",
     "@electron-forge/maker-squirrel": "^7.11.1",
     "@electron-forge/maker-zip": "^7.11.1",
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.0",
     "@wdio/cli": "^9.24.0",
     "@wdio/electron-service": "workspace:*",
     "@wdio/globals": "^9.23.0",
@@ -30,7 +30,7 @@
     "@wdio/native-utils": "workspace:*",
     "@wdio/spec-reporter": "^9.24.0",
     "cross-env": "^10.1.0",
-    "electron": "40.4.1",
+    "electron": "40.6.1",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3"
   },

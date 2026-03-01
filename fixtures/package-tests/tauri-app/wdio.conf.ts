@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 const appPath = path.resolve(__dirname);
 
 // Resolve Tauri binary path (following E2E pattern)
-const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'release');
+const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'debug');
 const tauriConfigPath = join(appPath, 'src-tauri', 'tauri.conf.json');
 
 if (!existsSync(tauriConfigPath)) {

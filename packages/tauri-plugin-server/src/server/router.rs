@@ -16,10 +16,6 @@ pub fn create_router<R: Runtime + 'static>(state: Arc<AppState<R>>) -> Router {
         // Status
         .route("/status", get(handlers::status::<R>))
         // =================================================================
-        // WDIO Extensions (non-standard endpoints)
-        // =================================================================
-        .route("/__wdio/deeplink", post(handlers::deeplink::forward::<R>))
-        // =================================================================
         // W3C WebDriver Standard Endpoints
         // =================================================================
         // Session management

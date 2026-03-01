@@ -97,12 +97,10 @@ jobs:
     secrets: inherit
     with:
       os: 'windows-latest'
-      build-command: 'build:debug'  # Use debug build on Windows to preserve stdout/stderr for log capture
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # macOS build for embedded provider - supports native WKWebView automation
   build-tauri-e2e-app-macos-arm:
     name: Build Tauri E2E App [macOS-ARM]
     needs: [detect-changes, build]
@@ -559,6 +557,88 @@ jobs:
       os: 'macos-15-intel'
       node-version: '20'
       scenario: 'tauri-basic-embedded'
+      test-type: ${{ matrix.test-type }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-e2e-app-macos-intel.outputs.cache_key }}
+
+  # Tauri E2E tests using CrabNebula WebDriver provider
+  # Works on all platforms (CN_API_KEY required for macOS only)
+  e2e-tauri-crabnebula-linux:
+    name: E2E - Tauri CrabNebula [Linux] - ${{ matrix.test-type }}
+    needs: [detect-changes, build, build-tauri-e2e-app-linux]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
+    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
+    secrets: inherit
+    with:
+      os: 'ubuntu-latest'
+      node-version: '20'
+      scenario: 'tauri-basic-crabnebula'
+      test-type: ${{ matrix.test-type }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-e2e-app-linux.outputs.cache_key }}
+
+  e2e-tauri-crabnebula-windows:
+    name: E2E - Tauri CrabNebula [Windows] - ${{ matrix.test-type }}
+    needs: [detect-changes, build, build-tauri-e2e-app-windows]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
+    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
+    secrets: inherit
+    with:
+      os: 'windows-latest'
+      node-version: '20'
+      scenario: 'tauri-basic-crabnebula'
+      test-type: ${{ matrix.test-type }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-e2e-app-windows.outputs.cache_key }}
+
+  e2e-tauri-crabnebula-macos-arm:
+    name: E2E - Tauri CrabNebula [macOS-ARM] - ${{ matrix.test-type }}
+    needs: [detect-changes, build, build-tauri-e2e-app-macos-arm]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
+    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
+    secrets: inherit
+    with:
+      os: 'macos-latest'
+      node-version: '20'
+      scenario: 'tauri-basic-crabnebula'
+      test-type: ${{ matrix.test-type }}
+      build_id: ${{ needs.build.outputs.build_id }}
+      artifact_size: ${{ needs.build.outputs.artifact_size }}
+      cache_key: ${{ needs.build.outputs.cache_key }}
+      tauri_cache_key: ${{ needs.build-tauri-e2e-app-macos-arm.outputs.cache_key }}
+
+  e2e-tauri-crabnebula-macos-intel:
+    name: E2E - Tauri CrabNebula [macOS-Intel] - ${{ matrix.test-type }}
+    needs: [detect-changes, build, build-tauri-e2e-app-macos-intel]
+    if: needs.detect-changes.outputs.run_tauri == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
+    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
+    secrets: inherit
+    with:
+      os: 'macos-15-intel'
+      node-version: '20'
+      scenario: 'tauri-basic-crabnebula'
       test-type: ${{ matrix.test-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}

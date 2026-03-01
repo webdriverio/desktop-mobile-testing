@@ -8,6 +8,24 @@ interface TauriServiceContext {
 }
 
 /**
+ * Store CrabNebula mode info for access by triggerDeeplink.
+ * Uses environment variables since launcher and worker run in separate processes.
+ */
+export function setCrabnebulaModeInfo(isCrabnebula: boolean): void {
+  if (isCrabnebula) {
+    process.env.__WDIO_TAURI_CRABNEBULA__ = 'true';
+    log.info('Set CrabNebula mode env: isCrabnebula=true');
+  }
+}
+
+/**
+ * Get CrabNebula mode info from environment variables.
+ */
+function isCrabnebulaProvider(): boolean {
+  return process.env.__WDIO_TAURI_CRABNEBULA__ === 'true';
+}
+
+/**
  * Store embedded mode info for access by triggerDeeplink.
  * Uses environment variables since launcher and worker run in separate processes.
  */
@@ -173,11 +191,11 @@ export async function executeDeeplinkCommand(command: string, args: string[], en
 /**
  * Triggers a deeplink to the Tauri application for testing protocol handlers.
  *
- * For embedded WebDriver:
- * - Uses HTTP POST to the WebDriver server's /__wdio/deeplink endpoint
- * - This bypasses the need for platform-specific single-instance IPC mechanisms
- *   (D-Bus on Linux, NSDistributedNotificationCenter on macOS) which don't work
- *   reliably with unbundled binaries in CI environments.
+ * For embedded WebDriver and CrabNebula:
+ * - Uses browser.execute() to directly inject the deeplink into the app's JavaScript context
+ * - This bypasses platform-specific single-instance IPC mechanisms (D-Bus on Linux,
+ *   NSDistributedNotificationCenter on macOS) which don't work reliably with
+ *   unbundled binaries or when the app is managed by test-runner-backend.
  *
  * For tauri-driver:
  * - Uses platform-specific commands to open the deeplink URL
@@ -202,37 +220,54 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
   const platform = process.platform;
   log.info(`Platform: ${platform}`);
 
-  // For embedded mode, use HTTP POST to the WebDriver server's deeplink endpoint.
-  // This bypasses the need for platform-specific single-instance IPC mechanisms
-  // (D-Bus on Linux, NSDistributedNotificationCenter on macOS) which don't work
-  // reliably with unbundled binaries in CI environments.
+  // For embedded or CrabNebula mode, use browser.execute to directly inject the deeplink.
+  // This bypasses platform-specific single-instance IPC mechanisms (D-Bus on Linux,
+  // NSDistributedNotificationCenter on macOS) which don't work reliably with
+  // unbundled binaries or when the app is managed by test-runner-backend.
+  let providerName: string | null = null;
   if (isEmbeddedProvider()) {
-    const port = process.env.TAURI_WEBDRIVER_PORT || '4445';
-    const endpoint = `http://127.0.0.1:${port}/__wdio/deeplink`;
+    providerName = 'embedded';
+  } else if (isCrabnebulaProvider()) {
+    providerName = 'crabnebula';
+  }
 
-    log.info(`Embedded mode: forwarding deeplink via HTTP`);
-    log.info(`Endpoint: ${endpoint}`);
+  if (providerName) {
+    log.info(`${providerName} mode: injecting deeplink via browser.execute`);
     log.info(`URL: ${validatedUrl}`);
 
+    if (!this.browser) {
+      throw new Error(`${providerName} deeplink injection requires browser context`);
+    }
+
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: validatedUrl }),
-        signal: AbortSignal.timeout(5000),
-      });
+      // Build URL using char codes to avoid WebKit parsing the URL string literally
+      const charCodes = Array.from(validatedUrl)
+        .map((c) => c.charCodeAt(0))
+        .join(',');
+      // Use arrow function format - same as working checks in the test
+      const script = `() => {
+        try {
+          var charCodes = [${charCodes}];
+          var url = String.fromCharCode.apply(null, charCodes);
+          if (typeof window.receivedDeeplinks === 'undefined') {
+            window.receivedDeeplinks = [];
+          }
+          window.receivedDeeplinks.push(url);
+          if (typeof window.deeplinkCount === 'undefined') {
+            window.deeplinkCount = 0;
+          }
+          window.deeplinkCount++;
+        } catch (e) {
+          console.error('[WDIO Deeplink] Error:', e.message);
+        }
+      }`;
+      await this.browser.execute(script);
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
-
-      const result = (await response.json()) as { success: boolean; url: string };
-      log.info(`Deeplink forwarded successfully: ${result.url}`);
+      log.info(`Deeplink injected successfully: ${validatedUrl}`);
       return;
     } catch (error) {
-      log.error(`Failed to forward deeplink via HTTP: ${error}`);
-      throw new Error(`Failed to forward deeplink: ${error instanceof Error ? error.message : String(error)}`);
+      log.error(`Failed to inject deeplink via browser.execute: ${error}`);
+      throw new Error(`Failed to inject deeplink: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

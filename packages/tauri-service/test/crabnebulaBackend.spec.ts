@@ -54,14 +54,14 @@ describe('CrabNebula Backend', () => {
     it('should throw when test-runner-backend is not found', async () => {
       vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue(undefined);
 
-      await expect(startTestRunnerBackend(3000)).rejects.toThrow('test-runner-backend not found');
+      await expect(startTestRunnerBackend({ port: 3000 })).rejects.toThrow('test-runner-backend not found');
     });
 
     it('should throw when CN_API_KEY is not set', async () => {
       vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue('/mock/backend');
       delete process.env.CN_API_KEY;
 
-      await expect(startTestRunnerBackend(3000)).rejects.toThrow('CN_API_KEY');
+      await expect(startTestRunnerBackend({ port: 3000 })).rejects.toThrow('CN_API_KEY');
     });
 
     it('should start backend with correct environment', async () => {
@@ -70,7 +70,7 @@ describe('CrabNebula Backend', () => {
       vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
 
       // Start the backend
-      const promise = startTestRunnerBackend(3000);
+      const promise = startTestRunnerBackend({ port: 3000 });
 
       // Simulate successful startup immediately (synchronously)
       setImmediate(() => {
@@ -81,7 +81,7 @@ describe('CrabNebula Backend', () => {
 
       expect(spawn).toHaveBeenCalledWith(
         '/mock/backend',
-        [],
+        ['--port', '3000'],
         expect.objectContaining({
           stdio: ['ignore', 'pipe', 'pipe'],
           env: expect.objectContaining({
@@ -101,7 +101,7 @@ describe('CrabNebula Backend', () => {
 
       vi.useFakeTimers();
 
-      const promise = startTestRunnerBackend(3000);
+      const promise = startTestRunnerBackend({ port: 3000 });
 
       // Fast-forward past timeout
       vi.advanceTimersByTime(15000);
@@ -119,7 +119,7 @@ describe('CrabNebula Backend', () => {
       process.env.CN_API_KEY = 'test-api-key';
       vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
 
-      const promise = startTestRunnerBackend(3000);
+      const promise = startTestRunnerBackend({ port: 3000 });
 
       // Simulate process exit
       setTimeout(() => {
@@ -132,7 +132,7 @@ describe('CrabNebula Backend', () => {
 
   describe('stopTestRunnerBackend', () => {
     it('should return early if process already killed', async () => {
-      mockProc.killed = true;
+      Object.defineProperty(mockProc, 'killed', { value: true, writable: true, configurable: true });
 
       await stopTestRunnerBackend(mockProc as ChildProcess);
 
@@ -174,34 +174,6 @@ describe('CrabNebula Backend', () => {
       expect(killCalls).toContain('SIGKILL');
 
       vi.useRealTimers();
-    });
-  });
-
-  describe('waitTestRunnerBackendReady', () => {
-    it('should resolve when health endpoint responds', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-
-    it('should throw on timeout if endpoint never responds', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('isTestRunnerBackendHealthy', () => {
-    it('should return true when health check succeeds', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
-    });
-
-    it('should return false when health check fails', async () => {
-      // We'll skip this test as it requires complex HTTP mocking
-      // The functionality is tested via integration tests
-      expect(true).toBe(true);
     });
   });
 });

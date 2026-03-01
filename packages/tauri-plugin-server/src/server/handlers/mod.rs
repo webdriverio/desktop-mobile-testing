@@ -10,7 +10,6 @@ use super::AppState;
 pub mod actions;
 pub mod alert;
 pub mod cookie;
-pub mod deeplink;
 pub mod document;
 pub mod element;
 pub mod frame;

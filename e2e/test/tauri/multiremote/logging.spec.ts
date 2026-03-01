@@ -3,23 +3,24 @@ import '@wdio/native-types';
 import path from 'node:path';
 import process from 'node:process';
 import url from 'node:url';
-import { assertLogContains, findLogEntries, readWdioLogs, waitForLog } from '../../../lib/utils.js';
+import { assertLogContains, findLogEntries, getLogDirName, readWdioLogs, waitForLog } from '../../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-// Get driver provider from environment
+// Detect driver provider - backend/frontend logs from app stderr are not captured by CrabNebula
 const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
-const isEmbedded = driverProvider === 'embedded';
+const isCrabNebula = driverProvider === 'crabnebula';
 
 function getMultiremoteLogDir() {
-  // For embedded provider, logs go to logs/embedded-multiremote-tauri
-  // For tauri-driver, logs go to logs/multiremote-tauri
-  const dirName = isEmbedded ? 'embedded-multiremote-tauri' : 'multiremote-tauri';
-  return path.join(__dirname, '..', '..', '..', 'logs', dirName);
+  const logDirName = getLogDirName('multiremote', 'tauri', driverProvider);
+  return path.join(__dirname, '..', '..', '..', 'logs', logDirName);
 }
 
 describe('Tauri Log Integration - Multiremote', () => {
-  it('should capture backend logs per instance with instance ID', async () => {
+  it('should capture backend logs per instance with instance ID', async function () {
+    if (isCrabNebula) {
+      this.skip(); // Backend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
@@ -58,7 +59,10 @@ describe('Tauri Log Integration - Multiremote', () => {
     expect(backendLogs.length).toBeGreaterThan(0);
   });
 
-  it('should capture frontend logs per instance', async () => {
+  it('should capture frontend logs per instance', async function () {
+    if (isCrabNebula) {
+      this.skip(); // Frontend log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');
@@ -98,7 +102,10 @@ describe('Tauri Log Integration - Multiremote', () => {
     console.log(`[DEBUG] Found frontend log markers in multiremote logs`);
   });
 
-  it('should capture logs independently per instance', async () => {
+  it('should capture logs independently per instance', async function () {
+    if (isCrabNebula) {
+      this.skip(); // Log capture not supported for CrabNebula (test-runner-backend doesn't forward app stderr)
+    }
     const multi = multiRemoteBrowser as unknown as WebdriverIO.MultiRemoteBrowser;
     const browserA = multi.getInstance('browserA');
     const browserB = multi.getInstance('browserB');

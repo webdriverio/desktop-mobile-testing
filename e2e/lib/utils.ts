@@ -234,6 +234,26 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
 }
 
 /**
+ * Get the log directory name for a test configuration
+ * Centralizes the naming convention across all config files and scripts
+ *
+ * Pattern:
+ * - official: ${testType}-${appDirName}
+ * - embedded: embedded-${testType}-${appDirName}
+ * - crabnebula: crabnebula-${testType}-${appDirName}
+ */
+export function getLogDirName(
+  testType: string,
+  appDirName: string,
+  driverProvider?: 'official' | 'crabnebula' | 'embedded',
+): string {
+  if (driverProvider && driverProvider !== 'official') {
+    return `${driverProvider}-${testType}-${appDirName}`;
+  }
+  return `${testType}-${appDirName}`;
+}
+
+/**
  * Read WDIO log files from output directory
  * Uses async file reading to prevent blocking the event loop
  */

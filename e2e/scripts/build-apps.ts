@@ -191,7 +191,7 @@ export class BuildManager {
    * Check if Tauri app has valid build artifacts
    */
   private hasValidTauriBuildArtifacts(appPath: string): boolean {
-    const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'release');
+    const tauriTargetDir = join(appPath, 'src-tauri', 'target', 'debug');
 
     if (!dirExists(tauriTargetDir)) {
       console.log(`🔍 Debug: No Tauri target directory found at ${tauriTargetDir}`);
