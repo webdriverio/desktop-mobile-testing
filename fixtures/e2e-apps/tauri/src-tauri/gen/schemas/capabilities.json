@@ -10,7 +10,7 @@
       "core:event:default",
       "deep-link:default",
       "wdio:default",
-      "wdio-server:default"
+      "wdio-webdriver:default"
     ]
   }
 }

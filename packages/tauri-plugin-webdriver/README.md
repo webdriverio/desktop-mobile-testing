@@ -1,6 +1,6 @@
-# tauri-plugin-wdio-server
+# tauri-plugin-wdio-webdriver
 
-[![Crates.io](https://img.shields.io/crates/v/tauri-plugin-wdio-server.svg)](https://crates.io/crates/tauri-plugin-wdio-server)
+[![Crates.io](https://img.shields.io/crates/v/tauri-plugin-wdio-webdriver.svg)](https://crates.io/crates/tauri-plugin-wdio-webdriver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A W3C WebDriver implementation for Tauri applications, enabling automated testing with standard WebDriver clients like Selenium, WebdriverIO, and Playwright.
@@ -30,17 +30,17 @@ Add to your `Cargo.toml` as a dev/test-only dependency:
 
 ```toml
 [target.'cfg(debug_assertions)'.dependencies]
-tauri-plugin-wdio-server = "0.1"
+tauri-plugin-wdio-webdriver = "0.1"
 ```
 
 Or use a feature flag for more control:
 
 ```toml
 [features]
-webdriver = ["tauri-plugin-wdio-server"]
+webdriver = ["tauri-plugin-wdio-webdriver"]
 
 [dependencies]
-tauri-plugin-wdio-server = { version = "0.1", optional = true }
+tauri-plugin-wdio-webdriver = { version = "0.1", optional = true }
 ```
 
 ## Usage
@@ -54,7 +54,7 @@ fn main() {
     let builder = tauri::Builder::default();
 
     #[cfg(debug_assertions)]
-    let builder = builder.plugin(tauri_plugin_wdio_server::init());
+    let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
 
     builder
         .run(tauri::generate_context!())
