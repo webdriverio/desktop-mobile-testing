@@ -32,17 +32,6 @@ The table below quantifies the key factors used to prioritise and sequence plann
 | **Dioxus Mobile** | Mobile | *(same repo)* | Cargo Mobile 2 — experimental | 🔴 Early-stage | Reuses mobile scaffold + Dioxus desktop learnings | Cargo Mobile 2 maturity, platform bridge stability | High |
 | **React Native Desktop** | Desktop | *(same repo)* | Less mature than mobile counterpart | 🟡 Emerging | Leverages Phase 2 mobile experience | React Native Desktop renderer maturity | Medium–High |
 
-### Frameworks excluded and why
-
-| Framework | Reason for exclusion |
-|---|---|
-| NW.js | Declining popularity, overlaps with Electron |
-| Cordova / PhoneGap | Deprecated (2020), replaced by Capacitor |
-| Qt / QML | Native rendering — no WebDriver fit |
-| .NET MAUI | Native UI, platform-specific drivers required |
-| Blazor | Standard web needs no service; Hybrid WebView context switching unreliable |
-| Wails | Go webview, no established automation patterns |
-
 ---
 
 ## Planned Services
@@ -152,14 +141,16 @@ The table below quantifies the key factors used to prioritise and sequence plann
 
 ## Not Planned
 
-These frameworks are not currently on the roadmap:
+The following frameworks were evaluated and excluded from the roadmap:
 
-- **NW.js** - Declining popularity, overlaps with Electron
-- **Cordova/PhoneGap** - Deprecated (2020), replaced by Capacitor
-- **Qt/QML** - Native rendering, no WebDriver fit
-- **.NET MAUI** - Native UI, platform-specific drivers
-- **Blazor** - Standard web (no service needed), Hybrid WebView context switching unreliable
-- **Wails** - Go webview, no established automation patterns
+| Framework | Reason |
+|---|---|
+| NW.js | Declining popularity, overlaps with Electron |
+| Cordova / PhoneGap | Deprecated (2020), replaced by Capacitor |
+| Qt / QML | Native rendering — no WebDriver fit |
+| .NET MAUI | Native UI, platform-specific drivers required |
+| Blazor | Standard web needs no service; Hybrid WebView context switching unreliable |
+| Wails | Go webview, no established automation patterns |
 
 ## Evaluation Criteria
 
