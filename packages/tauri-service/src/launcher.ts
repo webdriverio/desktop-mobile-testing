@@ -75,6 +75,14 @@ export default class TauriLaunchService {
   private embeddedProcesses: Map<string, EmbeddedDriverInfo> = new Map();
   private isEmbeddedMode: boolean = false;
   private workerBackends: Map<string, { proc: ChildProcess; port: number }> = new Map();
+  private cnCycleConfigs?: Array<{
+    instanceId: string;
+    backendPort: number;
+    driverPort: number;
+    driverNativePort: number;
+    env: NodeJS.ProcessEnv;
+    options: TauriServiceOptions;
+  }>;
 
   constructor(
     private options: TauriServiceGlobalOptions,
@@ -378,6 +386,30 @@ export default class TauriLaunchService {
 
           log.info(`Set CrabNebula connection for ${key}: ${hostname}:${driverPort}`);
         }
+
+        // Store configs for cycling between workers (backend state degrades across sessions)
+        if (isMacOS) {
+          this.cnCycleConfigs = capEntries.map(([key, value], i) => {
+            const cap = value.capabilities;
+            const instanceId = String(key);
+            const instanceOptions = mergeOptions(this.options, cap['wdio:tauriServiceOptions']);
+            const dataDir = generateDataDirectory(instanceId);
+            const envVarName = process.platform === 'linux' ? 'XDG_DATA_HOME' : 'TAURI_DATA_DIR';
+            const env: NodeJS.ProcessEnv = {
+              ...process.env,
+              [envVarName]: dataDir,
+              REMOTE_WEBDRIVER_URL: `http://${hostname}:${backendPorts[i]}`,
+            };
+            return {
+              instanceId,
+              backendPort: backendPorts[i],
+              driverPort: driverPortPairs[i].port,
+              driverNativePort: driverPortPairs[i].nativePort,
+              env,
+              options: instanceOptions,
+            };
+          });
+        }
       } else {
         log.info(`Starting ${capEntries.length} tauri-driver instance(s) for multiremote`);
 
@@ -505,6 +537,21 @@ export default class TauriLaunchService {
           (cap as { port?: number; hostname?: string }).port = port;
           (cap as { port?: number; hostname?: string }).hostname = hostname;
           log.info(`Set tauri-driver connection on capabilities: ${hostname}:${port}`);
+        }
+
+        // Store config for cycling between workers if CrabNebula on macOS
+        if (process.platform === 'darwin' && isCrabNebula) {
+          const backendPort = mergedOptions.crabnebulaBackendPort ?? 3000;
+          this.cnCycleConfigs = [
+            {
+              instanceId: 'tauri-driver',
+              backendPort,
+              driverPort: port,
+              driverNativePort: nativePort,
+              env: { ...process.env },
+              options: mergedOptions,
+            },
+          ];
         }
       }
     }
@@ -737,6 +784,72 @@ export default class TauriLaunchService {
     if (this.perWorkerMode) {
       await this.driverPool.stopDriver(cid);
     }
+
+    // CrabNebula (macOS): cycle backends + drivers between workers
+    // The test-runner-backend's internal websocket state degrades across session destroy/create
+    // cycles, causing stale native port references and "Connection refused" errors.
+    if (this.cnCycleConfigs) {
+      await this.cycleCnInfrastructure();
+    }
+  }
+
+  /**
+   * Restart backends and tauri-drivers for CrabNebula instances between workers.
+   * Required because the test-runner-backend's internal websocket state degrades
+   * across session destroy/create cycles, leaving stale native port references.
+   */
+  private async cycleCnInfrastructure(): Promise<void> {
+    const configs = this.cnCycleConfigs;
+    if (!configs) return;
+
+    const hostname = '127.0.0.1';
+    log.info(`Cycling ${configs.length} CrabNebula backend(s) + driver(s) between workers`);
+
+    // Stop existing backends and drivers
+    for (const config of configs) {
+      // Backend may be in workerBackends (multiremote) or testRunnerBackend (single-driver)
+      const backend = this.workerBackends.get(config.instanceId);
+      if (backend) {
+        log.debug(`Stopping backend for ${config.instanceId}`);
+        await stopTestRunnerBackend(backend.proc);
+        this.workerBackends.delete(config.instanceId);
+      } else if (this.testRunnerBackend) {
+        log.debug(`Stopping shared backend for ${config.instanceId}`);
+        await stopTestRunnerBackend(this.testRunnerBackend);
+        this.testRunnerBackend = undefined;
+      }
+      await this.driverPool.stopDriver(config.instanceId);
+    }
+
+    // Restart backends and drivers with the same ports
+    for (const config of configs) {
+      log.debug(`Restarting backend for ${config.instanceId} on port ${config.backendPort}`);
+      const { proc } = await startTestRunnerBackend({
+        port: config.backendPort,
+        serviceOptions: config.options,
+        instanceId: config.instanceId,
+      });
+      await waitTestRunnerBackendReady(hostname, config.backendPort);
+
+      // Store in the same location it was originally stored
+      if (configs.length === 1 && config.instanceId === 'tauri-driver') {
+        this.testRunnerBackend = proc;
+        process.env.REMOTE_WEBDRIVER_URL = `http://${hostname}:${config.backendPort}`;
+      } else {
+        this.workerBackends.set(config.instanceId, { proc, port: config.backendPort });
+      }
+
+      log.debug(`Restarting tauri-driver for ${config.instanceId} on port ${config.driverPort}`);
+      await this.startTauriDriverForInstance(
+        config.instanceId,
+        config.driverPort,
+        config.driverNativePort,
+        config.env,
+        config.options,
+      );
+    }
+
+    log.info('CrabNebula infrastructure cycled successfully');
   }
 
   /**
