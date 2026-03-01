@@ -23,8 +23,11 @@ const config: BundlerConfig = {
       },
     },
   ],
+  esm: {
+    bundle: ['@wdio/native-spy'],
+  },
   cjs: {
-    bundle: ['fast-copy'],
+    bundle: ['fast-copy', '@wdio/native-spy'],
   },
 };
 
