@@ -143,6 +143,7 @@ jobs:
           # Push will happen after successful publish
 
       - name: Publish to NPM
+        id: publish
         env:
           NPM_CONFIG_PROVENANCE: true
         run: |
@@ -153,11 +154,19 @@ jobs:
           else
             echo "🚀 LIVE RELEASE: Publishing to NPM"
 
-            echo "Publishing @wdio/native-types@${{ steps.version.outputs.types_version }}..."
+            # Read actual versions from package.json after bumping
+            TYPES_VERSION=$(jq -r '.version' packages/native-types/package.json)
+            UTILS_VERSION=$(jq -r '.version' packages/native-utils/package.json)
+
+            echo "Publishing @wdio/native-types@${TYPES_VERSION}..."
             pnpm --filter @wdio/native-types publish --access public --no-git-checks --provenance
 
-            echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
+            echo "Publishing @wdio/native-utils@${UTILS_VERSION}..."
             pnpm --filter @wdio/native-utils publish --access public --no-git-checks --provenance
+
+            # Output actual published versions for later steps
+            echo "types_version=${TYPES_VERSION}" >> $GITHUB_OUTPUT
+            echo "utils_version=${UTILS_VERSION}" >> $GITHUB_OUTPUT
           fi
 
       - name: Push Version Commits and Tags
@@ -174,14 +183,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create release for native-types
-          gh release create "@wdio/native-types@v${{ steps.version.outputs.types_version }}" \
-            --title "@wdio/native-types v${{ steps.version.outputs.types_version }}" \
+          gh release create "@wdio/native-types@v${{ steps.publish.outputs.types_version }}" \
+            --title "@wdio/native-types v${{ steps.publish.outputs.types_version }}" \
             --notes-file packages/native-types/CHANGELOG.md \
             --latest=false
 
           # Create release for native-utils
-          gh release create "@wdio/native-utils@v${{ steps.version.outputs.utils_version }}" \
-            --title "@wdio/native-utils v${{ steps.version.outputs.utils_version }}" \
+          gh release create "@wdio/native-utils@v${{ steps.publish.outputs.utils_version }}" \
+            --title "@wdio/native-utils v${{ steps.publish.outputs.utils_version }}" \
             --notes-file packages/native-utils/CHANGELOG.md \
             --latest=false
 
@@ -196,8 +205,13 @@ jobs:
           echo "### 📋 Package Versions" >> $GITHUB_STEP_SUMMARY
           echo "| Package | Target Version | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|----------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | ${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | ${{ inputs.dry_run && '🧪 Dry run tested' || '✅ Published' }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | 🧪 Dry run tested |" >> $GITHUB_STEP_SUMMARY
+            echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | 🧪 Dry run tested |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| @wdio/native-types | ${{ steps.publish.outputs.types_version }} | ✅ Published |" >> $GITHUB_STEP_SUMMARY
+            echo "| @wdio/native-utils | ${{ steps.publish.outputs.utils_version }} | ✅ Published |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
