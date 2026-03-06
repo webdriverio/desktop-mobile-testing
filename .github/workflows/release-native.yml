@@ -38,18 +38,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '20'
-          cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: true
 
       - name: Build packages
         run: pnpm turbo run build --filter='@wdio/native-types...' --filter='@wdio/native-utils...'
@@ -144,32 +142,23 @@ jobs:
           # Note: Commits and tags created locally by package-versioner
           # Push will happen after successful publish
 
-      - name: Configure NPM registry
-        if: ${{ !inputs.dry_run }}
-        run: |
-          pnpm config set registry "https://registry.npmjs.org/"
-
       - name: Publish to NPM
         env:
           NPM_CONFIG_PROVENANCE: true
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             echo "🧪 DRY RUN: Testing NPM publish (will not actually publish)"
-            DRY_RUN_FLAG="--dry-run"
+            echo "Would publish @wdio/native-types@${{ steps.version.outputs.types_version }}..."
+            echo "Would publish @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
           else
             echo "🚀 LIVE RELEASE: Publishing to NPM"
-            DRY_RUN_FLAG=""
+
+            echo "Publishing @wdio/native-types@${{ steps.version.outputs.types_version }}..."
+            pnpm --filter @wdio/native-types publish --access public --no-git-checks --provenance
+
+            echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
+            pnpm --filter @wdio/native-utils publish --access public --no-git-checks --provenance
           fi
-
-          echo "Publishing @wdio/native-types@${{ steps.version.outputs.types_version }}..."
-          cd packages/native-types
-          pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
-          cd ../..
-
-          echo "Publishing @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
-          cd packages/native-utils
-          pnpm publish --access public --no-git-checks $DRY_RUN_FLAG
-          cd ../..
 
       - name: Push Version Commits and Tags
         if: ${{ !inputs.dry_run }}
