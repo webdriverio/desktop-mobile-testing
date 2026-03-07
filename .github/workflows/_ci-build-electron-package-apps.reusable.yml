@@ -49,7 +49,7 @@ jobs:
       - name: 🛠️ Setup Development Environment
         uses: ./.github/workflows/actions/setup-workspace
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: 📊 Generate Build Information
         id: build-info

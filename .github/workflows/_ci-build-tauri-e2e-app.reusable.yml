@@ -65,7 +65,7 @@ jobs:
       - name: 🛠️ Setup Development Environment
         uses: ./.github/workflows/actions/setup-workspace
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: 🦀 Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
