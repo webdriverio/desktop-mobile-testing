@@ -52,30 +52,40 @@ jobs:
       - name: Build packages
         run: pnpm turbo run build --filter='@wdio/native-types...' --filter='@wdio/native-utils...'
 
-      - name: Calculate versions
+      - name: Version packages
         id: version
         run: |
-          echo "🧮 Calculating versions for native packages..."
+          # Configure git first (needed by package-versioner for commits)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "🧮 Calculating and applying versions for native packages..."
           echo "Release type: ${{ inputs.release_version }}"
           echo ""
 
-          # Calculate version for native-types
+          # Run package-versioner for native-types (with dry-run if dry_run input is true)
           echo "📦 Processing @wdio/native-types..."
-          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types"
-          TYPES_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types)
-          echo "Raw output:"
-          echo "$TYPES_RESULT" | head -20
-          TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
-          TYPES_CURRENT=$(echo "$TYPES_RESULT" | jq -r '.updates[0].oldVersion // empty')
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Running (dry-run): pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run -t @wdio/native-types"
+            TYPES_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types)
+            TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
+          else
+            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
+            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
+            TYPES_VERSION=$(node -e "console.log(require('./packages/native-types/package.json').version)")
+          fi
 
-          # Calculate version for native-utils
+          # Run package-versioner for native-utils (with dry-run if dry_run input is true)
           echo "📦 Processing @wdio/native-utils..."
-          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils"
-          UTILS_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils)
-          echo "Raw output:"
-          echo "$UTILS_RESULT" | head -20
-          UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
-          UTILS_CURRENT=$(echo "$UTILS_RESULT" | jq -r '.updates[0].oldVersion // empty')
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Running (dry-run): pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run -t @wdio/native-utils"
+            UTILS_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils)
+            UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
+          else
+            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
+            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
+            UTILS_VERSION=$(node -e "console.log(require('./packages/native-utils/package.json').version)")
+          fi
 
           if [ -z "$TYPES_VERSION" ] || [ -z "$UTILS_VERSION" ]; then
             echo "❌ Failed to calculate versions"
@@ -85,47 +95,14 @@ jobs:
           fi
 
           echo ""
-          echo "📋 VERSION CALCULATION RESULTS:"
+          echo "📋 VERSION RESULTS:"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 @wdio/native-types: $TYPES_CURRENT → $TYPES_VERSION"
-          echo "📦 @wdio/native-utils: $UTILS_CURRENT → $UTILS_VERSION"
+          echo "📦 @wdio/native-types: $TYPES_VERSION"
+          echo "📦 @wdio/native-utils: $UTILS_VERSION"
           echo ""
-
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "🧪 DRY RUN MODE - Testing all steps without making permanent changes"
-            echo ""
-            echo "📝 This dry run will:"
-            echo "  • Calculate target versions (✅ already done)"
-            echo "  • Test NPM authentication and publish process"
-            echo "  • Show what would be published"
-            echo ""
-            echo "📋 Live release would additionally:"
-            echo "  • Update package.json versions"
-            echo "  • Generate and commit changelogs"
-            echo "  • Create git tags: @wdio/native-types@v$TYPES_VERSION, @wdio/native-utils@v$UTILS_VERSION"
-            echo "  • Push commits to repository"
-            echo "  • Actually publish packages to NPM"
-            echo "  • Create GitHub releases"
-            echo ""
-          fi
 
           echo "types_version=$TYPES_VERSION" >> $GITHUB_OUTPUT
           echo "utils_version=$UTILS_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Update package versions
-        if: ${{ !inputs.dry_run }}
-        run: |
-          # Configure git first (needed by package-versioner for commits)
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          echo "Updating native-types to ${{ steps.version.outputs.types_version }}..."
-          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
-          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
-
-          echo "Updating native-utils to ${{ steps.version.outputs.utils_version }}..."
-          echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
-          pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
 
           # Show what was created
           echo ""
