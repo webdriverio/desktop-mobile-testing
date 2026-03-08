@@ -101,7 +101,7 @@ async function main() {
 
     // Skip private packages
     if (pkgJson.private) {
-      console.log(`   ⏭️  Skipping private package`);
+      console.log('   ⏭️  Skipping private package');
       skipped.push(scopedName);
       continue;
     }
@@ -116,7 +116,7 @@ async function main() {
     if (fs.existsSync(licensePath)) {
       try {
         fs.copyFileSync(licensePath, targetLicensePath);
-        console.log(`   📄 Copied LICENSE file`);
+        console.log('   📄 Copied LICENSE file');
       } catch (error) {
         console.warn(`   ⚠️  Warning: Could not copy LICENSE file: ${(error as Error).message}`);
       }
@@ -129,11 +129,11 @@ async function main() {
         console.log(`   🔍 Dry run - would publish to NPM with tag "${npmTag}"`);
         published.push(scopedName);
       } else {
-        // Use pnpm publish with the specific package filter
+        // Use pnpm publish - it auto-detects NPM_ID_TOKEN for OIDC when available
         // --provenance flag enables OIDC trusted publishing
         const publishCmd = `pnpm --filter ${scopedName} publish --tag ${npmTag} --access public --no-git-checks --provenance`;
         runCommand(publishCmd);
-        console.log(`   ✅ Published successfully`);
+        console.log('   ✅ Published successfully');
         published.push(scopedName);
       }
     } catch (error) {

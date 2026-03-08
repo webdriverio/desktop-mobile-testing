@@ -176,6 +176,18 @@ jobs:
           fi
 
 
+      # Request OIDC token for NPM
+      - name: Request OIDC token for NPM
+        if: ${{ !inputs.dry_run }}
+        run: |
+          # Request OIDC token from GitHub Actions
+          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=npm:registry.npmjs.org" | jq -r '.value')
+          echo "NPM_ID_TOKEN=$TOKEN" >> $GITHUB_ENV
+          # Configure both npm and pnpm to use the OIDC token
+          npm config set //registry.npmjs.org/:_authToken "$TOKEN"
+          pnpm config set //registry.npmjs.org/:_authToken "$TOKEN"
+
       # Publish all versioned packages to NPM
       - name: Publish to NPM
         env:
