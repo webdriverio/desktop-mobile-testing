@@ -75,7 +75,7 @@
     "@wdio/native-spy": "workspace:*",
     "@types/debug": "^4.1.12",
     "@types/electron-to-chromium": "^1.5.0",
-    "@types/node": "^25.3.0",
+    "@types/node": "^25.4.0",
     "@vitest/coverage-v8": "^4.0.18",
     "@wdio/types": "catalog:default",
     "builder-util": "^26.8.0",
