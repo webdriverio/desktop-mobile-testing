@@ -37,11 +37,17 @@ export class PortManager {
     });
     this.usedPorts.add(port);
 
-    const nativePort = await getPort({
-      port: preferredNativePort ?? this.baseNativePort,
-      host: '127.0.0.1',
-      exclude: Array.from(this.usedPorts),
-    });
+    let nativePort: number;
+    try {
+      nativePort = await getPort({
+        port: preferredNativePort ?? this.baseNativePort,
+        host: '127.0.0.1',
+        exclude: Array.from(this.usedPorts),
+      });
+    } catch (error) {
+      this.usedPorts.delete(port);
+      throw error;
+    }
     this.usedPorts.add(nativePort);
 
     log.debug(`Allocated port pair: main=${port}, native=${nativePort}`);

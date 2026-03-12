@@ -65,6 +65,32 @@ describe('PortManager', () => {
       expect(manager.getUsedPorts()).toContain(4444);
       expect(manager.getUsedPorts()).toContain(4445);
     });
+
+    it('should release first port if second allocation fails', async () => {
+      const getPort = await import('get-port');
+      const mockGetPort = vi.mocked(getPort.default);
+      let callCount = 0;
+      mockGetPort.mockImplementation(async ({ port }: { port: number }) => {
+        callCount++;
+        if (callCount === 2) {
+          throw new Error('no ports available');
+        }
+        return port;
+      });
+
+      await expect(manager.allocatePortPair(5000, 5001)).rejects.toThrow('no ports available');
+      expect(manager.getUsedPorts()).not.toContain(5000);
+      expect(manager.getUsedPorts()).toHaveLength(0);
+
+      // Restore default mock implementation
+      mockGetPort.mockImplementation(async ({ port, exclude = [] }: { port: number; exclude: number[] }) => {
+        let candidate = port;
+        while (exclude.includes(candidate) || usedPorts.has(candidate)) {
+          candidate++;
+        }
+        return candidate;
+      });
+    });
   });
 
   describe('allocatePorts', () => {

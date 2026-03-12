@@ -108,7 +108,7 @@ export default class TauriWorkerService {
         });
         log.debug('Tauri plugin initialization complete');
       } catch (error) {
-        log.error('Failed to wait for plugin initialization:', error);
+        log.error('Failed to wait for plugin initialization — tauri.execute() and mocking may not work:', error);
       }
     }
 
@@ -292,8 +292,8 @@ export default class TauriWorkerService {
       } as Parameters<typeof browser.overwriteCommand>[1];
 
       browser.overwriteCommand(commandName, testOverride, true);
-    } catch {
-      // ignore
+    } catch (error) {
+      log.warn(`Failed to override element command '${commandName}':`, error);
     }
   }
 
@@ -370,6 +370,6 @@ async function updateAllMocks() {
     );
     log.debug('All mock updates completed successfully');
   } catch (error) {
-    log.debug('Mock update batch failed:', error);
+    log.warn('Mock update batch failed:', error);
   }
 }
