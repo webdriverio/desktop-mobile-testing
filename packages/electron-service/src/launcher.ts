@@ -15,9 +15,14 @@ import {
 
 const log = createLogger('wdio-electron-service', 'launcher');
 
+async function readPackageUp(options: { cwd: string }): Promise<NormalizedReadResult | undefined> {
+  const { readPackageUp: readPkg } = await import('read-package-up');
+  return readPkg(options);
+}
+
 import type { Capabilities, Options, Services } from '@wdio/types';
 import getPort from 'get-port';
-import { type NormalizedReadResult, readPackageUp } from 'read-package-up';
+import type { NormalizedReadResult } from 'read-package-up';
 import { SevereServiceError } from 'webdriverio';
 import { applyApparmorWorkaround } from './apparmor.js';
 import {
