@@ -41,11 +41,15 @@ appBinaryPath: './src-tauri/target/release/my-app',     // Linux
 
 ### `appArgs` (string[], optional)
 
-Command-line arguments to pass to the Tauri application when launching.
+Command-line arguments to pass to the Tauri application when launching. Each array element is passed as a separate argument — no shell parsing is applied.
 
 **Example:**
 ```typescript
 appArgs: ['--debug', '--log-level', 'debug']
+
+// For key=value style arguments, use either form:
+appArgs: ['--window-size', '1920,1080']   // Two separate elements
+appArgs: ['--window-size=1920,1080']       // Single element with equals
 ```
 
 **Default:** `[]`

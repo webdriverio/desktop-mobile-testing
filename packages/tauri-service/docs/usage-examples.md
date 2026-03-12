@@ -65,16 +65,16 @@ describe('Tauri API Access', () => {
   });
 
   it('should access Tauri invoke API', async () => {
-    const result = await browser.tauri.execute(({ invoke }) => {
-      return invoke('get_config');
+    const result = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_config');
     });
     expect(result).toBeDefined();
   });
 
   it('should use async operations', async () => {
-    const data = await browser.tauri.execute(async ({ invoke }) => {
-      const user = await invoke('get_user');
-      const permissions = await invoke('get_user_permissions', { userId: user.id });
+    const data = await browser.tauri.execute(async ({ core }) => {
+      const user = await core.invoke('get_user');
+      const permissions = await core.invoke('get_user_permissions', { userId: user.id });
       return { user, permissions };
     });
 
@@ -120,8 +120,8 @@ describe('Command Mocking', () => {
     await mock.mockReturnValue('1.2.3');
 
     // Call the mocked command
-    const version = await browser.tauri.execute(({ invoke }) => {
-      return invoke('get_app_version');
+    const version = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_app_version');
     });
 
     expect(version).toBe('1.2.3');
@@ -131,8 +131,8 @@ describe('Command Mocking', () => {
     const mock = await browser.tauri.mock('get_user');
     await mock.mockReturnValue({ id: 1, name: 'John Doe' });
 
-    const user = await browser.tauri.execute(({ invoke }) => {
-      return invoke('get_user', { userId: 123 });
+    const user = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_user', { userId: 123 });
     });
 
     expect(user).toEqual({ id: 1, name: 'John Doe' });
@@ -143,9 +143,9 @@ describe('Command Mocking', () => {
     await mock.mockReturnValue({ success: true });
 
     // Call the command multiple times
-    await browser.tauri.execute(({ invoke }) => {
-      invoke('save_data', { data: 'test1' });
-      invoke('save_data', { data: 'test2' });
+    await browser.tauri.execute(({ core }) => {
+      core.invoke('save_data', { data: 'test1' });
+      core.invoke('save_data', { data: 'test2' });
     });
 
     expect(mock.calls.length).toBeGreaterThanOrEqual(2);
@@ -157,8 +157,8 @@ describe('Command Mocking', () => {
       return a + b;
     });
 
-    const result = await browser.tauri.execute(({ invoke }) => {
-      return invoke('calculate', { a: 5, b: 3 });
+    const result = await browser.tauri.execute(({ core }) => {
+      return core.invoke('calculate', { a: 5, b: 3 });
     });
 
     expect(result).toBe(8);
@@ -169,8 +169,8 @@ describe('Command Mocking', () => {
     await mock.mockRejectedValue(new Error('Operation failed'));
 
     try {
-      await browser.tauri.execute(({ invoke }) => {
-        return invoke('risky_operation');
+      await browser.tauri.execute(({ core }) => {
+        return core.invoke('risky_operation');
       });
     } catch (error) {
       expect(error.message).toBe('Operation failed');
@@ -185,8 +185,8 @@ describe('Command Mocking', () => {
     await mock.mockRestore();
 
     // Now calls the real command
-    const result = await browser.tauri.execute(({ invoke }) => {
-      return invoke('get_data');
+    const result = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_data');
     });
 
     // Result should be from actual backend
@@ -204,16 +204,16 @@ Test commands you've defined in your Tauri backend:
 ```typescript
 describe('Custom Tauri Commands', () => {
   it('should call custom command with simple return', async () => {
-    const greeting = await browser.tauri.execute(({ invoke }) => {
-      return invoke('greet', { name: 'Tauri' });
+    const greeting = await browser.tauri.execute(({ core }) => {
+      return core.invoke('greet', { name: 'Tauri' });
     });
 
     expect(greeting).toBe('Hello, Tauri!');
   });
 
   it('should call command returning object', async () => {
-    const config = await browser.tauri.execute(({ invoke }) => {
-      return invoke('get_config');
+    const config = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_config');
     });
 
     expect(config).toHaveProperty('version');
@@ -221,8 +221,8 @@ describe('Custom Tauri Commands', () => {
   });
 
   it('should handle command with file paths', async () => {
-    const result = await browser.tauri.execute(({ invoke }) => {
-      return invoke('read_project_file', {
+    const result = await browser.tauri.execute(({ core }) => {
+      return core.invoke('read_project_file', {
         path: './src/main.rs'
       });
     });
@@ -232,9 +232,9 @@ describe('Custom Tauri Commands', () => {
 
   it('should handle command timeout', async () => {
     try {
-      await browser.tauri.execute(async ({ invoke }) => {
+      await browser.tauri.execute(async ({ core }) => {
         // Simulate a slow operation
-        return invoke('slow_operation');
+        return core.invoke('slow_operation');
       });
     } catch (error) {
       // Handle timeout
@@ -319,12 +319,12 @@ describe('Multiremote - Multiple App Instances', () => {
     await mock2.mockReturnValue({ id: 2, name: 'User2' });
 
     // Verify each app gets its mocked value
-    const user1 = await browser.app1.tauri.execute(({ invoke }) => {
-      return invoke('get_user');
+    const user1 = await browser.app1.tauri.execute(({ core }) => {
+      return core.invoke('get_user');
     });
 
-    const user2 = await browser.app2.tauri.execute(({ invoke }) => {
-      return invoke('get_user');
+    const user2 = await browser.app2.tauri.execute(({ core }) => {
+      return core.invoke('get_user');
     });
 
     expect(user1.id).toBe(1);
@@ -343,8 +343,8 @@ describe('Multiremote - Multiple App Instances', () => {
     await browser.app1.tauri.clearAllMocks();
 
     // app1 now calls real command, app2 still mocked
-    const config2 = await browser.app2.tauri.execute(({ invoke }) => {
-      return invoke('get_config');
+    const config2 = await browser.app2.tauri.execute(({ core }) => {
+      return core.invoke('get_config');
     });
 
     expect(config2.version).toBe('2.0.0');
@@ -415,16 +415,16 @@ it('should validate form input', async () => {
 ```typescript
 it('should persist state across reload', async () => {
   // Set app state
-  await browser.tauri.execute(async ({ invoke }) => {
-    await invoke('set_user_preference', { theme: 'dark' });
+  await browser.tauri.execute(async ({ core }) => {
+    await core.invoke('set_user_preference', { theme: 'dark' });
   });
 
   // Reload the app (simulate)
   await browser.execute(() => window.location.reload());
 
   // Verify state persisted
-  const theme = await browser.tauri.execute(({ invoke }) => {
-    return invoke('get_user_preference', { key: 'theme' });
+  const theme = await browser.tauri.execute(({ core }) => {
+    return core.invoke('get_user_preference', { key: 'theme' });
   });
 
   expect(theme).toBe('dark');

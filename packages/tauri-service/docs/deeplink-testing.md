@@ -25,14 +25,14 @@ Your Tauri app must have the `@tauri-apps/plugin-deep-link` plugin installed and
 
 ### Protocol Registration
 
-Your app must be registered as a protocol handler in `tauri.conf.json`:
+Your app must register its custom protocol scheme in `tauri.conf.json` under the `deep-link` plugin configuration:
 
 ```json
 {
-  "app": {
-    "security": {
-      "protocol": {
-        "register": ["myapp"]
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["myapp"]
       }
     }
   }

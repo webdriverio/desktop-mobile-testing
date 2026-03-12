@@ -229,10 +229,10 @@ if (!available) {
 // ✅ Correct - mock first, then call
 const mock = await browser.tauri.mock('my_command');
 await mock.mockReturnValue('test');
-await browser.tauri.execute(({ invoke }) => invoke('my_command'));
+await browser.tauri.execute(({ core }) => core.invoke('my_command'));
 
 // ❌ Wrong - calling before mocking
-await browser.tauri.execute(({ invoke }) => invoke('my_command'));
+await browser.tauri.execute(({ core }) => core.invoke('my_command'));
 const mock = await browser.tauri.mock('my_command');
 ```
 
@@ -530,9 +530,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install webkit2gtk-driver
         run: sudo apt-get install -y webkit2gtk-driver

@@ -287,12 +287,12 @@ describe('My Tauri App', () => {
   });
 
   it('should execute Tauri commands', async () => {
-    // Execute JavaScript in the Tauri frontend context
-    const result = await browser.tauri.execute(() => {
-      return window.location.href;
+    // Execute JavaScript in the Tauri frontend context with access to Tauri APIs
+    const result = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_platform_info');
     });
 
-    console.log('Current URL:', result);
+    console.log('Platform info:', result);
   });
 
   it('should mock Tauri commands', async () => {
@@ -301,8 +301,8 @@ describe('My Tauri App', () => {
     await mock.mockReturnValue({ id: 1, name: 'Test User' });
 
     // Execute code that uses the mocked command
-    const user = await browser.tauri.execute(({ invoke }) => {
-      return invoke('get_user');
+    const user = await browser.tauri.execute(({ core }) => {
+      return core.invoke('get_user');
     });
 
     expect(user).toEqual({ id: 1, name: 'Test User' });
@@ -403,8 +403,8 @@ Make sure you're using `browserName: 'tauri'` in capabilities, not other browser
 
 ```typescript
 it('should call custom commands', async () => {
-  const result = await browser.tauri.execute(({ invoke }) => {
-    return invoke('my_custom_command', { param: 'value' });
+  const result = await browser.tauri.execute(({ core }) => {
+    return core.invoke('my_custom_command', { param: 'value' });
   });
 
   expect(result).toBeDefined();
@@ -461,9 +461,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
         run: npm install
