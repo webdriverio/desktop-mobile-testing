@@ -44,14 +44,16 @@ This difference is intentional and reflects:
 
 ## Version Support Matrix
 
-| Package | Current Version | Status | Supported |
-|---------|----------------|--------|-----------|
-| @wdio/electron-service | 10.0.0-next.2 | Pre-release | ✅ Active |
-| @wdio/tauri-service | 1.0.0-next.0 | Pre-release | ✅ Active |
-| @wdio/native-utils | 2.0.0 | Stable | ✅ Active |
-| @wdio/native-types | 2.0.0 | Stable | ✅ Active |
-| @wdio/electron-cdp-bridge | 10.0.0-next.2 | Pre-release | ✅ Active |
-| @wdio/tauri-plugin | 1.0.0-next.0 | Pre-release | ✅ Active |
+| Package | Status | Supported |
+|---------|--------|-----------|
+| @wdio/electron-service | Pre-release | ✅ Active |
+| @wdio/tauri-service | Pre-release | ✅ Active |
+| @wdio/native-utils | Stable | ✅ Active |
+| @wdio/native-types | Stable | ✅ Active |
+| @wdio/electron-cdp-bridge | Pre-release | ✅ Active |
+| @wdio/tauri-plugin | Pre-release | ✅ Active |
+
+Check npm or each package's `package.json` for current version numbers.
 
 **Legend:**
 - ✅ Active - Receives all updates
@@ -62,31 +64,11 @@ This difference is intentional and reflects:
 
 ### Pin Versions for Stability
 
-If you need stability and want to avoid breaking changes:
-
-```json
-{
-  "devDependencies": {
-    "@wdio/electron-service": "10.0.0-next.2",
-    "@wdio/tauri-service": "1.0.0-next.0"
-  }
-}
-```
-
-Use exact versions (no `^` or `~`) to prevent automatic updates.
+If you need stability and want to avoid breaking changes, use exact versions (no `^` or `~`) in your `package.json` to prevent automatic updates.
 
 ### Stay Updated
 
-For the latest features and fixes:
-
-```json
-{
-  "devDependencies": {
-    "@wdio/electron-service": "^10.0.0-next.2",
-    "@wdio/tauri-service": "^1.0.0-next.0"
-  }
-}
-```
+For the latest features and fixes, use the `^` range prefix to allow compatible updates.
 
 ### Monitor Releases
 
