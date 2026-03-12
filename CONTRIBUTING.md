@@ -218,7 +218,6 @@ pnpm --filter @wdio/electron-service vitest
 ### Documentation Files
 
 - Update `docs/` when adding new features
-- Add examples to `examples/` directory
 - Update CHANGELOG.md for notable changes
 
 ## Pull Request Process
