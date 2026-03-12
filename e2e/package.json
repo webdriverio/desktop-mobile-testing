@@ -66,7 +66,7 @@
     "@wdio/types": "catalog:",
     "cross-env": "^10.1.0",
     "p-limit": "^7.3.0",
-    "read-package-up": "^11.0.0",
+    "read-package-up": "^12.0.0",
     "typescript": "^5.9.3",
     "zod": "^4.3.6"
   }
