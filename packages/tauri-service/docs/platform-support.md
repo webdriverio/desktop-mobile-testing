@@ -466,7 +466,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
       - run: npm install
       - run: npm run tauri build
       - run: npm run test:e2e
@@ -476,7 +476,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
       - run: npm install
       - run: npm run tauri build
       # No test step - just build verification

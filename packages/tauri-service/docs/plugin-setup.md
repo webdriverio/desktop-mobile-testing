@@ -108,8 +108,12 @@ Or use individual permissions if you prefer fine-grained control:
     "core:default",
     "core:window:default",
     "wdio:allow-execute",
-    "wdio:allow-mock",
-    "wdio:allow-log-frontend"
+    "wdio:allow-log-frontend",
+    "wdio:allow-set-mock",
+    "wdio:allow-get-mock",
+    "wdio:allow-clear-mocks",
+    "wdio:allow-reset-mocks",
+    "wdio:allow-restore-mocks"
   ]
 }
 ```
@@ -262,10 +266,10 @@ Make sure:
 // ✅ Correct
 const mock = await browser.tauri.mock('my_command');
 await mock.mockReturnValue('test');
-await browser.tauri.execute(({ invoke }) => invoke('my_command'));
+await browser.tauri.execute(({ core }) => core.invoke('my_command'));
 
 // ❌ Wrong - mock set up after calling command
-await browser.tauri.execute(({ invoke }) => invoke('my_command'));
+await browser.tauri.execute(({ core }) => core.invoke('my_command'));
 const mock = await browser.tauri.mock('my_command');
 ```
 
@@ -327,9 +331,18 @@ When you import `@wdio/tauri-plugin`:
 ### Permissions Detail
 
 The `wdio:default` permission includes:
-- `wdio:allow-execute` - Permission to execute JavaScript
-- `wdio:allow-mock` - Permission to mock commands
-- `wdio:allow-log-frontend` - Permission to forward frontend logs
+- `wdio:allow-execute` - Execute JavaScript in frontend context
+- `wdio:allow-log-frontend` - Forward frontend logs
+- `wdio:allow-debug-plugin` - Debug plugin state
+- `wdio:allow-set-mock` - Set mock configuration
+- `wdio:allow-get-mock` - Get mock configuration
+- `wdio:allow-clear-mocks` - Clear all mocks
+- `wdio:allow-reset-mocks` - Reset all mocks
+- `wdio:allow-restore-mocks` - Restore all mocks
+- `wdio:allow-get-active-window-label` - Get active window label
+- `wdio:allow-get-window-states` - Get window states
+- `wdio:allow-list-windows` - List windows
+- `wdio:allow-switch-to-main` - Switch to main window
 
 For production, you might want to use only specific permissions:
 
@@ -337,12 +350,13 @@ For production, you might want to use only specific permissions:
 {
   "permissions": [
     "wdio:allow-execute",
-    "wdio:allow-mock"
+    "wdio:allow-set-mock",
+    "wdio:allow-get-mock"
   ]
 }
 ```
 
-This would enable the execute and mock APIs but disable log forwarding.
+This would enable the execute and basic mock APIs but disable log forwarding and window management.
 
 ## Production Considerations
 
@@ -350,12 +364,17 @@ This would enable the execute and mock APIs but disable log forwarding.
 
 **No**, the plugin is **test-only**. For production builds:
 
-1. **Don't register the plugin in release mode**
+1. **Conditionally register the plugin**
    ```rust
-   #[cfg(debug_assertions)]
    fn main() {
-       tauri::Builder::default()
-           .plugin(tauri_plugin_wdio::init())  // Only in debug
+       let mut builder = tauri::Builder::default();
+
+       #[cfg(debug_assertions)]
+       {
+           builder = builder.plugin(tauri_plugin_wdio::init());
+       }
+
+       builder
            .run(tauri::generate_context!())
            .expect("error while running tauri application");
    }
@@ -364,10 +383,25 @@ This would enable the execute and mock APIs but disable log forwarding.
 2. **Or use feature flags**
    ```toml
    [features]
-   tauri-plugin-wdio = ["dep:tauri-plugin-wdio"]
+   wdio = ["dep:tauri-plugin-wdio"]
 
    [dependencies]
    tauri-plugin-wdio = { version = "1.0", optional = true }
+   ```
+
+   ```rust
+   fn main() {
+       let mut builder = tauri::Builder::default();
+
+       #[cfg(feature = "wdio")]
+       {
+           builder = builder.plugin(tauri_plugin_wdio::init());
+       }
+
+       builder
+           .run(tauri::generate_context!())
+           .expect("error while running tauri application");
+   }
    ```
 
 3. **Build release without the plugin**

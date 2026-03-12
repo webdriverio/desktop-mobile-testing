@@ -3,14 +3,25 @@
 [![Crates.io](https://img.shields.io/crates/v/tauri-plugin-wdio-webdriver.svg)](https://crates.io/crates/tauri-plugin-wdio-webdriver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A W3C WebDriver implementation for Tauri applications, enabling automated testing with standard WebDriver clients like Selenium, WebdriverIO, and Playwright.
+An embedded W3C WebDriver server for Tauri applications, providing the **embedded** driver provider for `@wdio/tauri-service`. This plugin embeds a WebDriver HTTP server directly inside your Tauri app, eliminating the need for external drivers like `tauri-driver` or CrabNebula.
+
+This is a fork of [`Choochmeque/tauri-plugin-webdriver`](https://github.com/Choochmeque/tauri-plugin-webdriver) with changes for WebdriverIO compatibility.
+
+## When to Use This Plugin
+
+This plugin is required when using the `'embedded'` driver provider with `@wdio/tauri-service`:
+
+- **macOS** — auto-detected, no configuration needed
+- **Windows/Linux** — set `driverProvider: 'embedded'` or `TAURI_WEBDRIVER_PORT` env var
+
+It is **not needed** if you use the `'official'` or `'crabnebula'` driver providers.
 
 ## Features
 
-- **Full W3C WebDriver compliance** - 47 endpoints implementing the W3C WebDriver specification
-- **Native platform integration** - Uses native WebView APIs for reliable automation
-- **Zero configuration** - Just add the plugin and start testing
-- **Standard tooling support** - Works with Selenium, WebdriverIO, Playwright, and any W3C-compliant client
+- **Full W3C WebDriver compliance** — 47 endpoints implementing the W3C WebDriver specification
+- **Native platform integration** — Uses native WebView APIs (WKWebView, WebView2, WebKitGTK)
+- **Zero configuration** — Add the plugin, and `@wdio/tauri-service` handles the rest
+- **No external drivers** — No need to install `tauri-driver`, `msedgedriver`, or `webkit2gtk-driver`
 
 ### Supported Platforms
 
@@ -19,8 +30,6 @@ A W3C WebDriver implementation for Tauri applications, enabling automated testin
 | macOS | Full support | WKWebView native APIs |
 | Windows | Full support | WebView2 native APIs |
 | Linux | Full support | WebKitGTK native APIs |
-| iOS | Planned | WKWebView |
-| Android | Planned | Android WebView |
 
 ## Installation
 
@@ -43,11 +52,11 @@ webdriver = ["tauri-plugin-wdio-webdriver"]
 tauri-plugin-wdio-webdriver = { version = "0.1", optional = true }
 ```
 
-## Usage
+## Usage with @wdio/tauri-service
 
 ### 1. Register the plugin
 
-Use conditional compilation to exclude the plugin from release builds:
+Use conditional compilation to exclude from release builds:
 
 ```rust
 fn main() {
@@ -62,88 +71,88 @@ fn main() {
 }
 ```
 
-Or with a feature flag:
+### 2. Configure WebdriverIO
 
-```rust
-fn main() {
-    let builder = tauri::Builder::default();
+```typescript
+// wdio.conf.ts
+export const config = {
+  services: [['@wdio/tauri-service', {
+    driverProvider: 'embedded',  // Auto-detected on macOS
+  }]],
 
-    #[cfg(feature = "webdriver")]
-    let builder = builder.plugin(tauri_plugin_webdriver::init());
+  capabilities: [{
+    browserName: 'tauri',
+    'tauri:options': {
+      application: './src-tauri/target/release/my-app',
+    },
+  }],
+};
+```
 
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+The service spawns your Tauri app with `TAURI_WEBDRIVER_PORT` set, the plugin starts the WebDriver server on that port, and WebdriverIO connects directly — no external driver process needed.
+
+### 3. Add permissions
+
+Add to your `src-tauri/capabilities/default.json`:
+
+```json
+{
+  "permissions": [
+    "wdio-webdriver:default"
+  ]
 }
 ```
 
-The WebDriver server starts automatically on `http://127.0.0.1:4445`.
+## Standalone Usage
 
-### 2. Connect with a WebDriver client
+The plugin also works with any W3C WebDriver client independently of `@wdio/tauri-service`:
 
-#### Python (Selenium)
-
-```python
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-
-# Connect to your Tauri app
-driver = webdriver.Remote(
-    command_executor="http://127.0.0.1:4445",
-    options=webdriver.ChromeOptions()  # Options are accepted but not processed
-)
-
-# Interact with your app
-driver.get("tauri://localhost")  # Or your app's URL
-element = driver.find_element(By.CSS_SELECTOR, "#my-button")
-element.click()
-
-# Take a screenshot
-driver.save_screenshot("screenshot.png")
-
-driver.quit()
+```bash
+# Start your app with the WebDriver port configured
+TAURI_WEBDRIVER_PORT=4445 cargo tauri dev
 ```
 
-#### JavaScript (WebdriverIO)
+Then connect with any client:
 
 ```javascript
-const { remote } = require('webdriverio');
-
-(async () => {
-    const browser = await remote({
-        hostname: '127.0.0.1',
-        port: 4445,
-        capabilities: {}
-    });
-
-    await browser.url('tauri://localhost');
-    const button = await browser.$('#my-button');
-    await button.click();
-
-    await browser.deleteSession();
-})();
+// WebdriverIO
+const browser = await remote({
+    hostname: '127.0.0.1',
+    port: 4445,
+    capabilities: {}
+});
 ```
 
-#### Rust
+```python
+# Selenium
+driver = webdriver.Remote(
+    command_executor="http://127.0.0.1:4445",
+    options=webdriver.ChromeOptions()
+)
+```
+
+## Configuration
+
+The WebDriver server runs on port `4445` by default, bound to `127.0.0.1`.
+
+### Custom Port
+
+**1. Environment variable** (used by `@wdio/tauri-service` automatically):
+
+```bash
+TAURI_WEBDRIVER_PORT=9515 cargo tauri dev
+```
+
+**2. Programmatically:**
 
 ```rust
-use fantoccini::{ClientBuilder, Locator};
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = ClientBuilder::native()
-        .connect("http://127.0.0.1:4445")
-        .await?;
-
-    client.goto("tauri://localhost").await?;
-
-    let button = client.find(Locator::Css("#my-button")).await?;
-    button.click().await?;
-
-    client.close().await?;
-    Ok(())
-}
+#[cfg(debug_assertions)]
+let builder = builder.plugin(tauri_plugin_wdio_webdriver::init_with_port(9515));
 ```
+
+Port resolution order:
+1. `init_with_port(port)` — uses the specified port (ignores env var)
+2. `init()` — checks `TAURI_WEBDRIVER_PORT` env var, falls back to 4445
 
 ## W3C WebDriver Endpoints
 
@@ -259,8 +268,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Locator Strategies
 
-The following locator strategies are supported:
-
 | Strategy | Example |
 |----------|---------|
 | `css selector` | `#id`, `.class`, `div > p` |
@@ -269,52 +276,11 @@ The following locator strategies are supported:
 | `link text` | Exact link text match |
 | `partial link text` | Partial link text match |
 
-## Configuration
+## See Also
 
-The WebDriver server runs on port `4445` by default. The server binds to `127.0.0.1` for security.
-
-### Custom Port
-
-You can configure the port in two ways:
-
-**1. Environment variable:**
-
-```bash
-TAURI_WEBDRIVER_PORT=9515 cargo tauri dev
-```
-
-**2. Programmatically:**
-
-```rust
-fn main() {
-    let builder = tauri::Builder::default();
-
-    #[cfg(debug_assertions)]
-    let builder = builder.plugin(tauri_plugin_wdio_server::init_with_port(9515));
-
-    builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-The port resolution order is:
-1. `init_with_port(port)` - uses the specified port (ignores env var)
-2. `init()` - checks `TAURI_WEBDRIVER_PORT` env var, falls back to 4445
-
-## Development
-
-```bash
-# Build the plugin
-cargo build
-
-# Run clippy
-cargo clippy --all-targets -- -D warnings -D clippy::pedantic
-
-# Run the example app
-cd examples/tauri-app
-cargo tauri dev
-```
+- [Plugin Setup Guide](../tauri-service/docs/plugin-setup.md) — Full setup instructions including this plugin
+- [Platform Support](../tauri-service/docs/platform-support.md) — Per-platform details
+- [Upstream repository](https://github.com/Choochmeque/tauri-plugin-webdriver) — Original project
 
 ## License
 
