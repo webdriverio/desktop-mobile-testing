@@ -41,6 +41,12 @@ export type {
   WdioElectronWindowObj,
   WebdriverClientFunc,
 } from './electron.js';
+// Package.json types
+export type {
+  NormalizedPackageJson,
+  NormalizedReadResult,
+  ReadPackageUpOptions,
+} from './package.js';
 // Shared types
 export type {
   AbstractFn,

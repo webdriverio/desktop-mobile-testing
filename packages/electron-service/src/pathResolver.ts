@@ -1,7 +1,12 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
-import { getAppBuildInfo, getBinaryPath, getElectronVersion, readPackageUp } from '@wdio/native-utils';
-import type { NormalizedReadResult } from 'read-package-up';
+import {
+  getAppBuildInfo,
+  getBinaryPath,
+  getElectronVersion,
+  type NormalizedReadResult,
+  readPackageUp,
+} from '@wdio/native-utils';
 
 /**
  * Validate that a file path exists and is accessible

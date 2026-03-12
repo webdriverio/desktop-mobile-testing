@@ -1,9 +1,9 @@
 import path from 'node:path';
 import type { BuilderBuildInfo, BuilderConfig } from '@wdio/native-types';
 import { deepmerge as deepMerge } from 'deepmerge-ts';
-import type { NormalizedReadResult } from 'read-package-up';
 import { APP_NAME_DETECTION_ERROR } from '../constants.js';
 import { createLogger } from '../log.js';
+import type { NormalizedReadResult } from '../package.js';
 import { readConfig } from './read.js';
 
 const log = createLogger('electron-service', 'config');
@@ -13,7 +13,7 @@ export async function getConfig(
   customConfigPath?: string,
 ): Promise<BuilderBuildInfo | undefined> {
   const rootDir = path.dirname(pkg.path);
-  let builderConfig: BuilderConfig = pkg.packageJson.build;
+  let builderConfig: BuilderConfig | undefined = pkg.packageJson.build;
   let configDir = rootDir;
 
   // If custom config path provided, use it directly
@@ -82,7 +82,7 @@ function getBuilderConfigCandidates(configFileName = 'electron-builder') {
 
 function builderBuildInfo(builderConfig: BuilderConfig, pkg: NormalizedReadResult): BuilderBuildInfo {
   log.debug(`Builder configuration detected: \n${JSON.stringify(builderConfig)}`);
-  const appName: string = pkg.packageJson.productName || builderConfig?.productName || pkg.packageJson.name;
+  const appName = ((pkg.packageJson.productName || builderConfig?.productName || pkg.packageJson.name) as string) ?? '';
 
   if (!appName) {
     throw new Error(APP_NAME_DETECTION_ERROR);
