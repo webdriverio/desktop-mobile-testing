@@ -215,6 +215,11 @@ async fn get_deep_links(_app: tauri::AppHandle) -> Result<Vec<String>, String> {
     Ok(links)
 }
 
+#[tauri::command]
+async fn get_command_line_args() -> Result<Vec<String>, String> {
+    Ok(std::env::args().collect())
+}
+
 fn emit_deep_links<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     let deep_links = DEEP_LINKS.lock().map(|guard| guard.clone()).unwrap_or_default();
 
@@ -382,6 +387,7 @@ fn main() {
             generate_test_logs,
             switch_to_main,
             get_deep_links,
+            get_command_line_args,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
