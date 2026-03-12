@@ -13,9 +13,11 @@ export type NormalizedPackageJson = {
     executableName?: string;
     [key: string]: unknown;
   };
+  config?: { forge?: unknown; [key: string]: unknown };
   forge?: unknown;
   exports?: Record<string, unknown>;
   module?: string;
+  productName?: string;
   [key: string]: unknown;
 };
 
