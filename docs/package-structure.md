@@ -46,9 +46,7 @@ packages/tauri-plugin/
 │   ├── commands.rs                   # Tauri command implementations
 │   ├── models.rs                     # Data models
 │   ├── error.rs                      # Error types
-│   ├── mock_store.rs                 # Mock storage implementation
-│   ├── desktop.rs                    # Desktop-specific code
-│   └── mobile.rs                     # Mobile-specific code
+│   └── desktop.rs                    # Desktop-specific code
 ├── guest-js/                         # Frontend JavaScript/TypeScript
 │   ├── index.ts                      # Frontend API implementation
 │   └── index.d.ts                    # TypeScript definitions

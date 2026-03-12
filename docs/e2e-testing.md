@@ -21,13 +21,14 @@ e2e/
 │       ├── logging.spec.ts
 │       └── ...
 ├── lib/                    # Shared test utilities
-├── config/                 # Test configurations
 ├── wdio.electron.conf.ts   # Electron WDIO config
-└── wdio.tauri.conf.ts      # Tauri WDIO config
+├── wdio.tauri.conf.ts      # Tauri WDIO config
+└── wdio.tauri-embedded.conf.ts  # Tauri embedded WDIO config
 
 fixtures/e2e-apps/
 ├── electron-builder/       # Electron app (builder packaging)
 ├── electron-forge/         # Electron app (forge packaging)
+├── electron-no-binary/     # Electron app (no binary mode)
 ├── electron-script/        # Electron app (script mode)
 └── tauri/                  # Tauri app
 ```
@@ -98,16 +99,13 @@ export const config: WebdriverIO.Config = {
 
 ```typescript
 export const config: WebdriverIO.Config = {
-  services: [
-    [
-      'tauri',
-      {
-        application: '/path/to/app/binary',
-        captureBackendLogs: true,
-        captureFrontendLogs: true,
-      },
-    ],
-  ],
+  services: ['tauri'],
+  capabilities: [{
+    browserName: 'tauri',
+    'tauri:options': {
+      application: '/path/to/app/binary',
+    },
+  }],
   // ...
 };
 ```
@@ -119,14 +117,12 @@ export const config: WebdriverIO.Config = {
 Default mode - single browser instance:
 
 ```typescript
-capabilities: [
-  {
-    browserName: 'tauri',
-    'tauri:options': {
-      application: appBinaryPath,
-    },
+capabilities: [{
+  browserName: 'tauri',
+  'tauri:options': {
+    application: appBinaryPath,
   },
-];
+}],
 ```
 
 ### Multiremote
@@ -136,88 +132,33 @@ Multiple browser instances simultaneously:
 ```typescript
 capabilities: {
   browserA: {
-    browserName: 'tauri',
-    'tauri:options': { application: appBinaryPath },
+    capabilities: {
+      browserName: 'tauri',
+      'tauri:options': { application: appBinaryPath },
+    },
   },
   browserB: {
-    browserName: 'tauri',
-    'tauri:options': { application: appBinaryPath },
+    capabilities: {
+      browserName: 'tauri',
+      'tauri:options': { application: appBinaryPath },
+    },
   },
-};
+},
 ```
 
 ### Per-Worker
 
-Separate driver instance per test worker:
+When `maxInstances > 1`, the service automatically spawns a separate driver per worker:
 
 ```typescript
-capabilities: [
-  {
-    browserName: 'tauri',
-    'tauri:options': {
-      application: appBinaryPath,
-    },
-    'wdio:maxInstances': 3,
+// wdio.conf.ts
+maxInstances: 3,  // Enables per-worker mode automatically
+capabilities: [{
+  browserName: 'tauri',
+  'tauri:options': {
+    application: appBinaryPath,
   },
-];
-```
-
-## Test Patterns
-
-### Basic Test
-
-```typescript
-describe('My App', () => {
-  it('should display the correct title', async () => {
-    const title = await browser.getTitle();
-    expect(title).toBe('Expected Title');
-  });
-});
-```
-
-### API Mocking (Electron)
-
-```typescript
-describe('API Mocking', () => {
-  it('should mock API responses', async () => {
-    const mock = await browser.mock('**/api/users');
-    mock.respond([{ id: 1, name: 'Test' }]);
-
-    // Trigger API call in app
-    await $('button.fetch-users').click();
-
-    // Verify mocked response was used
-    expect(mock.calls.length).toBe(1);
-  });
-});
-```
-
-### Tauri Backend Invocation
-
-```typescript
-describe('Backend Commands', () => {
-  it('should invoke backend commands', async () => {
-    const result = await browser.invoke('my_backend_command', {
-      arg1: 'value',
-    });
-    expect(result).toBe('expected result');
-  });
-});
-```
-
-### Log Capture
-
-```typescript
-describe('Log Capture', () => {
-  it('should capture backend logs', async () => {
-    // Enable log capture in config
-    // Logs appear in WDIO output with [BACKEND] prefix
-
-    await browser.invoke('generate_logs');
-
-    // Check WDIO logs for captured output
-  });
-});
+}],
 ```
 
 ## Debugging E2E Tests
@@ -225,30 +166,14 @@ describe('Log Capture', () => {
 ### Enable Debug Logging
 
 ```bash
-DEBUG=tauri-service:* pnpm test:e2e:tauri-basic
+pnpm e2e:tauri-basic -- --logLevel debug
+pnpm e2e:electron-builder -- --logLevel debug
 ```
 
 ### Run Specific Test
 
 ```bash
 pnpm wdio wdio.tauri.conf.ts --spec test/tauri/api.spec.ts
-```
-
-### Headed Mode (see browser)
-
-For Electron, the app window is visible by default. For Tauri window mode:
-
-```typescript
-// In wdio config
-capabilities: [
-  {
-    browserName: 'tauri',
-    'tauri:options': {
-      application: appBinaryPath,
-      window: true, // Opens visible window
-    },
-  },
-];
 ```
 
 ### Common Issues
@@ -270,7 +195,7 @@ kill -9 <PID>
 Ensure app is built and path is correct:
 
 ```bash
-ls -la fixtures/e2e-apps/tauri/src-tauri/target/release/
+ls -la fixtures/e2e-apps/tauri/src-tauri/target/debug/
 ```
 
 #### Protocol Handler Not Registered

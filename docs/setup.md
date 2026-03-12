@@ -135,14 +135,13 @@ desktop-mobile/
 │   └── bundler/                # Build tooling
 ├── fixtures/              # Test fixtures and example apps
 │   ├── e2e-apps/         # E2E test applications
+│   │   ├── electron-*/   # Electron E2E apps
 │   │   └── tauri/        # Tauri E2E app
 │   └── package-tests/     # Package test fixtures
 │       └── tauri-app/     # Tauri package test app
-├── examples/              # Example applications
 ├── e2e/                  # E2E test scenarios
 ├── docs/                 # Documentation
 ├── scripts/              # Build and utility scripts
-├── types/                # Shared type definitions
 ├── package.json          # Root package.json
 ├── pnpm-workspace.yaml   # Workspace configuration
 ├── turbo.json           # Turborepo configuration
