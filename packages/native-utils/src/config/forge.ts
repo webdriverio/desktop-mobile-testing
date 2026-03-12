@@ -9,8 +9,7 @@ const log = createLogger('electron-service', 'config');
 
 function forgeBuildInfo(forgeConfig: ForgeConfig, pkg: NormalizedReadResult): ForgeBuildInfo {
   log.debug(`Forge configuration detected: \n${JSON.stringify(forgeConfig)}`);
-  const appName =
-    ((pkg.packageJson.productName || forgeConfig?.packagerConfig?.name || pkg.packageJson.name) as string) ?? '';
+  const appName = pkg.packageJson.productName || forgeConfig?.packagerConfig?.name || pkg.packageJson.name || '';
 
   if (!appName) {
     throw new Error(APP_NAME_DETECTION_ERROR);
@@ -25,8 +24,7 @@ function forgeBuildInfo(forgeConfig: ForgeConfig, pkg: NormalizedReadResult): Fo
 }
 
 export async function getConfig(pkg: NormalizedReadResult): Promise<ForgeBuildInfo | undefined> {
-  const pkgJson = pkg.packageJson as { config?: { forge?: unknown }; productName?: string };
-  const forgePackageJsonConfig = pkgJson.config?.forge;
+  const forgePackageJsonConfig = pkg.packageJson.config?.forge;
   // if config.forge is a string it is a custom config file path
   const isConfigFilePath = typeof forgePackageJsonConfig === 'string';
 

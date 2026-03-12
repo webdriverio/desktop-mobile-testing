@@ -1,6 +1,6 @@
 import { normalize } from 'node:path';
-import type { NormalizedPackageJson } from 'read-package-up';
 import type { Plugin } from 'rollup';
+import type { NormalizedPackageJson } from './readPackageUp.js';
 import { type InjectDependencyPluginOptions, injectDependency } from './utils';
 
 export const MODULE_TYPE = {

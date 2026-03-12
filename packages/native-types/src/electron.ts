@@ -5,16 +5,9 @@ import type { Capabilities, Options } from '@wdio/types';
 import type { ArchType } from 'builder-util';
 import type * as Electron from 'electron';
 
-export type PackageJson = {
-  name?: string;
-  version?: string;
-  description?: string;
-  main?: string;
-  type?: string;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-  [key: string]: unknown;
-};
+import type { NormalizedPackageJson } from './package.js';
+
+export type PackageJson = NormalizedPackageJson;
 
 import type {
   AbstractFn,

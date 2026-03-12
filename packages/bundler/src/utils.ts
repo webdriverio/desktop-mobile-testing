@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { basename, dirname, join, posix, relative } from 'node:path';
 import nodeResolve from '@rollup/plugin-node-resolve';
-import { type NormalizedReadResult, readPackageUpSync } from 'read-package-up';
 import { type PluginContext, rollup } from 'rollup';
+import { type NormalizedReadResult, readPackageUpSync } from './readPackageUp.js';
 
 const normalizeToPosix = (path: string) => {
   // Handle both forward and backslashes

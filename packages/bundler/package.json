@@ -39,7 +39,7 @@
     "@rollup/plugin-typescript": "^12.3.0",
     "commander": "^14.0.3",
     "debug": "^4.4.3",
-    "read-package-up": "^12.0.0",
+    "find-up": "^6.3.0",
     "rollup": "^4.59.0",
     "rollup-plugin-node-externals": "^8.1.2",
     "tsx": "^4.21.0",
@@ -48,6 +48,7 @@
   "devDependencies": {
     "@types/debug": "^4.1.12",
     "@types/node": "^25.3.0",
+    "@wdio/native-types": "workspace:*",
     "@vitest/coverage-v8": "^4.0.18",
     "shx": "^0.4.0",
     "terser": "^5.46.0",

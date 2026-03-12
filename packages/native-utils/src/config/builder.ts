@@ -82,7 +82,7 @@ function getBuilderConfigCandidates(configFileName = 'electron-builder') {
 
 function builderBuildInfo(builderConfig: BuilderConfig, pkg: NormalizedReadResult): BuilderBuildInfo {
   log.debug(`Builder configuration detected: \n${JSON.stringify(builderConfig)}`);
-  const appName = ((pkg.packageJson.productName || builderConfig?.productName || pkg.packageJson.name) as string) ?? '';
+  const appName = pkg.packageJson.productName || builderConfig?.productName || pkg.packageJson.name || '';
 
   if (!appName) {
     throw new Error(APP_NAME_DETECTION_ERROR);
