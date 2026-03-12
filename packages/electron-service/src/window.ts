@@ -74,7 +74,8 @@ export const ensureActiveWindowFocus = async (
       let mrPuppeteer: PuppeteerBrowser | undefined;
       try {
         mrPuppeteer = await getPuppeteer(mrInstance);
-      } catch {
+      } catch (error) {
+        log.warn(`Failed to get Puppeteer for instance '${instance}', window focus management disabled:`, error);
         mrPuppeteer = undefined;
       }
       if (!mrPuppeteer) {
