@@ -204,8 +204,8 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
       } as Parameters<typeof browser.overwriteCommand>[1];
 
       browser.overwriteCommand(commandName, testOverride, true);
-    } catch {
-      // ignore
+    } catch (error) {
+      log.warn(`Failed to override element command '${commandName}':`, error);
     }
   }
 
@@ -301,7 +301,7 @@ async function updateAllMocks() {
       );
       log.debug('All mock updates completed successfully');
     } catch (error) {
-      log.debug('Mock update batch failed:', error);
+      log.warn('Mock update batch failed:', error);
     } finally {
       mockUpdatePending = false;
     }
@@ -344,8 +344,10 @@ async function initCdpBridge(
     await cdpBridge.connect();
     return cdpBridge;
   } catch (error) {
-    // CDP bridge failed for any reason - return undefined
-    log.debug('CDP bridge initialization failed:', error);
+    log.warn(
+      'CDP bridge initialization failed — electron.execute(), mock(), and related APIs will be unavailable:',
+      error,
+    );
     return undefined;
   }
 }
