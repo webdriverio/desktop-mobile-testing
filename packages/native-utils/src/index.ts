@@ -15,6 +15,7 @@ export {
 } from './diagnostics.js';
 export { getElectronVersion } from './electronVersion.js';
 export type { LogArea } from './log.js';
+export { readPackageUp } from './package.js';
 export {
   Err,
   isErr,
