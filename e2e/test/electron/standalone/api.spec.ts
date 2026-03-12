@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { NormalizedPackageJson } from '@wdio/native-types';
 import { getElectronVersion } from '@wdio/native-utils';
 import type * as Electron from 'electron';
-import type { NormalizedPackageJson } from 'read-package-up';
 import { setupStandaloneTest } from './helpers/setup.js';
 
 console.log('🔍 Debug: Starting Electron standalone API test');

@@ -23,10 +23,13 @@ function getFixtureDir(fixtureType: string, fixtureName: string) {
 
 vi.mock('node:fs/promises', () => {
   const mockAccessFn = vi.fn().mockResolvedValue(undefined);
+  const mockReadFileFn = vi.fn();
   return {
     access: mockAccessFn,
+    readFile: mockReadFileFn,
     default: {
       access: mockAccessFn,
+      readFile: mockReadFileFn,
     },
   };
 });
@@ -35,9 +38,23 @@ vi.mock('@wdio/native-utils', async () => {
   const actual = await vi.importActual('@wdio/native-utils');
   return {
     ...actual,
-    getBinaryPath: vi.fn(),
-    getAppBuildInfo: vi.fn(),
-    getElectronVersion: vi.fn(),
+    getBinaryPath: vi.fn().mockResolvedValue({ ok: true, value: { binaryPath: '' } }),
+    getAppBuildInfo: vi.fn().mockResolvedValue({ ok: true, value: { appName: '', config: {} } }),
+    getElectronVersion: vi.fn().mockResolvedValue('26.0.0'),
+    readPackageUp: vi.fn().mockImplementation((options: { cwd?: string }) => {
+      const cwd = (options as { cwd?: string }).cwd || process.cwd();
+      return Promise.resolve({
+        packageJson: { name: 'test', version: '1.0.0', dependencies: {}, devDependencies: {} },
+        path: `${cwd}/package.json`,
+      });
+    }),
+    readPackageUpSync: vi.fn().mockImplementation((options: { cwd?: string }) => {
+      const cwd = (options as { cwd?: string }).cwd || process.cwd();
+      return {
+        packageJson: { name: 'test', version: '1.0.0', dependencies: {}, devDependencies: {} },
+        path: `${cwd}/package.json`,
+      };
+    }),
     createLogger: vi.fn(() => ({
       info: vi.fn(),
       warn: vi.fn(),
@@ -819,7 +836,7 @@ describe('Electron Launch Service', () => {
       });
 
       it('should use readPackageUp result for electron binary path with appEntryPoint instead of rootDir', async () => {
-        // Mock readPackageUp before importing the module
+        // Mock readPackageUp in @wdio/native-utils before importing the module
         const mockPackage = {
           packageJson: {
             dependencies: { electron: '^26.0.0' },
@@ -830,8 +847,19 @@ describe('Electron Launch Service', () => {
           path: '/different/path/to/package.json',
         };
 
-        vi.doMock('read-package-up', () => ({
+        vi.doMock('@wdio/native-utils', () => ({
+          ...vi.importActual('@wdio/native-utils'),
           readPackageUp: vi.fn().mockResolvedValue(mockPackage),
+          getBinaryPath: vi.fn(),
+          getAppBuildInfo: vi.fn(),
+          getElectronVersion: vi.fn(),
+          createLogger: vi.fn(() => ({
+            info: vi.fn(),
+            warn: vi.fn(),
+            debug: vi.fn(),
+            error: vi.fn(),
+            trace: vi.fn(),
+          })),
         }));
 
         // Clear module cache to ensure our mock is used
