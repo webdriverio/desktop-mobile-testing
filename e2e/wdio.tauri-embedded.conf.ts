@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { NormalizedPackageJson } from 'read-package-up';
+import type { NormalizedPackageJson } from '@wdio/native-types';
 
 import { createEnvironmentContext } from './config/envSchema.js';
 import { fileExists, getLogDirName, safeJsonParse } from './lib/utils.js';
