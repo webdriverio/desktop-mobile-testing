@@ -51,7 +51,13 @@ impl<R: Runtime + 'static> AppState<R> {
 /// Start the `WebDriver` HTTP server on the specified port
 pub fn start<R: Runtime + 'static>(app: AppHandle<R>, port: u16) {
     std::thread::spawn(move || {
-        let rt = TokioRuntime::new().expect("Failed to create Tokio runtime");
+        let rt = match TokioRuntime::new() {
+            Ok(rt) => rt,
+            Err(e) => {
+                tracing::error!("Failed to create Tokio runtime for WebDriver server: {}", e);
+                return;
+            }
+        };
 
         rt.block_on(async {
             let state = Arc::new(AppState::new(app));
@@ -64,13 +70,22 @@ pub fn start<R: Runtime + 'static>(app: AppHandle<R>, port: u16) {
             #[cfg(not(target_os = "android"))]
             let addr = SocketAddr::from(([127, 0, 0, 1], port));
 
+            let listener = match tokio::net::TcpListener::bind(addr).await {
+                Ok(l) => l,
+                Err(e) => {
+                    tracing::error!(
+                        "Failed to bind WebDriver server to {} — port may already be in use: {}",
+                        addr, e
+                    );
+                    return;
+                }
+            };
+
             tracing::info!("WebDriver server listening on http://{}", addr);
 
-            let listener = tokio::net::TcpListener::bind(addr)
-                .await
-                .expect("Failed to bind to address");
-
-            axum::serve(listener, router).await.expect("Server error");
+            if let Err(e) = axum::serve(listener, router).await {
+                tracing::error!("WebDriver server error: {}", e);
+            }
         });
     });
 }
