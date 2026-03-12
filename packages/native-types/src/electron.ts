@@ -4,7 +4,18 @@ import type { Mock, MockResultType, fn as vitestFn } from '@wdio/native-spy';
 import type { Capabilities, Options } from '@wdio/types';
 import type { ArchType } from 'builder-util';
 import type * as Electron from 'electron';
-import type { PackageJson } from 'read-package-up';
+
+export type PackageJson = {
+  name?: string;
+  version?: string;
+  description?: string;
+  main?: string;
+  type?: string;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  [key: string]: unknown;
+};
+
 import type {
   AbstractFn,
   BaseServiceGlobalOptions,
@@ -433,4 +444,4 @@ export interface ElectronBrowserExtension extends BrowserBase {
 }
 
 // Re-export types needed for global declarations
-export type { Electron, PackageJson, vitestFn };
+export type { Electron, vitestFn };

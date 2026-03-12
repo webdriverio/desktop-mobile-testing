@@ -123,11 +123,11 @@
       "cache": false
     },
     "@wdio/bundler#build": {
-      "dependsOn": ["typecheck"],
+      "dependsOn": ["@wdio/native-types#build", "typecheck"],
       "outputs": ["dist/**"]
     },
     "@wdio/native-types#build": {
-      "dependsOn": ["@wdio/bundler#build", "typecheck"],
+      "dependsOn": ["typecheck"],
       "outputs": ["dist/**"]
     },
     "@wdio/native-utils#build": {
@@ -164,7 +164,7 @@
       "outputs": ["dist/**"]
     },
     "@wdio/native-spy#build": {
-      "dependsOn": ["@wdio/bundler#build", "typecheck"],
+      "dependsOn": ["typecheck"],
       "outputs": ["dist/**"]
     },
     "electron-builder-e2e-app#build": {

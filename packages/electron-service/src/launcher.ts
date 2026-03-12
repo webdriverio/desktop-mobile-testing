@@ -15,10 +15,10 @@ import {
 
 const log = createLogger('wdio-electron-service', 'launcher');
 
+import type { NormalizedReadResult } from '@wdio/native-utils';
 import { readPackageUp } from '@wdio/native-utils';
 import type { Capabilities, Options, Services } from '@wdio/types';
 import getPort from 'get-port';
-import type { NormalizedReadResult } from 'read-package-up';
 import { SevereServiceError } from 'webdriverio';
 import { applyApparmorWorkaround } from './apparmor.js';
 import {

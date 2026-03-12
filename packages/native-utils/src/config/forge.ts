@@ -1,15 +1,16 @@
 import path from 'node:path';
 import type { ForgeBuildInfo, ForgeConfig } from '@wdio/native-types';
-import type { NormalizedReadResult } from 'read-package-up';
 import { APP_NAME_DETECTION_ERROR } from '../constants.js';
 import { createLogger } from '../log.js';
+import type { NormalizedReadResult } from '../package.js';
 import { readConfig } from './read.js';
 
 const log = createLogger('electron-service', 'config');
 
 function forgeBuildInfo(forgeConfig: ForgeConfig, pkg: NormalizedReadResult): ForgeBuildInfo {
   log.debug(`Forge configuration detected: \n${JSON.stringify(forgeConfig)}`);
-  const appName: string = pkg.packageJson.productName || forgeConfig?.packagerConfig?.name || pkg.packageJson.name;
+  const appName =
+    ((pkg.packageJson.productName || forgeConfig?.packagerConfig?.name || pkg.packageJson.name) as string) ?? '';
 
   if (!appName) {
     throw new Error(APP_NAME_DETECTION_ERROR);
@@ -24,7 +25,8 @@ function forgeBuildInfo(forgeConfig: ForgeConfig, pkg: NormalizedReadResult): Fo
 }
 
 export async function getConfig(pkg: NormalizedReadResult): Promise<ForgeBuildInfo | undefined> {
-  const forgePackageJsonConfig = pkg.packageJson.config?.forge;
+  const pkgJson = pkg.packageJson as { config?: { forge?: unknown }; productName?: string };
+  const forgePackageJsonConfig = pkgJson.config?.forge;
   // if config.forge is a string it is a custom config file path
   const isConfigFilePath = typeof forgePackageJsonConfig === 'string';
 

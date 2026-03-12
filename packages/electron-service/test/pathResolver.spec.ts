@@ -1,5 +1,5 @@
 import { access } from 'node:fs/promises';
-import type { NormalizedReadResult } from 'read-package-up';
+import type { NormalizedReadResult } from '@wdio/native-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveAppPaths, validateFilePath } from '../src/pathResolver.js';
 
