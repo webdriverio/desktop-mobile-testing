@@ -1,12 +1,7 @@
 import { access } from 'node:fs/promises';
 import path from 'node:path';
-import { getAppBuildInfo, getBinaryPath, getElectronVersion } from '@wdio/native-utils';
+import { getAppBuildInfo, getBinaryPath, getElectronVersion, readPackageUp } from '@wdio/native-utils';
 import type { NormalizedReadResult } from 'read-package-up';
-
-async function readPackageUp(options: { cwd: string }): Promise<NormalizedReadResult | undefined> {
-  const { readPackageUp: readPkg } = await import('read-package-up');
-  return readPkg(options);
-}
 
 /**
  * Validate that a file path exists and is accessible
