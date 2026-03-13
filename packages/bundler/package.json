@@ -48,7 +48,6 @@
   "devDependencies": {
     "@types/debug": "^4.1.12",
     "@types/node": "^25.3.0",
-    "@wdio/native-types": "workspace:*",
     "@vitest/coverage-v8": "^4.0.18",
     "shx": "^0.4.0",
     "terser": "^5.46.0",
