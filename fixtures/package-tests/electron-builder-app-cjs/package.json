@@ -15,16 +15,16 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^25.3.0",
-    "@wdio/cli": "^9.24.0",
+    "@types/node": "^25.5.0",
+    "@wdio/cli": "^9.25.0",
     "@wdio/electron-service": "workspace:*",
     "@wdio/globals": "^9.23.0",
-    "@wdio/local-runner": "^9.24.0",
-    "@wdio/mocha-framework": "^9.24.0",
-    "@wdio/spec-reporter": "^9.24.0",
+    "@wdio/local-runner": "^9.25.0",
+    "@wdio/mocha-framework": "^9.25.0",
+    "@wdio/spec-reporter": "^9.25.0",
     "cross-env": "^10.1.0",
-    "electron": "40.6.1",
-    "electron-builder": "26.8.0",
+    "electron": "41.0.2",
+    "electron-builder": "26.8.1",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3"
   },

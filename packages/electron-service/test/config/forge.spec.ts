@@ -1,9 +1,14 @@
+// @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 import { getConfig } from '../../src/config/forge.js';
 import { APP_NAME_DETECTION_ERROR } from '../../src/constants.js';
 import { getFixturePackageJson } from '../testUtils.js';
 
-vi.mock('../../src/log.js', () => import('../__mock__/log.js'));
+vi.mock('@wdio/native-utils', async (importActual) => {
+  const actual = await importActual<typeof import('@wdio/native-utils')>();
+  const { createLogger } = await import('../__mock__/log.js');
+  return { ...actual, createLogger };
+});
 
 describe('getConfig', () => {
   describe('config formats', () => {

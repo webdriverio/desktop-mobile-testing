@@ -1,10 +1,8 @@
 import path from 'node:path';
 import type { BuilderBuildInfo, BuilderConfig } from '@wdio/native-types';
+import { createLogger, type NormalizedReadResult, readConfig } from '@wdio/native-utils';
 import { deepmerge as deepMerge } from 'deepmerge-ts';
 import { APP_NAME_DETECTION_ERROR } from '../constants.js';
-import { createLogger } from '../log.js';
-import type { NormalizedReadResult } from '../package.js';
-import { readConfig } from './read.js';
 
 const log = createLogger('electron-service', 'config');
 

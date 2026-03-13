@@ -15,10 +15,10 @@ const createMockLogger = () => ({
 export const createLogger = vi.fn(() => createMockLogger());
 
 // Export mocks for native-utils functions used in tests
-export const getBinaryPath = vi.fn();
-export const getAppBuildInfo = vi.fn();
-export const getElectronVersion = vi.fn();
 export const waitUntilWindowAvailable = vi.fn();
+export const readConfig = vi.fn();
+export const readPackageUp = vi.fn();
+export const readPackageUpSync = vi.fn();
 
 // Diagnostics
 export const diagnoseBinary = vi.fn();

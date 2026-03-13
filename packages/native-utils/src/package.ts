@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { cwd } from 'node:process';
 import type { NormalizedPackageJson, NormalizedReadResult, ReadPackageUpOptions } from '@wdio/native-types';
-import { findUp, findUpSync } from 'find-up';
+import { findUp, findUpSync } from 'find-up-simple';
 
 export type { NormalizedPackageJson, NormalizedReadResult, ReadPackageUpOptions };
 

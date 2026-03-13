@@ -42,7 +42,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@babel/parser": "^7.29.0",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
     "@wdio/native-spy": "workspace:*",
@@ -52,13 +51,15 @@
     "@wdio/types": "catalog:default",
     "debug": "^4.4.3",
     "get-port": "^7.1.0",
-    "recast": "^0.23.11",
     "tslib": "^2.8.1",
     "webdriverio": "catalog:default"
   },
   "devDependencies": {
+    "@babel/parser": "^7.29.0",
     "@types/debug": "^4.1.12",
-    "@types/node": "^25.3.0",
+    "@types/node": "^25.5.0",
+    "recast": "^0.23.11",
+    "shx": "^0.4.0",
     "terser": "^5.46.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"

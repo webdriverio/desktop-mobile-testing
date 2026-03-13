@@ -10,8 +10,8 @@ import type {
   PathGenerationResult,
   PathValidationResult,
 } from '@wdio/native-types';
+import { validateBinaryPaths } from '@wdio/native-utils';
 import { SUPPORTED_BUILD_TOOL, SUPPORTED_PLATFORM } from './constants.js';
-import { validateBinaryPaths } from './selectExecutable.js';
 
 type SupportedPlatform = keyof typeof SUPPORTED_PLATFORM;
 type SupportedBuildTool = keyof typeof SUPPORTED_BUILD_TOOL;
