@@ -644,9 +644,6 @@ importers:
       rollup-plugin-node-externals:
         specifier: ^8.1.2
         version: 8.1.2(rollup@4.59.0)
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -666,8 +663,11 @@ importers:
       terser:
         specifier: ^5.46.0
         version: 5.46.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       vitest:
-        specifier: ^4.1.0
+        specifier: ^4.0.18
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@8.0.0(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/electron-cdp-bridge:
@@ -713,7 +713,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: ^4.0.18
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@8.0.0(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/electron-service:
@@ -724,9 +724,9 @@ importers:
       '@electron/fuses':
         specifier: ^2.1.0
         version: 2.1.0
-      '@puppeteer/browsers':
-        specifier: ^2.13.0
-        version: 2.13.0
+      '@electron/packager':
+        specifier: ^19.0.5
+        version: 19.0.5
       '@wdio/electron-cdp-bridge':
         specifier: workspace:*
         version: link:../electron-cdp-bridge
@@ -748,12 +748,18 @@ importers:
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
+      deepmerge-ts:
+        specifier: ^7.1.5
+        version: 7.1.5
       electron-to-chromium:
         specifier: ^1.5.313
         version: 1.5.313
       fast-copy:
         specifier: ^4.0.2
         version: 4.0.2
+      find-versions:
+        specifier: ^6.0.0
+        version: 6.0.0
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
@@ -763,16 +769,19 @@ importers:
       recast:
         specifier: ^0.23.9
         version: 0.23.11
-      tinyspy:
-        specifier: ^4.0.4
-        version: 4.0.4
       webdriverio:
         specifier: catalog:default
         version: 9.25.0(puppeteer-core@24.39.1)
+      yaml:
+        specifier: ^2.8.2
+        version: 2.8.2
     devDependencies:
       '@electron-forge/shared-types':
         specifier: ^7.11.1
         version: 7.11.1
+      '@puppeteer/browsers':
+        specifier: ^2.13.0
+        version: 2.13.0
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
@@ -806,6 +815,9 @@ importers:
       shx:
         specifier: ^0.4.0
         version: 0.4.0
+      tinyspy:
+        specifier: ^4.0.4
+        version: 4.0.4
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -813,7 +825,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: ^4.0.18
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@8.0.0(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/native-spy:
@@ -831,14 +843,10 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: ^4.0.18
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@8.0.0(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/native-types:
-    dependencies:
-      '@wdio/native-spy':
-        specifier: workspace:*
-        version: link:../native-spy
     devDependencies:
       '@electron-forge/shared-types':
         specifier: ^7.11.1
@@ -852,6 +860,9 @@ importers:
       '@wdio/globals':
         specifier: catalog:default
         version: 9.23.0(expect-webdriverio@5.6.4)(webdriverio@9.25.0(puppeteer-core@24.39.1))
+      '@wdio/native-spy':
+        specifier: workspace:*
+        version: link:../native-spy
       '@wdio/types':
         specifier: catalog:default
         version: 9.25.0
@@ -873,9 +884,6 @@ importers:
 
   packages/native-utils:
     dependencies:
-      '@electron/packager':
-        specifier: ^19.0.5
-        version: 19.0.5
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0
@@ -926,7 +934,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: ^4.0.18
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@8.0.0(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/tauri-plugin:
@@ -944,15 +952,15 @@ importers:
       esbuild:
         specifier: ^0.27.4
         version: 0.27.4
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
 
   packages/tauri-service:
     dependencies:
-      '@babel/parser':
-        specifier: ^7.29.0
-        version: 7.29.0
       '@wdio/globals':
         specifier: catalog:default
         version: 9.23.0(expect-webdriverio@5.6.4)(webdriverio@9.25.0(puppeteer-core@24.39.1))
@@ -980,9 +988,6 @@ importers:
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
-      recast:
-        specifier: ^0.23.11
-        version: 0.23.11
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -990,12 +995,21 @@ importers:
         specifier: catalog:default
         version: 9.25.0(puppeteer-core@24.39.1)
     devDependencies:
+      '@babel/parser':
+        specifier: ^7.29.0
+        version: 7.29.0
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
+      recast:
+        specifier: ^0.23.11
+        version: 0.23.11
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       terser:
         specifier: ^5.46.0
         version: 5.46.0
@@ -1003,7 +1017,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: ^4.0.18
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@8.0.0(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
 packages:
@@ -3408,10 +3422,6 @@ packages:
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
-  balanced-match@4.0.2:
-    resolution: {integrity: sha512-x0K50QvKQ97fdEz2kPehIerj+YTeptKF9hyYkKf6egnwmMWAkADiO0QCzSp0R5xN8FTZgYaBfSaue46Ej62nMg==}
-    engines: {node: 20 || >=22}
-
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
@@ -3502,10 +3512,6 @@ packages:
 
   brace-expansion@2.0.2:
     resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
-
-  brace-expansion@5.0.2:
-    resolution: {integrity: sha512-Pdk8c9poy+YhOgVWw1JNN22/HcivgKWwpxKq04M/jTmHyCZn12WPJebZxdjSa5TmBqISrUSgNYU3eRORljfCCw==}
-    engines: {node: 20 || >=22}
 
   brace-expansion@5.0.4:
     resolution: {integrity: sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==}
@@ -5381,10 +5387,6 @@ packages:
   mimic-response@4.0.0:
     resolution: {integrity: sha512-e5ISH9xMYU0DzrT+jl8q2ze9D6eWBto+I8CNpe+VI+K2J/F/k3PdkdTdz4wvGVH4NTpo+NRYTVIuMQEMMcsLqg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
-  minimatch@10.2.0:
-    resolution: {integrity: sha512-ugkC31VaVg9cF0DFVoADH12k6061zNZkZON+aX8AWsR9GhPcErkcMBceb6znR8wLERM2AkkOxy2nWRLpT9Jq5w==}
-    engines: {node: 20 || >=22}
 
   minimatch@10.2.4:
     resolution: {integrity: sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg==}
@@ -7566,7 +7568,7 @@ snapshots:
     dependencies:
       commander: 13.1.0
       glob: 11.1.0
-      minimatch: 10.2.0
+      minimatch: 10.2.4
 
   '@electron/fuses@1.8.0':
     dependencies:
@@ -7819,7 +7821,7 @@ snapshots:
       '@malept/cross-spawn-promise': 2.0.0
       debug: 4.4.3(supports-color@8.1.1)
       dir-compare: 4.2.0
-      minimatch: 9.0.5
+      minimatch: 9.0.9
       plist: 3.1.0
     transitivePeerDependencies:
       - supports-color
@@ -9697,10 +9699,6 @@ snapshots:
 
   balanced-match@1.0.2: {}
 
-  balanced-match@4.0.2:
-    dependencies:
-      jackspeak: 4.2.3
-
   balanced-match@4.0.4: {}
 
   bare-events@2.8.1: {}
@@ -9779,10 +9777,6 @@ snapshots:
   brace-expansion@2.0.2:
     dependencies:
       balanced-match: 1.0.2
-
-  brace-expansion@5.0.2:
-    dependencies:
-      balanced-match: 4.0.2
 
   brace-expansion@5.0.4:
     dependencies:
@@ -11237,8 +11231,8 @@ snapshots:
     dependencies:
       foreground-child: 3.3.1
       jackspeak: 4.2.3
-      minimatch: 10.2.0
-      minipass: 7.1.2
+      minimatch: 10.2.4
+      minipass: 7.1.3
       package-json-from-dist: 1.0.1
       path-scurry: 2.0.1
 
@@ -11999,10 +11993,6 @@ snapshots:
 
   mimic-response@4.0.0: {}
 
-  minimatch@10.2.0:
-    dependencies:
-      brace-expansion: 5.0.2
-
   minimatch@10.2.4:
     dependencies:
       brace-expansion: 5.0.4
@@ -12446,7 +12436,7 @@ snapshots:
   path-scurry@2.0.1:
     dependencies:
       lru-cache: 11.2.6
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   path-type@2.0.0:
     dependencies:

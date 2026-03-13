@@ -38,7 +38,6 @@
     "lint": "biome check ."
   },
   "dependencies": {
-    "@electron/packager": "^19.0.5",
     "@wdio/logger": "catalog:default",
     "debug": "^4.4.3",
     "deepmerge-ts": "^7.1.5",
@@ -57,7 +56,7 @@
     "@wdio/native-types": "workspace:*",
     "shx": "^0.4.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.0.18"
   },
   "files": ["dist", "LICENSE"],
   "publishConfig": {
