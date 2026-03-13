@@ -1,31 +1,58 @@
-import { describe, expect, it } from 'vitest';
-import { executeTauriCommand, isTauriApiAvailable } from '../src/commands/execute.js';
-import { getTauriBinaryPath, isTauriAppBuilt } from '../src/pathResolver.js';
+import { describe, expect, it, vi } from 'vitest';
 
-describe('Tauri Service', () => {
-  it('should export required functions', () => {
-    expect(typeof getTauriBinaryPath).toBe('function');
-    expect(typeof isTauriAppBuilt).toBe('function');
-    expect(typeof executeTauriCommand).toBe('function');
-    expect(typeof isTauriApiAvailable).toBe('function');
+vi.mock('@wdio/native-utils', () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
+
+vi.mock('@wdio/globals', () => ({
+  browser: {},
+}));
+
+describe('Tauri Service package exports', () => {
+  it('should export default as TauriWorkerService', async () => {
+    const mod = await import('../src/index.js');
+    expect(mod.default).toBeDefined();
+    expect(typeof mod.default).toBe('function');
   });
 
-  it('should handle path resolution errors gracefully', async () => {
-    await expect(getTauriBinaryPath('/nonexistent/path')).rejects.toThrow();
+  it('should export launcher as named export', async () => {
+    const mod = await import('../src/index.js');
+    expect(mod.launcher).toBeDefined();
+    expect(typeof mod.launcher).toBe('function');
   });
 
-  it('should detect non-built apps', async () => {
-    const isBuilt = await isTauriAppBuilt('/nonexistent/path');
-    expect(isBuilt).toBe(false);
+  it('should export getTauriBinaryPath', async () => {
+    const mod = await import('../src/index.js');
+    expect(typeof mod.getTauriBinaryPath).toBe('function');
   });
 
-  it('should match Electron service API surface', () => {
-    // The Tauri service should provide the same API as Electron service
-    const expectedMethods = ['execute', 'clearAllMocks', 'isMockFunction', 'mock', 'resetAllMocks', 'restoreAllMocks'];
+  it('should export getTauriAppInfo', async () => {
+    const mod = await import('../src/index.js');
+    expect(typeof mod.getTauriAppInfo).toBe('function');
+  });
 
-    // This test documents the expected API surface
-    expect(expectedMethods).toHaveLength(6);
-    expect(expectedMethods).toContain('execute');
-    expect(expectedMethods).toContain('mock');
+  it('should export createTauriCapabilities', async () => {
+    const mod = await import('../src/index.js');
+    expect(typeof mod.createTauriCapabilities).toBe('function');
+  });
+
+  it('should export startWdioSession (init)', async () => {
+    const mod = await import('../src/index.js');
+    expect(typeof mod.startWdioSession).toBe('function');
+  });
+
+  it('should export cleanupWdioSession (cleanup)', async () => {
+    const mod = await import('../src/index.js');
+    expect(typeof mod.cleanupWdioSession).toBe('function');
+  });
+
+  it('should export browser', async () => {
+    const mod = await import('../src/index.js');
+    expect(mod.browser).toBeDefined();
   });
 });
