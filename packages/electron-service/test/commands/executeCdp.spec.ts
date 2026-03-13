@@ -104,7 +104,7 @@ describe('execute Command', () => {
       arguments: [{ value: 1 }, { value: 2 }, { value: 3 }],
       awaitPromise: true,
       executionContextId: 9999,
-      functionDeclaration: `function test(a, b, c) {\n        return a + b + c;\n      }`,
+      functionDeclaration: expect.stringMatching(/function test\(a, b, c\)\s*\{\s*return a \+ b \+ c;\s*\}/),
       returnByValue: true,
     });
   });
