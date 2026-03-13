@@ -1,6 +1,7 @@
+import assert from 'node:assert';
 import fs from 'node:fs/promises';
 import { describe, expect, it, vi } from 'vitest';
-import { selectExecutable } from '../src/selectExecutable.js';
+import { selectExecutable, validateBinaryPaths } from '../src/selectExecutable.js';
 import { mockBinaryPath } from './testUtils.js';
 
 /**
@@ -69,5 +70,88 @@ describe('selectExecutable', () => {
     await expect(() => selectExecutable(['/path/to/dist'])).rejects.toThrowError(
       'No executable binary found, checked:',
     );
+  });
+
+  it('should report EACCES error with PERMISSION_DENIED type', async () => {
+    const eaccesError = new Error('EACCES: permission denied') as NodeJS.ErrnoException;
+    eaccesError.code = 'EACCES';
+    vi.mocked(fs.access).mockRejectedValue(eaccesError);
+
+    const result = await validateBinaryPaths(['/path/to/binary']);
+
+    assert(!result.ok);
+    expect(result.error.attempts).toHaveLength(1);
+    expect(result.error.attempts[0].valid).toBe(false);
+    expect(result.error.attempts[0].error?.type).toBe('PERMISSION_DENIED');
+    expect(result.error.attempts[0].error?.code).toBe('EACCES');
+  });
+
+  it('should report EISDIR error with IS_DIRECTORY type', async () => {
+    const eisdirError = new Error('EISDIR: illegal operation on a directory') as NodeJS.ErrnoException;
+    eisdirError.code = 'EISDIR';
+    vi.mocked(fs.access).mockRejectedValue(eisdirError);
+
+    const result = await validateBinaryPaths(['/path/to/directory']);
+
+    assert(!result.ok);
+    expect(result.error.attempts).toHaveLength(1);
+    expect(result.error.attempts[0].valid).toBe(false);
+    expect(result.error.attempts[0].error?.type).toBe('IS_DIRECTORY');
+    expect(result.error.attempts[0].error?.code).toBe('EISDIR');
+  });
+
+  it('should report ENOENT error with FILE_NOT_FOUND type', async () => {
+    const enoentError = new Error('ENOENT: no such file or directory') as NodeJS.ErrnoException;
+    enoentError.code = 'ENOENT';
+    vi.mocked(fs.access).mockRejectedValue(enoentError);
+
+    const result = await validateBinaryPaths(['/nonexistent/path']);
+
+    assert(!result.ok);
+    expect(result.error.attempts).toHaveLength(1);
+    expect(result.error.attempts[0].error?.type).toBe('FILE_NOT_FOUND');
+    expect(result.error.attempts[0].error?.code).toBe('ENOENT');
+  });
+
+  it('should report generic access error for unknown error codes', async () => {
+    const genericError = new Error('some other error') as NodeJS.ErrnoException;
+    genericError.code = 'EUNKNOWN';
+    vi.mocked(fs.access).mockRejectedValue(genericError);
+
+    const result = await validateBinaryPaths(['/path/to/binary']);
+
+    assert(!result.ok);
+    expect(result.error.attempts[0].error?.type).toBe('ACCESS_ERROR');
+  });
+
+  it('should report NOT_EXECUTABLE for permission-related error messages', async () => {
+    const permError = new Error('not executable') as NodeJS.ErrnoException;
+    vi.mocked(fs.access).mockRejectedValue(permError);
+
+    const result = await validateBinaryPaths(['/path/to/binary']);
+
+    assert(!result.ok);
+    expect(result.error.attempts[0].error?.type).toBe('NOT_EXECUTABLE');
+  });
+
+  it('should return first valid path when some paths fail', async () => {
+    let callCount = 0;
+    vi.mocked(fs.access).mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        const error = new Error('ENOENT') as NodeJS.ErrnoException;
+        error.code = 'ENOENT';
+        throw error;
+      }
+      // Second call succeeds
+    });
+
+    const result = await validateBinaryPaths(['/bad/path', '/good/path']);
+
+    assert(result.ok);
+    expect(result.value.validPath).toBe('/good/path');
+    expect(result.value.attempts).toHaveLength(2);
+    expect(result.value.attempts[0].valid).toBe(false);
+    expect(result.value.attempts[1].valid).toBe(true);
   });
 });
