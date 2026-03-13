@@ -11,7 +11,7 @@
   "license": "MIT",
   "author": "WebdriverIO Community",
   "engines": {
-    "node": ">=18 || >=20",
+    "node": ">=20",
     "pnpm": ">=10.12.0"
   },
   "pnpm": {
