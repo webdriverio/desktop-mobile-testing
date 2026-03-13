@@ -1,6 +1,6 @@
+import type { NormalizedPackageJson, NormalizedReadResult } from '@wdio/native-types';
 import { describe, expect, it, vi } from 'vitest';
 import { getElectronVersion } from '../src/electronVersion.js';
-import type { NormalizedPackageJson, NormalizedReadResult } from '../src/package.js';
 import { findPnpmCatalogVersion } from '../src/pnpm.js';
 
 vi.mock('../src/pnpm', async () => {
