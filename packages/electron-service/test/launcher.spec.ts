@@ -16,6 +16,21 @@ let options: ElectronServiceOptions;
 let getBinaryPath: Mock<() => Promise<BinaryPathResult>>;
 let getAppBuildInfo: Mock<() => Promise<AppBuildInfo>>;
 let getElectronVersion: Mock<() => Promise<string>>;
+let readPackageUp: Mock<
+  (options?: {
+    cwd?: string;
+  }) => Promise<
+    | { packageJson: { dependencies: Record<string, string>; devDependencies: Record<string, string> }; path: string }
+    | undefined
+  >
+>;
+let readPackageUpSync: Mock<
+  (options?: {
+    cwd?: string;
+  }) =>
+    | { packageJson: { dependencies: Record<string, string>; devDependencies: Record<string, string> }; path: string }
+    | undefined
+>;
 
 function getFixtureDir(fixtureType: string, fixtureName: string) {
   return path.join(process.cwd(), '..', '..', 'fixtures', fixtureType, fixtureName);
@@ -23,13 +38,10 @@ function getFixtureDir(fixtureType: string, fixtureName: string) {
 
 vi.mock('node:fs/promises', () => {
   const mockAccessFn = vi.fn().mockResolvedValue(undefined);
-  const mockReadFileFn = vi.fn();
   return {
     access: mockAccessFn,
-    readFile: mockReadFileFn,
     default: {
       access: mockAccessFn,
-      readFile: mockReadFileFn,
     },
   };
 });
@@ -38,23 +50,11 @@ vi.mock('@wdio/native-utils', async () => {
   const actual = await vi.importActual('@wdio/native-utils');
   return {
     ...actual,
-    getBinaryPath: vi.fn().mockResolvedValue({ ok: true, value: { binaryPath: '' } }),
-    getAppBuildInfo: vi.fn().mockResolvedValue({ ok: true, value: { appName: '', config: {} } }),
-    getElectronVersion: vi.fn().mockResolvedValue('26.0.0'),
-    readPackageUp: vi.fn().mockImplementation((options: { cwd?: string }) => {
-      const cwd = (options as { cwd?: string }).cwd || process.cwd();
-      return Promise.resolve({
-        packageJson: { name: 'test', version: '1.0.0', dependencies: {}, devDependencies: {} },
-        path: `${cwd}/package.json`,
-      });
-    }),
-    readPackageUpSync: vi.fn().mockImplementation((options: { cwd?: string }) => {
-      const cwd = (options as { cwd?: string }).cwd || process.cwd();
-      return {
-        packageJson: { name: 'test', version: '1.0.0', dependencies: {}, devDependencies: {} },
-        path: `${cwd}/package.json`,
-      };
-    }),
+    getBinaryPath: vi.fn(),
+    getAppBuildInfo: vi.fn(),
+    getElectronVersion: vi.fn(),
+    readPackageUp: vi.fn(),
+    readPackageUpSync: vi.fn(),
     createLogger: vi.fn(() => ({
       info: vi.fn(),
       warn: vi.fn(),
@@ -81,6 +81,21 @@ beforeEach(async () => {
   getBinaryPath = nativeUtils.getBinaryPath as Mock<() => Promise<BinaryPathResult>>;
   getAppBuildInfo = nativeUtils.getAppBuildInfo as Mock<() => Promise<AppBuildInfo>>;
   getElectronVersion = nativeUtils.getElectronVersion as Mock<() => Promise<string>>;
+  readPackageUp = nativeUtils.readPackageUp as Mock<
+    (
+      ...args: unknown[]
+    ) => Promise<
+      | { packageJson: { dependencies: Record<string, string>; devDependencies: Record<string, string> }; path: string }
+      | undefined
+    >
+  >;
+  readPackageUpSync = nativeUtils.readPackageUpSync as Mock<
+    (
+      ...args: unknown[]
+    ) =>
+      | { packageJson: { dependencies: Record<string, string>; devDependencies: Record<string, string> }; path: string }
+      | undefined
+  >;
   getBinaryPath.mockResolvedValue({
     ok: true,
     value: {
@@ -115,6 +130,22 @@ beforeEach(async () => {
 
   // Default getElectronVersion mock - returns a version >= 26 by default
   getElectronVersion.mockResolvedValue('30.0.0');
+
+  // Default readPackageUp mock - returns a valid result based on the cwd option
+  readPackageUp.mockImplementation(async (options?: { cwd?: string }) => {
+    const cwdPath = options?.cwd || getFixtureDir('package-scenarios', 'no-build-tool');
+    return {
+      packageJson: { dependencies: { electron: '^26.0.0' }, devDependencies: {} },
+      path: path.join(cwdPath, 'package.json'),
+    };
+  });
+  readPackageUpSync.mockImplementation((options?: { cwd?: string }) => {
+    const cwdPath = options?.cwd || getFixtureDir('package-scenarios', 'no-build-tool');
+    return {
+      packageJson: { dependencies: { electron: '^26.0.0' }, devDependencies: {} },
+      path: path.join(cwdPath, 'package.json'),
+    };
+  });
 
   LaunchService = (await import('../src/launcher.js')).default;
   options = {
@@ -836,7 +867,6 @@ describe('Electron Launch Service', () => {
       });
 
       it('should use readPackageUp result for electron binary path with appEntryPoint instead of rootDir', async () => {
-        // Mock readPackageUp in @wdio/native-utils before importing the module
         const mockPackage = {
           packageJson: {
             dependencies: { electron: '^26.0.0' },
@@ -847,31 +877,11 @@ describe('Electron Launch Service', () => {
           path: '/different/path/to/package.json',
         };
 
-        vi.doMock('@wdio/native-utils', () => ({
-          ...vi.importActual('@wdio/native-utils'),
-          readPackageUp: vi.fn().mockResolvedValue(mockPackage),
-          getBinaryPath: vi.fn(),
-          getAppBuildInfo: vi.fn(),
-          getElectronVersion: vi.fn(),
-          createLogger: vi.fn(() => ({
-            info: vi.fn(),
-            warn: vi.fn(),
-            debug: vi.fn(),
-            error: vi.fn(),
-            trace: vi.fn(),
-          })),
-        }));
-
-        // Clear module cache to ensure our mock is used
-        vi.resetModules();
-
-        // Now import the module after setting up the mock
-        const { default: LaunchService } = await import('../src/launcher.js');
+        readPackageUp.mockResolvedValue(mockPackage);
 
         delete options.appBinaryPath;
         options.appEntryPoint = 'path/to/main.bundle.js';
 
-        // Create instance with a different rootDir to ensure we don't use it
         instance = new LaunchService(
           options,
           [] as never,
@@ -890,7 +900,6 @@ describe('Electron Launch Service', () => {
 
         await instance?.onPrepare({} as never, capabilities);
 
-        // Verify that binary path uses the directory from readPackageUp result, not rootDir
         expect(capabilities[0]['goog:chromeOptions']?.binary).toBe(
           path.join(
             '/different/path/to',
@@ -899,9 +908,6 @@ describe('Electron Launch Service', () => {
             process.platform === 'win32' ? 'electron.CMD' : 'electron',
           ),
         );
-
-        // Note: Not cleaning up the read-package-up mock to avoid Windows path issues
-        // The mock won't affect other tests since they don't use read-package-up
       });
 
       it('should set the expected capabilities when setting custom chromedriverOptions', async () => {
