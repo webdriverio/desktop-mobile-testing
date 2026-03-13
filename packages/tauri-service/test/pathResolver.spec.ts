@@ -262,6 +262,7 @@ describe('pathResolver', () => {
     it('should return true when binary exists', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
       vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ productName: 'MyApp', version: '1.0.0' }));
+      vi.mocked(readdirSync).mockReturnValue([] as unknown as ReturnType<typeof readdirSync>);
 
       const result = await isTauriAppBuilt('/app');
 
