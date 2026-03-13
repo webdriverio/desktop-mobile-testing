@@ -121,7 +121,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
     const caps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
     const pkg =
       (await readPackageUp({ cwd: this.#projectRoot })) ||
-      ({ packageJson: { dependencies: {}, devDependencies: {} } } as NormalizedReadResult);
+      ({ packageJson: { dependencies: {}, devDependencies: {} }, path: '' } as NormalizedReadResult);
 
     if (!caps.length) {
       const noElectronCapabilityError = new Error('No Electron browser found in capabilities');
