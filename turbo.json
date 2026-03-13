@@ -123,7 +123,7 @@
       "cache": false
     },
     "@wdio/bundler#build": {
-      "dependsOn": ["@wdio/native-types#build", "typecheck"],
+      "dependsOn": ["typecheck"],
       "outputs": ["dist/**"]
     },
     "@wdio/native-types#build": {
