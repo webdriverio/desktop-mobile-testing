@@ -421,92 +421,86 @@ describe('Multiremote Mode - Integration', () => {
       delete process.env.CN_API_KEY;
     });
 
-    it('should spawn separate test-runner-backend per multiremote instance', async () => {
-      // Skip on non-macOS
-      if (process.platform !== 'darwin') {
-        return;
-      }
-      vi.mocked(ensureTauriDriver).mockResolvedValue({
-        ok: true,
-        value: { path: mockSuccessPath, method: 'found' },
-      });
+    it.skipIf(process.platform !== 'darwin')(
+      'should spawn separate test-runner-backend per multiremote instance',
+      async () => {
+        vi.mocked(ensureTauriDriver).mockResolvedValue({
+          ok: true,
+          value: { path: mockSuccessPath, method: 'found' },
+        });
 
-      launcher = new TauriLaunchService(
-        { driverProvider: 'crabnebula', crabnebulaManageBackend: false },
-        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
-        { maxInstances: 1 },
-      );
+        launcher = new TauriLaunchService(
+          { driverProvider: 'crabnebula', crabnebulaManageBackend: false },
+          { browserName: 'tauri', 'tauri:options': { application: '/app' } },
+          { maxInstances: 1 },
+        );
 
-      const capabilities = {
-        browserA: {
-          capabilities: {
-            browserName: 'tauri',
-            'tauri:options': { application: '/app' },
-          } as TauriCapabilities,
-        },
-        browserB: {
-          capabilities: {
-            browserName: 'tauri',
-            'tauri:options': { application: '/app' },
-          } as TauriCapabilities,
-        },
-      };
+        const capabilities = {
+          browserA: {
+            capabilities: {
+              browserName: 'tauri',
+              'tauri:options': { application: '/app' },
+            } as TauriCapabilities,
+          },
+          browserB: {
+            capabilities: {
+              browserName: 'tauri',
+              'tauri:options': { application: '/app' },
+            } as TauriCapabilities,
+          },
+        };
 
-      await (launcher as any).onPrepare({}, capabilities);
+        await (launcher as any).onPrepare({}, capabilities);
 
-      // Verify test-runner-backend was called for each instance
-      expect(startTestRunnerBackend).toHaveBeenCalledTimes(2);
-    });
+        // Verify test-runner-backend was called for each instance
+        expect(startTestRunnerBackend).toHaveBeenCalledTimes(2);
+      },
+    );
 
-    it('should allocate unique ports for each CrabNebula backend instance', async () => {
-      // Skip on non-macOS (test-runner-backend is macOS only)
-      if (process.platform !== 'darwin') {
-        return;
-      }
-      vi.mocked(ensureTauriDriver).mockResolvedValue({
-        ok: true,
-        value: { path: mockSuccessPath, method: 'found' },
-      });
+    it.skipIf(process.platform !== 'darwin')(
+      'should allocate unique ports for each CrabNebula backend instance',
+      async () => {
+        vi.mocked(ensureTauriDriver).mockResolvedValue({
+          ok: true,
+          value: { path: mockSuccessPath, method: 'found' },
+        });
 
-      launcher = new TauriLaunchService(
-        { driverProvider: 'crabnebula', crabnebulaManageBackend: false },
-        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
-        { maxInstances: 1 },
-      );
+        launcher = new TauriLaunchService(
+          { driverProvider: 'crabnebula', crabnebulaManageBackend: false },
+          { browserName: 'tauri', 'tauri:options': { application: '/app' } },
+          { maxInstances: 1 },
+        );
 
-      const capabilities = {
-        browserA: {
-          capabilities: {
-            browserName: 'tauri',
-            'tauri:options': { application: '/app' },
-          } as TauriCapabilities,
-        } as { capabilities: TauriCapabilities; port?: number },
-        browserB: {
-          capabilities: {
-            browserName: 'tauri',
-            'tauri:options': { application: '/app' },
-          } as TauriCapabilities,
-        } as { capabilities: TauriCapabilities; port?: number },
-      };
+        const capabilities = {
+          browserA: {
+            capabilities: {
+              browserName: 'tauri',
+              'tauri:options': { application: '/app' },
+            } as TauriCapabilities,
+          } as { capabilities: TauriCapabilities; port?: number },
+          browserB: {
+            capabilities: {
+              browserName: 'tauri',
+              'tauri:options': { application: '/app' },
+            } as TauriCapabilities,
+          } as { capabilities: TauriCapabilities; port?: number },
+        };
 
-      await (launcher as any).onPrepare({}, capabilities);
+        await (launcher as any).onPrepare({}, capabilities);
 
-      // Verify ports are unique
-      const portA = capabilities.browserA.port;
-      const portB = capabilities.browserB.port;
+        // Verify ports are unique
+        const portA = capabilities.browserA.port;
+        const portB = capabilities.browserB.port;
 
-      expect(portA).toBeDefined();
-      expect(portB).toBeDefined();
-      expect(portA).not.toBe(portB);
-      expect(portA).toBeGreaterThan(0);
-      expect(portB).toBeGreaterThan(0);
-    });
+        expect(portA).toBeDefined();
+        expect(portB).toBeDefined();
+        expect(portA).not.toBe(portB);
+        expect(portA).toBeGreaterThan(0);
+        expect(portB).toBeGreaterThan(0);
+      },
+    );
 
-    it('should update capabilities with correct ports and hostname', async () => {
-      // Skip on non-macOS (test-runner-backend is macOS only)
-      if (process.platform !== 'darwin') {
-        return;
-      }
+    it.skipIf(process.platform !== 'darwin')('should update capabilities with correct ports and hostname', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -534,11 +528,7 @@ describe('Multiremote Mode - Integration', () => {
       expect(capabilities.browserA.hostname).toBe('127.0.0.1');
     });
 
-    it('should call waitTestRunnerBackendReady for each instance', async () => {
-      // Skip on non-macOS (test-runner-backend is macOS only)
-      if (process.platform !== 'darwin') {
-        return;
-      }
+    it.skipIf(process.platform !== 'darwin')('should call waitTestRunnerBackendReady for each instance', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -571,11 +561,7 @@ describe('Multiremote Mode - Integration', () => {
       expect(waitTestRunnerBackendReady).toHaveBeenCalledTimes(2);
     });
 
-    it('should cleanup all CrabNebula backends in onComplete', async () => {
-      // Skip on non-macOS (test-runner-backend is macOS only)
-      if (process.platform !== 'darwin') {
-        return;
-      }
+    it.skipIf(process.platform !== 'darwin')('should cleanup all CrabNebula backends in onComplete', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },
@@ -611,53 +597,53 @@ describe('Multiremote Mode - Integration', () => {
       expect(stopTestRunnerBackend).toHaveBeenCalledTimes(2);
     });
 
-    it('should cycle backends and drivers between workers in onWorkerEnd', async () => {
-      if (process.platform !== 'darwin') {
-        return;
-      }
-      vi.mocked(ensureTauriDriver).mockResolvedValue({
-        ok: true,
-        value: { path: mockSuccessPath, method: 'found' },
-      });
+    it.skipIf(process.platform !== 'darwin')(
+      'should cycle backends and drivers between workers in onWorkerEnd',
+      async () => {
+        vi.mocked(ensureTauriDriver).mockResolvedValue({
+          ok: true,
+          value: { path: mockSuccessPath, method: 'found' },
+        });
 
-      launcher = new TauriLaunchService(
-        { driverProvider: 'crabnebula', crabnebulaManageBackend: false },
-        { browserName: 'tauri', 'tauri:options': { application: '/app' } },
-        { maxInstances: 1 },
-      );
+        launcher = new TauriLaunchService(
+          { driverProvider: 'crabnebula', crabnebulaManageBackend: false },
+          { browserName: 'tauri', 'tauri:options': { application: '/app' } },
+          { maxInstances: 1 },
+        );
 
-      const capabilities = {
-        browserA: {
-          capabilities: {
-            browserName: 'tauri',
-            'tauri:options': { application: '/app' },
-          } as TauriCapabilities,
-        },
-        browserB: {
-          capabilities: {
-            browserName: 'tauri',
-            'tauri:options': { application: '/app' },
-          } as TauriCapabilities,
-        },
-      };
+        const capabilities = {
+          browserA: {
+            capabilities: {
+              browserName: 'tauri',
+              'tauri:options': { application: '/app' },
+            } as TauriCapabilities,
+          },
+          browserB: {
+            capabilities: {
+              browserName: 'tauri',
+              'tauri:options': { application: '/app' },
+            } as TauriCapabilities,
+          },
+        };
 
-      await (launcher as any).onPrepare({}, capabilities);
+        await (launcher as any).onPrepare({}, capabilities);
 
-      // onPrepare starts 2 backends
-      expect(startTestRunnerBackend).toHaveBeenCalledTimes(2);
-      expect(waitTestRunnerBackendReady).toHaveBeenCalledTimes(2);
+        // onPrepare starts 2 backends
+        expect(startTestRunnerBackend).toHaveBeenCalledTimes(2);
+        expect(waitTestRunnerBackendReady).toHaveBeenCalledTimes(2);
 
-      vi.mocked(startTestRunnerBackend).mockClear();
-      vi.mocked(waitTestRunnerBackendReady).mockClear();
-      vi.mocked(stopTestRunnerBackend).mockClear();
+        vi.mocked(startTestRunnerBackend).mockClear();
+        vi.mocked(waitTestRunnerBackendReady).mockClear();
+        vi.mocked(stopTestRunnerBackend).mockClear();
 
-      // onWorkerEnd should cycle: stop 2 backends + restart 2 backends
-      await (launcher as any).onWorkerEnd('0-0');
+        // onWorkerEnd should cycle: stop 2 backends + restart 2 backends
+        await (launcher as any).onWorkerEnd('0-0');
 
-      expect(stopTestRunnerBackend).toHaveBeenCalledTimes(2);
-      expect(startTestRunnerBackend).toHaveBeenCalledTimes(2);
-      expect(waitTestRunnerBackendReady).toHaveBeenCalledTimes(2);
-    });
+        expect(stopTestRunnerBackend).toHaveBeenCalledTimes(2);
+        expect(startTestRunnerBackend).toHaveBeenCalledTimes(2);
+        expect(waitTestRunnerBackendReady).toHaveBeenCalledTimes(2);
+      },
+    );
 
     it('should not cycle infrastructure on non-CrabNebula multiremote', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({

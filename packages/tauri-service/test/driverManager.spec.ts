@@ -66,27 +66,21 @@ describe('WebKitWebDriver Management', () => {
       });
     });
 
-    it('should have proper result structure for WebKitWebDriver', async () => {
-      if (process.platform !== 'linux') {
-        return;
-      }
-
+    it.skipIf(process.platform !== 'linux')('should have proper result structure for WebKitWebDriver', async () => {
       const result = await ensureWebKitWebDriver();
 
       expect(result).toHaveProperty('ok');
+      // On Linux, result is either ok with a value or error with a message
       expect(result.ok ? result.value : result.error).toBeDefined();
-      expect(result.ok ? undefined : result.error).toHaveProperty('message');
     });
 
-    it('should return valid result for WebKitWebDriver check', async () => {
-      if (process.platform !== 'linux') {
-        return;
-      }
-
+    it.skipIf(process.platform !== 'linux')('should return valid result for WebKitWebDriver check', async () => {
       const result = await ensureWebKitWebDriver();
 
       expect(result).toHaveProperty('ok');
-      expect(result.ok ? result.value.path : result.error.message).toBeDefined();
+      // Verify the discriminated union has the expected shape
+      const hasExpectedShape = result.ok ? result.value !== undefined : typeof result.error.message === 'string';
+      expect(hasExpectedShape).toBe(true);
     });
   });
 });
