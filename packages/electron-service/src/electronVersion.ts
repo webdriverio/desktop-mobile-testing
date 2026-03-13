@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
+import type { NormalizedReadResult } from '@wdio/native-utils';
 import findVersions from 'find-versions';
 import { PKG_NAME_ELECTRON, PNPM_CATALOG_PREFIX } from './constants.js';
-import type { NormalizedReadResult } from './package.js';
 import { findPnpmCatalogVersion } from './pnpm.js';
 
 export async function getElectronVersion(pkg: NormalizedReadResult) {

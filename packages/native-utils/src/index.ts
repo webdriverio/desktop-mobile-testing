@@ -1,8 +1,7 @@
 import { createLogger } from './log.js';
 
 export { createLogger };
-export { getAppBuildInfo } from './appBuildInfo.js';
-export { generateBinaryPaths, getBinaryPath } from './binaryPath.js';
+export { readConfig } from './config/read.js';
 export {
   type DiagnosticResult,
   diagnoseBinary,
@@ -13,7 +12,6 @@ export {
   diagnoseSharedLibraries,
   formatDiagnosticResults,
 } from './diagnostics.js';
-export { getElectronVersion } from './electronVersion.js';
 export type { LogArea } from './log.js';
 export { type NormalizedReadResult, readPackageUp, readPackageUpSync } from './package.js';
 export {

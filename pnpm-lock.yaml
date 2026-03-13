@@ -884,9 +884,6 @@ importers:
 
   packages/native-utils:
     dependencies:
-      '@electron/packager':
-        specifier: ^19.0.5
-        version: 19.0.5
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0

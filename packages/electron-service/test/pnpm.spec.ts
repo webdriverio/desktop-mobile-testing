@@ -1,9 +1,14 @@
+// @vitest-environment node
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PKG_NAME_ELECTRON, PNPM_WORKSPACE_YAML } from '../src/constants.js';
 import { findPnpmCatalogVersion } from '../src/pnpm.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function getPnpmFixtureDirPath(subPath?: string[]) {
   const fixtureDir = path.resolve(process.cwd(), '..', '..', 'fixtures', 'package-scenarios', 'pnpm-workspace');

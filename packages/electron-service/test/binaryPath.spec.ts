@@ -1,3 +1,4 @@
+// @vitest-environment node
 import fs from 'node:fs/promises';
 import { normalize } from 'node:path';
 import type { AppBuildInfo } from '@wdio/native-types';
@@ -14,7 +15,19 @@ vi.mock('node:fs/promises', async (importActual) => {
   };
 });
 
-vi.mock('../src/log.js', () => import('./__mock__/log.js'));
+vi.mock('@wdio/native-utils', async (importActual) => {
+  const actual = await importActual<typeof import('@wdio/native-utils')>();
+  return {
+    ...actual,
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  };
+});
 
 const pkgJSONPath = '/path/to/package.json';
 const winProcess = { platform: 'win32', arch: 'x64' } as NodeJS.Process;

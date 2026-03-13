@@ -1,4 +1,5 @@
 import type { AppBuildInfo } from '@wdio/native-types';
+import { createLogger, type NormalizedReadResult } from '@wdio/native-utils';
 import { getConfig as getBuilderConfig } from './config/builder.js';
 import { getConfig as getForgeConfig } from './config/forge.js';
 import {
@@ -7,8 +8,6 @@ import {
   FORGE_CONFIG_NOT_FOUND_ERROR,
   MULTIPLE_BUILD_TOOL_WARNING,
 } from './constants.js';
-import { createLogger } from './log.js';
-import type { NormalizedReadResult } from './package.js';
 
 const log = createLogger('electron-service', 'config');
 

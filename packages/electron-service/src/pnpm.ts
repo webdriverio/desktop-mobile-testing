@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createLogger } from '@wdio/native-utils';
 import { PNPM_CATALOG_PREFIX, PNPM_WORKSPACE_YAML } from './constants.js';
-import { createLogger } from './log.js';
 
 const log = createLogger('electron-service', 'utils');
 
