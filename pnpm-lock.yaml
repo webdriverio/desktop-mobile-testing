@@ -890,18 +890,12 @@ importers:
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
-      deepmerge-ts:
-        specifier: ^7.1.5
-        version: 7.1.5
       esbuild:
         specifier: ^0.27.4
         version: 0.27.4
       find-up-simple:
         specifier: ^1.0.1
         version: 1.0.1
-      find-versions:
-        specifier: ^6.0.0
-        version: 6.0.0
       json5:
         specifier: ^2.2.3
         version: 2.2.3
