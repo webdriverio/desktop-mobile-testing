@@ -12,4 +12,7 @@ export const browser: WebdriverIO.Browser = wdioBrowser;
 export const startWdioSession = initSession;
 export const cleanupWdioSession = cleanup;
 export { createElectronCapabilities };
+export { getAppBuildInfo } from './appBuildInfo.js';
+export { getBinaryPath } from './binaryPath.js';
+export { getElectronVersion } from './electronVersion.js';
 export { getElectronBinaryPath } from './pathResolver.js';
