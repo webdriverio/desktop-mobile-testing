@@ -12,7 +12,7 @@ let LaunchService: typeof ElectronLaunchService;
 let instance: ElectronLaunchService | undefined;
 let options: ElectronServiceOptions;
 
-// Mocked functions from @wdio/native-utils
+// Mocked functions
 let getBinaryPath: Mock<() => Promise<BinaryPathResult>>;
 let getAppBuildInfo: Mock<() => Promise<AppBuildInfo>>;
 let getElectronVersion: Mock<() => Promise<string>>;
@@ -50,9 +50,6 @@ vi.mock('@wdio/native-utils', async () => {
   const actual = await vi.importActual('@wdio/native-utils');
   return {
     ...actual,
-    getBinaryPath: vi.fn(),
-    getAppBuildInfo: vi.fn(),
-    getElectronVersion: vi.fn(),
     readPackageUp: vi.fn(),
     readPackageUpSync: vi.fn(),
     createLogger: vi.fn(() => ({
@@ -65,7 +62,9 @@ vi.mock('@wdio/native-utils', async () => {
   };
 });
 
-// Log mock is included in the main @wdio/native-utils mock above
+vi.mock('../src/appBuildInfo.js', () => ({ getAppBuildInfo: vi.fn() }));
+vi.mock('../src/binaryPath.js', () => ({ getBinaryPath: vi.fn() }));
+vi.mock('../src/electronVersion.js', () => ({ getElectronVersion: vi.fn() }));
 
 vi.mock('get-port', async () => {
   return {
@@ -78,9 +77,12 @@ beforeEach(async () => {
 
   // Get references to the mocked functions
   const nativeUtils = await import('@wdio/native-utils');
-  getBinaryPath = nativeUtils.getBinaryPath as Mock<() => Promise<BinaryPathResult>>;
-  getAppBuildInfo = nativeUtils.getAppBuildInfo as Mock<() => Promise<AppBuildInfo>>;
-  getElectronVersion = nativeUtils.getElectronVersion as Mock<() => Promise<string>>;
+  const appBuildInfoMod = await import('../src/appBuildInfo.js');
+  const binaryPathMod = await import('../src/binaryPath.js');
+  const electronVersionMod = await import('../src/electronVersion.js');
+  getBinaryPath = binaryPathMod.getBinaryPath as Mock<() => Promise<BinaryPathResult>>;
+  getAppBuildInfo = appBuildInfoMod.getAppBuildInfo as Mock<() => Promise<AppBuildInfo>>;
+  getElectronVersion = electronVersionMod.getElectronVersion as Mock<() => Promise<string>>;
   readPackageUp = nativeUtils.readPackageUp as Mock<
     (
       ...args: unknown[]

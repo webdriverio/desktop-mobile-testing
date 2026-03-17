@@ -20,13 +20,13 @@
     "@wdio/tauri-plugin": "workspace:*"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.10.0",
-    "@wdio/cli": "^9.24.0",
-    "@wdio/local-runner": "^9.24.0",
-    "@wdio/mocha-framework": "^9.24.0",
-    "@wdio/spec-reporter": "^9.24.0",
+    "@tauri-apps/cli": "2.10.1",
+    "@wdio/cli": "^9.25.0",
+    "@wdio/local-runner": "^9.25.0",
+    "@wdio/mocha-framework": "^9.25.0",
+    "@wdio/spec-reporter": "^9.25.0",
     "@wdio/tauri-service": "workspace:*",
-    "typescript": "^5.0.0",
+    "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }
 }

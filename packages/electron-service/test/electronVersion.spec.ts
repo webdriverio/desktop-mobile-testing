@@ -1,3 +1,4 @@
+// @vitest-environment node
 import type { NormalizedPackageJson, NormalizedReadResult } from '@wdio/native-types';
 import { describe, expect, it, vi } from 'vitest';
 import { getElectronVersion } from '../src/electronVersion.js';

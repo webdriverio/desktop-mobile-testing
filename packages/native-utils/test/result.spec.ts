@@ -1,5 +1,5 @@
-import { Err, isErr, isOk, map, mapErr, Ok, unwrap, unwrapOr, wrapAsync } from '@wdio/native-utils';
 import { assert, describe, expect, it } from 'vitest';
+import { Err, isErr, isOk, map, mapErr, Ok, unwrap, unwrapOr, wrapAsync } from '../src/result.js';
 
 describe('Ok', () => {
   it('should create an Ok result', () => {

@@ -2,7 +2,7 @@
 // so native-utils cannot be imported by bundler at build time.
 // The canonical implementation lives in @wdio/native-utils/src/package.ts.
 import { readFileSync } from 'node:fs';
-import { findUpSync } from 'find-up';
+import { findUpSync } from 'find-up-simple';
 
 export interface NormalizedPackageJson {
   name?: string;

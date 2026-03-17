@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { getElectronVersion } from '@wdio/electron-service';
 import type { NormalizedPackageJson } from '@wdio/native-types';
-import { getElectronVersion } from '@wdio/native-utils';
 import type * as Electron from 'electron';
 import { setupStandaloneTest } from './helpers/setup.js';
 

@@ -16,16 +16,16 @@ packages:
 
 catalogs:
   default:
-    '@wdio/cli': ^9.24.0
+    '@wdio/cli': ^9.25.0
     '@wdio/globals': ^9.23.0
-    '@wdio/local-runner': ^9.24.0
+    '@wdio/local-runner': ^9.25.0
     '@wdio/logger': ^9.18.0
-    '@wdio/mocha-framework': ^9.24.0
-    '@wdio/spec-reporter': ^9.24.0
-    '@wdio/types': 9.24.0
-    '@wdio/xvfb': ^9.24.0
-    electron: 40.6.1
-    webdriverio: ^9.24.0
+    '@wdio/mocha-framework': ^9.25.0
+    '@wdio/spec-reporter': ^9.25.0
+    '@wdio/types': 9.25.0
+    '@wdio/xvfb': ^9.25.0
+    electron: 41.0.2
+    webdriverio: ^9.25.0
   minimum:
     '@wdio/cli': ^8.43.0
     '@wdio/globals': ^8.43.0
@@ -46,5 +46,5 @@ catalogs:
     '@wdio/spec-reporter': latest
     '@wdio/types': latest
     '@wdio/xvfb': latest
-    electron-nightly: 42.0.0-nightly.20260224
+    electron-nightly: 42.0.0-nightly.20260311
     webdriverio: latest

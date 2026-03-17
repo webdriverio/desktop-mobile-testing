@@ -9,6 +9,7 @@ export default defineConfig({
         output: {
           format: 'es',
         },
+        external: ['electron'],
       },
     },
   },
@@ -20,6 +21,7 @@ export default defineConfig({
           format: 'cjs',
           entryFileNames: '[name].cjs',
         },
+        external: ['electron'],
       },
     },
   },

@@ -5,18 +5,13 @@ import type {
   ElectronServiceGlobalOptions,
   PathGenerationError,
 } from '@wdio/native-types';
-import {
-  createLogger,
-  formatDiagnosticResults,
-  getAppBuildInfo,
-  getBinaryPath,
-  getElectronVersion,
-} from '@wdio/native-utils';
+import { createLogger, formatDiagnosticResults, type NormalizedReadResult, readPackageUp } from '@wdio/native-utils';
+import { getAppBuildInfo } from './appBuildInfo.js';
+import { getBinaryPath } from './binaryPath.js';
+import { getElectronVersion } from './electronVersion.js';
 
 const log = createLogger('wdio-electron-service', 'launcher');
 
-import type { NormalizedReadResult } from '@wdio/native-utils';
-import { readPackageUp } from '@wdio/native-utils';
 import type { Capabilities, Options, Services } from '@wdio/types';
 import getPort from 'get-port';
 import { SevereServiceError } from 'webdriverio';

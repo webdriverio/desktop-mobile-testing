@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAppBuildInfo } from '../src/appBuildInfo.js';
 import { getConfig as getBuilderConfig } from '../src/config/builder.js';
@@ -10,7 +11,11 @@ import {
 } from '../src/constants.js';
 import { getFixturePackageJson } from './testUtils.js';
 
-vi.mock('../src/log.js', () => import('./__mock__/log.js'));
+vi.mock('@wdio/native-utils', async (importActual) => {
+  const actual = await importActual<typeof import('@wdio/native-utils')>();
+  const { createLogger } = await import('./__mock__/log.js');
+  return { ...actual, createLogger };
+});
 
 vi.mock('../src/config/builder', () => {
   return {
