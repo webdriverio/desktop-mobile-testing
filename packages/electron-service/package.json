@@ -51,9 +51,9 @@
     }
   },
   "dependencies": {
-    "@babel/parser": "^7.29.0",
+    "@babel/parser": "^7.29.2",
     "@electron/fuses": "^2.1.0",
-    "@electron/packager": "^19.0.5",
+    "@electron/packager": "^19.1.0",
     "@wdio/electron-cdp-bridge": "workspace:*",
     "@wdio/globals": "catalog:default",
     "@wdio/logger": "catalog:default",
