@@ -455,6 +455,80 @@ describe('Electron Launch Service', () => {
         );
       });
 
+      it('should use appEntryPoint when only appEntryPoint is provided', async () => {
+        delete options.appBinaryPath;
+        options.appEntryPoint = './main.js';
+        instance = new LaunchService(
+          options,
+          [] as never,
+          {
+            services: [['electron', options]],
+            rootDir: getFixtureDir('package-scenarios', 'no-build-tool'),
+          } as Options.Testrunner,
+        );
+        const capabilities: WebdriverIO.Capabilities[] = [
+          {
+            browserName: 'electron',
+            browserVersion: '26.2.2',
+          },
+        ];
+        await instance?.onPrepare({} as never, capabilities);
+
+        expect(capabilities[0]['goog:chromeOptions']?.args).toContain('--app=./main.js');
+      });
+
+      it('should wrap unexpected getBinaryPath errors with build tool suggestion', async () => {
+        delete options.appBinaryPath;
+        (getBinaryPath as Mock).mockRejectedValueOnce(new Error('Unexpected filesystem error'));
+
+        instance = new LaunchService(
+          options,
+          [] as never,
+          {
+            services: [['electron', options]],
+            rootDir: getFixtureDir('package-scenarios', 'no-build-tool'),
+          } as Options.Testrunner,
+        );
+        const capabilities: WebdriverIO.Capabilities[] = [
+          {
+            browserName: 'electron',
+            browserVersion: '26.2.2',
+          },
+        ];
+        await expect(() => instance?.onPrepare({} as never, capabilities)).rejects.toThrow(
+          /Could not find Electron app built with Electron Forge/,
+        );
+      });
+
+      it('should suggest electron-builder when build tool is not forge', async () => {
+        delete options.appBinaryPath;
+        (getBinaryPath as Mock).mockRejectedValueOnce(new Error('Unexpected error'));
+        (getAppBuildInfo as Mock).mockResolvedValueOnce({
+          appName: 'my-test-app',
+          isForge: false,
+          isBuilder: true,
+          config: {},
+        });
+
+        instance = new LaunchService(
+          options,
+          [] as never,
+          {
+            services: [['electron', options]],
+            rootDir: getFixtureDir('package-scenarios', 'no-build-tool'),
+          } as Options.Testrunner,
+        );
+        const capabilities: WebdriverIO.Capabilities[] = [
+          {
+            browserName: 'electron',
+            browserVersion: '26.2.2',
+          },
+        ];
+        await expect(() => instance?.onPrepare({} as never, capabilities)).rejects.toThrow(
+          /Could not find Electron app built with electron-builder/,
+        );
+      });
+
       it('should override global options with capabilities', async () => {
         const capabilities: WebdriverIO.Capabilities[] = [
           {

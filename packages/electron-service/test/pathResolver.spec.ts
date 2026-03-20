@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises';
-import type { NormalizedReadResult } from '@wdio/native-types';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveAppPaths, validateFilePath } from '../src/pathResolver.js';
+import type { AppBuildInfo, BinaryPathResult, NormalizedReadResult } from '@wdio/native-types';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { getElectronBinaryPath, resolveAppPaths, validateFilePath } from '../src/pathResolver.js';
 
 vi.mock('node:fs/promises', () => {
   const mockAccessFn = vi.fn().mockResolvedValue(undefined);
@@ -12,6 +12,16 @@ vi.mock('node:fs/promises', () => {
     },
   };
 });
+vi.mock('@wdio/native-utils', async () => {
+  const actual = await vi.importActual('@wdio/native-utils');
+  return {
+    ...actual,
+    readPackageUp: vi.fn(),
+  };
+});
+vi.mock('../src/appBuildInfo.js', () => ({ getAppBuildInfo: vi.fn() }));
+vi.mock('../src/binaryPath.js', () => ({ getBinaryPath: vi.fn() }));
+vi.mock('../src/electronVersion.js', () => ({ getElectronVersion: vi.fn() }));
 
 describe('pathResolver', () => {
   let mockPkg: NormalizedReadResult;
@@ -201,6 +211,70 @@ describe('pathResolver', () => {
           }),
         ).rejects.toThrow(/No paths provided for resolution/);
       });
+    });
+  });
+
+  describe('getElectronBinaryPath', () => {
+    let readPackageUp: Mock;
+    let getAppBuildInfo: Mock;
+    let getBinaryPath: Mock;
+    let getElectronVersion: Mock;
+
+    beforeEach(async () => {
+      const nativeUtils = await import('@wdio/native-utils');
+      const appBuildInfoMod = await import('../src/appBuildInfo.js');
+      const binaryPathMod = await import('../src/binaryPath.js');
+      const electronVersionMod = await import('../src/electronVersion.js');
+
+      readPackageUp = nativeUtils.readPackageUp as Mock;
+      getAppBuildInfo = appBuildInfoMod.getAppBuildInfo as Mock;
+      getBinaryPath = binaryPathMod.getBinaryPath as Mock;
+      getElectronVersion = electronVersionMod.getElectronVersion as Mock;
+    });
+
+    it('should return the binary path when all steps succeed', async () => {
+      readPackageUp.mockResolvedValue({
+        packageJson: { name: 'test-app', version: '1.0.0' },
+        path: '/app/package.json',
+      });
+      getElectronVersion.mockResolvedValue('30.0.0');
+      getAppBuildInfo.mockResolvedValue({
+        appName: 'test-app',
+        isForge: true,
+        config: {},
+      } as AppBuildInfo);
+      getBinaryPath.mockResolvedValue({
+        ok: true,
+        value: { binaryPath: '/app/out/test-app' },
+      } as unknown as BinaryPathResult);
+
+      const result = await getElectronBinaryPath('/app');
+      expect(result).toBe('/app/out/test-app');
+    });
+
+    it('should throw when package.json is not found', async () => {
+      readPackageUp.mockResolvedValue(undefined);
+
+      await expect(getElectronBinaryPath('/missing')).rejects.toThrow(/Failed to find package.json in \/missing/);
+    });
+
+    it('should throw when binary path resolution fails', async () => {
+      readPackageUp.mockResolvedValue({
+        packageJson: { name: 'test-app', version: '1.0.0' },
+        path: '/app/package.json',
+      });
+      getElectronVersion.mockResolvedValue('30.0.0');
+      getAppBuildInfo.mockResolvedValue({
+        appName: 'test-app',
+        isForge: true,
+        config: {},
+      } as AppBuildInfo);
+      getBinaryPath.mockResolvedValue({
+        ok: false,
+        error: { message: 'not found' },
+      } as unknown as BinaryPathResult);
+
+      await expect(getElectronBinaryPath('/app')).rejects.toThrow(/Failed to resolve Electron binary path for \/app/);
     });
   });
 });

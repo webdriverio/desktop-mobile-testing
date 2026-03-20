@@ -186,6 +186,37 @@ describe('Electron Worker Service', () => {
       expect(() => serviceApi.restoreAllMocks()).toThrow('CDP bridge is not available, API is disabled');
     });
 
+    it('should gracefully degrade when CDP bridge connection fails', async () => {
+      const { ElectronCdpBridge } = await import('../src/bridge.js');
+      vi.mocked(ElectronCdpBridge.prototype.connect).mockRejectedValueOnce(new Error('Connection refused'));
+
+      instance = new ElectronWorkerService({}, {});
+      await instance.before({}, [], browser);
+
+      const serviceApi = browser.electron as BrowserExtension['electron'];
+      expect(() => serviceApi.execute(() => {})).toThrow('CDP bridge is not available, API is disabled');
+      expect(() => serviceApi.mock('app', 'getName')).toThrow('CDP bridge is not available, API is disabled');
+    });
+
+    it('should log warning when fuse check has non-fatal error', async () => {
+      const { checkInspectFuse } = await import('../src/fuses.js');
+      vi.mocked(checkInspectFuse).mockResolvedValueOnce({
+        canUseCdpBridge: true,
+        error: 'Could not read fuse config, proceeding anyway',
+      });
+
+      instance = new ElectronWorkerService({}, {});
+      const capabilities = {
+        'goog:chromeOptions': {
+          binary: '/path/to/electron',
+        },
+      };
+      await instance.before(capabilities, [], browser);
+
+      const serviceApi = browser.electron as BrowserExtension['electron'];
+      expect(serviceApi.execute).toEqual(expect.any(Function));
+    });
+
     it('should reject when waitUntilWindowAvailable fails', async () => {
       // Mock the @wdio/native-utils version which the service actually calls
       const nativeUtils = await import('@wdio/native-utils');

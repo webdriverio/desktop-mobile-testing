@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-import { createMock } from '../../src/mock.js';
+import { createClassMock, createMock } from '../../src/mock.js';
 import mockStore from '../../src/mockStore.js';
 
 vi.mock('../../src/mock.js', () => ({
   createMock: vi.fn(),
+  createClassMock: vi.fn(),
 }));
 vi.mock('../../src/mockStore.js', () => ({
   default: {
@@ -67,6 +68,29 @@ describe('mock Command', () => {
 
       await mock('app', 'getName');
       expect(mockStore.setMock).toBeCalledWith(mockedGetName);
+    });
+  });
+
+  describe('class mock path (no funcName)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should call createClassMock when no funcName is provided', async () => {
+      const mockClassInstance = { getMockName: () => 'electron.Tray', __constructor: vi.fn() };
+      (createClassMock as Mock).mockResolvedValue(mockClassInstance);
+
+      const result = await mock('Tray');
+      expect(createClassMock).toHaveBeenCalledWith('Tray', undefined);
+      expect(result).toBe(mockClassInstance);
+    });
+
+    it('should not interact with mockStore for class mocks', async () => {
+      (createClassMock as Mock).mockResolvedValue({ getMockName: () => 'electron.Tray' });
+
+      await mock('Tray');
+      expect(mockStore.getMock).not.toHaveBeenCalled();
+      expect(mockStore.setMock).not.toHaveBeenCalled();
     });
   });
 });
