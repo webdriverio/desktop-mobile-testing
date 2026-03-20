@@ -193,6 +193,44 @@ To use a catalog dependency:
 }
 ```
 
+## Dependency Management
+
+The project uses three catalogs to test against different versions of key dependencies:
+
+| Catalog | Purpose |
+|---------|---------|
+| `default` | Stable production versions — the reliable baseline |
+| `next` | Latest/nightly versions — validates upcoming compatibility |
+| `minimum` | Lowest supported versions — ensures backward compatibility |
+
+### Switching Catalogs
+
+```bash
+pnpm catalog:default   # Switch all packages to stable versions
+pnpm catalog:next      # Switch all packages to latest/nightly versions
+pnpm catalog:minimum   # Switch all packages to lowest supported versions
+```
+
+### Updating Catalog Versions
+
+```bash
+# Update catalog versions interactively
+pnpm catalog:update
+
+# Preview changes without applying them
+pnpm catalog:update:dry
+
+# Update all catalogs and other dependencies
+pnpm update:all
+
+# Target a specific catalog
+pnpm catalog:update --default
+pnpm catalog:update --next
+pnpm catalog:update --minimum
+```
+
+The update process shows available updates, lets you select which to apply, updates `pnpm-workspace.yaml`, then runs `pnpm install`.
+
 ## Turborepo Caching
 
 Turborepo caches task outputs to speed up subsequent runs.
@@ -236,11 +274,11 @@ pnpm turbo build
 ### Update Dependencies
 
 ```bash
-# Update all dependencies
-pnpm update -r -i --latest
+# Update dependencies interactively
+pnpm update:interactive
 
-# Update specific package
-pnpm --filter @wdio/electron-service update some-package
+# Preview changes without applying
+pnpm update:interactive:dry
 ```
 
 ## Troubleshooting
