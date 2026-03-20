@@ -23,6 +23,7 @@ vi.mock('@wdio/native-utils', () => ({
     warn: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
+    trace: vi.fn(),
   }),
 }));
 
@@ -453,13 +454,23 @@ describe('triggerDeeplink', () => {
   });
 
   describe('Error handling', () => {
-    it('should propagate errors from executeDeeplinkCommand', async () => {
-      const originalPlatform = process.platform;
+    const originalPlatform = process.platform;
+
+    beforeEach(() => {
       Object.defineProperty(process, 'platform', {
         value: 'darwin',
         configurable: true,
       });
+    });
 
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+      });
+    });
+
+    it('should propagate errors from executeDeeplinkCommand', async () => {
       mockContext.globalOptions = {};
 
       // Mock spawn to throw error
@@ -472,11 +483,6 @@ describe('triggerDeeplink', () => {
       await expect(triggerDeeplink.call(mockContext, 'myapp://test')).rejects.toThrow(
         'Failed to trigger deeplink: Command failed',
       );
-
-      Object.defineProperty(process, 'platform', {
-        value: originalPlatform,
-        configurable: true,
-      });
     });
   });
 

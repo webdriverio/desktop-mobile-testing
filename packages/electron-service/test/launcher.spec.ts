@@ -1246,7 +1246,7 @@ describe('Electron Launch Service', () => {
       });
     });
 
-    describe('Multiremote', async () => {
+    describe('Multiremote', () => {
       it('should apply `--inspect` to the args of `goog:chromeOptions` for the electron', async () => {
         instance = new ElectronLaunchService({}, {}, {});
         const capabilities = {

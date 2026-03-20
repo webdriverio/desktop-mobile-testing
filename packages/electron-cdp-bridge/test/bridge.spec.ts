@@ -284,14 +284,14 @@ describe('CdpBridge', () => {
       await client.connect();
       const result = client.close();
       triggerWebSocketEvent('close'); // emulate close event
-      await expect(result).resolves.not.toThrowError();
+      await expect(result).resolves.toBeUndefined();
     });
 
     it('should handle calling close before connect without errors', async () => {
       debuggerList = [{ webSocketDebuggerUrl: 'ws://localhost:123/uuid' }];
       const client = new CdpBridge();
       const result = client.close();
-      await expect(result).resolves.not.toThrowError();
+      await expect(result).resolves.toBeUndefined();
     });
   });
 
@@ -313,7 +313,7 @@ describe('CdpBridge', () => {
       debuggerList = [{ webSocketDebuggerUrl: 'ws://localhost:123/uuid' }];
       const client = new CdpBridge();
       const result = client.close();
-      await expect(result).resolves.not.toThrowError();
+      await expect(result).resolves.toBeUndefined();
     });
   });
 });

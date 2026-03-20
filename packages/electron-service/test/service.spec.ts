@@ -129,27 +129,24 @@ describe('Electron Worker Service', () => {
       } as unknown as WebdriverIO.Browser;
     });
 
-    it('should use CDP bridge', async () => {
-      instance = new ElectronWorkerService({}, {});
-      const beforeSpy = vi.spyOn(instance, 'before');
-
-      await instance.before({}, [], browser);
-
-      expect(beforeSpy).toHaveBeenCalled();
-    });
-
-    it('should add electron commands to the browser object', async () => {
+    it('should initialize CDP bridge and add all electron commands to the browser object', async () => {
       instance = new ElectronWorkerService({}, {});
 
       await instance.before({}, [], browser);
+
+      const { getDebuggerEndpoint, ElectronCdpBridge } = await import('../src/bridge.js');
+      expect(getDebuggerEndpoint).toHaveBeenCalled();
+      expect(ElectronCdpBridge).toHaveBeenCalled();
 
       const serviceApi = browser.electron as BrowserExtension['electron'];
       expect(serviceApi.clearAllMocks).toEqual(expect.any(Function));
       expect(serviceApi.execute).toEqual(expect.any(Function));
+      expect(serviceApi.isMockFunction).toEqual(expect.any(Function));
       expect(serviceApi.mock).toEqual(expect.any(Function));
       expect(serviceApi.mockAll).toEqual(expect.any(Function));
       expect(serviceApi.resetAllMocks).toEqual(expect.any(Function));
       expect(serviceApi.restoreAllMocks).toEqual(expect.any(Function));
+      expect(serviceApi.triggerDeeplink).toEqual(expect.any(Function));
     });
 
     it('should provide a stubbed API when CDP bridge is unavailable', async () => {
@@ -176,13 +173,27 @@ describe('Electron Worker Service', () => {
       expect(serviceApi.resetAllMocks).toEqual(expect.any(Function));
       expect(serviceApi.restoreAllMocks).toEqual(expect.any(Function));
 
-      // Test that methods throw appropriate errors
+      // triggerDeeplink does not require CDP, so it should not throw
+      expect(() => serviceApi.triggerDeeplink).not.toThrow();
+
+      // Test that CDP-dependent methods throw appropriate errors
       expect(() => serviceApi.execute(() => {})).toThrow('CDP bridge is not available, API is disabled');
       expect(() => serviceApi.clearAllMocks()).toThrow('CDP bridge is not available, API is disabled');
+      expect(() => serviceApi.isMockFunction(() => {})).toThrow('CDP bridge is not available, API is disabled');
       expect(() => serviceApi.mock('app', 'getName')).toThrow('CDP bridge is not available, API is disabled');
       expect(() => serviceApi.mockAll('app')).toThrow('CDP bridge is not available, API is disabled');
       expect(() => serviceApi.resetAllMocks()).toThrow('CDP bridge is not available, API is disabled');
       expect(() => serviceApi.restoreAllMocks()).toThrow('CDP bridge is not available, API is disabled');
+    });
+
+    it('should reject when waitUntilWindowAvailable fails', async () => {
+      // Mock the @wdio/native-utils version which the service actually calls
+      const nativeUtils = await import('@wdio/native-utils');
+      vi.mocked(nativeUtils.waitUntilWindowAvailable).mockRejectedValueOnce(new Error('Window not found'));
+
+      instance = new ElectronWorkerService({}, {});
+
+      await expect(instance.before({}, [], browser)).rejects.toThrow('Window not found');
     });
 
     it('should install element command overrides with overwriteCommand', async () => {
