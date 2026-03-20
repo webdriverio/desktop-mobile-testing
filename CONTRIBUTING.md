@@ -10,8 +10,8 @@ Please be respectful and constructive in all interactions. We aim to create a we
 
 ### Prerequisites
 
-- Node.js 18 LTS or 20 LTS
-- pnpm 10.27.0+
+- Node.js 24 LTS
+- pnpm 10.27.0
 - Git
 
 ### Setup

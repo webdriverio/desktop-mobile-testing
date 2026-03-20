@@ -17,7 +17,7 @@ This is a monorepo providing WebdriverIO services for automated testing of nativ
 | Category | Technology |
 |----------|------------|
 | Language | TypeScript 5.9+ (strict mode, ESM) |
-| Runtime | Node.js 18 LTS or 20 LTS |
+| Runtime | Node.js 24 LTS |
 | Package Manager | pnpm 10.27.0+ |
 | Monorepo | Turborepo 2.5+ with pnpm workspaces |
 | Testing | Vitest 3.2+ (unit/integration), WebdriverIO 9.0+ (E2E) |
@@ -29,7 +29,7 @@ This is a monorepo providing WebdriverIO services for automated testing of nativ
 ```
 packages/
 ├── electron-service/     # Electron WDIO service
-├── tauri-service/        # Tauri WDIO service  
+├── tauri-service/        # Tauri WDIO service
 ├── tauri-plugin/         # Tauri v2 plugin (Rust + JS)
 ├── electron-cdp-bridge/  # Chrome DevTools Protocol bridge
 ├── native-utils/         # Cross-platform utilities
@@ -136,7 +136,7 @@ pnpm test                # Run all tests
 This codebase uses a `Result<T, E>` type for operations that can fail:
 
 ```typescript
-type Result<T, E = Error> = 
+type Result<T, E = Error> =
   | { ok: true; value: T }
   | { ok: false; error: E }
 

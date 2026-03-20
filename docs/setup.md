@@ -6,9 +6,9 @@ This guide will help you set up the WebdriverIO Desktop & Mobile monorepo for de
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js**: Version 18 LTS or 20 LTS
+- **Node.js**: Version 24 LTS
   ```bash
-  node --version  # Should be v18.x or v20.x
+  node --version  # Should be v24.x
   ```
 
 - **pnpm**: Version 10.27.0 or higher

@@ -99,7 +99,7 @@ All packages use the `@wdio/` scope:
     }
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "^18.12.0 || ^20.9.0 || >=22.11.0"
   },
   "scripts": {
     "build": "pnpm build:esm && pnpm build:cjs",
