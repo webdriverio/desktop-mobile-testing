@@ -35,7 +35,9 @@ async function buildBundler(): Promise<void> {
 
   return new Promise((resolve, reject) => {
     const isWindows = process.platform === 'win32';
-    const child = spawn(isWindows ? 'pnpm.cmd' : 'pnpm', ['build'], {
+    const cmd = isWindows ? 'cmd.exe' : 'pnpm';
+    const args = isWindows ? ['/c', 'pnpm', 'build'] : ['build'];
+    const child = spawn(cmd, args, {
       cwd: BUNDLER_PATH,
       stdio: 'inherit',
       shell: false,
