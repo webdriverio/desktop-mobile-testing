@@ -479,7 +479,7 @@ describe('setupInvokeInterception', () => {
 
     const firstWrappedInvoke = (window as any).__TAURI__.core.invoke;
 
-    (window as any).__TAURI__.core._wdioInvokeInterceptor = true;
+    await mod.init();
 
     expect((window as any).__TAURI__.core.invoke).toBe(firstWrappedInvoke);
   });
