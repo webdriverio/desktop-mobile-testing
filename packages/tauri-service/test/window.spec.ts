@@ -3,6 +3,7 @@ import {
   clearWindowState,
   ensureActiveWindowFocus,
   getActiveWindowLabel,
+  getCurrentDevtoolsPort,
   getLastCommand,
   listWindowLabels,
   updateLastCommand,
@@ -98,6 +99,80 @@ describe('window management', () => {
       const result = getLastCommand(mockBrowser);
       expect(result).toBeUndefined();
     });
+
+    it('should clear a specific session state', () => {
+      const browser1 = { sessionId: 'session-1' } as unknown as WebdriverIO.Browser;
+      const browser2 = { sessionId: 'session-2' } as unknown as WebdriverIO.Browser;
+
+      updateLastCommand(browser1, 'click');
+      updateLastCommand(browser2, 'setValue');
+
+      clearWindowState('session-1');
+
+      expect(getLastCommand(browser1)).toBeUndefined();
+      expect(getLastCommand(browser2)).toBe('setValue');
+    });
+
+    it('should clear all state when no argument is provided', () => {
+      const browser1 = { sessionId: 'session-a' } as unknown as WebdriverIO.Browser;
+      const browser2 = { sessionId: 'session-b' } as unknown as WebdriverIO.Browser;
+
+      updateLastCommand(browser1, 'click');
+      updateLastCommand(browser2, 'setValue');
+
+      clearWindowState();
+
+      expect(getLastCommand(browser1)).toBeUndefined();
+      expect(getLastCommand(browser2)).toBeUndefined();
+    });
+  });
+
+  describe('getCurrentDevtoolsPort', () => {
+    it('should extract port from debuggerAddress capability', async () => {
+      const mockBrowser = {
+        capabilities: {
+          'goog:chromeOptions': {
+            debuggerAddress: 'localhost:12345',
+          },
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      const port = await getCurrentDevtoolsPort(mockBrowser);
+      expect(port).toBe(12345);
+    });
+
+    it('should return undefined when no debuggerAddress exists', async () => {
+      const mockBrowser = {
+        capabilities: {
+          'goog:chromeOptions': {},
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      const port = await getCurrentDevtoolsPort(mockBrowser);
+      expect(port).toBeUndefined();
+    });
+
+    it('should return undefined when no goog:chromeOptions exists', async () => {
+      const mockBrowser = {
+        capabilities: {},
+      } as unknown as WebdriverIO.Browser;
+
+      const port = await getCurrentDevtoolsPort(mockBrowser);
+      expect(port).toBeUndefined();
+    });
+
+    it('should return undefined when debuggerAddress has no port', async () => {
+      const mockBrowser = {
+        capabilities: {
+          'goog:chromeOptions': {
+            debuggerAddress: 'no-port-here',
+          },
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      const port = await getCurrentDevtoolsPort(mockBrowser);
+      expect(port).toBeUndefined();
+    });
   });
 
   describe('ensureActiveWindowFocus', () => {
@@ -115,7 +190,9 @@ describe('window management', () => {
     it('should check focus for DOM commands', async () => {
       const mockBrowser = {
         tauri: {
-          execute: vi.fn().mockResolvedValueOnce('main'),
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce([{ label: 'main', title: 'main window', is_visible: true, is_focused: true }]),
         },
         getWindowHandles: vi.fn().mockResolvedValue(['handle1', 'handle2']),
         switchToWindow: vi.fn().mockResolvedValue(undefined),
@@ -137,6 +214,228 @@ describe('window management', () => {
 
       await ensureActiveWindowFocus(mockBrowser, 'getTitle');
       expect(mockBrowser.tauri.execute).toHaveBeenCalled();
+    });
+
+    it('should not switch when already on the active window', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce([{ label: 'main', title: 'My App', is_visible: true, is_focused: true }]),
+        },
+        getTitle: vi.fn().mockResolvedValue('My App'),
+        getWindowHandles: vi.fn(),
+        switchToWindow: vi.fn(),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, 'findElement');
+
+      expect(mockBrowser.getWindowHandles).not.toHaveBeenCalled();
+      expect(mockBrowser.switchToWindow).not.toHaveBeenCalled();
+    });
+
+    it('should switch to a different active window when title does not match', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce([{ label: 'settings', title: 'Settings', is_visible: true, is_focused: true }]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Main Window')
+          .mockResolvedValueOnce('Main Window')
+          .mockResolvedValueOnce('Settings'),
+        getWindowHandles: vi.fn().mockResolvedValue(['handle1', 'handle2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, 'findElement');
+
+      expect(mockBrowser.getWindowHandles).toHaveBeenCalled();
+    });
+  });
+
+  describe('findActiveWindow (via ensureActiveWindowFocus)', () => {
+    it('should prefer visible AND focused window', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValueOnce([
+            { label: 'bg', title: 'Background', is_visible: false, is_focused: false },
+            { label: 'main', title: 'Main', is_visible: true, is_focused: true },
+            { label: 'other', title: 'Other', is_visible: true, is_focused: false },
+          ]),
+        },
+        getTitle: vi.fn().mockResolvedValue('Background'),
+        getWindowHandles: vi.fn().mockResolvedValue(['h1', 'h2', 'h3']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      (mockBrowser.getTitle as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce('Background')
+        .mockResolvedValueOnce('Background')
+        .mockResolvedValueOnce('Main')
+        .mockResolvedValueOnce('Other')
+        .mockResolvedValueOnce('Main');
+
+      await ensureActiveWindowFocus(mockBrowser, '$');
+
+      const switchCalls = (mockBrowser.switchToWindow as ReturnType<typeof vi.fn>).mock.calls;
+      const lastHandle = switchCalls[switchCalls.length - 1]?.[0];
+      expect(lastHandle).toBe('h2');
+    });
+
+    it('should fall back to visible-only window when none are focused', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValueOnce([
+            { label: 'hidden', title: 'Hidden', is_visible: false, is_focused: false },
+            { label: 'visible', title: 'Visible', is_visible: true, is_focused: false },
+          ]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Hidden')
+          .mockResolvedValueOnce('Hidden')
+          .mockResolvedValueOnce('Visible')
+          .mockResolvedValueOnce('Visible'),
+        getWindowHandles: vi.fn().mockResolvedValue(['h1', 'h2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, 'findElement');
+
+      const switchCalls = (mockBrowser.switchToWindow as ReturnType<typeof vi.fn>).mock.calls;
+      const lastHandle = switchCalls[switchCalls.length - 1]?.[0];
+      expect(lastHandle).toBe('h2');
+    });
+
+    it('should fall back to focused-only window when none are visible', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValueOnce([
+            { label: 'hidden1', title: 'Hidden1', is_visible: false, is_focused: false },
+            { label: 'focused', title: 'Focused', is_visible: false, is_focused: true },
+          ]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Hidden1')
+          .mockResolvedValueOnce('Hidden1')
+          .mockResolvedValueOnce('Focused')
+          .mockResolvedValueOnce('Focused'),
+        getWindowHandles: vi.fn().mockResolvedValue(['h1', 'h2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, 'findElements');
+
+      const switchCalls = (mockBrowser.switchToWindow as ReturnType<typeof vi.fn>).mock.calls;
+      const lastHandle = switchCalls[switchCalls.length - 1]?.[0];
+      expect(lastHandle).toBe('h2');
+    });
+
+    it('should fall back to first available window when none are visible or focused', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValueOnce([
+            { label: 'first', title: 'First', is_visible: false, is_focused: false },
+            { label: 'second', title: 'Second', is_visible: false, is_focused: false },
+          ]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Something Else')
+          .mockResolvedValueOnce('First')
+          .mockResolvedValueOnce('Second')
+          .mockResolvedValueOnce('First'),
+        getWindowHandles: vi.fn().mockResolvedValue(['h1', 'h2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, '$$');
+
+      const switchCalls = (mockBrowser.switchToWindow as ReturnType<typeof vi.fn>).mock.calls;
+      const lastHandle = switchCalls[switchCalls.length - 1]?.[0];
+      expect(lastHandle).toBe('h1');
+    });
+
+    it('should return early when window states list is empty', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValueOnce([]),
+        },
+        getTitle: vi.fn(),
+        getWindowHandles: vi.fn(),
+        switchToWindow: vi.fn(),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, 'getTitle');
+
+      expect(mockBrowser.getTitle).not.toHaveBeenCalled();
+      expect(mockBrowser.getWindowHandles).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('switchToWindowByTitle (via ensureActiveWindowFocus)', () => {
+    it('should successfully switch to window matching title', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce([{ label: 'target', title: 'Target Window', is_visible: true, is_focused: true }]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Other Window')
+          .mockResolvedValueOnce('Other Window')
+          .mockResolvedValueOnce('Target Window')
+          .mockResolvedValueOnce('Target Window'),
+        getWindowHandles: vi.fn().mockResolvedValue(['h1', 'h2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await ensureActiveWindowFocus(mockBrowser, 'elementClick');
+
+      expect(mockBrowser.switchToWindow).toHaveBeenCalled();
+    });
+
+    it('should handle when no window matches the target title', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce([{ label: 'ghost', title: 'Ghost Window', is_visible: true, is_focused: true }]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Current')
+          .mockResolvedValueOnce('Window A')
+          .mockResolvedValueOnce('Window B'),
+        getWindowHandles: vi.fn().mockResolvedValue(['h1', 'h2']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(ensureActiveWindowFocus(mockBrowser, 'findElement')).resolves.not.toThrow();
+    });
+
+    it('should handle stale window handle gracefully', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce([{ label: 'target', title: 'Target', is_visible: true, is_focused: true }]),
+        },
+        getTitle: vi
+          .fn()
+          .mockResolvedValueOnce('Current')
+          .mockResolvedValueOnce('Target')
+          .mockResolvedValueOnce('Target'),
+        getWindowHandles: vi.fn().mockResolvedValue(['stale-handle', 'good-handle']),
+        switchToWindow: vi.fn().mockRejectedValueOnce(new Error('no such window')).mockResolvedValue(undefined),
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(ensureActiveWindowFocus(mockBrowser, 'getTitle')).resolves.not.toThrow();
     });
   });
 });
