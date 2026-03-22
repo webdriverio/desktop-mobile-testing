@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,49 +33,28 @@ function checkBundlerBuilt(): boolean {
 async function buildBundler(): Promise<void> {
   console.log('🔨 Building bundler...');
 
-  return new Promise((resolve, reject) => {
-    const isWindows = process.platform === 'win32';
-    const cmd = isWindows ? 'cmd.exe' : 'pnpm';
-    const args = isWindows ? ['/c', 'pnpm', 'build'] : ['build'];
-    const child = spawn(cmd, args, {
+  try {
+    execSync('pnpm build', {
       cwd: BUNDLER_PATH,
       stdio: 'inherit',
-      shell: false,
     });
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ Bundler built successfully');
-        resolve();
-      } else {
-        reject(new Error(`Bundler build failed with code ${code}`));
-      }
-    });
-
-    child.on('error', reject);
-  });
+    console.log('✅ Bundler built successfully');
+  } catch (error) {
+    throw new Error(`Bundler build failed: ${(error as Error).message}`);
+  }
 }
 
 /**
  * Execute the bundler CLI with provided arguments
  */
 async function executeBundler(args: string[]): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('node', [BUNDLER_CLI, ...args], {
+  try {
+    execSync(`node "${BUNDLER_CLI}" ${args.join(' ')}`, {
       stdio: 'inherit',
-      shell: false,
     });
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`Bundler execution failed with code ${code}`));
-      }
-    });
-
-    child.on('error', reject);
-  });
+  } catch (error) {
+    throw new Error(`Bundler execution failed: ${(error as Error).message}`);
+  }
 }
 
 /**
