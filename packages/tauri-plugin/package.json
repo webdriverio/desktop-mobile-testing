@@ -17,7 +17,8 @@
   "files": ["README.md", "dist-js", "LICENSE"],
   "scripts": {
     "build": "tsx scripts/build-guest-js.ts",
-    "build:js": "tsx scripts/build-guest-js.ts"
+    "build:js": "tsx scripts/build-guest-js.ts",
+    "test": "vitest run"
   },
   "keywords": ["tauri", "webdriverio", "testing", "automation"],
   "author": "WebDriverIO Community",
