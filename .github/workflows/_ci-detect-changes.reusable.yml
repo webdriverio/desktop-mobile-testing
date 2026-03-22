@@ -49,7 +49,6 @@ jobs:
             # Documentation only (triggers lint only)
             docs:
               - '**/*.md'
-              - 'docs/**/*.md'
 
             # Electron service packages
             electron_service:
