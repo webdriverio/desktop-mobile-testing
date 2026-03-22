@@ -2,11 +2,17 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    # Only run on release tags (PRs already validate before merge)
     tags:
       - v[0-9]+.[0-9]+.[0-9]+*
+    # Note: paths-ignore is ANDed with tags — a doc-only tagged commit
+    # won't trigger CI. Safe because release commits always touch code.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**/*.md'
   pull_request:
+    # Doc-only PRs still trigger CI but use lint-only mode via detect-changes
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       force_all:
@@ -21,6 +27,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
@@ -35,27 +42,28 @@ jobs:
       force_all: ${{ inputs.force_all || false }}
 
   # Build on Linux first since it's the fastest and its artifacts are used by all other jobs
+  # Skip build when only docs changed
   build:
     name: Build [Linux]
     needs: [detect-changes]
+    if: needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build.reusable.yml
     secrets: inherit
     with:
       os: 'ubuntu-latest'
 
-  # Run linting after build to use the build artifacts
+  # Run linting - doesn't need build artifacts
   lint:
     name: Lint [Linux]
-    needs: [detect-changes, build]
+    needs: [detect-changes]
     uses: ./.github/workflows/_ci-lint.reusable.yml
     secrets: inherit
-    with:
-      cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # Run unit tests in parallel with lint - both only need build artifacts
+  # Run unit tests - skip when only docs changed
   unit-matrix:
     name: Unit
-    needs: [build]
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -80,7 +88,7 @@ jobs:
   build-tauri-e2e-app-linux:
     name: Build Tauri E2E App [Linux]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     secrets: inherit
     with:
@@ -92,7 +100,7 @@ jobs:
   build-tauri-e2e-app-windows:
     name: Build Tauri E2E App [Windows]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     secrets: inherit
     with:
@@ -104,7 +112,7 @@ jobs:
   build-tauri-e2e-app-macos-arm:
     name: Build Tauri E2E App [macOS-ARM]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     secrets: inherit
     with:
@@ -116,7 +124,7 @@ jobs:
   build-tauri-e2e-app-macos-intel:
     name: Build Tauri E2E App [macOS-Intel]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-e2e-app.reusable.yml
     secrets: inherit
     with:
@@ -129,7 +137,7 @@ jobs:
   build-tauri-package-app-linux:
     name: Build Tauri Package Test App [Linux]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     secrets: inherit
     with:
@@ -141,7 +149,7 @@ jobs:
   build-tauri-package-app-windows:
     name: Build Tauri Package Test App [Windows]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     secrets: inherit
     with:
@@ -153,7 +161,7 @@ jobs:
   build-tauri-package-app-linux-arm:
     name: Build Tauri Package Test App [Linux-ARM64]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-build-tauri-package-app.reusable.yml
     secrets: inherit
     with:
@@ -170,7 +178,7 @@ jobs:
   package-electron-matrix:
     name: Package - Electron
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_electron == 'true'
+    if: needs.detect-changes.outputs.run_electron == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -212,7 +220,7 @@ jobs:
   package-tauri-linux:
     name: Package - Tauri [Linux]
     needs: [detect-changes, build, build-tauri-package-app-linux]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     secrets: inherit
     with:
@@ -226,7 +234,7 @@ jobs:
   package-tauri-windows:
     name: Package - Tauri [Windows]
     needs: [detect-changes, build, build-tauri-package-app-windows]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     secrets: inherit
     with:
@@ -240,7 +248,7 @@ jobs:
   package-tauri-linux-arm:
     name: Package - Tauri [Linux-ARM64]
     needs: [detect-changes, build, build-tauri-package-app-linux-arm]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     uses: ./.github/workflows/_ci-package.reusable.yml
     secrets: inherit
     with:
@@ -261,7 +269,7 @@ jobs:
   package-tauri-distros:
     name: Package - Tauri (Docker)
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -285,7 +293,7 @@ jobs:
   build-matrix:
     name: Build
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_electron == 'true'
+    if: needs.detect-changes.outputs.run_electron == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -309,7 +317,7 @@ jobs:
   e2e-matrix:
     name: E2E - Electron
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_electron == 'true'
+    if: needs.detect-changes.outputs.run_electron == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -364,7 +372,7 @@ jobs:
   e2e-electron-window:
     name: E2E - Electron [Linux] (window)
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_electron == 'true'
+    if: needs.detect-changes.outputs.run_electron == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -393,7 +401,7 @@ jobs:
   e2e-tauri-linux-matrix:
     name: E2E - Tauri Official [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [detect-changes, build, build-tauri-e2e-app-linux]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -415,7 +423,7 @@ jobs:
   e2e-tauri-windows-matrix:
     name: E2E - Tauri Official [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
     needs: [detect-changes, build, build-tauri-e2e-app-windows]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -439,7 +447,7 @@ jobs:
   e2e-tauri-macos-matrix:
     name: E2E - Tauri Official [macOS]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -485,7 +493,7 @@ jobs:
   e2e-tauri-embedded-linux:
     name: E2E - Tauri Embedded [Linux] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-linux]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -505,7 +513,7 @@ jobs:
   e2e-tauri-embedded-windows:
     name: E2E - Tauri Embedded [Windows] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-windows]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -526,7 +534,7 @@ jobs:
   e2e-tauri-embedded-macos-arm:
     name: E2E - Tauri Embedded [macOS-ARM] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-macos-arm]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -546,7 +554,7 @@ jobs:
   e2e-tauri-embedded-macos-intel:
     name: E2E - Tauri Embedded [macOS-Intel] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-macos-intel]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -568,7 +576,7 @@ jobs:
   e2e-tauri-crabnebula-linux:
     name: E2E - Tauri CrabNebula [Linux] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-linux]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -588,7 +596,7 @@ jobs:
   e2e-tauri-crabnebula-windows:
     name: E2E - Tauri CrabNebula [Windows] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-windows]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -608,7 +616,7 @@ jobs:
   e2e-tauri-crabnebula-macos-arm:
     name: E2E - Tauri CrabNebula [macOS-ARM] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-macos-arm]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -628,7 +636,7 @@ jobs:
   e2e-tauri-crabnebula-macos-intel:
     name: E2E - Tauri CrabNebula [macOS-Intel] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-macos-intel]
-    if: needs.detect-changes.outputs.run_tauri == 'true'
+    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -649,7 +657,7 @@ jobs:
   package-electron-mac-universal:
     name: Package - Electron [macOS-Universal-Verify]
     needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_electron == 'true'
+    if: needs.detect-changes.outputs.run_electron == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     runs-on: macos-latest
     steps:
       - name: 👷 Checkout Repository

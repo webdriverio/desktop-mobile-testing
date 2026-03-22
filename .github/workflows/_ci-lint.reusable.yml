@@ -8,11 +8,6 @@ on:
   workflow_call:
     # Make this a reusable workflow, no value needed
     # https://docs.github.com/en/actions/using-workflows/reusing-workflows
-    inputs:
-      cache_key:
-        description: 'Cache key to use for downloading artifacts'
-        required: false
-        type: string
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
@@ -50,17 +45,6 @@ jobs:
           restore-keys: |
             linting-${{ runner.os }}-${{ hashFiles('eslint.config.js', '.prettierrc*', 'package.json') }}-
             linting-${{ runner.os }}-
-
-      # Download the pre-built packages from the build job
-      # This ensures all tests use the same build artifacts
-      - name: 📦 Download Build Artifacts
-        uses: ./.github/workflows/actions/download-archive
-        with:
-          name: wdio-desktop-mobile
-          path: wdio-desktop-mobile-build
-          filename: artifact.zip
-          cache_key_prefix: wdio-desktop-build
-          exact_cache_key: ${{ inputs.cache_key || github.run_id && format('{0}-{1}-{2}-{3}{4}', 'Linux', 'wdio-desktop-build', 'wdio-desktop-mobile', github.run_id, github.run_attempt > 1 && format('-rerun{0}', github.run_attempt) || '') || '' }}
 
       # Run Linting checks
       - name: 🔍 Run Linting
