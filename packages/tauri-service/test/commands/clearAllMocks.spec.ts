@@ -63,4 +63,23 @@ describe('clearAllMocks Command', () => {
     expect(mockedReadClipboard.mockClear).not.toHaveBeenCalled();
     expect(mockedWriteClipboard.mockClear).not.toHaveBeenCalled();
   });
+
+  it('should escape regex metacharacters in prefix so dot is literal', async () => {
+    const mockedDotCommand = {
+      getMockName: () => 'tauri.get_platform.info',
+      mockClear: vi.fn(),
+    };
+    const mockedNonDotCommand = {
+      getMockName: () => 'tauri.get_platformXinfo',
+      mockClear: vi.fn(),
+    };
+    (mockStore.getMocks as Mock).mockReturnValue([
+      ['tauri.get_platform.info', mockedDotCommand],
+      ['tauri.get_platformXinfo', mockedNonDotCommand],
+    ]);
+
+    await clearAllMocks('get_platform.info');
+    expect(mockedDotCommand.mockClear).toHaveBeenCalled();
+    expect(mockedNonDotCommand.mockClear).not.toHaveBeenCalled();
+  });
 });
