@@ -214,19 +214,22 @@ describe('CrabNebula Backend', () => {
     });
 
     it('should retry and eventually connect', async () => {
-      const server = net.createServer();
-      const listenPromise = new Promise<number>((resolve) => {
-        setTimeout(() => {
-          server.listen(0, '127.0.0.1', () => {
-            resolve((server.address() as net.AddressInfo).port);
-          });
-        }, 100);
-      });
+      // Reserve a port then release it so we know the port before the server starts
+      const tempServer = net.createServer();
+      await new Promise<void>((resolve) => tempServer.listen(0, '127.0.0.1', resolve));
+      const port = (tempServer.address() as net.AddressInfo).port;
+      await new Promise<void>((resolve) => tempServer.close(() => resolve()));
 
-      const port = await listenPromise;
+      // Start waiting BEFORE the server is up — forces retry logic
+      const server = net.createServer();
+      const waitPromise = waitTestRunnerBackendReady('127.0.0.1', port, 5000);
+
+      // Start the server after a delay so at least one retry happens
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+      await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
 
       try {
-        await expect(waitTestRunnerBackendReady('127.0.0.1', port, 5000)).resolves.toBeUndefined();
+        await expect(waitPromise).resolves.toBeUndefined();
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()));
       }
