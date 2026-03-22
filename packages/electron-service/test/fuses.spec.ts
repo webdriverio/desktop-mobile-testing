@@ -27,7 +27,7 @@ describe('fuses', () => {
 
   describe('checkInspectFuse', () => {
     it('should return canUseCdpBridge: true when no fuse config is found', async () => {
-      vi.mocked(getCurrentFuseWire).mockResolvedValue(null);
+      vi.mocked(getCurrentFuseWire).mockResolvedValue(null as never);
 
       const result = await checkInspectFuse('/path/to/electron');
 

@@ -1,4 +1,5 @@
 import type { BrowserExtension } from '@wdio/native-types';
+import { waitUntilWindowAvailable } from '@wdio/native-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearAllMocks } from '../src/commands/clearAllMocks.js';
 import { execute } from '../src/commands/executeCdp.js';
@@ -7,7 +8,7 @@ import { mock } from '../src/commands/mock.js';
 import { mockAll } from '../src/commands/mockAll.js';
 import { resetAllMocks } from '../src/commands/resetAllMocks.js';
 import { restoreAllMocks } from '../src/commands/restoreAllMocks.js';
-import ElectronWorkerService, { waitUntilWindowAvailable } from '../src/service.js';
+import ElectronWorkerService from '../src/service.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus } from '../src/window.js';
 import { mockProcessProperty } from './helpers.js';
 
@@ -83,15 +84,6 @@ vi.mock('../src/logCapture', () => {
       captureRendererLogs: vi.fn().mockResolvedValue(undefined),
       stopCapture: vi.fn(),
     })),
-  };
-});
-
-// Mock waitUntilWindowAvailable function specifically
-vi.mock('../src/service', async () => {
-  const actual = await vi.importActual('../src/service.js');
-  return {
-    ...actual,
-    waitUntilWindowAvailable: vi.fn(),
   };
 });
 

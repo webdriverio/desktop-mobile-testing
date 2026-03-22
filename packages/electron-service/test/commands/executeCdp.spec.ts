@@ -82,7 +82,7 @@ describe('execute Command', () => {
   });
 
   it('should execute a function when multi remote browser', async () => {
-    const mockElectron = globalThis.mrBrowser.getInstance();
+    const mockElectron = globalThis.mrBrowser.getInstance('browserA');
     await execute(globalThis.mrBrowser, client, (_electron, a, b, c) => a + b + c, 1, 2, 3);
 
     expect(mockElectron.electron.execute).toHaveBeenCalledTimes(2); // Because mrBrowser has 2 browser instance
