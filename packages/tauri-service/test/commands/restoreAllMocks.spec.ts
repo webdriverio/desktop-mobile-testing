@@ -48,8 +48,8 @@ describe('restoreAllMocks Command', () => {
     const callback = (globalThis.browser as any).execute.mock.calls[0][0];
     const mockWindow = {
       __wdio_mocks__: {
-        get_platform_info: { mockReset: vi.fn() },
-        read_clipboard: { mockReset: vi.fn() },
+        get_platform_info: { implementation: () => {} },
+        read_clipboard: { implementation: () => {} },
       },
     } as any;
     (globalThis as any).window = mockWindow;
@@ -82,8 +82,8 @@ describe('restoreAllMocks Command', () => {
     const callback = (globalThis.browser as any).execute.mock.calls[0][0];
     const mockWindow = {
       __wdio_mocks__: {
-        get_platform_info: { mockReset: vi.fn() },
-        write_clipboard: { mockReset: vi.fn() },
+        get_platform_info: { implementation: () => {} },
+        write_clipboard: { implementation: () => {} },
       },
     } as any;
     (globalThis as any).window = mockWindow;
