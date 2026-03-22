@@ -1,7 +1,26 @@
-import { describe, expect, it } from 'vitest';
-import { isEmbeddedProvider } from '../src/embeddedProvider.js';
+import { type ChildProcess, spawn } from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TauriServiceOptions } from '../src/types.js';
+
+vi.mock('node:child_process', () => ({
+  spawn: vi.fn(),
+}));
+
+vi.mock('../src/logCapture.js', () => ({
+  createLogCapture: vi.fn(() => ({
+    close: vi.fn(),
+  })),
+}));
 
 describe('isEmbeddedProvider', () => {
+  let isEmbeddedProvider: typeof import('../src/embeddedProvider.js').isEmbeddedProvider;
+
+  beforeEach(async () => {
+    const mod = await import('../src/embeddedProvider.js');
+    isEmbeddedProvider = mod.isEmbeddedProvider;
+  });
+
   describe('explicit driverProvider — always takes priority', () => {
     it('returns true for "embedded"', () => {
       expect(isEmbeddedProvider({ driverProvider: 'embedded' })).toBe(true);
@@ -35,5 +54,217 @@ describe('isEmbeddedProvider', () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
       expect(isEmbeddedProvider({})).toBe(true);
     });
+  });
+});
+
+describe('getEmbeddedPort', () => {
+  let getEmbeddedPort: typeof import('../src/embeddedProvider.js').getEmbeddedPort;
+  const originalEnv = process.env;
+
+  beforeEach(async () => {
+    const mod = await import('../src/embeddedProvider.js');
+    getEmbeddedPort = mod.getEmbeddedPort;
+    process.env = { ...originalEnv };
+    delete process.env.TAURI_WEBDRIVER_PORT;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('returns explicit embeddedPort option when set', () => {
+    expect(getEmbeddedPort({ embeddedPort: 9999 })).toBe(9999);
+  });
+
+  it('prefers embeddedPort option over env var', () => {
+    process.env.TAURI_WEBDRIVER_PORT = '8888';
+    expect(getEmbeddedPort({ embeddedPort: 9999 })).toBe(9999);
+  });
+
+  it('falls back to TAURI_WEBDRIVER_PORT env var when no option', () => {
+    process.env.TAURI_WEBDRIVER_PORT = '7777';
+    expect(getEmbeddedPort({})).toBe(7777);
+  });
+
+  it('returns default 4445 when neither option nor env var is set', () => {
+    expect(getEmbeddedPort({})).toBe(4445);
+  });
+
+  it('ignores NaN env var and returns default', () => {
+    process.env.TAURI_WEBDRIVER_PORT = 'not-a-number';
+    expect(getEmbeddedPort({})).toBe(4445);
+  });
+
+  it('parses numeric string env var correctly', () => {
+    process.env.TAURI_WEBDRIVER_PORT = '5555';
+    expect(getEmbeddedPort({})).toBe(5555);
+  });
+});
+
+describe('startEmbeddedDriver', () => {
+  let startEmbeddedDriver: typeof import('../src/embeddedProvider.js').startEmbeddedDriver;
+  let mockProc: EventEmitter & Partial<ChildProcess>;
+  const originalFetch = globalThis.fetch;
+  const originalPlatform = process.platform;
+
+  beforeEach(async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.clearAllMocks();
+
+    const mod = await import('../src/embeddedProvider.js');
+    startEmbeddedDriver = mod.startEmbeddedDriver;
+
+    mockProc = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+    Object.defineProperty(mockProc, 'pid', { value: 12345, configurable: true });
+    mockProc.kill = vi.fn().mockReturnValue(true);
+    mockProc.stdout = Object.assign(new EventEmitter(), {
+      resume: vi.fn(),
+      pause: vi.fn(),
+      setEncoding: vi.fn(),
+      [Symbol.asyncIterator]: undefined,
+    }) as unknown as ChildProcess['stdout'];
+    mockProc.stderr = Object.assign(new EventEmitter(), {
+      resume: vi.fn(),
+      pause: vi.fn(),
+      setEncoding: vi.fn(),
+      [Symbol.asyncIterator]: undefined,
+    }) as unknown as ChildProcess['stderr'];
+
+    vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+  });
+
+  it('spawns app and resolves when poll succeeds', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ value: { ready: true } }),
+    });
+
+    const options: TauriServiceOptions = { appArgs: ['--test'] };
+    const result = await startEmbeddedDriver('/path/to/app', 4445, options);
+
+    expect(spawn).toHaveBeenCalledWith(
+      '/path/to/app',
+      ['--test'],
+      expect.objectContaining({
+        env: expect.objectContaining({
+          TAURI_WEBDRIVER_PORT: '4445',
+          WDIO_EMBEDDED_SERVER: 'true',
+        }),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false,
+      }),
+    );
+    expect(result.proc).toBe(mockProc);
+    expect(result.logHandlers).toBeDefined();
+  });
+
+  it('rejects on spawn error', async () => {
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
+
+    const promise = startEmbeddedDriver('/path/to/nonexistent', 4445, {});
+
+    setImmediate(() => {
+      mockProc.emit('error', new Error('ENOENT'));
+    });
+
+    await expect(promise).rejects.toThrow('Failed to spawn Tauri app');
+  });
+
+  it('cleans up on poll timeout failure', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Connection refused'));
+
+    const options: TauriServiceOptions = { startTimeout: 500 };
+    const promise = startEmbeddedDriver('/path/to/app', 4445, options);
+
+    await expect(promise).rejects.toThrow('Embedded WebDriver server did not become ready');
+    expect(mockProc.kill).toHaveBeenCalledWith('SIGTERM');
+  });
+});
+
+describe('stopEmbeddedDriver', () => {
+  let stopEmbeddedDriver: typeof import('../src/embeddedProvider.js').stopEmbeddedDriver;
+
+  beforeEach(async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const mod = await import('../src/embeddedProvider.js');
+    stopEmbeddedDriver = mod.stopEmbeddedDriver;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('sends SIGTERM and resolves when process exits gracefully', async () => {
+    const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+    Object.defineProperty(mockChild, 'pid', { value: 111, configurable: true });
+    Object.defineProperty(mockChild, 'exitCode', { value: null, writable: true, configurable: true });
+    Object.defineProperty(mockChild, 'signalCode', { value: null, writable: true, configurable: true });
+    mockChild.kill = vi.fn().mockImplementation(() => {
+      Object.defineProperty(mockChild, 'exitCode', { value: 0, writable: true, configurable: true });
+      return true;
+    });
+
+    const handler = { close: vi.fn() } as any;
+    await stopEmbeddedDriver({ proc: mockChild as ChildProcess, logHandlers: [handler] });
+
+    expect(mockChild.kill).toHaveBeenCalledWith('SIGTERM');
+    expect(handler.close).toHaveBeenCalled();
+  });
+
+  it('sends SIGKILL after graceful timeout expires', async () => {
+    const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+    Object.defineProperty(mockChild, 'pid', { value: 222, configurable: true });
+    Object.defineProperty(mockChild, 'exitCode', { value: null, writable: true, configurable: true });
+    Object.defineProperty(mockChild, 'signalCode', { value: null, writable: true, configurable: true });
+    const killCalls: string[] = [];
+    mockChild.kill = vi.fn().mockImplementation((signal: string) => {
+      killCalls.push(signal);
+      if (signal === 'SIGKILL') {
+        Object.defineProperty(mockChild, 'signalCode', { value: 'SIGKILL', writable: true, configurable: true });
+      }
+      return true;
+    });
+
+    const promise = stopEmbeddedDriver({ proc: mockChild as ChildProcess, logHandlers: [] });
+
+    await vi.advanceTimersByTimeAsync(6000);
+    await promise;
+
+    expect(killCalls).toContain('SIGTERM');
+    expect(killCalls).toContain('SIGKILL');
+  });
+
+  it('returns early when no PID is available', async () => {
+    const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+    Object.defineProperty(mockChild, 'pid', { value: undefined, configurable: true });
+    mockChild.kill = vi.fn();
+
+    const handler = { close: vi.fn() } as any;
+    await stopEmbeddedDriver({ proc: mockChild as ChildProcess, logHandlers: [handler] });
+
+    expect(mockChild.kill).not.toHaveBeenCalledWith('SIGTERM');
+    expect(handler.close).toHaveBeenCalled();
+  });
+
+  it('ignores errors when closing log handlers', async () => {
+    const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+    Object.defineProperty(mockChild, 'pid', { value: undefined, configurable: true });
+    mockChild.kill = vi.fn();
+
+    const throwingHandler = {
+      close: vi.fn().mockImplementation(() => {
+        throw new Error('close failed');
+      }),
+    } as any;
+
+    await expect(
+      stopEmbeddedDriver({ proc: mockChild as ChildProcess, logHandlers: [throwingHandler] }),
+    ).resolves.toBeUndefined();
   });
 });

@@ -13,7 +13,7 @@ vi.mock('../../src/mockStore.js', () => ({
   },
 }));
 
-let mock: any;
+let mock: typeof import('../../src/commands/mock.js').mock;
 
 beforeEach(async () => {
   mock = (await import('../../src/commands/mock.js')).mock;
@@ -21,6 +21,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.resetModules();
+  delete (globalThis as any).browser;
 });
 
 describe('mock Command', () => {
@@ -67,6 +68,73 @@ describe('mock Command', () => {
 
       await mock('get_platform_info');
       expect(mockStore.setMock).toBeCalledWith(mockedCommand);
+    });
+
+    it('should use this.browser when it has tauri capabilities', async () => {
+      (createMock as Mock).mockReturnValue(mockedCommand);
+
+      const browserWithTauri = {
+        isMultiremote: false,
+        tauri: { execute: vi.fn() },
+      } as unknown as WebdriverIO.Browser;
+
+      const context = { browser: browserWithTauri };
+      await mock.call(context, 'get_platform_info');
+
+      expect(createMock).toHaveBeenCalledWith('get_platform_info', browserWithTauri);
+    });
+
+    it('should fall back to globalThis.browser with tauri capabilities', async () => {
+      (createMock as Mock).mockReturnValue(mockedCommand);
+
+      const globalBrowser = {
+        isMultiremote: false,
+        tauri: { execute: vi.fn() },
+      } as unknown as WebdriverIO.Browser;
+      globalThis.browser = globalBrowser as any;
+
+      await mock.call({}, 'get_platform_info');
+
+      expect(createMock).toHaveBeenCalledWith('get_platform_info', globalBrowser);
+    });
+
+    it('should fall back to globalThis.browser without tauri when not multiremote', async () => {
+      (createMock as Mock).mockReturnValue(mockedCommand);
+
+      const globalBrowser = {
+        isMultiremote: false,
+      } as unknown as WebdriverIO.Browser;
+      globalThis.browser = globalBrowser as any;
+
+      await mock.call({}, 'get_platform_info');
+
+      expect(createMock).toHaveBeenCalledWith('get_platform_info', globalBrowser);
+    });
+
+    it('should skip multiremote browser on this.browser and use globalThis.browser', async () => {
+      (createMock as Mock).mockReturnValue(mockedCommand);
+
+      const multiremoteBrowser = {
+        isMultiremote: true,
+        tauri: { execute: vi.fn() },
+      } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+      const globalBrowser = {
+        isMultiremote: false,
+        tauri: { execute: vi.fn() },
+      } as unknown as WebdriverIO.Browser;
+      globalThis.browser = globalBrowser as any;
+
+      const context = { browser: multiremoteBrowser };
+      await mock.call(context, 'get_platform_info');
+
+      expect(createMock).toHaveBeenCalledWith('get_platform_info', globalBrowser);
+    });
+
+    it('should propagate errors from createMock', async () => {
+      (createMock as Mock).mockRejectedValue(new Error('browser.execute failed'));
+
+      await expect(mock.call({}, 'get_platform_info')).rejects.toThrow('browser.execute failed');
     });
   });
 });

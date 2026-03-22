@@ -38,11 +38,27 @@ describe('restoreAllMocks Command', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+    delete (globalThis as any).browser;
   });
 
   it('should restore all mocks in the injection script when no prefix is provided', async () => {
     await restoreAllMocks();
     expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), undefined);
+
+    const callback = (globalThis.browser as any).execute.mock.calls[0][0];
+    const mockWindow = {
+      __wdio_mocks__: {
+        get_platform_info: { implementation: () => {} },
+        read_clipboard: { implementation: () => {} },
+      },
+    } as any;
+    (globalThis as any).window = mockWindow;
+    try {
+      callback(undefined);
+      expect(mockWindow.__wdio_mocks__).toEqual({});
+    } finally {
+      delete (globalThis as any).window;
+    }
   });
 
   it('should restore all outer mock functions when no prefix is provided', async () => {
@@ -62,6 +78,22 @@ describe('restoreAllMocks Command', () => {
   it('should pass prefix to browser execute for inner mock filtering', async () => {
     await restoreAllMocks('write');
     expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), 'write');
+
+    const callback = (globalThis.browser as any).execute.mock.calls[0][0];
+    const mockWindow = {
+      __wdio_mocks__: {
+        get_platform_info: { implementation: () => {} },
+        write_clipboard: { implementation: () => {} },
+      },
+    } as any;
+    (globalThis as any).window = mockWindow;
+    try {
+      callback('write');
+      expect(mockWindow.__wdio_mocks__.get_platform_info).toBeDefined();
+      expect(mockWindow.__wdio_mocks__.write_clipboard).toBeUndefined();
+    } finally {
+      delete (globalThis as any).window;
+    }
   });
 
   it('should handle prefix that matches no mocks', async () => {
@@ -69,5 +101,20 @@ describe('restoreAllMocks Command', () => {
     expect(mockedGetPlatformInfo.mockRestore).not.toHaveBeenCalled();
     expect(mockedReadClipboard.mockRestore).not.toHaveBeenCalled();
     expect(mockedWriteClipboard.mockRestore).not.toHaveBeenCalled();
+  });
+
+  it('should throw when no browser context is available', async () => {
+    delete (globalThis as any).browser;
+    await expect(restoreAllMocks.call({})).rejects.toThrow('restoreAllMocks requires a valid browser context');
+  });
+
+  it('should throw when browser is multiremote', async () => {
+    const multiremoteBrowser = {
+      isMultiremote: true,
+      execute: vi.fn(),
+    } as unknown as WebdriverIO.MultiRemoteBrowser;
+    globalThis.browser = multiremoteBrowser as any;
+
+    await expect(restoreAllMocks.call({})).rejects.toThrow('restoreAllMocks requires a valid browser context');
   });
 });
