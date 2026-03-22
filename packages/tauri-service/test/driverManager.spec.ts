@@ -2,7 +2,6 @@ import assert from 'node:assert';
 import { execSync, spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { existsSync } from 'node:fs';
-import { isOk } from '@wdio/native-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ensureTauriDriver,
@@ -85,7 +84,7 @@ describe('WebKitWebDriver Management', () => {
       });
 
       const result = await ensureWebKitWebDriver();
-      expect(isOk(result)).toBe(true);
+      assert(result.ok);
 
       Object.defineProperty(process, 'platform', {
         value: originalPlatform,
@@ -93,19 +92,36 @@ describe('WebKitWebDriver Management', () => {
       });
     });
 
-    it.skipIf(process.platform !== 'linux')('should have proper result structure for WebKitWebDriver', async () => {
+    it('should return Ok with path when WebKitWebDriver is found on Linux', async () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+
+      vi.mocked(execSync).mockReturnValue('/usr/bin/WebKitWebDriver\n');
+      vi.mocked(existsSync).mockReturnValue(true);
+
       const result = await ensureWebKitWebDriver();
 
-      expect(result).toHaveProperty('ok');
-      expect(result.ok ? result.value : result.error).toBeDefined();
+      assert(result.ok);
+      expect(result.value.path).toBe('/usr/bin/WebKitWebDriver');
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
     });
 
-    it.skipIf(process.platform !== 'linux')('should return valid result for WebKitWebDriver check', async () => {
+    it('should return Err with install instructions when not found on Linux', async () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+
+      vi.mocked(execSync).mockImplementation(() => {
+        throw new Error('not found');
+      });
+      vi.mocked(existsSync).mockReturnValue(false);
+
       const result = await ensureWebKitWebDriver();
 
-      expect(result).toHaveProperty('ok');
-      const hasExpectedShape = result.ok ? result.value !== undefined : typeof result.error.message === 'string';
-      expect(hasExpectedShape).toBe(true);
+      assert(!result.ok);
+      expect(result.error.message).toContain('WebKitWebDriver not found');
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
     });
   });
 });
