@@ -295,11 +295,9 @@ describe('DriverPool', () => {
         nativePort: 4501,
       });
 
-      let callCount = 0;
-      mockIsRunning.mockImplementation(() => {
-        callCount++;
-        return callCount % 2 === 1;
-      });
+      mockIsRunning
+        .mockReturnValueOnce(true) // running-driver
+        .mockReturnValueOnce(false); // stopped-driver
 
       const status = pool.getStatus();
 
