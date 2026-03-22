@@ -16,10 +16,10 @@ describe.each([
   { name: 'resetAllMocks', fn: resetAllMocks, mockMethod: 'mockReset' },
   { name: 'restoreAllMocks', fn: restoreAllMocks, mockMethod: 'mockRestore' },
 ] as const)('$name Command', ({ fn, mockMethod }) => {
-  let mockedGetName: Record<string, ReturnType<typeof vi.fn>>;
-  let mockedShowOpenDialog: Record<string, ReturnType<typeof vi.fn>>;
+  let mockedGetName: Record<string, ReturnType<typeof vi.fn> | (() => string)>;
+  let mockedShowOpenDialog: Record<string, ReturnType<typeof vi.fn> | (() => string)>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     mockedGetName = {
       getMockName: () => 'electron.app.getName',
       [mockMethod]: vi.fn(),
