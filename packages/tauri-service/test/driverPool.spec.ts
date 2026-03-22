@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mockStart = vi.fn();
 const mockStop = vi.fn();
 const mockIsRunning = vi.fn();
+let mockProcPid: number | undefined = 12345;
 
 vi.mock('../src/driverManager.js', () => ({
   ensureTauriDriver: vi.fn(async () => ({
@@ -16,7 +17,9 @@ vi.mock('../src/driverProcess.js', () => ({
     start = mockStart.mockResolvedValue({ proc: { pid: 12345 } });
     stop = mockStop.mockResolvedValue(undefined);
     isRunning = mockIsRunning.mockReturnValue(true);
-    proc = { pid: 12345 };
+    get proc() {
+      return { pid: mockProcPid };
+    }
   },
 }));
 
@@ -26,11 +29,20 @@ vi.mock('../src/pathResolver.js', () => ({
 
 describe('DriverPool', () => {
   let pool: Awaited<ReturnType<typeof import('../src/driverPool.js').DriverPool>>;
+  let ensureTauriDriver: typeof import('../src/driverManager.js').ensureTauriDriver;
 
   beforeEach(async () => {
     mockStart.mockClear().mockResolvedValue({ proc: { pid: 12345 } });
     mockStop.mockClear().mockResolvedValue(undefined);
     mockIsRunning.mockClear().mockReturnValue(true);
+    mockProcPid = 12345;
+
+    const driverManagerMod = await import('../src/driverManager.js');
+    ensureTauriDriver = driverManagerMod.ensureTauriDriver;
+    vi.mocked(ensureTauriDriver).mockResolvedValue({
+      ok: true,
+      value: { path: '/mock/tauri-driver', method: 'found' as const },
+    });
 
     const { DriverPool } = await import('../src/driverPool.js');
     pool = new DriverPool({}, '/mock/native-driver');
@@ -106,6 +118,22 @@ describe('DriverPool', () => {
       expect(status.count).toBe(2);
       expect(status.identifiers).toContain('driver-1');
       expect(status.identifiers).toContain('driver-2');
+    });
+
+    it('should throw when ensureTauriDriver returns an Err result', async () => {
+      vi.mocked(ensureTauriDriver).mockResolvedValue({
+        ok: false,
+        error: new Error('tauri-driver not found'),
+      });
+
+      await expect(
+        pool.startDriver({
+          mode: 'single',
+          identifier: 'fail-driver',
+          port: 4444,
+          nativePort: 4445,
+        }),
+      ).rejects.toThrow('tauri-driver not found');
     });
   });
 
@@ -251,6 +279,34 @@ describe('DriverPool', () => {
       expect(status.count).toBe(1);
       expect(status.identifiers).toContain('driver-1');
     });
+
+    it('should report mixed running/stopped drivers correctly', async () => {
+      await pool.startDriver({
+        mode: 'worker',
+        identifier: 'running-driver',
+        port: 4444,
+        nativePort: 4445,
+      });
+
+      await pool.startDriver({
+        mode: 'worker',
+        identifier: 'stopped-driver',
+        port: 4500,
+        nativePort: 4501,
+      });
+
+      let callCount = 0;
+      mockIsRunning.mockImplementation(() => {
+        callCount++;
+        return callCount % 2 === 1;
+      });
+
+      const status = pool.getStatus();
+
+      expect(status.identifiers).toHaveLength(2);
+      expect(status.count).toBe(1);
+      expect(status.running).toBe(true);
+    });
   });
 
   describe('getRunningPids', () => {
@@ -269,6 +325,34 @@ describe('DriverPool', () => {
 
       const pids = pool.getRunningPids();
       expect(pids).toContain(12345);
+    });
+
+    it('should exclude drivers with undefined pid', async () => {
+      await pool.startDriver({
+        mode: 'single',
+        identifier: 'no-pid-driver',
+        port: 4444,
+        nativePort: 4445,
+      });
+
+      mockProcPid = undefined;
+
+      const pids = pool.getRunningPids();
+      expect(pids).toHaveLength(0);
+    });
+
+    it('should exclude stopped drivers', async () => {
+      await pool.startDriver({
+        mode: 'single',
+        identifier: 'stopped-driver',
+        port: 4444,
+        nativePort: 4445,
+      });
+
+      mockIsRunning.mockReturnValue(false);
+
+      const pids = pool.getRunningPids();
+      expect(pids).toHaveLength(0);
     });
   });
 });

@@ -1,10 +1,23 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkAutomationPlugin, checkDebugBuild } from '../src/pluginValidator.js';
+import { checkAutomationPlugin, checkDebugBuild, warnAutomationPlugin } from '../src/pluginValidator.js';
 
-// Mock fs
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
+}));
+
+const { mockWarn, mockDebug } = vi.hoisted(() => ({
+  mockWarn: vi.fn(),
+  mockDebug: vi.fn(),
+}));
+
+vi.mock('@wdio/native-utils', () => ({
+  createLogger: () => ({
+    warn: mockWarn,
+    debug: mockDebug,
+    info: vi.fn(),
+    error: vi.fn(),
+  }),
 }));
 
 describe('Plugin Validator', () => {
@@ -85,6 +98,60 @@ tauri = { version = "2.0" }
       expect(result.installed).toBe(false);
       expect(result.message).toContain('not appear to be a debug build');
       expect(result.details).toContain('cargo build');
+    });
+  });
+
+  describe('warnAutomationPlugin', () => {
+    it('should log warning when plugin is not installed', () => {
+      const cargoToml = `
+[package]
+name = "my-app"
+
+[dependencies]
+tauri = { version = "2.0" }
+`;
+      vi.mocked(readFileSync).mockReturnValue(cargoToml);
+
+      warnAutomationPlugin('/mock/src-tauri');
+
+      expect(mockWarn).toHaveBeenCalled();
+      const warnMessage = mockWarn.mock.calls[0][0] as string;
+      expect(warnMessage).toContain('not found');
+    });
+
+    it('should log warning with details when plugin is not installed', () => {
+      const cargoToml = `
+[package]
+name = "my-app"
+
+[dependencies]
+tauri = { version = "2.0" }
+`;
+      vi.mocked(readFileSync).mockReturnValue(cargoToml);
+
+      warnAutomationPlugin('/mock/src-tauri');
+
+      expect(mockWarn).toHaveBeenCalledTimes(2);
+      const detailsMessage = mockWarn.mock.calls[1][0] as string;
+      expect(detailsMessage).toContain('cargo add');
+    });
+
+    it('should log debug when plugin is installed', () => {
+      const cargoToml = `
+[package]
+name = "my-app"
+
+[dependencies]
+tauri-plugin-automation = "2.0"
+`;
+      vi.mocked(readFileSync).mockReturnValue(cargoToml);
+
+      warnAutomationPlugin('/mock/src-tauri');
+
+      expect(mockDebug).toHaveBeenCalled();
+      const debugMessage = mockDebug.mock.calls[0][0] as string;
+      expect(debugMessage).toContain('found in Cargo.toml');
+      expect(mockWarn).not.toHaveBeenCalled();
     });
   });
 });
