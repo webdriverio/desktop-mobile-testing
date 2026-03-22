@@ -1,6 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import net from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isTestRunnerBackendHealthy,
@@ -16,6 +15,33 @@ vi.mock('node:child_process', () => ({
 
 vi.mock('../src/driverManager.js', () => ({
   findTestRunnerBackend: vi.fn(),
+}));
+
+type MockSocket = EventEmitter & {
+  connect: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
+  setTimeout: ReturnType<typeof vi.fn>;
+};
+
+let onConnect: (socket: MockSocket) => void = () => {};
+const createMockSocket = () => {
+  const socket = Object.assign(new EventEmitter(), {
+    connect: vi.fn().mockImplementation(function (this: MockSocket) {
+      onConnect(this);
+    }),
+    destroy: vi.fn(),
+    setTimeout: vi.fn(),
+  }) as MockSocket;
+  return socket;
+};
+
+function MockSocket() {
+  return createMockSocket();
+}
+
+vi.mock('node:net', () => ({
+  default: { Socket: MockSocket },
+  Socket: MockSocket,
 }));
 
 describe('CrabNebula Backend', () => {
@@ -196,60 +222,62 @@ describe('CrabNebula Backend', () => {
 
   describe('waitTestRunnerBackendReady', () => {
     it('should resolve when port is accepting connections', async () => {
-      const server = net.createServer();
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const port = (server.address() as net.AddressInfo).port;
+      onConnect = (socket) => setImmediate(() => socket.emit('connect'));
 
-      try {
-        await expect(waitTestRunnerBackendReady('127.0.0.1', port, 5000)).resolves.toBeUndefined();
-      } finally {
-        await new Promise<void>((resolve) => server.close(() => resolve()));
-      }
+      await expect(waitTestRunnerBackendReady('127.0.0.1', 3000, 5000)).resolves.toBeUndefined();
     });
 
     it('should reject after timeout when connection is refused', async () => {
-      await expect(waitTestRunnerBackendReady('127.0.0.1', 1, 500)).rejects.toThrow(
-        'did not become ready within 500ms',
-      );
+      vi.useFakeTimers();
+
+      onConnect = (socket) => setImmediate(() => socket.emit('error', new Error('ECONNREFUSED')));
+
+      const promise = waitTestRunnerBackendReady('127.0.0.1', 1, 500);
+      const assertion = await expect(promise).rejects.toThrow('did not become ready within 500ms');
+
+      await vi.advanceTimersByTimeAsync(600);
+      await assertion;
+
+      vi.useRealTimers();
     });
 
     it('should retry and eventually connect', async () => {
-      // Bind to get an OS-assigned port, then close so initial probes fail
-      const server = net.createServer();
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const port = (server.address() as net.AddressInfo).port;
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      vi.useFakeTimers();
 
-      // Start waiting immediately — first probes will get ECONNREFUSED
-      const waitPromise = waitTestRunnerBackendReady('127.0.0.1', port, 5000);
+      let connectAttempts = 0;
+      onConnect = (socket) => {
+        connectAttempts++;
+        setImmediate(() => {
+          if (connectAttempts < 3) {
+            socket.emit('error', new Error('ECONNREFUSED'));
+          } else {
+            socket.emit('connect');
+          }
+        });
+      };
 
-      // Re-bind the same port so a retry succeeds (Node uses SO_REUSEADDR)
-      const listeningServer = net.createServer();
-      await new Promise<void>((resolve) => listeningServer.listen(port, '127.0.0.1', resolve));
+      const promise = waitTestRunnerBackendReady('127.0.0.1', 3000, 5000);
 
-      try {
-        await expect(waitPromise).resolves.toBeUndefined();
-      } finally {
-        await new Promise<void>((resolve) => listeningServer.close(() => resolve()));
-      }
+      await vi.advanceTimersByTimeAsync(500);
+
+      await expect(promise).resolves.toBeUndefined();
+      expect(connectAttempts).toBeGreaterThanOrEqual(3);
+
+      vi.useRealTimers();
     });
   });
 
   describe('isTestRunnerBackendHealthy', () => {
     it('should return true when backend is accepting connections', async () => {
-      const server = net.createServer();
-      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-      const port = (server.address() as net.AddressInfo).port;
+      onConnect = (socket) => setImmediate(() => socket.emit('connect'));
 
-      try {
-        const healthy = await isTestRunnerBackendHealthy('127.0.0.1', port);
-        expect(healthy).toBe(true);
-      } finally {
-        await new Promise<void>((resolve) => server.close(() => resolve()));
-      }
+      const healthy = await isTestRunnerBackendHealthy('127.0.0.1', 3000);
+      expect(healthy).toBe(true);
     });
 
     it('should return false when backend is not accepting connections', async () => {
+      onConnect = (socket) => setImmediate(() => socket.emit('error', new Error('ECONNREFUSED')));
+
       const healthy = await isTestRunnerBackendHealthy('127.0.0.1', 1);
       expect(healthy).toBe(false);
     });
