@@ -565,11 +565,20 @@ describe('waitForInit', () => {
     vi.resetModules();
   });
 
-  it('should resolve when initialization is complete', async () => {
+  it('should resolve after auto-init triggered by module import', async () => {
     vi.resetModules();
     (window as any).__TAURI__ = createTauriMock();
 
     const mod = await import('../index.js');
+    await expect(mod.waitForInit()).resolves.toBeUndefined();
+  });
+
+  it('should resolve after explicit init() call', async () => {
+    vi.resetModules();
+    (window as any).__TAURI__ = createTauriMock();
+
+    const mod = await import('../index.js');
+    await mod.init();
     await expect(mod.waitForInit()).resolves.toBeUndefined();
   });
 });
