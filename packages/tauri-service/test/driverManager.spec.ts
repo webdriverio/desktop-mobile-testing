@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { execSync, spawn } from 'node:child_process';
+import { exec, execSync, spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { existsSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -25,7 +25,15 @@ vi.mock('node:fs', () => ({
 }));
 
 vi.mock('node:util', () => ({
-  promisify: vi.fn((fn) => fn),
+  promisify:
+    (fn: (...args: unknown[]) => unknown) =>
+    (...args: unknown[]) =>
+      new Promise((resolve, reject) => {
+        fn(...args, (err: Error | null, stdout: string, stderr: string) => {
+          if (err) reject(err);
+          else resolve({ stdout, stderr });
+        });
+      }),
 }));
 
 describe('WebKitWebDriver Management', () => {
@@ -113,6 +121,10 @@ describe('WebKitWebDriver Management', () => {
 
       vi.mocked(execSync).mockImplementation(() => {
         throw new Error('not found');
+      });
+      vi.mocked(exec as any).mockImplementation((_cmd: string, callback: any) => {
+        callback(new Error('not found'), '', '');
+        return {} as any;
       });
       vi.mocked(existsSync).mockReturnValue(false);
 
