@@ -316,14 +316,21 @@ describe('TauriWorkerService', () => {
     });
 
     it('should call restoreAllMocks before clearing mock store', async () => {
+      const callOrder: string[] = [];
+      vi.mocked(restoreAllMocks).mockImplementation(async () => {
+        callOrder.push('restoreAllMocks');
+      });
+      vi.mocked(mockStore.clear).mockImplementation(() => {
+        callOrder.push('mockStore.clear');
+      });
+
       const mockBrowser = createMockBrowser();
       const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
       (service as any).browser = mockBrowser;
 
       await service.afterSession({}, {} as any, []);
 
-      expect(restoreAllMocks).toHaveBeenCalled();
-      expect(mockStore.clear).toHaveBeenCalled();
+      expect(callOrder).toEqual(['restoreAllMocks', 'mockStore.clear']);
     });
 
     it('should handle deleteSession errors gracefully', async () => {
