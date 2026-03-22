@@ -233,11 +233,16 @@ describe('CrabNebula Backend', () => {
       onConnect = (socket) => setImmediate(() => socket.emit('error', new Error('ECONNREFUSED')));
 
       const promise = waitTestRunnerBackendReady('127.0.0.1', 1, 500);
-      // Attach rejection handler before advancing timers to avoid unhandled rejection
-      const assertion = await expect(promise).rejects.toThrow('did not become ready within 500ms');
+      // Prevent unhandled rejection while timers advance
+      let rejection: Error | undefined;
+      promise.catch((err: Error) => {
+        rejection = err;
+      });
 
       await vi.advanceTimersByTimeAsync(600);
-      await assertion;
+
+      expect(rejection).toBeDefined();
+      expect(rejection!.message).toContain('did not become ready within 500ms');
 
       vi.useRealTimers();
     });
