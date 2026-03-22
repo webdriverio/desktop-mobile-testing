@@ -23,6 +23,18 @@ vi.mock('../src/appBuildInfo.js', () => ({ getAppBuildInfo: vi.fn() }));
 vi.mock('../src/binaryPath.js', () => ({ getBinaryPath: vi.fn() }));
 vi.mock('../src/electronVersion.js', () => ({ getElectronVersion: vi.fn() }));
 
+vi.mock('@wdio/native-utils', async () => {
+  const actual = await vi.importActual('@wdio/native-utils');
+  return {
+    ...actual,
+    readPackageUp: vi.fn(),
+  };
+});
+
+vi.mock('../src/appBuildInfo.js', () => ({ getAppBuildInfo: vi.fn() }));
+vi.mock('../src/binaryPath.js', () => ({ getBinaryPath: vi.fn() }));
+vi.mock('../src/electronVersion.js', () => ({ getElectronVersion: vi.fn() }));
+
 describe('pathResolver', () => {
   let mockPkg: NormalizedReadResult;
 

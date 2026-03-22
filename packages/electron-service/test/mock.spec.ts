@@ -1,4 +1,3 @@
-/// <reference types="../../../@types/vitest/index.d.ts" />
 import { isAsyncFunction } from 'node:util/types';
 import type { ElectronInterface, ElectronType } from '@wdio/native-types';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
