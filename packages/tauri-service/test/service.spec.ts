@@ -195,10 +195,12 @@ describe('TauriWorkerService', () => {
     });
 
     it('should not call any mock functions when all options are false', async () => {
+      const mockBrowser = createMockBrowser();
       const service = new TauriWorkerService(
         { clearMocks: false, resetMocks: false, restoreMocks: false },
         { 'wdio:tauriServiceOptions': {} },
       );
+      (service as any).browser = mockBrowser;
 
       await service.beforeTest({}, {});
 
