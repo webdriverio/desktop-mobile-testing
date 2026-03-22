@@ -2,11 +2,10 @@ name: CI
 
 on:
   push:
-    # Only run on release tags (PRs already validate before merge)
+    branches:
+      - main
     tags:
       - v[0-9]+.[0-9]+.[0-9]+*
-    # Note: paths-ignore is ANDed with tags — a doc-only tagged commit
-    # won't trigger CI. Safe because release commits always touch code.
     paths-ignore:
       - '**/*.md'
       - 'docs/**/*.md'
