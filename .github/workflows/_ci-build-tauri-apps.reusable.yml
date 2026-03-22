@@ -35,7 +35,6 @@ env:
   TURBO_TELEMETRY_DISABLED: 1
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-  TURBO_DAEMON: false
 
 jobs:
   # This job builds all Tauri test applications for the specified OS
