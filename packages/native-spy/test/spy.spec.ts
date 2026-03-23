@@ -171,6 +171,23 @@ describe('native-spy', () => {
       expect(mock.results[0].type).toBe('throw');
     });
 
+    it('should track results with type throw for queued implementations that throw', () => {
+      const mock = fn();
+      mock.mockImplementationOnce(() => {
+        throw new Error('queued boom');
+      });
+
+      expect(() => mock()).toThrow('queued boom');
+      expect(mock.results[0].type).toBe('throw');
+    });
+
+    it('should track instances', () => {
+      const mock = fn();
+      mock();
+      expect(mock.instances).toBeDefined();
+      expect(Array.isArray(mock.instances)).toBe(true);
+    });
+
     it('should track globally unique invocationCallOrder across mocks', () => {
       const mock1 = fn();
       const mock2 = fn();
