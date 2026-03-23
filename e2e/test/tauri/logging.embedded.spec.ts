@@ -1,13 +1,16 @@
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
 import path from 'node:path';
+import process from 'node:process';
 import url from 'node:url';
-import { readWdioLogs } from '../../lib/utils.js';
+import { getLogDirName, readWdioLogs } from '../../lib/utils.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
 
 function getLogDir() {
-  return path.join(__dirname, '..', '..', 'logs');
+  const logDirName = getLogDirName('standard', 'tauri', driverProvider);
+  return path.join(__dirname, '..', '..', 'logs', logDirName);
 }
 
 /**
