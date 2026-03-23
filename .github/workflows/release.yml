@@ -16,19 +16,6 @@ on:
           - electron
           - tauri
         default: electron
-      branch:
-        description: 'Branch type to release from (main is recommended for all release types)'
-        required: true
-        type: choice
-        options:
-          - main
-          - feature
-          - maintenance
-        default: main
-      feature_branch_name:
-        description: 'Feature branch name (required when branch is "feature")'
-        required: false
-        type: string
       release_version:
         description: 'Release version type (pre* options for pre-releases)'
         required: true
@@ -54,26 +41,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       target_packages: ${{ steps.map.outputs.packages }}
-      target_branch: ${{ steps.branch.outputs.branch }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          sparse-checkout: packages/electron-service/package.json
-
       - name: Validate repository
         run: |
           if [ "${{ github.repository }}" != "webdriverio/desktop-mobile" ]; then
             echo "::error::This workflow must run in webdriverio/desktop-mobile"
-            exit 1
-          fi
-
-      - name: Validate feature branch name
-        if: ${{ inputs.branch == 'feature' }}
-        run: |
-          if [ -z "${{ inputs.feature_branch_name }}" ]; then
-            echo "::error::Feature branch name is required when branch type is 'feature'"
             exit 1
           fi
 
@@ -89,30 +62,6 @@ jobs:
               ;;
           esac
 
-      - name: Resolve target branch
-        id: branch
-        run: |
-          case "${{ inputs.branch }}" in
-            main)
-              echo "branch=main" >> "$GITHUB_OUTPUT"
-              ;;
-            feature)
-              echo "branch=${{ inputs.feature_branch_name }}" >> "$GITHUB_OUTPUT"
-              ;;
-            maintenance)
-              CURRENT_MAJOR=$(jq -r '.version' packages/electron-service/package.json | grep -o -E '([0-9]+)' | head -n1)
-              LTS_MAJOR=$((CURRENT_MAJOR - 1))
-              echo "branch=v${LTS_MAJOR}.x" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: Verify branch exists
-        run: |
-          git fetch origin "${{ steps.branch.outputs.branch }}" --depth=1 2>/dev/null || {
-            echo "::error::Branch '${{ steps.branch.outputs.branch }}' does not exist on the remote"
-            exit 1
-          }
-
   release:
     needs: resolve
     uses: ./.github/workflows/_release.reusable.yml
@@ -121,7 +70,7 @@ jobs:
       id-token: write
     with:
       target_packages: ${{ needs.resolve.outputs.target_packages }}
-      target_branch: ${{ needs.resolve.outputs.target_branch }}
+      target_branch: main
       bump: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
       scope: ${{ inputs.service }}
