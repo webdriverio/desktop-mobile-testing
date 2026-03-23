@@ -396,256 +396,79 @@ jobs:
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
 
-  # Tauri E2E tests for Linux - only waits for E2E app build
-  e2e-tauri-linux-matrix:
-    name: E2E - Tauri Official [Linux] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [detect-changes, build, build-tauri-e2e-app-linux]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
-    secrets: inherit
-    with:
-      os: 'ubuntu-latest'
-      node-version: '24'
-      scenario: ${{ matrix.scenario }}
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-e2e-app-linux.outputs.cache_key }}
-
-  # Tauri E2E tests for Windows
-  e2e-tauri-windows-matrix:
-    name: E2E - Tauri Official [Windows] - ${{ matrix.scenario }}${{ matrix.test-type != 'standard' && format(' ({0})', matrix.test-type) || '' }}
-    needs: [detect-changes, build, build-tauri-e2e-app-windows]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        scenario: ['tauri-basic']
-        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
-    secrets: inherit
-    with:
-      os: 'windows-latest'
-      node-version: '24'
-      scenario: ${{ matrix.scenario }}
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-e2e-app-windows.outputs.cache_key }}
-
-  # Tauri E2E tests for macOS - skipped with clear messaging
-  # macOS is not supported due to WKWebView WebDriver limitations
-  # Note: Official tauri-driver doesn't work on macOS - use Embedded or CrabNebula provider instead
-  e2e-tauri-macos-matrix:
-    name: E2E - Tauri Official [macOS]
-    needs: [detect-changes, build]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            display-name: macOS-ARM
-            scenario: tauri-basic
-            test-type: standard
-          - os: macos-latest
-            display-name: macOS-ARM
-            scenario: tauri-basic
-            test-type: multiremote
-          - os: macos-latest
-            display-name: macOS-ARM
-            scenario: tauri-basic
-            test-type: standalone
-          - os: macos-15-intel
-            display-name: macOS-Intel
-            scenario: tauri-basic
-            test-type: standard
-          - os: macos-15-intel
-            display-name: macOS-Intel
-            scenario: tauri-basic
-            test-type: multiremote
-          - os: macos-15-intel
-            display-name: macOS-Intel
-            scenario: tauri-basic
-            test-type: standalone
-    uses: ./.github/workflows/_ci-e2e-tauri.reusable.yml
-    secrets: inherit
-    with:
-      os: ${{ matrix.os }}
-      node-version: '24'
-      scenario: ${{ matrix.scenario }}
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ''
-
-  # Tauri E2E tests using embedded WebDriver provider
-  # Works on all platforms including macOS (no external driver needed)
-  e2e-tauri-embedded-linux:
-    name: E2E - Tauri Embedded [Linux] - ${{ matrix.test-type }}
+  # Tauri E2E tests - all providers (official, embedded, CrabNebula) run sequentially per runner
+  # This consolidation reduces runner count from 56 to 20 for Tauri E2E tests
+  # Official provider is automatically skipped on macOS (WKWebView limitations)
+  e2e-tauri-linux:
+    name: E2E - Tauri [Linux] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-linux]
     if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
         test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-embedded.reusable.yml
+    uses: ./.github/workflows/_ci-e2e-tauri-all-providers.reusable.yml
     secrets: inherit
     with:
       os: 'ubuntu-latest'
       node-version: '24'
-      scenario: 'tauri-basic-embedded'
       test-type: ${{ matrix.test-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ${{ needs.build-tauri-e2e-app-linux.outputs.cache_key }}
 
-  e2e-tauri-embedded-windows:
-    name: E2E - Tauri Embedded [Windows] - ${{ matrix.test-type }}
+  e2e-tauri-windows:
+    name: E2E - Tauri [Windows] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-windows]
     if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
         test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-embedded.reusable.yml
+    uses: ./.github/workflows/_ci-e2e-tauri-all-providers.reusable.yml
     secrets: inherit
     with:
       os: 'windows-latest'
       node-version: '24'
-      scenario: 'tauri-basic-embedded'
       test-type: ${{ matrix.test-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ${{ needs.build-tauri-e2e-app-windows.outputs.cache_key }}
 
-  # Embedded provider tests on macOS - native WKWebView support
-  e2e-tauri-embedded-macos-arm:
-    name: E2E - Tauri Embedded [macOS-ARM] - ${{ matrix.test-type }}
+  e2e-tauri-macos-arm:
+    name: E2E - Tauri [macOS-ARM] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-macos-arm]
     if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
         test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-embedded.reusable.yml
+    uses: ./.github/workflows/_ci-e2e-tauri-all-providers.reusable.yml
     secrets: inherit
     with:
       os: 'macos-latest'
       node-version: '24'
-      scenario: 'tauri-basic-embedded'
       test-type: ${{ matrix.test-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
       tauri_cache_key: ${{ needs.build-tauri-e2e-app-macos-arm.outputs.cache_key }}
 
-  e2e-tauri-embedded-macos-intel:
-    name: E2E - Tauri Embedded [macOS-Intel] - ${{ matrix.test-type }}
+  e2e-tauri-macos-intel:
+    name: E2E - Tauri [macOS-Intel] - ${{ matrix.test-type }}
     needs: [detect-changes, build, build-tauri-e2e-app-macos-intel]
     if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
     strategy:
       fail-fast: false
       matrix:
         test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-embedded.reusable.yml
+    uses: ./.github/workflows/_ci-e2e-tauri-all-providers.reusable.yml
     secrets: inherit
     with:
       os: 'macos-15-intel'
       node-version: '24'
-      scenario: 'tauri-basic-embedded'
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-e2e-app-macos-intel.outputs.cache_key }}
-
-  # Tauri E2E tests using CrabNebula WebDriver provider
-  # Works on all platforms (CN_API_KEY required for macOS only)
-  e2e-tauri-crabnebula-linux:
-    name: E2E - Tauri CrabNebula [Linux] - ${{ matrix.test-type }}
-    needs: [detect-changes, build, build-tauri-e2e-app-linux]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
-    secrets: inherit
-    with:
-      os: 'ubuntu-latest'
-      node-version: '24'
-      scenario: 'tauri-basic-crabnebula'
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-e2e-app-linux.outputs.cache_key }}
-
-  e2e-tauri-crabnebula-windows:
-    name: E2E - Tauri CrabNebula [Windows] - ${{ matrix.test-type }}
-    needs: [detect-changes, build, build-tauri-e2e-app-windows]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
-    secrets: inherit
-    with:
-      os: 'windows-latest'
-      node-version: '24'
-      scenario: 'tauri-basic-crabnebula'
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-e2e-app-windows.outputs.cache_key }}
-
-  e2e-tauri-crabnebula-macos-arm:
-    name: E2E - Tauri CrabNebula [macOS-ARM] - ${{ matrix.test-type }}
-    needs: [detect-changes, build, build-tauri-e2e-app-macos-arm]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
-    secrets: inherit
-    with:
-      os: 'macos-latest'
-      node-version: '24'
-      scenario: 'tauri-basic-crabnebula'
-      test-type: ${{ matrix.test-type }}
-      build_id: ${{ needs.build.outputs.build_id }}
-      artifact_size: ${{ needs.build.outputs.artifact_size }}
-      cache_key: ${{ needs.build.outputs.cache_key }}
-      tauri_cache_key: ${{ needs.build-tauri-e2e-app-macos-arm.outputs.cache_key }}
-
-  e2e-tauri-crabnebula-macos-intel:
-    name: E2E - Tauri CrabNebula [macOS-Intel] - ${{ matrix.test-type }}
-    needs: [detect-changes, build, build-tauri-e2e-app-macos-intel]
-    if: needs.detect-changes.outputs.run_tauri == 'true' && needs.detect-changes.outputs.run_lint_only != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: ['standard', 'window', 'multiremote', 'standalone', 'deeplink']
-    uses: ./.github/workflows/_ci-e2e-tauri-crabnebula.reusable.yml
-    secrets: inherit
-    with:
-      os: 'macos-15-intel'
-      node-version: '24'
-      scenario: 'tauri-basic-crabnebula'
       test-type: ${{ matrix.test-type }}
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
@@ -750,13 +573,10 @@ jobs:
       - unit-matrix
       - e2e-matrix
       - e2e-electron-window
-      - e2e-tauri-linux-matrix
-      - e2e-tauri-windows-matrix
-      - e2e-tauri-macos-matrix
-      - e2e-tauri-embedded-linux
-      - e2e-tauri-embedded-windows
-      - e2e-tauri-embedded-macos-arm
-      - e2e-tauri-embedded-macos-intel
+      - e2e-tauri-linux
+      - e2e-tauri-windows
+      - e2e-tauri-macos-arm
+      - e2e-tauri-macos-intel
       - package-electron-matrix
       - package-tauri-linux
       - package-tauri-windows
