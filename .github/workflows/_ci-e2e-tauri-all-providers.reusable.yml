@@ -327,7 +327,7 @@ jobs:
         run: |
           echo "Cleaning up before Official provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -Command "Get-Process -Name 'tauri-driver','msedgedriver','tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+            powershell -Command "Get-Process -Name 'tauri-driver','msedgedriver','tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-driver || true
             pkill -9 -f tauri-e2e-app || true
@@ -357,7 +357,7 @@ jobs:
         run: |
           echo "Cleaning up after Official provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -Command "Get-Process -Name 'tauri-driver','msedgedriver','tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+            powershell -Command "Get-Process -Name 'tauri-driver','msedgedriver','tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-driver || true
             pkill -9 -f msedgedriver || true
@@ -374,7 +374,7 @@ jobs:
         run: |
           echo "Cleaning up before Embedded provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-e2e-app || true
           fi
@@ -402,7 +402,7 @@ jobs:
         run: |
           echo "Cleaning up after Embedded provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-e2e-app || true
           fi
@@ -417,7 +417,7 @@ jobs:
         run: |
           echo "Cleaning up before CrabNebula provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-e2e-app || true
           fi
@@ -446,7 +446,7 @@ jobs:
         run: |
           echo "Cleaning up after CrabNebula provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+            powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-e2e-app || true
           fi
