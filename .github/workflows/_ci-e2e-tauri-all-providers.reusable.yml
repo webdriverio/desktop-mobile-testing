@@ -468,25 +468,20 @@ jobs:
           embedded="${{ steps.test-embedded.outcome }}"
           crabnebula="${{ steps.test-crabnebula.outcome }}"
 
-          if [ -z "$official" ] || [ "$official" = "skipped" ]; then
-            echo "| Official | ⏭️ Skipped (macOS) |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$official" = "success" ]; then
-            echo "| Official | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Official | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-          fi
+          format_result() {
+            local provider="$1" outcome="$2"
+            case "$outcome" in
+              success)   echo "| $provider | ✅ Passed |" >> $GITHUB_STEP_SUMMARY ;;
+              failure)   echo "| $provider | ❌ Failed |" >> $GITHUB_STEP_SUMMARY ;;
+              cancelled) echo "| $provider | ⚠️ Cancelled |" >> $GITHUB_STEP_SUMMARY ;;
+              skipped|"") echo "| $provider | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY ;;
+              *)         echo "| $provider | ❓ $outcome |" >> $GITHUB_STEP_SUMMARY ;;
+            esac
+          }
 
-          if [ "$embedded" = "success" ]; then
-            echo "| Embedded | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Embedded | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "$crabnebula" = "success" ]; then
-            echo "| CrabNebula | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| CrabNebula | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
-          fi
+          format_result "Official" "$official"
+          format_result "Embedded" "$embedded"
+          format_result "CrabNebula" "$crabnebula"
 
       # CodeQL false positive: This script cannot be poisoned by artifacts because
       # download-archive/action.yml only extracts dist/, dist-js/, and target/ directories
@@ -517,18 +512,25 @@ jobs:
 
           failed=false
 
-          if [ "$official" = "failure" ]; then
-            echo "::error::Official provider tests failed"
-            failed=true
-          fi
-          if [ "$embedded" = "failure" ]; then
-            echo "::error::Embedded provider tests failed"
-            failed=true
-          fi
-          if [ "$crabnebula" = "failure" ]; then
-            echo "::error::CrabNebula provider tests failed"
-            failed=true
-          fi
+          check_result() {
+            local provider="$1" outcome="$2"
+            case "$outcome" in
+              success|skipped|"") ;;
+              failure)
+                echo "::error::$provider provider tests failed"
+                failed=true ;;
+              cancelled)
+                echo "::error::$provider provider tests were cancelled"
+                failed=true ;;
+              *)
+                echo "::error::$provider provider had unexpected outcome: $outcome"
+                failed=true ;;
+            esac
+          }
+
+          check_result "Official" "$official"
+          check_result "Embedded" "$embedded"
+          check_result "CrabNebula" "$crabnebula"
 
           if [ "$failed" = "true" ]; then
             exit 1
