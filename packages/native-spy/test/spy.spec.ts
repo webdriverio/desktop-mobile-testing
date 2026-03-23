@@ -131,6 +131,83 @@ describe('native-spy', () => {
       expect(mock.results[1].value).toBe('default');
       expect(mock.results[2].value).toBe('default');
     });
+
+    it('mockResolvedValueOnce resolves for next call only', async () => {
+      const mock = fn();
+      mock.mockResolvedValue('default');
+      mock.mockResolvedValueOnce('once');
+
+      expect(await mock()).toBe('once');
+      expect(await mock()).toBe('default');
+    });
+
+    it('mockRejectedValueOnce rejects for next call only', async () => {
+      const mock = fn();
+      mock.mockReturnValue('default');
+      mock.mockRejectedValueOnce(new Error('once'));
+
+      await expect(async () => mock()).rejects.toThrow('once');
+      expect(mock()).toBe('default');
+    });
+
+    it('mockRestore resets all state including implementation', () => {
+      const mock = fn(() => 'original');
+      mock.mockReturnValue('overridden');
+      mock();
+
+      mock.mockRestore();
+
+      expect(mock.calls.length).toBe(0);
+      expect(mock()).toBe(undefined);
+    });
+
+    it('tracks results with type throw for implementations that throw', () => {
+      const mock = fn();
+      mock.mockImplementation(() => {
+        throw new Error('boom');
+      });
+
+      expect(() => mock()).toThrow('boom');
+      expect(mock.results[0].type).toBe('throw');
+    });
+
+    it('tracks globally unique invocationCallOrder across mocks', () => {
+      const mock1 = fn();
+      const mock2 = fn();
+
+      mock1();
+      mock2();
+      mock1();
+
+      expect(mock1.invocationCallOrder[0]).toBeLessThan(mock2.invocationCallOrder[0]);
+      expect(mock2.invocationCallOrder[0]).toBeLessThan(mock1.invocationCallOrder[1]);
+    });
+
+    it('queues multiple mockReturnValueOnce in order', () => {
+      const mock = fn();
+      mock.mockReturnValue('default');
+      mock.mockReturnValueOnce('first');
+      mock.mockReturnValueOnce('second');
+      mock.mockReturnValueOnce('third');
+
+      expect(mock()).toBe('first');
+      expect(mock()).toBe('second');
+      expect(mock()).toBe('third');
+      expect(mock()).toBe('default');
+    });
+
+    it('tracks context as undefined when called directly', () => {
+      const mock = fn();
+      mock();
+      expect(mock.mock.contexts[0]).toBeUndefined();
+    });
+
+    it('tracks context when called as method', () => {
+      const mock = fn();
+      const obj = { method: mock };
+      obj.method();
+      expect(mock.mock.contexts[0]).toBe(obj);
+    });
   });
 
   describe('withImplementation', () => {
@@ -144,8 +221,39 @@ describe('native-spy', () => {
       );
 
       expect(result).toBe('temporary');
-      // Original implementation should be restored
       expect(mock()).toBe('original');
+    });
+
+    it('restores implementation even when callback throws', () => {
+      const mock = fn();
+      mock.mockReturnValue('original');
+
+      expect(() => {
+        mock.withImplementation(
+          () => 'temp',
+          () => {
+            throw new Error('callback error');
+          },
+        );
+      }).toThrow('callback error');
+
+      expect(mock()).toBe('original');
+    });
+
+    it('restores queued implementations after callback throws', () => {
+      const mock = fn();
+      mock.mockReturnValueOnce('queued');
+
+      expect(() => {
+        mock.withImplementation(
+          () => 'temp',
+          () => {
+            throw new Error('error');
+          },
+        );
+      }).toThrow('error');
+
+      expect(mock()).toBe('queued');
     });
   });
 
@@ -154,10 +262,18 @@ describe('native-spy', () => {
       const mock = fn();
       mock.mockReturnThis();
 
-      // When mockReturnThis is set, calling mock() should return the context passed as 'this'
       const thisObj = { called: false };
       const result = mock.call(thisObj);
       expect(result).toBe(thisObj);
+    });
+
+    it('is overridden by mockReturnValue', () => {
+      const mock = fn();
+      mock.mockReturnThis();
+      mock.mockReturnValue('value');
+
+      const obj = { method: mock };
+      expect(obj.method()).toBe('value');
     });
   });
 
