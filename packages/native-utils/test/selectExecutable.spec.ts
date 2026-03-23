@@ -67,9 +67,7 @@ describe('selectExecutable', () => {
     enoentError.code = 'ENOENT';
     vi.mocked(fs.access).mockRejectedValue(enoentError);
 
-    await expect(() => selectExecutable(['/path/to/dist'])).rejects.toThrowError(
-      'No executable binary found, checked:',
-    );
+    await expect(selectExecutable(['/path/to/dist'])).rejects.toThrowError('No executable binary found, checked:');
   });
 
   it('should report EACCES error with PERMISSION_DENIED type', async () => {
@@ -132,6 +130,24 @@ describe('selectExecutable', () => {
 
     assert(!result.ok);
     expect(result.error.attempts[0].error?.type).toBe('NOT_EXECUTABLE');
+  });
+
+  it('should handle error without message property via String() fallback', async () => {
+    const errorWithoutMessage = { name: 'CustomError' } as unknown as Error;
+    Object.defineProperty(errorWithoutMessage, 'message', { value: '', writable: true });
+    vi.mocked(fs.access).mockRejectedValue(errorWithoutMessage);
+
+    const result = await validateBinaryPaths(['/path/to/binary']);
+
+    assert(!result.ok);
+    expect(result.error.attempts[0].error?.type).toBe('ACCESS_ERROR');
+  });
+
+  it('should return error result for empty paths array', async () => {
+    const result = await validateBinaryPaths([]);
+
+    assert(!result.ok);
+    expect(result.error.attempts).toHaveLength(0);
   });
 
   it('should return first valid path when some paths fail', async () => {

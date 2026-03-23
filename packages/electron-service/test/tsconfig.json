@@ -2,9 +2,11 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
     "baseUrl": ".",
     "outDir": "../dist"
   },
-  "include": ["./*.spec.ts"],
+  "include": ["./**/*.spec.ts", "./setup.ts", "./custom-matchers.d.ts"],
   "exclude": []
 }

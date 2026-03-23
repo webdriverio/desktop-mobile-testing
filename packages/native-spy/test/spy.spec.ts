@@ -3,12 +3,12 @@ import { fn } from '../src/index.js';
 
 describe('native-spy', () => {
   describe('fn()', () => {
-    it('creates a mock function', () => {
+    it('should create a mock function', () => {
       const mock = fn();
       expect(typeof mock).toBe('function');
     });
 
-    it('tracks calls', () => {
+    it('should track calls', () => {
       const mock = fn();
       mock('arg1', 'arg2');
       mock('arg3');
@@ -18,7 +18,7 @@ describe('native-spy', () => {
       expect(mock.calls[1]).toEqual(['arg3']);
     });
 
-    it('tracks call order', () => {
+    it('should track call order', () => {
       const mock = fn();
       mock();
       mock();
@@ -27,7 +27,7 @@ describe('native-spy', () => {
       expect(mock.invocationCallOrder.length).toBe(3);
     });
 
-    it('mockReturnValue sets return value', () => {
+    it('should set return value with mockReturnValue', () => {
       const mock = fn();
       mock.mockReturnValue('hello');
 
@@ -35,7 +35,7 @@ describe('native-spy', () => {
       expect(mock()).toBe('hello');
     });
 
-    it('mockReturnValueOnce sets return value for next call only', () => {
+    it('should set return value for next call only with mockReturnValueOnce', () => {
       const mock = fn();
       mock.mockReturnValueOnce('first');
       mock.mockReturnValue('rest');
@@ -45,14 +45,14 @@ describe('native-spy', () => {
       expect(mock()).toBe('rest');
     });
 
-    it('mockImplementation sets implementation', () => {
+    it('should set implementation with mockImplementation', () => {
       const mock = fn();
       mock.mockImplementation(() => 'implemented');
 
       expect(mock()).toBe('implemented');
     });
 
-    it('mockImplementationOnce sets implementation for next call', () => {
+    it('should set implementation for next call with mockImplementationOnce', () => {
       const mock = fn();
       mock.mockImplementationOnce(() => 'once');
 
@@ -60,7 +60,7 @@ describe('native-spy', () => {
       expect(mock()).toBe(undefined);
     });
 
-    it('mockClear clears call history', () => {
+    it('should clear call history with mockClear', () => {
       const mock = fn();
       mock('test');
       expect(mock.calls.length).toBe(1);
@@ -69,7 +69,7 @@ describe('native-spy', () => {
       expect(mock.calls.length).toBe(0);
     });
 
-    it('mockReset clears everything including return values', () => {
+    it('should clear everything including return values with mockReset', () => {
       const mock = fn();
       mock.mockReturnValue('value');
       mock('test');
@@ -80,14 +80,14 @@ describe('native-spy', () => {
       expect(mock()).toBe(undefined);
     });
 
-    it('mockName sets and gets mock name', () => {
+    it('should set and get mock name with mockName', () => {
       const mock = fn();
       mock.mockName('myMock');
 
       expect(mock.getMockName()).toBe('myMock');
     });
 
-    it('mockResolvedValue handles promises', async () => {
+    it('should handle promises with mockResolvedValue', async () => {
       const mock = fn();
       mock.mockResolvedValue('resolved');
 
@@ -96,14 +96,14 @@ describe('native-spy', () => {
       expect(await result).toBe('resolved');
     });
 
-    it('mockRejectedValue handles rejections', () => {
+    it('should handle rejections with mockRejectedValue', () => {
       const mock = fn();
       mock.mockRejectedValue(new Error('fail'));
 
       expect(() => mock()).toThrow('fail');
     });
 
-    it('tracks results with mockReturnValue', () => {
+    it('should track results with mockReturnValue', () => {
       const mock = fn();
       mock.mockReturnValue('result');
 
@@ -116,7 +116,7 @@ describe('native-spy', () => {
       expect(mock.results[1].value).toBe('result');
     });
 
-    it('tracks results with mockReturnValueOnce', () => {
+    it('should track results with mockReturnValueOnce', () => {
       const mock = fn();
       mock.mockReturnValueOnce('once');
       mock.mockReturnValue('default');
@@ -131,10 +131,104 @@ describe('native-spy', () => {
       expect(mock.results[1].value).toBe('default');
       expect(mock.results[2].value).toBe('default');
     });
+
+    it('should resolve for next call only with mockResolvedValueOnce', async () => {
+      const mock = fn();
+      mock.mockResolvedValue('default');
+      mock.mockResolvedValueOnce('once');
+
+      expect(await mock()).toBe('once');
+      expect(await mock()).toBe('default');
+    });
+
+    it('should reject for next call only with mockRejectedValueOnce', async () => {
+      const mock = fn();
+      mock.mockReturnValue('default');
+      mock.mockRejectedValueOnce(new Error('once'));
+
+      await expect(async () => mock()).rejects.toThrow('once');
+      expect(mock()).toBe('default');
+    });
+
+    it('should reset all state including implementation with mockRestore', () => {
+      const mock = fn(() => 'original');
+      mock.mockReturnValue('overridden');
+      mock();
+
+      mock.mockRestore();
+
+      expect(mock.calls.length).toBe(0);
+      expect(mock()).toBe(undefined);
+    });
+
+    it('should track results with type throw for implementations that throw', () => {
+      const mock = fn();
+      mock.mockImplementation(() => {
+        throw new Error('boom');
+      });
+
+      expect(() => mock()).toThrow('boom');
+      expect(mock.results[0].type).toBe('throw');
+    });
+
+    it('should track results with type throw for queued implementations that throw', () => {
+      const mock = fn();
+      mock.mockImplementationOnce(() => {
+        throw new Error('queued boom');
+      });
+
+      expect(() => mock()).toThrow('queued boom');
+      expect(mock.results[0].type).toBe('throw');
+    });
+
+    it('should track instances', () => {
+      const mock = fn();
+      mock();
+      expect(mock.instances).toBeDefined();
+      expect(Array.isArray(mock.instances)).toBe(true);
+    });
+
+    it('should track globally unique invocationCallOrder across mocks', () => {
+      const mock1 = fn();
+      const mock2 = fn();
+
+      mock1();
+      mock2();
+      mock1();
+
+      expect(mock1.invocationCallOrder[0]).toBeLessThan(mock2.invocationCallOrder[0]);
+      expect(mock2.invocationCallOrder[0]).toBeLessThan(mock1.invocationCallOrder[1]);
+    });
+
+    it('should queue multiple mockReturnValueOnce in order', () => {
+      const mock = fn();
+      mock.mockReturnValue('default');
+      mock.mockReturnValueOnce('first');
+      mock.mockReturnValueOnce('second');
+      mock.mockReturnValueOnce('third');
+
+      expect(mock()).toBe('first');
+      expect(mock()).toBe('second');
+      expect(mock()).toBe('third');
+      expect(mock()).toBe('default');
+    });
+
+    it('should track context as undefined when called directly', () => {
+      const mock = fn();
+      mock();
+      expect(mock.mock.contexts[0]).toBeUndefined();
+    });
+
+    it('should track context when called as method', () => {
+      const mock = fn();
+      const obj = { method: mock };
+      obj.method();
+      expect(mock.mock.contexts[0]).toBe(obj);
+    });
   });
 
   describe('withImplementation', () => {
-    it('temporarily changes implementation', () => {
+    it('should temporarily change implementation', () => {
       const mock = fn();
       mock.mockReturnValue('original');
 
@@ -144,25 +238,64 @@ describe('native-spy', () => {
       );
 
       expect(result).toBe('temporary');
-      // Original implementation should be restored
       expect(mock()).toBe('original');
+    });
+
+    it('should restore implementation even when callback throws', () => {
+      const mock = fn();
+      mock.mockReturnValue('original');
+
+      expect(() => {
+        mock.withImplementation(
+          () => 'temp',
+          () => {
+            throw new Error('callback error');
+          },
+        );
+      }).toThrow('callback error');
+
+      expect(mock()).toBe('original');
+    });
+
+    it('should restore queued implementations after callback throws', () => {
+      const mock = fn();
+      mock.mockReturnValueOnce('queued');
+
+      expect(() => {
+        mock.withImplementation(
+          () => 'temp',
+          () => {
+            throw new Error('error');
+          },
+        );
+      }).toThrow('error');
+
+      expect(mock()).toBe('queued');
     });
   });
 
   describe('mockReturnThis', () => {
-    it('returns this context when set', () => {
+    it('should return this context when set', () => {
       const mock = fn();
       mock.mockReturnThis();
 
-      // When mockReturnThis is set, calling mock() should return the context passed as 'this'
       const thisObj = { called: false };
       const result = mock.call(thisObj);
       expect(result).toBe(thisObj);
     });
+
+    it('should be overridden by mockReturnValue', () => {
+      const mock = fn();
+      mock.mockReturnThis();
+      mock.mockReturnValue('value');
+
+      const obj = { method: mock };
+      expect(obj.method()).toBe('value');
+    });
   });
 
   describe('serialization', () => {
-    it('mock object is serializable (no circular references)', () => {
+    it('should be serializable with no circular references', () => {
       const mock = fn();
       mock('test');
 
@@ -176,7 +309,7 @@ describe('native-spy', () => {
       expect(() => JSON.stringify(mock.mock)).not.toThrow();
     });
 
-    it('mock.mock returns plain data object', () => {
+    it('should return plain data object from mock.mock', () => {
       const mock = fn();
       mock('arg1', 'arg2');
 
@@ -188,7 +321,7 @@ describe('native-spy', () => {
       expect(Array.isArray(mockData.invocationCallOrder)).toBe(true);
     });
 
-    it('mock function itself is not in circular reference', () => {
+    it('should not have circular reference in mock function', () => {
       const mock = fn();
 
       // mock.mock should not be the mock function itself
@@ -200,7 +333,7 @@ describe('native-spy', () => {
       expect(typeof mockData).toBe('object');
     });
 
-    it('handles call arguments without creating circular references in mock structure', () => {
+    it('should handle call arguments without creating circular references in mock structure', () => {
       const mock = fn();
 
       // Call mock with regular objects (no circular references)

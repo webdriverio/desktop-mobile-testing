@@ -23,6 +23,7 @@ vi.mock('@wdio/native-utils', () => ({
     warn: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
+    trace: vi.fn(),
   }),
 }));
 
@@ -452,14 +453,112 @@ describe('triggerDeeplink', () => {
     });
   });
 
+  describe('userData auto-detection', () => {
+    const originalPlatform = process.platform;
+
+    beforeEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+      });
+    });
+
+    it('should auto-detect userDataDir from the running app when not already set', async () => {
+      mockContext.globalOptions = { appBinaryPath: 'C:\\app.exe' };
+      mockContext.userDataDir = undefined;
+      mockContext.browser = {
+        electron: {
+          execute: vi.fn().mockResolvedValue('C:\\Users\\Test\\AppData\\Roaming\\myapp'),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      await triggerDeeplink.call(mockContext, 'myapp://test');
+
+      expect(mockContext.browser.electron.execute).toHaveBeenCalledWith(expect.any(Function));
+      expect(mockContext.userDataDir).toBe('C:\\Users\\Test\\AppData\\Roaming\\myapp');
+      // Verify userData was appended to the URL
+      const spawnCall = mockSpawn.mock.calls[0];
+      const urlArg = spawnCall[1][1];
+      expect(urlArg).toContain('userData=');
+    });
+
+    it('should cache userDataDir after first auto-detection', async () => {
+      mockContext.globalOptions = { appBinaryPath: 'C:\\app.exe' };
+      mockContext.userDataDir = undefined;
+      mockContext.browser = {
+        electron: {
+          execute: vi.fn().mockResolvedValue('C:\\Users\\Test\\AppData'),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      await triggerDeeplink.call(mockContext, 'myapp://test');
+      expect(mockContext.userDataDir).toBe('C:\\Users\\Test\\AppData');
+
+      // Second call should use cached value
+      mockSpawn.mockClear();
+      await triggerDeeplink.call(mockContext, 'myapp://test2');
+      expect(mockContext.browser.electron.execute).toHaveBeenCalledTimes(1); // Only called once
+    });
+
+    it('should skip auto-detection if userDataDir is already set', async () => {
+      mockContext.globalOptions = { appBinaryPath: 'C:\\app.exe' };
+      mockContext.userDataDir = 'C:\\existing\\path';
+      mockContext.browser = {
+        electron: {
+          execute: vi.fn(),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      await triggerDeeplink.call(mockContext, 'myapp://test');
+      expect(mockContext.browser.electron.execute).not.toHaveBeenCalled();
+    });
+
+    it('should handle auto-detection failure gracefully', async () => {
+      mockContext.globalOptions = { appBinaryPath: 'C:\\app.exe' };
+      mockContext.userDataDir = undefined;
+      mockContext.browser = {
+        electron: {
+          execute: vi.fn().mockRejectedValue(new Error('CDP bridge not available')),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      // Should not throw despite auto-detection failure
+      await triggerDeeplink.call(mockContext, 'myapp://test');
+
+      // userData should not be set
+      expect(mockContext.userDataDir).toBeUndefined();
+      // URL should not contain userData param
+      const spawnCall = mockSpawn.mock.calls[0];
+      const urlArg = spawnCall[1][1];
+      expect(urlArg).toBe('myapp://test');
+    });
+  });
+
   describe('Error handling', () => {
-    it('should propagate errors from executeDeeplinkCommand', async () => {
-      const originalPlatform = process.platform;
+    const originalPlatform = process.platform;
+
+    beforeEach(() => {
       Object.defineProperty(process, 'platform', {
         value: 'darwin',
         configurable: true,
       });
+    });
 
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+      });
+    });
+
+    it('should propagate errors from executeDeeplinkCommand', async () => {
       mockContext.globalOptions = {};
 
       // Mock spawn to throw error
@@ -472,11 +571,6 @@ describe('triggerDeeplink', () => {
       await expect(triggerDeeplink.call(mockContext, 'myapp://test')).rejects.toThrow(
         'Failed to trigger deeplink: Command failed',
       );
-
-      Object.defineProperty(process, 'platform', {
-        value: originalPlatform,
-        configurable: true,
-      });
     });
   });
 

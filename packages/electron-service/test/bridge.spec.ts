@@ -27,7 +27,7 @@ describe('getDebuggerEndpoint', () => {
           args: ['foo=bar'],
         },
       }),
-    ).toThrowError();
+    ).toThrowError(/--inspect/);
   });
 
   it('should throw the error when invalid host is set', () => {
@@ -39,7 +39,7 @@ describe('getDebuggerEndpoint', () => {
           args: ['foo=bar', `--inspect=${host}:${port}`],
         },
       }),
-    ).toThrowError();
+    ).toThrowError(/host|port|invalid/i);
   });
 
   it('should throw the error when invalid port number is set', () => {
@@ -51,7 +51,7 @@ describe('getDebuggerEndpoint', () => {
           args: ['foo=bar', `--inspect=${host}:${port}`],
         },
       }),
-    ).toThrowError();
+    ).toThrowError(/port|invalid|NaN/i);
   });
 });
 
@@ -70,7 +70,7 @@ describe('ElectronCdpBridge', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-  describe('connect', async () => {
+  describe('connect', () => {
     const expectedContextId = 999;
     const getMockedInstance = async () => {
       const cdpBridge = new ElectronCdpBridge();

@@ -34,6 +34,13 @@ describe('readPackageUp', () => {
     const result = await readPackageUp({ cwd: '/' });
     expect(result).toBeUndefined();
   });
+
+  it('should accept a URL as cwd', async () => {
+    const url = new URL(`file://${testDir}`);
+    const result = await readPackageUp({ cwd: url });
+    expect(result).toBeDefined();
+    expect(result?.packageJson.name).toBe('test-package');
+  });
 });
 
 describe('readPackageUpSync', () => {
@@ -66,5 +73,12 @@ describe('readPackageUpSync', () => {
   it('should return undefined when package.json is not found', () => {
     const result = readPackageUpSync({ cwd: '/' });
     expect(result).toBeUndefined();
+  });
+
+  it('should accept a URL as cwd', () => {
+    const url = new URL(`file://${testDir}`);
+    const result = readPackageUpSync({ cwd: url });
+    expect(result).toBeDefined();
+    expect(result?.packageJson.name).toBe('test-package-sync');
   });
 });

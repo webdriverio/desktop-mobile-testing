@@ -1,9 +1,10 @@
+import 'vitest';
+
 interface CustomMatchers<R = unknown> {
   anyMockFunction(): R;
 }
+
 declare module 'vitest' {
-  interface Assertion<T = unknown> extends CustomMatchers<T> {}
+  interface Assertion<T> extends CustomMatchers<T> {}
   interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
-
-export * from 'vitest';
