@@ -98,7 +98,7 @@ jobs:
                 --filter='@wdio/native-utils...'
               ;;
             *)
-              echo "::error::Unknown service: ${{ inputs.scope }}"
+              echo "::error::Unknown scope: ${{ inputs.scope }}"
               exit 1
               ;;
           esac
@@ -157,7 +157,7 @@ jobs:
           # Run releasekit and capture JSON output
           set +e
           RELEASE_OUTPUT=$(pnpm releasekit release \
-            --target ${{ inputs.target_packages }} \
+            --target "${{ inputs.target_packages }}" \
             ${BUMP_FLAGS} \
             ${PRERELEASE_FLAGS} \
             ${DRY_RUN_FLAG} \
@@ -184,16 +184,22 @@ jobs:
         if: always()
         env:
           HAS_CHANGES: ${{ steps.release.outputs.has_changes }}
+          RELEASE_OUTCOME: ${{ steps.release.outcome }}
         run: |
           echo "## Release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Setting | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Service | \`${{ inputs.scope }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Scope | \`${{ inputs.scope }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Bump type | \`${{ inputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Packages | \`${{ inputs.target_packages }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Dry run | \`${{ inputs.dry_run }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$RELEASE_OUTCOME" = "failure" ]; then
+            echo "> **Release failed** — check the Run release step for details" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
           if [ "$HAS_CHANGES" != "true" ]; then
             echo "> **No releasable changes found**" >> "$GITHUB_STEP_SUMMARY"
