@@ -37,7 +37,7 @@ describe.each([
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should operate on all mock functions when no apiName is specified', async () => {
