@@ -84,7 +84,7 @@
     "tsx": "^4.21.0",
     "turbo": "2.8.16",
     "typescript": "^5.9.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.8.3"
   },
   "lint-staged": {
     "**/*.{j,t}s": ["biome check --write", "eslint --fix --cache"],
