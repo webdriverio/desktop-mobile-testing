@@ -11,13 +11,15 @@ vi.mock('../../src/mockStore.js', () => ({
   },
 }));
 
+type MockApiMethod = { getMockName: () => string; [key: string]: ReturnType<typeof vi.fn> | (() => string) };
+
 describe.each([
   { name: 'clearAllMocks', fn: clearAllMocks, mockMethod: 'mockClear' },
   { name: 'resetAllMocks', fn: resetAllMocks, mockMethod: 'mockReset' },
   { name: 'restoreAllMocks', fn: restoreAllMocks, mockMethod: 'mockRestore' },
 ] as const)('$name Command', ({ fn, mockMethod }) => {
-  let mockedGetName: Record<string, ReturnType<typeof vi.fn> | (() => string)>;
-  let mockedShowOpenDialog: Record<string, ReturnType<typeof vi.fn> | (() => string)>;
+  let mockedGetName: MockApiMethod;
+  let mockedShowOpenDialog: MockApiMethod;
 
   beforeEach(() => {
     mockedGetName = {
