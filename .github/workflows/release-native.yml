@@ -11,9 +11,9 @@ on:
           - patch
           - minor
           - major
-          - premajor
-          - preminor
           - prepatch
+          - preminor
+          - premajor
       dry_run:
         description: 'Dry run (show what would happen, make no changes)'
         required: false
@@ -25,196 +25,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release-native:
-    name: Release Native Packages
-    runs-on: ubuntu-latest
+  release:
+    uses: ./.github/workflows/_release.reusable.yml
     permissions:
       contents: write
       id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          run_install: true
-
-      - name: Build packages
-        run: pnpm turbo run build --filter='@wdio/native-types...' --filter='@wdio/native-utils...'
-
-      - name: Version packages
-        id: version
-        run: |
-          # Configure git first (needed by package-versioner for commits)
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          echo "🧮 Calculating and applying versions for native packages..."
-          echo "Release type: ${{ inputs.release_version }}"
-          echo ""
-
-          # Run package-versioner for native-types (with dry-run if dry_run input is true)
-          echo "📦 Processing @wdio/native-types..."
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "Running (dry-run): pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run -t @wdio/native-types"
-            TYPES_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-types)
-            TYPES_VERSION=$(echo "$TYPES_RESULT" | jq -r '.updates[0].newVersion // empty')
-          else
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-types
-            TYPES_VERSION=$(node -e "console.log(require('./packages/native-types/package.json').version)")
-          fi
-
-          # Run package-versioner for native-utils (with dry-run if dry_run input is true)
-          echo "📦 Processing @wdio/native-utils..."
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "Running (dry-run): pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run -t @wdio/native-utils"
-            UTILS_RESULT=$(pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} --dry-run --json -t @wdio/native-utils)
-            UTILS_VERSION=$(echo "$UTILS_RESULT" | jq -r '.updates[0].newVersion // empty')
-          else
-            echo "Running: pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils"
-            pnpm --loglevel=error package-versioner --bump ${{ inputs.release_version }} -t @wdio/native-utils
-            UTILS_VERSION=$(node -e "console.log(require('./packages/native-utils/package.json').version)")
-          fi
-
-          if [ -z "$TYPES_VERSION" ] || [ -z "$UTILS_VERSION" ]; then
-            echo "❌ Failed to calculate versions"
-            echo "TYPES_VERSION: '$TYPES_VERSION'"
-            echo "UTILS_VERSION: '$UTILS_VERSION'"
-            exit 1
-          fi
-
-          echo ""
-          echo "📋 VERSION RESULTS:"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 @wdio/native-types: $TYPES_VERSION"
-          echo "📦 @wdio/native-utils: $UTILS_VERSION"
-          echo ""
-
-          echo "types_version=$TYPES_VERSION" >> $GITHUB_OUTPUT
-          echo "utils_version=$UTILS_VERSION" >> $GITHUB_OUTPUT
-
-          # Show what was created
-          echo ""
-          echo "Git status:"
-          git status
-          echo ""
-          echo "Recent commits:"
-          git log --oneline -5
-          echo ""
-          echo "Tags created:"
-          git tag --points-at HEAD
-          echo ""
-
-          # Note: Commits and tags created locally by package-versioner
-          # Push will happen after successful publish
-
-      - name: Publish to NPM
-        id: publish
-        env:
-          NPM_CONFIG_PROVENANCE: true
-        run: |
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "🧪 DRY RUN: Testing NPM publish (will not actually publish)"
-            echo "Would publish @wdio/native-types@${{ steps.version.outputs.types_version }}..."
-            echo "Would publish @wdio/native-utils@${{ steps.version.outputs.utils_version }}..."
-          else
-            echo "🚀 LIVE RELEASE: Publishing to NPM"
-
-            # Read actual versions from package.json after bumping
-            TYPES_VERSION=$(jq -r '.version' packages/native-types/package.json)
-            UTILS_VERSION=$(jq -r '.version' packages/native-utils/package.json)
-
-            echo "Publishing @wdio/native-types@${TYPES_VERSION}..."
-            pnpm --filter @wdio/native-types publish --access public --no-git-checks --provenance
-
-            echo "Publishing @wdio/native-utils@${UTILS_VERSION}..."
-            pnpm --filter @wdio/native-utils publish --access public --no-git-checks --provenance
-
-            # Output actual published versions for later steps
-            echo "types_version=${TYPES_VERSION}" >> $GITHUB_OUTPUT
-            echo "utils_version=${UTILS_VERSION}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Push Version Commits and Tags
-        if: ${{ !inputs.dry_run }}
-        run: |
-          echo "Publishing successful - pushing version commits and tags..."
-          git push --no-verify
-          git push --no-verify --tags
-          echo "✅ Version commits and tags pushed successfully"
-
-      - name: Create GitHub Releases
-        if: ${{ !inputs.dry_run }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create release for native-types
-          gh release create "@wdio/native-types@v${{ steps.publish.outputs.types_version }}" \
-            --title "@wdio/native-types v${{ steps.publish.outputs.types_version }}" \
-            --notes-file packages/native-types/CHANGELOG.md \
-            --latest=false
-
-          # Create release for native-utils
-          gh release create "@wdio/native-utils@v${{ steps.publish.outputs.utils_version }}" \
-            --title "@wdio/native-utils v${{ steps.publish.outputs.utils_version }}" \
-            --notes-file packages/native-utils/CHANGELOG.md \
-            --latest=false
-
-      - name: Summary
-        run: |
-          echo "## 📦 Native Packages Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Release Type:** ${{ inputs.release_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Mode:** ${{ inputs.dry_run && '🧪 Dry Run' || '🚀 Live Release' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "### 📋 Package Versions" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | Target Version | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|----------------|--------|" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "| @wdio/native-types | ${{ steps.version.outputs.types_version }} | 🧪 Dry run tested |" >> $GITHUB_STEP_SUMMARY
-            echo "| @wdio/native-utils | ${{ steps.version.outputs.utils_version }} | 🧪 Dry run tested |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| @wdio/native-types | ${{ steps.publish.outputs.types_version }} | ✅ Published |" >> $GITHUB_STEP_SUMMARY
-            echo "| @wdio/native-utils | ${{ steps.publish.outputs.utils_version }} | ✅ Published |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "### 📝 Dry Run Details" >> $GITHUB_STEP_SUMMARY
-            echo "This was a dry run - no permanent changes were made." >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**What was tested:**" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Version calculations" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ NPM authentication" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Package publishing (dry-run)" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**What would happen in a live release:**" >> $GITHUB_STEP_SUMMARY
-            echo "- 📄 Update package.json versions" >> $GITHUB_STEP_SUMMARY
-            echo "- 📝 Generate changelogs" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏷️ Create git tags and push to repository" >> $GITHUB_STEP_SUMMARY
-            echo "- 📦 **Actually publish** packages to NPM registry" >> $GITHUB_STEP_SUMMARY
-            echo "- 🏷️ Create GitHub releases" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "To perform an actual release, run this workflow with **Dry Run: ☐** (unchecked)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "### ✅ Release Complete" >> $GITHUB_STEP_SUMMARY
-            echo "**Actions performed:**" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Updated package.json versions" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Generated changelogs" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Created git tags and pushed to repository" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Published packages to NPM" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Created GitHub releases" >> $GITHUB_STEP_SUMMARY
-          fi
-
+    with:
+      target_packages: '@wdio/native-types,@wdio/native-utils'
+      target_branch: main
+      bump: ${{ inputs.release_version }}
+      dry_run: ${{ inputs.dry_run }}
+      scope: native
+    secrets:
+      deploy_key: ${{ secrets.DEPLOY_KEY }}
+      ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}

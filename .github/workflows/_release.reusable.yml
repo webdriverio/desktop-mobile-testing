@@ -1,0 +1,221 @@
+name: Release (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      target_packages:
+        description: 'Comma-separated list of packages to release'
+        required: true
+        type: string
+      target_branch:
+        description: 'Branch to release from'
+        required: true
+        type: string
+      bump:
+        description: 'Bump type (patch, minor, major, prepatch, preminor, premajor, prerelease)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run mode'
+        required: false
+        type: boolean
+        default: false
+      scope:
+        description: 'Release scope (electron, tauri, native) — controls build and toolchain steps'
+        required: true
+        type: string
+    secrets:
+      deploy_key:
+        description: 'SSH deploy key for pushing to the repository'
+        required: true
+      crates_io_token:
+        description: 'Crates.io token for publishing Rust crates (required for Tauri)'
+        required: false
+      ollama_api_key:
+        description: 'Ollama API key for LLM-enhanced release notes'
+        required: false
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+  NPM_CONFIG_PROVENANCE: true
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout (SSH)
+        if: ${{ !inputs.dry_run }}
+        uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.deploy_key }}
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Checkout (read-only)
+        if: ${{ inputs.dry_run }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          case "${{ inputs.scope }}" in
+            electron)
+              pnpm turbo run build \
+                --filter='@wdio/electron-service...' \
+                --filter='@wdio/electron-cdp-bridge...' \
+                --filter='@wdio/bundler...'
+              ;;
+            tauri)
+              pnpm turbo run build \
+                --filter='@wdio/tauri-service...' \
+                --filter='@wdio/tauri-plugin...'
+              ;;
+            native)
+              pnpm turbo run build \
+                --filter='@wdio/native-types...' \
+                --filter='@wdio/native-utils...'
+              ;;
+            *)
+              echo "::error::Unknown service: ${{ inputs.scope }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Configure Git
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Rust
+        if: ${{ inputs.scope == 'tauri' }}
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install GTK development libraries
+        if: ${{ inputs.scope == 'tauri' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libglib2.0-dev \
+            libsoup2.4-dev \
+            pkg-config
+          sudo apt-get install -y libwebkit2gtk-4.0-dev || true
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || true
+          sudo apt-get install -y libappindicator3-dev || true
+          sudo apt-get install -y libayatana-appindicator3-dev || true
+          sudo apt-get install -y libsoup3-dev || true
+
+      - name: Run release
+        id: release
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.crates_io_token }}
+          GH_TOKEN: ${{ github.token }}
+          OLLAMA_API_KEY: ${{ secrets.ollama_api_key }}
+        run: |
+          # Build releasekit flags
+          BUMP_FLAGS="--bump ${{ inputs.bump }}"
+          PRERELEASE_FLAGS=""
+
+          # Handle prerelease bump types
+          if [ "${{ inputs.bump }}" = "prerelease" ]; then
+            PRERELEASE_FLAGS="--prerelease next"
+          elif [[ "${{ inputs.bump }}" == pre* ]]; then
+            BASE_BUMP="${{ inputs.bump }}"
+            BASE_BUMP="${BASE_BUMP#pre}"
+            BUMP_FLAGS="--bump ${BASE_BUMP}"
+            PRERELEASE_FLAGS="--prerelease next"
+          fi
+
+          DRY_RUN_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+          fi
+
+          # Run releasekit and capture JSON output
+          set +e
+          RELEASE_OUTPUT=$(pnpm releasekit release \
+            --target ${{ inputs.target_packages }} \
+            ${BUMP_FLAGS} \
+            ${PRERELEASE_FLAGS} \
+            ${DRY_RUN_FLAG} \
+            --json \
+            2> >(tee /tmp/release_stderr >&2))
+          EXIT_CODE=$?
+          set -e
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::releasekit failed with exit code $EXIT_CODE"
+            cat /tmp/release_stderr
+            exit $EXIT_CODE
+          fi
+
+          # Check if output contains version updates
+          if echo "$RELEASE_OUTPUT" | jq -e '.versionOutput.updates[0]' > /dev/null 2>&1; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "$RELEASE_OUTPUT" > /tmp/release-output.json
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        if: always()
+        env:
+          HAS_CHANGES: ${{ steps.release.outputs.has_changes }}
+        run: |
+          echo "## Release" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Setting | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Service | \`${{ inputs.scope }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Bump type | \`${{ inputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Packages | \`${{ inputs.target_packages }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dry run | \`${{ inputs.dry_run }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$HAS_CHANGES" != "true" ]; then
+            echo "> **No releasable changes found**" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "> **Dry run** — no packages were published or pushed" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "### Package Updates" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Package | Version |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---------|---------|" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '.versionOutput.updates[] | "| \`\(.packageName)\` | \(.newVersion) |"' /tmp/release-output.json >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if jq -e '.versionOutput.tags[0]' /tmp/release-output.json > /dev/null 2>&1; then
+            echo "### Tags" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.versionOutput.tags[]' /tmp/release-output.json | while read -r tag; do
+              echo "- \`${tag}\`" >> "$GITHUB_STEP_SUMMARY"
+            done
+          fi
