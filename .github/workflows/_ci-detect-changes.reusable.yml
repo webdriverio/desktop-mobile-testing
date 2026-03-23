@@ -22,7 +22,7 @@ on:
         description: 'Whether shared packages changed (affects both services)'
         value: ${{ jobs.detect.outputs.has_shared_changes }}
       run_lint_only:
-        description: 'Whether to run only lint (docs-only changes)'
+        description: 'Whether to run only lint (no service-affecting changes detected)'
         value: ${{ jobs.detect.outputs.run_lint_only }}
 
 jobs:
@@ -174,7 +174,7 @@ jobs:
           echo "### Decisions" >> $GITHUB_STEP_SUMMARY
           echo "- **Run Electron**: $RUN_ELECTRON" >> $GITHUB_STEP_SUMMARY
           echo "- **Run Tauri**: $RUN_TAURI" >> $GITHUB_STEP_SUMMARY
-          echo "- **Lint only (docs-only)**: $RUN_LINT_ONLY" >> $GITHUB_STEP_SUMMARY
+          echo "- **Lint only (no service changes)**: $RUN_LINT_ONLY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Outputs" >> $GITHUB_STEP_SUMMARY
           echo "- \`run_electron\`: $RUN_ELECTRON" >> $GITHUB_STEP_SUMMARY
