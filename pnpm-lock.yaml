@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@25.5.0)
       '@releasekit/release':
-        specifier: ^0.2.1
-        version: 0.2.1(conventional-commits-parser@6.2.1)(ws@8.19.0)
+        specifier: ^0.3.1
+        version: 0.3.1(conventional-commits-parser@6.2.1)(ws@8.19.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -1193,18 +1193,6 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
-
-  '@conventional-changelog/git-client@2.5.1':
-    resolution: {integrity: sha512-lAw7iA5oTPWOLjiweb7DlGEMDEvzqzLLa6aWOly2FSZ64IwLE8T458rC+o+WvI31Doz6joM7X2DoNog7mX8r4A==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      conventional-commits-filter: ^5.0.0
-      conventional-commits-parser: ^6.1.0
-    peerDependenciesMeta:
-      conventional-commits-filter:
-        optional: true
-      conventional-commits-parser:
-        optional: true
 
   '@conventional-changelog/git-client@2.6.0':
     resolution: {integrity: sha512-T+uPDciKf0/ioNNDpMGc8FDsehJClZP0yR3Q5MN6wE/Y/1QZ7F+80OgznnTCOlMEG4AV0LvH2UJi3C/nBnaBUg==}
@@ -2558,23 +2546,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.2.1':
-    resolution: {integrity: sha512-Ouv/ZtwwjucJyQTkN2B2dGf53EAaQDbKok7QJFVFRQxcy2GRaDUHgsLYqMrkz/7qdQqpCEGJvdaNKiP/plRqEw==}
+  '@releasekit/notes@0.3.1':
+    resolution: {integrity: sha512-DqXNwCU2Y8PXiYOXcd17jXe3W11C0cxg87FyPkEpzev8bMs2hvXsvV2SxGHOLuDgXaPa2VW8KaqTnSrANb9lPQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.2.1':
-    resolution: {integrity: sha512-j6EWqyln1xP3Mfqeqp5p7trPAvDQJRVj+OODo6w+8jnGAF3L9LYSnIjxbSqyTHjJ9b92HtKIHCeIUyo6J3zZIA==}
+  '@releasekit/publish@0.3.1':
+    resolution: {integrity: sha512-reW31RIOVTl5Y02nVW6w6SklMvJEb+kDItJ/jc7ARg50NajOvRHe4xFt+XeG5H3esqFM+evuL57BAXsDMxozqw==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.2.1':
-    resolution: {integrity: sha512-aDa/V7HaRahE9W4cJ0q19kjoQFRAsC9wsGIwMDddM4GMdOZW+88Qit3tARFIEKJr3Y6vcW/3F9jt/13CZVomjw==}
+  '@releasekit/release@0.3.1':
+    resolution: {integrity: sha512-qyzIcR4RQOm8oqBuzgypCfRBaU6xaZD9b8TUB3yXomJGKzU86W9rx5UZXpxPHBmuI8CT5ok9JqcnDYimgcZo/Q==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.2.1':
-    resolution: {integrity: sha512-sOFK2g1qIVvRl7PQrfMY0r5GPkXSwBihqne/EfBqdDrn/L4yEI3D3a6ChGkwIWqISCQ+IjDmONKFPDBWM4c6bQ==}
+  '@releasekit/version@0.3.1':
+    resolution: {integrity: sha512-9J12pad1Jk6PcnybIEGpHDZbfe0o2n7OlHdfGvzciQv2SPPXAJOKSaqJi5hW+S+ctZ0aMmfXa22CMizJs+r/pw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2831,10 +2819,6 @@ packages:
 
   '@simple-libs/child-process-utils@1.0.1':
     resolution: {integrity: sha512-3nWd8irxvDI6v856wpPCHZ+08iQR0oHTZfzAZmnbsLzf+Sf1odraP6uKOHDZToXq3RPRV/LbqGVlSCogm9cJjg==}
-    engines: {node: '>=18'}
-
-  '@simple-libs/stream-utils@1.1.0':
-    resolution: {integrity: sha512-6rsHTjodIn/t90lv5snQjRPVtOosM7Vp0AKdrObymq45ojlgVwnpAqdc+0OBBrpEiy31zZ6/TKeIVqV1HwvnuQ==}
     engines: {node: '>=18'}
 
   '@simple-libs/stream-utils@1.2.0':
@@ -6363,6 +6347,10 @@ packages:
     resolution: {integrity: sha512-4zemZi0HvTnYwLfrpk/CF9LOd9Lt87kAt50GnqhMpyF9U3poDAP2+iukq2bZsO/ufegbYehBkqINbsWxj4l4cw==}
     engines: {node: '>= 18'}
 
+  smol-toml@1.6.1:
+    resolution: {integrity: sha512-dWUG8F5sIIARXih1DTaQAX4SsiTXhInKf1buxdY9DIg4ZYPZK5nGM1VRIYmEbDbsHt7USo99xSLFu5Q1IqTmsg==}
+    engines: {node: '>= 18'}
+
   socks-proxy-agent@7.0.0:
     resolution: {integrity: sha512-Fgl0YPZ902wEsAyiQ+idGd1A7rSFx/ayC1CQVMw5P+EQx2V0SgpGtf6OKFhVjPflPUl9YMmEOnmfjCdMUsygww==}
     engines: {node: '>= 10'}
@@ -7375,15 +7363,6 @@ snapshots:
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.1.0
-
-  '@conventional-changelog/git-client@2.5.1(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)':
-    dependencies:
-      '@simple-libs/child-process-utils': 1.0.1
-      '@simple-libs/stream-utils': 1.1.0
-      semver: 7.7.4
-    optionalDependencies:
-      conventional-commits-filter: 5.0.0
-      conventional-commits-parser: 6.2.1
 
   '@conventional-changelog/git-client@2.6.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)':
     dependencies:
@@ -8865,7 +8844,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.2.1(ws@8.19.0)':
+  '@releasekit/notes@0.3.1(ws@8.19.0)':
     dependencies:
       '@anthropic-ai/sdk': 0.78.0(zod@4.3.6)
       '@octokit/rest': 22.0.1
@@ -8875,33 +8854,34 @@ snapshots:
       handlebars: 4.7.8
       liquidjs: 10.25.1
       openai: 6.32.0(ws@8.19.0)(zod@4.3.6)
-      smol-toml: 1.6.0
+      smol-toml: 1.6.1
       zod: 4.3.6
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.2.1':
+  '@releasekit/publish@0.3.1':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
       semver: 7.7.4
-      smol-toml: 1.6.0
+      smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.2.1(conventional-commits-parser@6.2.1)(ws@8.19.0)':
+  '@releasekit/release@0.3.1(conventional-commits-parser@6.2.1)(ws@8.19.0)':
     dependencies:
-      '@releasekit/notes': 0.2.1(ws@8.19.0)
-      '@releasekit/publish': 0.2.1
-      '@releasekit/version': 0.2.1(conventional-commits-parser@6.2.1)
+      '@octokit/rest': 22.0.1
+      '@releasekit/notes': 0.3.1(ws@8.19.0)
+      '@releasekit/publish': 0.3.1
+      '@releasekit/version': 0.3.1(conventional-commits-parser@6.2.1)
       chalk: 5.6.2
       commander: 14.0.3
-      smol-toml: 1.6.0
+      smol-toml: 1.6.1
       zod: 4.3.6
     transitivePeerDependencies:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.2.1(conventional-commits-parser@6.2.1)':
+  '@releasekit/version@0.3.1(conventional-commits-parser@6.2.1)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@types/micromatch': 4.0.10
@@ -8916,7 +8896,7 @@ snapshots:
       git-semver-tags: 8.0.1(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)
       micromatch: 4.0.8
       semver: 7.7.4
-      smol-toml: 1.6.0
+      smol-toml: 1.6.1
       zod: 4.3.6
     transitivePeerDependencies:
       - conventional-commits-parser
@@ -9077,10 +9057,6 @@ snapshots:
   '@simple-libs/child-process-utils@1.0.1':
     dependencies:
       '@simple-libs/stream-utils': 1.2.0
-      '@types/node': 22.19.15
-
-  '@simple-libs/stream-utils@1.1.0':
-    dependencies:
       '@types/node': 22.19.15
 
   '@simple-libs/stream-utils@1.2.0': {}
@@ -10397,7 +10373,7 @@ snapshots:
 
   conventional-recommended-bump@11.2.0:
     dependencies:
-      '@conventional-changelog/git-client': 2.5.1(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)
+      '@conventional-changelog/git-client': 2.6.0(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)
       conventional-changelog-preset-loader: 5.0.0
       conventional-commits-filter: 5.0.0
       conventional-commits-parser: 6.2.1
@@ -13161,6 +13137,8 @@ snapshots:
   smart-buffer@4.2.0: {}
 
   smol-toml@1.6.0: {}
+
+  smol-toml@1.6.1: {}
 
   socks-proxy-agent@7.0.0:
     dependencies:
