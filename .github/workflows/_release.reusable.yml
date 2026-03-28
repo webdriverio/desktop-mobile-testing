@@ -136,16 +136,12 @@ jobs:
           OLLAMA_API_KEY: ${{ secrets.ollama_api_key }}
         run: |
           # Build releasekit flags
+          # Note: prepatch/preminor/premajor bump types automatically use prereleaseIdentifier
+          # from config (set to "next"). Only plain "prerelease" needs explicit --prerelease flag.
           BUMP_FLAGS="--bump ${{ inputs.bump }}"
           PRERELEASE_FLAGS=""
 
-          # Handle prerelease bump types
           if [ "${{ inputs.bump }}" = "prerelease" ]; then
-            PRERELEASE_FLAGS="--prerelease next"
-          elif [[ "${{ inputs.bump }}" == pre* ]]; then
-            BASE_BUMP="${{ inputs.bump }}"
-            BASE_BUMP="${BASE_BUMP#pre}"
-            BUMP_FLAGS="--bump ${BASE_BUMP}"
             PRERELEASE_FLAGS="--prerelease next"
           fi
 
