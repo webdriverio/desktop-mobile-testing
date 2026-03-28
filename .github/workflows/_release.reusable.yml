@@ -155,9 +155,11 @@ jobs:
           fi
 
           # Run releasekit and capture JSON output
+          # Pass --branch to ensure releasekit pushes to the correct branch
           set +e
           RELEASE_OUTPUT=$(pnpm releasekit release \
             --target "${{ inputs.target_packages }}" \
+            --branch "${{ inputs.target_branch }}" \
             ${BUMP_FLAGS} \
             ${PRERELEASE_FLAGS} \
             ${DRY_RUN_FLAG} \
@@ -198,6 +200,11 @@ jobs:
 
           if [ "$RELEASE_OUTCOME" = "failure" ]; then
             echo "> **Release failed** — check the Run release step for details" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ -z "$HAS_CHANGES" ]; then
+            echo "> **Release step did not complete — check logs above**" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
