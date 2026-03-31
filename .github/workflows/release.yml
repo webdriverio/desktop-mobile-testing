@@ -8,13 +8,14 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      service:
-        description: 'Service to release'
+      scope:
+        description: 'Release scope'
         required: true
         type: choice
         options:
           - electron
           - tauri
+          - shared
         default: electron
       release_version:
         description: 'Release version type (pre* options for pre-releases)'
@@ -50,15 +51,18 @@ jobs:
             exit 1
           fi
 
-      - name: Map service to packages
+      - name: Map scope to packages
         id: map
         run: |
-          case "${{ inputs.service }}" in
+          case "${{ inputs.scope }}" in
             electron)
               echo "packages=@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types" >> "$GITHUB_OUTPUT"
               ;;
             tauri)
               echo "packages=@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types" >> "$GITHUB_OUTPUT"
+              ;;
+            shared)
+              echo "packages=@wdio/native-types,@wdio/native-utils" >> "$GITHUB_OUTPUT"
               ;;
           esac
 
@@ -73,7 +77,7 @@ jobs:
       target_branch: main
       bump: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
-      scope: ${{ inputs.service }}
+      scope: ${{ inputs.scope }}
     secrets:
       deploy_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
