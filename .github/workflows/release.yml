@@ -132,7 +132,7 @@ jobs:
   release-auto:
     name: Release (Auto)
     needs: [check-labels, resolve-packages]
-    if: github.event_name == 'workflow_run'
+    if: github.event_name == 'workflow_run' && needs.check-labels.outputs.should_release == 'true'
     uses: ./.github/workflows/_release.reusable.yml
     permissions:
       contents: write

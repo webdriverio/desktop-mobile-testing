@@ -1,0 +1,47 @@
+name: Release Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, labeled, unlabeled]
+
+concurrency:
+  group: release-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  contents: read
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  preview:
+    name: Release Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm turbo run build
+
+      - name: Release preview
+        run: pnpm releasekit preview
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OLLAMA_API_KEY: ""
