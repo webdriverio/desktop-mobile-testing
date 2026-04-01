@@ -4,7 +4,7 @@ This directory contains the CI/CD workflows for the WebdriverIO Desktop & Mobile
 
 ## Release Workflow
 
-The `release.yml` workflow handles all releases using the reusable `_release.reusable.yml` workflow.
+The `release.yml` workflow handles both manual and automated releases using the reusable `_release.reusable.yml` workflow.
 
 ### Scopes
 
@@ -24,7 +24,30 @@ The `release.yml` workflow handles all releases using the reusable `_release.reu
 3. Select scope, version type, and dry run option
 4. For dry runs, set `dry_run: true` to preview without publishing
 
-### Dry Runs
+### Autorelease
+
+Automated releases trigger when CI completes on `main` with release labels on merged PRs.
+
+**Release Labels:**
+
+- **Scope labels** (prefix `scope:`):
+  - `scope:electron` - Release Electron packages
+  - `scope:tauri` - Release Tauri packages
+  - `scope:shared` - Release shared packages
+
+- **Release labels** (prefix `release:`):
+  - `release:patch`, `release:minor`, `release:major`
+  - `release:prerelease`, `release:prepatch`, `release:preminor`, `release:premajor`
+
+**Examples:**
+- `scope:electron` + `release:major` → Electron packages at major bump
+- `scope:tauri` + `release:minor` → Tauri packages at minor bump
+- `scope:shared` only → Shared packages at minor bump (default)
+- `release:major` only → Shared packages at major bump
+
+**Default behavior:** If only scope is specified, uses `minor` bump. If only version is specified, uses `shared` scope.
+
+## Dry Runs
 
 Always run with `dry_run: true` first to verify:
 - Correct packages will be released
@@ -41,10 +64,10 @@ Always run with `dry_run: true` first to verify:
 
 ## Architecture
 
-The release infrastructure uses a single reusable workflow:
-
 ```
 release.yml
+    ├── check-labels (autorelease only)
+    ├── resolve-packages / resolve-manual
     └── _release.reusable.yml
             ├── Checkout (SSH or read-only)
             ├── Setup Node.js/pnpm

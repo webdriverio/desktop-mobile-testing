@@ -72,43 +72,30 @@ pnpm test:dev
 
 ## Release
 
-Project maintainers publish releases using GitHub Actions workflows. The project follows a feature branch strategy:
+Project maintainers publish releases using GitHub Actions. The release workflow supports both manual triggers and automated releases via PR labels.
 
-- `main` — current stable version
-- `feature/vX` — next major version development
-- `vX.x` — maintenance branch
+### Autorelease (Recommended)
+
+1. Add labels to your PR: `scope:electron` and a version label like `release:major`
+2. After CI passes and the PR is merged, the release workflow automatically publishes
+
+### Manual Release
+
+1. Go to Actions → Release
+2. Click "Run workflow"
+3. Select scope (`electron`), version type, and dry run option
+
+### Version Types
+
+- `patch`, `minor`, `major` - Stable releases
+- `prepatch`, `preminor`, `premajor`, `prerelease` - Pre-releases
 
 ### Pre-releases
 
-Run the [pre-release workflow](https://github.com/webdriverio/desktop-mobile/actions/workflows/pre-release.yml):
+Use prerelease labels for testing:
+- `scope:electron` + `release:premajor` → Electron packages as premajor (e.g., 11.0.0-beta.0)
 
-1. Select branch (`feature` for next major, `main` for current version)
-2. Choose type: `prepatch`, `preminor`, `premajor`, or `prerelease`
-3. Optionally enable dry-run to preview changes
-
-### Releases
-
-Run the [release workflow](https://github.com/webdriverio/desktop-mobile/actions/workflows/release.yml):
-
-1. Select branch (`main`, `feature`, or `maintenance`)
-2. Choose type: `patch`, `minor`, or `major`
-3. Optionally enable dry-run to preview changes
-
-### Major Version Releases
-
-1. Ensure all changes are ready in the feature branch
-2. Run the release workflow with branch `feature` and type `major`
-3. This automatically:
-   - Creates a maintenance branch for the current version
-   - Updates dependabot configuration
-   - Merges the feature branch to main
-   - Creates a GitHub release
-
-### Maintenance Policy
-
-This repository does not maintain LTS or maintenance branches. Users requiring long-term support should pin to specific versions in their `package.json`.
-
-## Contributing
+### Contributing
 
 See [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines, commit format, and PR process.
 

@@ -299,12 +299,50 @@ This repository does not maintain LTS or backport branches. Only the latest vers
 
 ## Release Process
 
-Maintainers handle releases. The process is:
+Releases are automated via GitHub Actions and triggered by PR labels.
 
-1. Update version numbers
-2. Update CHANGELOG.md
-3. Create git tag
-4. Publish to npm
+### Autorelease (Recommended)
+
+When your PR is merged to `main`, the release workflow checks for release labels:
+
+1. Add a scope label to your PR: `scope:electron`, `scope:tauri`, or `scope:shared`
+2. Add a version label: `release:patch`, `release:minor`, `release:major`, or prerelease variants
+3. After CI passes and the PR is merged, the release workflow automatically publishes packages
+
+**Examples:**
+- `scope:electron` + `release:major` → Electron packages at major bump
+- `scope:tauri` + `release:minor` → Tauri packages at minor bump
+- `scope:shared` + `release:patch` → Shared packages at patch bump
+
+### Manual Release
+
+For releases without PR labels or for dry runs:
+
+1. Go to Actions → Release in GitHub
+2. Click "Run workflow"
+3. Select scope, version type, and dry run option
+4. Monitor the workflow execution
+
+### Required Labels
+
+| Label | Effect |
+|-------|--------|
+| `scope:electron` | Release Electron packages |
+| `scope:tauri` | Release Tauri packages |
+| `scope:shared` | Release shared packages |
+| `release:patch` | Patch bump |
+| `release:minor` | Minor bump |
+| `release:major` | Major bump |
+| `release:prerelease` | Prerelease bump |
+| `release:prepatch` | Prepatch bump |
+| `release:preminor` | Preminor bump |
+| `release:premajor` | Premajor bump |
+
+### Pre-releases
+
+For testing changes before a stable release, use prerelease labels:
+- `scope:electron` + `release:premajor` → Electron packages as premajor (e.g., 11.0.0-beta.0)
+- `scope:shared` + `release:prerelease` → Shared packages as prerelease (e.g., 2.0.0-next.0)
 
 ## Getting Help
 
