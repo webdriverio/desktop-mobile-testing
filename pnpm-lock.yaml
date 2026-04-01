@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@25.5.0)
       '@releasekit/release':
-        specifier: ^0.3.1
-        version: 0.3.1(conventional-commits-parser@6.2.1)(ws@8.19.0)
+        specifier: ^0.6.1
+        version: 0.6.1(conventional-commits-parser@6.2.1)(ws@8.19.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -2546,23 +2546,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.3.1':
-    resolution: {integrity: sha512-DqXNwCU2Y8PXiYOXcd17jXe3W11C0cxg87FyPkEpzev8bMs2hvXsvV2SxGHOLuDgXaPa2VW8KaqTnSrANb9lPQ==}
+  '@releasekit/notes@0.6.1':
+    resolution: {integrity: sha512-8itjGw3reltqz+6fOTXrHblPgB8YICv10aYP0lwJjoCw7i5lM7iznQmEAL3Q8g/TCwBYrJhuYaX1AsNU2VcutQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.3.1':
-    resolution: {integrity: sha512-reW31RIOVTl5Y02nVW6w6SklMvJEb+kDItJ/jc7ARg50NajOvRHe4xFt+XeG5H3esqFM+evuL57BAXsDMxozqw==}
+  '@releasekit/publish@0.6.1':
+    resolution: {integrity: sha512-24WJUvPb7pO9tAsM/lFAMnsoE6BqgGmuNkLvRqxORWEIyUFCmMp97hWKw9tnE/AvxMBuRmOdWqx2FhXrLVyfnA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.3.1':
-    resolution: {integrity: sha512-qyzIcR4RQOm8oqBuzgypCfRBaU6xaZD9b8TUB3yXomJGKzU86W9rx5UZXpxPHBmuI8CT5ok9JqcnDYimgcZo/Q==}
+  '@releasekit/release@0.6.1':
+    resolution: {integrity: sha512-nGAGejwHlUCRgr/8CTaUxXJbknyP7mEW74dMyvd6g/pgL53OxRTSvUQkS9yP5q2mtwBt4Q7ReQtUfni6mUkPTQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.3.1':
-    resolution: {integrity: sha512-9J12pad1Jk6PcnybIEGpHDZbfe0o2n7OlHdfGvzciQv2SPPXAJOKSaqJi5hW+S+ctZ0aMmfXa22CMizJs+r/pw==}
+  '@releasekit/version@0.6.1':
+    resolution: {integrity: sha512-Bkrduu2Kw8sHX/WR+Kue4RJ76ADh2+CMxsF7UL/cj/VSN9v+vbzpjJ/C0tJNh0taJOhH15Qgmoc4lEh98FoNvA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -4768,8 +4768,8 @@ packages:
   grapheme-splitter@1.0.4:
     resolution: {integrity: sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==}
 
-  handlebars@4.7.8:
-    resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
+  handlebars@4.7.9:
+    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
     hasBin: true
 
@@ -8844,14 +8844,14 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.3.1(ws@8.19.0)':
+  '@releasekit/notes@0.6.1(ws@8.19.0)':
     dependencies:
       '@anthropic-ai/sdk': 0.78.0(zod@4.3.6)
       '@octokit/rest': 22.0.1
       chalk: 5.6.2
       commander: 14.0.3
       ejs: 4.0.1
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       liquidjs: 10.25.1
       openai: 6.32.0(ws@8.19.0)(zod@4.3.6)
       smol-toml: 1.6.1
@@ -8859,7 +8859,7 @@ snapshots:
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.3.1':
+  '@releasekit/publish@0.6.1':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -8867,12 +8867,12 @@ snapshots:
       smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.3.1(conventional-commits-parser@6.2.1)(ws@8.19.0)':
+  '@releasekit/release@0.6.1(conventional-commits-parser@6.2.1)(ws@8.19.0)':
     dependencies:
       '@octokit/rest': 22.0.1
-      '@releasekit/notes': 0.3.1(ws@8.19.0)
-      '@releasekit/publish': 0.3.1
-      '@releasekit/version': 0.3.1(conventional-commits-parser@6.2.1)
+      '@releasekit/notes': 0.6.1(ws@8.19.0)
+      '@releasekit/publish': 0.6.1
+      '@releasekit/version': 0.6.1(conventional-commits-parser@6.2.1)
       chalk: 5.6.2
       commander: 14.0.3
       smol-toml: 1.6.1
@@ -8881,7 +8881,7 @@ snapshots:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.3.1(conventional-commits-parser@6.2.1)':
+  '@releasekit/version@0.6.1(conventional-commits-parser@6.2.1)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@types/micromatch': 4.0.10
@@ -11534,7 +11534,7 @@ snapshots:
 
   grapheme-splitter@1.0.4: {}
 
-  handlebars@4.7.8:
+  handlebars@4.7.9:
     dependencies:
       minimist: 1.2.8
       neo-async: 2.6.2

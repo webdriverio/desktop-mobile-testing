@@ -79,7 +79,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.3.3",
     "ora": "^9.3.0",
-    "@releasekit/release": "^0.3.1",
+    "@releasekit/release": "^0.6.1",
     "shx": "^0.4.0",
     "tsx": "^4.21.0",
     "turbo": "2.8.16",
