@@ -37,9 +37,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm turbo run build
-
       - name: Release preview
         run: pnpm releasekit preview
         env:
