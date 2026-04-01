@@ -309,6 +309,8 @@ When your PR is merged to `main`, the release workflow checks for release labels
 2. Add a version label: `release:patch`, `release:minor`, `release:major`, or prerelease variants
 3. After CI passes and the PR is merged, the release workflow automatically publishes packages
 
+**Preview:** The `release-preview.yml` workflow runs on PRs with release labels to show what will be released.
+
 **Examples:**
 - `scope:electron` + `release:major` → Electron packages at major bump
 - `scope:tauri` + `release:minor` → Tauri packages at minor bump

@@ -26,7 +26,7 @@ The `release.yml` workflow handles both manual and automated releases using the 
 
 ### Autorelease
 
-Automated releases trigger when CI completes on `main` with release labels on merged PRs.
+Automated releases trigger when CI completes on `main` with release labels on merged PRs. The `release-preview.yml` workflow runs on PRs to show what will be released.
 
 **Release Labels:**
 
@@ -46,6 +46,8 @@ Automated releases trigger when CI completes on `main` with release labels on me
 - `release:major` only → Shared packages at major bump
 
 **Default behavior:** If only scope is specified, uses `minor` bump. If only version is specified, uses `shared` scope.
+
+**Preview workflow:** When a PR has release labels, the `release-preview.yml` workflow shows what packages would be released and their new versions.
 
 ## Dry Runs
 
@@ -89,4 +91,4 @@ Release notes can be enhanced with LLM (Ollama). If `OLLAMA_API_KEY` is not set 
 ## Other Workflows
 
 - **`ci.yml`** - Build, test, lint
-- **`test-tauri-webkit-e2e.yml`** - E2E tests for Tauri WebDriver
+- **`release-preview.yml`** - Preview release outcome on PRs with release labels
