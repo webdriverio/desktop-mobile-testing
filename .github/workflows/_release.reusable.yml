@@ -21,7 +21,7 @@ on:
         type: boolean
         default: false
       scope:
-        description: 'Release scope (electron, tauri, native) — controls build and toolchain steps'
+        description: 'Release scope (electron, tauri, shared) — controls build and toolchain steps'
         required: true
         type: string
     secrets:
@@ -92,7 +92,7 @@ jobs:
                 --filter='@wdio/tauri-service...' \
                 --filter='@wdio/tauri-plugin...'
               ;;
-            native)
+            shared)
               pnpm turbo run build \
                 --filter='@wdio/native-types...' \
                 --filter='@wdio/native-utils...'
