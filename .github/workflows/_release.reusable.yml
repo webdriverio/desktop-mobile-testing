@@ -128,52 +128,26 @@ jobs:
           sudo apt-get install -y libayatana-appindicator3-dev || true
           sudo apt-get install -y libsoup3-dev || true
 
-      - name: Run release
-        id: release
+      - name: Run ReleaseKit
+        id: releasekit
+        uses: goosewobbler/releasekit@v0.7.0
+        with:
+          mode: release
+          target: ${{ inputs.target_packages }}
+          branch: ${{ inputs.target_branch }}
+          bump: ${{ inputs.bump }}
+          json: 'true'
+          dry-run: ${{ inputs.dry_run }}
+          project-dir: .
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.crates_io_token }}
-          GH_TOKEN: ${{ github.token }}
           OLLAMA_API_KEY: ${{ secrets.ollama_api_key }}
+
+      - name: Check for changes
         run: |
-          # Build releasekit flags
-          # Note: prepatch/preminor/premajor bump types automatically use prereleaseIdentifier
-          # from config (set to "next"). Only plain "prerelease" needs explicit --prerelease flag.
-          BUMP_FLAGS="--bump ${{ inputs.bump }}"
-          PRERELEASE_FLAGS=""
-
-          if [ "${{ inputs.bump }}" = "prerelease" ]; then
-            PRERELEASE_FLAGS="--prerelease next"
-          fi
-
-          DRY_RUN_FLAG=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            DRY_RUN_FLAG="--dry-run"
-          fi
-
-          # Run releasekit and capture JSON output
-          # Pass --branch to ensure releasekit pushes to the correct branch
-          set +e
-          RELEASE_OUTPUT=$(pnpm releasekit release \
-            --target "${{ inputs.target_packages }}" \
-            --branch "${{ inputs.target_branch }}" \
-            ${BUMP_FLAGS} \
-            ${PRERELEASE_FLAGS} \
-            ${DRY_RUN_FLAG} \
-            --json \
-            2> >(tee /tmp/release_stderr >&2))
-          EXIT_CODE=$?
-          set -e
-
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::releasekit failed with exit code $EXIT_CODE"
-            cat /tmp/release_stderr
-            exit $EXIT_CODE
-          fi
-
-          # Check if output contains version updates
-          if echo "$RELEASE_OUTPUT" | jq -e '.versionOutput.updates[0]' > /dev/null 2>&1; then
+          if [ "${{ steps.releasekit.outputs.has-changes }}" = "true" ]; then
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            echo "$RELEASE_OUTPUT" > /tmp/release-output.json
           else
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
@@ -181,8 +155,10 @@ jobs:
       - name: Summary
         if: always()
         env:
-          HAS_CHANGES: ${{ steps.release.outputs.has_changes }}
-          RELEASE_OUTCOME: ${{ steps.release.outcome }}
+          HAS_CHANGES: ${{ steps.releasekit.outputs.has-changes }}
+          RELEASE_OUTCOME: ${{ steps.releasekit.outcome }}
+          VERSION_OUTPUT: ${{ steps.releasekit.outputs.version-output }}
+          TAGS: ${{ steps.releasekit.outputs.tags }}
         run: |
           echo "## Release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -195,7 +171,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$RELEASE_OUTCOME" = "failure" ]; then
-            echo "> **Release failed** — check the Run release step for details" >> "$GITHUB_STEP_SUMMARY"
+            echo "> **Release failed** — check the Run ReleaseKit step for details" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
@@ -218,13 +194,13 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Package | Version |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---------|---------|" >> "$GITHUB_STEP_SUMMARY"
-          jq -r '.versionOutput.updates[] | "| \`\(.packageName)\` | \(.newVersion) |"' /tmp/release-output.json >> "$GITHUB_STEP_SUMMARY"
+          echo "$VERSION_OUTPUT" | jq -r '.updates[] | "| `\(.packageName)` | \(.newVersion) |"' >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          if jq -e '.versionOutput.tags[0]' /tmp/release-output.json > /dev/null 2>&1; then
+          if [ -n "$TAGS" ]; then
             echo "### Tags" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            jq -r '.versionOutput.tags[]' /tmp/release-output.json | while read -r tag; do
+            echo "$TAGS" | tr ',' '\n' | while read -r tag; do
               echo "- \`${tag}\`" >> "$GITHUB_STEP_SUMMARY"
             done
           fi

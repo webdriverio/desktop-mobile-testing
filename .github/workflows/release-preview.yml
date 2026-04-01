@@ -21,24 +21,12 @@ jobs:
     name: Release Preview
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Release Preview
+        uses: goosewobbler/releasekit@v0.7.0
         with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Release preview
-        run: pnpm releasekit preview
+          mode: preview
+          pr: ${{ github.event.pull_request.number }}
+          repo: ${{ github.repository }}
+          project-dir: .
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OLLAMA_API_KEY: ""
