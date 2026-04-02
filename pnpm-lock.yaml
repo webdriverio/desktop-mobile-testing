@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@25.5.0)
       '@releasekit/release':
-        specifier: ^0.6.1
-        version: 0.6.1(conventional-commits-parser@6.2.1)(ws@8.19.0)
+        specifier: ^0.7.14
+        version: 0.7.14(conventional-commits-parser@6.2.1)(ws@8.19.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -1022,8 +1022,8 @@ packages:
   '@acemir/cssom@0.9.31':
     resolution: {integrity: sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA==}
 
-  '@anthropic-ai/sdk@0.78.0':
-    resolution: {integrity: sha512-PzQhR715td/m1UaaN5hHXjYB8Gl2lF9UVhrrGrZeysiF6Rb74Wc9GCB8hzLdzmQtBd1qe89F9OptgB9Za1Ib5w==}
+  '@anthropic-ai/sdk@0.82.0':
+    resolution: {integrity: sha512-xdHTjL1GlUlDugHq/I47qdOKp/ROPvuHl7ROJCgUQigbvPu7asf9KcAcU1EqdrP2LuVhEKaTs7Z+ShpZDRzHdQ==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -2546,23 +2546,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.6.1':
-    resolution: {integrity: sha512-8itjGw3reltqz+6fOTXrHblPgB8YICv10aYP0lwJjoCw7i5lM7iznQmEAL3Q8g/TCwBYrJhuYaX1AsNU2VcutQ==}
+  '@releasekit/notes@0.7.14':
+    resolution: {integrity: sha512-VOhubO2etpvtPYY+JSkq58JDI6jmj7hDMLU/SNP3t25txlFgxqbdiFWkv7Biv+n0O1/dbq+Qb7v8YKe+p++wMQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.6.1':
-    resolution: {integrity: sha512-24WJUvPb7pO9tAsM/lFAMnsoE6BqgGmuNkLvRqxORWEIyUFCmMp97hWKw9tnE/AvxMBuRmOdWqx2FhXrLVyfnA==}
+  '@releasekit/publish@0.7.14':
+    resolution: {integrity: sha512-iRBs/YkpZloBTl/QkpWBk/rHbxZeTSoOx8QW2U9j1S6CkpQ+0/tYMTWfEvm1wWnW0Sq+qXS/mMEna/AnTJIVnw==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.6.1':
-    resolution: {integrity: sha512-nGAGejwHlUCRgr/8CTaUxXJbknyP7mEW74dMyvd6g/pgL53OxRTSvUQkS9yP5q2mtwBt4Q7ReQtUfni6mUkPTQ==}
+  '@releasekit/release@0.7.14':
+    resolution: {integrity: sha512-rGZdtSI+QSAIbZiD7i97CRjjY0bWsvMMl3lTS1FDcSCCNbZ8GCApS3ikapBEeF2S6gQwzVh5VJCS7FnFXmCB9w==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.6.1':
-    resolution: {integrity: sha512-Bkrduu2Kw8sHX/WR+Kue4RJ76ADh2+CMxsF7UL/cj/VSN9v+vbzpjJ/C0tJNh0taJOhH15Qgmoc4lEh98FoNvA==}
+  '@releasekit/version@0.7.14':
+    resolution: {integrity: sha512-iPeIabid9vgEiPuNnONkpVr4wdgdEL0rA6b2ejD3fK+XeMKiXg1ZQ1hixJd1D4hW0ANvQcXxVX5c1zcPy/+98g==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2940,9 +2940,6 @@ packages:
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
-  '@types/braces@3.0.5':
-    resolution: {integrity: sha512-SQFof9H+LXeWNz8wDe7oN5zu7ket0qwMu5vZubW4GCJ8Kkeh6nBWUz87+KTz/G3Kqsrp0j/W253XJb3KMEeg3w==}
-
   '@types/cacheable-request@6.0.3':
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
 
@@ -2991,8 +2988,8 @@ packages:
   '@types/keyv@3.1.4':
     resolution: {integrity: sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==}
 
-  '@types/micromatch@4.0.10':
-    resolution: {integrity: sha512-5jOhFDElqr4DKTrTEbnW8DZ4Hz5LRUEmyrGpCMrD/NphYv3nUnaF08xmSLx1rGGnyEs/kFnhiw6dCgcDqMr5PQ==}
+  '@types/minimatch@5.1.2':
+    resolution: {integrity: sha512-K0VQKziLUWkVKiRVrx4a40iPaxTUefQmjtkQofBkYRcoaaL/8rhwDWww9qWbrgicNOgnpIsMxyNIUM4+n6dUIA==}
 
   '@types/mocha@10.0.10':
     resolution: {integrity: sha512-xPyYSz1cMPnJQhl0CLMH68j3gprKZaTjG3s5Vi+fDgx+uhG9NOXwbVt52eFS8ECyXhyKcjDLCBEqBExKuiZb7Q==}
@@ -3587,6 +3584,10 @@ packages:
     resolution: {integrity: sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==}
     engines: {node: 18 || 20 || >=22}
 
+  brace-expansion@5.0.5:
+    resolution: {integrity: sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ==}
+    engines: {node: 18 || 20 || >=22}
+
   braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
@@ -3860,8 +3861,8 @@ packages:
   config-file-ts@0.2.8-rc1:
     resolution: {integrity: sha512-GtNECbVI82bT4RiDIzBSVuTKoSHufnU7Ce7/42bkWZJZFLjmDF2WBpVsvRkhKCfKBnTBb3qZrBwPpFBU/Myvhg==}
 
-  conventional-changelog-angular@8.3.0:
-    resolution: {integrity: sha512-DOuBwYSqWzfwuRByY9O4oOIvDlkUCTDzfbOgcSbkY+imXXj+4tmrEFao3K+FxemClYfYnZzsvudbwrhje9VHDA==}
+  conventional-changelog-angular@8.3.1:
+    resolution: {integrity: sha512-6gfI3otXK5Ph5DfCOI1dblr+kN3FAm5a97hYoQkqNZxOaYa5WKfXH+AnpsmS+iUH2mgVC2Cg2Qw9m5OKcmNrIg==}
     engines: {node: '>=18'}
 
   conventional-changelog-conventionalcommits@9.3.0:
@@ -5278,8 +5279,8 @@ packages:
     engines: {node: '>=20.17'}
     hasBin: true
 
-  liquidjs@10.25.1:
-    resolution: {integrity: sha512-D+jsJvkGigFn8qNUgh8U6XNHhGFBp+p8Dk26ea/Hl+XrjFVSg9OXlN31hGAfS3MYQ3Kr8Xi9sEVBVQa/VTVSmg==}
+  liquidjs@10.25.2:
+    resolution: {integrity: sha512-ZbgcjEjGNlAIjqhuMzymO3lCpHgmVMftKfrq4/YLLxmKaFFeQMXRGrJTqKX7OXX1hKVPUDpTIrvL7lxt3X/hmw==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -5478,6 +5479,10 @@ packages:
 
   minimatch@10.2.4:
     resolution: {integrity: sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg==}
+    engines: {node: 18 || 20 || >=22}
+
+  minimatch@10.2.5:
+    resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
     engines: {node: 18 || 20 || >=22}
 
   minimatch@3.1.2:
@@ -5735,8 +5740,8 @@ packages:
     resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
     engines: {node: '>=18'}
 
-  openai@6.32.0:
-    resolution: {integrity: sha512-j3k+BjydAf8yQlcOI7WUQMQTbbF5GEIMAE2iZYCOzwwB3S2pCheaWYp+XZRNAch4jWVc52PMDGRRjutao3lLCg==}
+  openai@6.33.0:
+    resolution: {integrity: sha512-xAYN1W3YsDXJWA5F277135YfkEk6H7D3D6vWwRhJ3OEkzRgcyK8z/P5P9Gyi/wB4N8kK9kM5ZjprfvyHagKmpw==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -7177,7 +7182,7 @@ snapshots:
 
   '@acemir/cssom@0.9.31': {}
 
-  '@anthropic-ai/sdk@0.78.0(zod@4.3.6)':
+  '@anthropic-ai/sdk@0.82.0(zod@4.3.6)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
@@ -8844,22 +8849,22 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.6.1(ws@8.19.0)':
+  '@releasekit/notes@0.7.14(ws@8.19.0)':
     dependencies:
-      '@anthropic-ai/sdk': 0.78.0(zod@4.3.6)
+      '@anthropic-ai/sdk': 0.82.0(zod@4.3.6)
       '@octokit/rest': 22.0.1
       chalk: 5.6.2
       commander: 14.0.3
       ejs: 4.0.1
       handlebars: 4.7.9
-      liquidjs: 10.25.1
-      openai: 6.32.0(ws@8.19.0)(zod@4.3.6)
+      liquidjs: 10.25.2
+      openai: 6.33.0(ws@8.19.0)(zod@4.3.6)
       smol-toml: 1.6.1
       zod: 4.3.6
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.6.1':
+  '@releasekit/publish@0.7.14':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -8867,12 +8872,12 @@ snapshots:
       smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.6.1(conventional-commits-parser@6.2.1)(ws@8.19.0)':
+  '@releasekit/release@0.7.14(conventional-commits-parser@6.2.1)(ws@8.19.0)':
     dependencies:
       '@octokit/rest': 22.0.1
-      '@releasekit/notes': 0.6.1(ws@8.19.0)
-      '@releasekit/publish': 0.6.1
-      '@releasekit/version': 0.6.1(conventional-commits-parser@6.2.1)
+      '@releasekit/notes': 0.7.14(ws@8.19.0)
+      '@releasekit/publish': 0.7.14
+      '@releasekit/version': 0.7.14(conventional-commits-parser@6.2.1)
       chalk: 5.6.2
       commander: 14.0.3
       smol-toml: 1.6.1
@@ -8881,20 +8886,20 @@ snapshots:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.6.1(conventional-commits-parser@6.2.1)':
+  '@releasekit/version@0.7.14(conventional-commits-parser@6.2.1)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
-      '@types/micromatch': 4.0.10
+      '@types/minimatch': 5.1.2
       chalk: 5.6.2
       commander: 14.0.3
-      conventional-changelog-angular: 8.3.0
+      conventional-changelog-angular: 8.3.1
       conventional-changelog-conventional-commits: conventional-changelog-conventionalcommits@9.3.0
       conventional-changelog-conventionalcommits: 9.3.0
       conventional-commits-filter: 5.0.0
       conventional-recommended-bump: 11.2.0
       figlet: 1.11.0
       git-semver-tags: 8.0.1(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.2.1)
-      micromatch: 4.0.8
+      minimatch: 10.2.5
       semver: 7.7.4
       smol-toml: 1.6.1
       zod: 4.3.6
@@ -9145,8 +9150,6 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@types/braces@3.0.5': {}
-
   '@types/cacheable-request@6.0.3':
     dependencies:
       '@types/http-cache-semantics': 4.2.0
@@ -9203,9 +9206,7 @@ snapshots:
     dependencies:
       '@types/node': 25.5.0
 
-  '@types/micromatch@4.0.10':
-    dependencies:
-      '@types/braces': 3.0.5
+  '@types/minimatch@5.1.2': {}
 
   '@types/mocha@10.0.10': {}
 
@@ -10007,6 +10008,10 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
+  brace-expansion@5.0.5:
+    dependencies:
+      balanced-match: 4.0.4
+
   braces@3.0.3:
     dependencies:
       fill-range: 7.1.1
@@ -10355,7 +10360,7 @@ snapshots:
       glob: 10.5.0
       typescript: 5.9.3
 
-  conventional-changelog-angular@8.3.0:
+  conventional-changelog-angular@8.3.1:
     dependencies:
       compare-func: 2.0.0
 
@@ -12015,7 +12020,7 @@ snapshots:
       tinyexec: 1.0.2
       yaml: 2.8.2
 
-  liquidjs@10.25.1:
+  liquidjs@10.25.2:
     dependencies:
       commander: 10.0.1
 
@@ -12236,6 +12241,10 @@ snapshots:
   minimatch@10.2.4:
     dependencies:
       brace-expansion: 5.0.4
+
+  minimatch@10.2.5:
+    dependencies:
+      brace-expansion: 5.0.5
 
   minimatch@3.1.2:
     dependencies:
@@ -12494,7 +12503,7 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openai@6.32.0(ws@8.19.0)(zod@4.3.6):
+  openai@6.33.0(ws@8.19.0)(zod@4.3.6):
     optionalDependencies:
       ws: 8.19.0
       zod: 4.3.6
