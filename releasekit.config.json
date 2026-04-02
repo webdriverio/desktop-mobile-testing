@@ -28,7 +28,8 @@
       "electron-script-app-example-cjs",
       "electron-script-app-example-esm",
       "electron-script-e2e-app",
-      "tauri-app-example"
+      "tauri-app-example",
+      "tauri-e2e-app"
     ]
   },
   "notes": {
