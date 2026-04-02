@@ -19,10 +19,16 @@
     "skip": [
       "@repo/e2e",
       "@wdio/bundler",
+      "electron-builder-app-example-cjs",
+      "electron-builder-app-example-esm",
       "electron-builder-e2e-app",
+      "electron-forge-app-example-cjs",
+      "electron-forge-app-example-esm",
       "electron-forge-e2e-app",
+      "electron-script-app-example-cjs",
+      "electron-script-app-example-esm",
       "electron-script-e2e-app",
-      "tauri-e2e-app"
+      "tauri-app-example"
     ]
   },
   "notes": {
