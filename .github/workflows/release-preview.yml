@@ -22,11 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Release Preview
-        uses: goosewobbler/releasekit@v0.7.26
+        uses: goosewobbler/releasekit@v0.7.27
         with:
           mode: preview
           pr: ${{ github.event.pull_request.number }}
           repo: ${{ github.repository }}
           project-dir: .
+          npm-token: ${{ secrets.NPM_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
