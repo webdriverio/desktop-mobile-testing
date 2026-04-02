@@ -16,7 +16,14 @@
     "cargo": {
       "enabled": true
     },
-    "skip": ["@repo/e2e", "@wdio/bundler"]
+    "skip": [
+      "@repo/e2e",
+      "@wdio/bundler",
+      "electron-builder-e2e-app",
+      "electron-forge-e2e-app",
+      "electron-script-e2e-app",
+      "tauri-e2e-app"
+    ]
   },
   "notes": {
     "changelog": {
