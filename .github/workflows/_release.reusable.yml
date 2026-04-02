@@ -130,7 +130,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.7.36
+        uses: goosewobbler/releasekit@v0.7.37
         with:
           mode: release
           target: ${{ inputs.target_packages }}
