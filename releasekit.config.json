@@ -15,7 +15,8 @@
     "mismatchStrategy": "prefer-package",
     "cargo": {
       "enabled": true
-    }
+    },
+    "skip": ["@repo/e2e", "@wdio/bundler"]
   },
   "notes": {
     "changelog": {
