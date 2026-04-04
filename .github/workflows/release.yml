@@ -47,102 +47,22 @@ permissions:
   id-token: write
 
 jobs:
-  check-labels:
-    name: Check Release Labels
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      scope: ${{ steps.check.outputs.scope }}
-      bump: ${{ steps.check.outputs.bump }}
-    steps:
-      - name: Check for release labels
-        id: check
-        env:
-          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh_api() {
-            local result
-            result=$(gh api "$1" 2>&1) || true
-            echo "$result"
-          }
-
-          PRS_OUTPUT=$(gh_api "repos/$REPO/commits/$COMMIT_SHA/pulls")
-          PRS=$(echo "$PRS_OUTPUT" | jq -r '.[].number' 2>/dev/null | tr '\n' ' ') || PRS=""
-
-          if [ -z "$PRS" ]; then
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-            echo "No PRs found for commit, skipping release"
-            exit 0
-          fi
-
-          LABELS=$(echo "$PRS_OUTPUT" | jq -r '.[].labels[].name' 2>/dev/null)
-
-          SCOPE_LABEL=$(echo "$LABELS" | grep -E "^scope:(electron|tauri|shared)$" | head -1)
-          VERSION_LABEL=$(echo "$LABELS" | grep -E "^release:(patch|minor|major|prerelease|prepatch|preminor|premajor)$" | head -1)
-
-          if [ -n "$SCOPE_LABEL" ] || [ -n "$VERSION_LABEL" ]; then
-            if [ -n "$SCOPE_LABEL" ]; then
-              SCOPE="${SCOPE_LABEL#scope:}"
-            else
-              SCOPE="shared"
-            fi
-
-            if [ -n "$VERSION_LABEL" ]; then
-              BUMP_TYPE="${VERSION_LABEL#release:}"
-            else
-              BUMP_TYPE="minor"
-            fi
-
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "scope=$SCOPE" >> "$GITHUB_OUTPUT"
-            echo "bump=$BUMP_TYPE" >> "$GITHUB_OUTPUT"
-            echo "Release scope '${SCOPE}' with bump '${BUMP_TYPE}'"
-            exit 0
-          fi
-
-          echo "should_release=false" >> "$GITHUB_OUTPUT"
-          echo "No release label found"
-
-  resolve-packages:
-    name: Resolve Packages
-    needs: check-labels
-    if: github.event_name == 'workflow_run' && needs.check-labels.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      target_packages: ${{ steps.resolve.outputs.target_packages }}
-    steps:
-      - name: Resolve packages for scope
-        id: resolve
-        run: |
-          case "${{ needs.check-labels.outputs.scope }}" in
-            electron)
-              echo "target_packages=@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types" >> "$GITHUB_OUTPUT"
-              ;;
-            tauri)
-              echo "target_packages=@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types" >> "$GITHUB_OUTPUT"
-              ;;
-            shared)
-              echo "target_packages=@wdio/native-types,@wdio/native-utils" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
   release-auto:
     name: Release (Auto)
-    needs: [check-labels, resolve-packages]
-    if: github.event_name == 'workflow_run' && needs.check-labels.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     uses: ./.github/workflows/_release.reusable.yml
     permissions:
       contents: write
       id-token: write
     with:
-      target_packages: ${{ needs.resolve-packages.outputs.target_packages }}
+      # Build all packages - releasekit will filter by scope labels from the merged PR
+      # defaultScope in config ensures shared packages are released if no scope label found
+      target_packages: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types'
       target_branch: main
-      bump: ${{ needs.check-labels.outputs.bump }}
+      bump: minor
       dry_run: false
-      scope: ${{ needs.check-labels.outputs.scope }}
+      scope: shared
     secrets:
       deploy_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
@@ -150,14 +70,12 @@ jobs:
 
   resolve-manual:
     name: Resolve Release Parameters
-    needs: check-labels
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
     outputs:
       target_packages: ${{ steps.map.outputs.packages }}
     steps:
       - name: Validate repository
-        if: github.event_name == 'workflow_dispatch'
         run: |
           if [ "${{ github.repository }}" != "webdriverio/desktop-mobile" ]; then
             echo "::error::This workflow must run in webdriverio/desktop-mobile"
@@ -166,7 +84,6 @@ jobs:
 
       - name: Map scope to packages
         id: map
-        if: github.event_name == 'workflow_dispatch'
         run: |
           case "${{ inputs.scope }}" in
             electron)
