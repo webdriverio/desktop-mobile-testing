@@ -32,6 +32,15 @@
       "tauri-e2e-app"
     ]
   },
+  "ci": {
+    "releaseTrigger": "label",
+    "scopeLabels": {
+      "scope:shared": "@wdio/native-*",
+      "scope:tauri": "@wdio/tauri-*",
+      "scope:electron": "@wdio/electron-*"
+    },
+    "defaultScope": "scope:shared"
+  },
   "notes": {
     "changelog": {
       "file": "CHANGELOG.md"
