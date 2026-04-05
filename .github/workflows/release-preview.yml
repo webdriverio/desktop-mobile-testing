@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Release Preview
-        uses: goosewobbler/releasekit@v0.10.2
+        uses: goosewobbler/releasekit@v0.10.3
         with:
           mode: preview
           pr: ${{ github.event.pull_request.number }}
