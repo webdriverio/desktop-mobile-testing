@@ -47,10 +47,56 @@ permissions:
   id-token: write
 
 jobs:
+  # Check if a release should run based on merged PR labels
+  check-release:
+    name: Check Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Check for release labels
+        id: check
+        run: |
+          # Get the SHA that was pushed
+          SHA="${{ github.event.workflow_run.head_sha }}"
+
+          # Find the PR that was merged
+          PR_DATA=$(gh api graphql -f query='
+            query($sha: String!) {
+              commit(sha: $sha) {
+                associatedPullRequests(first: 1) {
+                  nodes {
+                    number
+                    labels(first: 20) {
+                      nodes { name }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f sha="$SHA" 2>/dev/null)
+
+          # Check for release labels
+          LABELS=$(echo "$PR_DATA" | jq -r '.data.commit.associatedPullRequests.nodes[0].labels.nodes[].name' 2>/dev/null | tr '\n' ' ')
+
+          echo "PR Labels: $LABELS"
+
+          if echo "$LABELS" | grep -qE "(^| )bump:(patch|minor|major)( |$)"; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Release label found"
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "No release label found"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
   release-auto:
     name: Release (Auto)
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    needs: [check-release]
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && needs.check-release.outputs.should_release == 'true'
     uses: ./.github/workflows/_release.reusable.yml
     permissions:
       contents: write
@@ -60,7 +106,7 @@ jobs:
       # defaultScope in config ensures shared packages are released if no scope label found
       target_packages: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types'
       target_branch: main
-      bump: minor
+      bump: auto
       dry_run: false
       scope: shared
     secrets:
