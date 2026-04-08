@@ -306,15 +306,15 @@ Releases are automated via GitHub Actions and triggered by PR labels.
 When your PR is merged to `main`, the release workflow checks for release labels:
 
 1. Add a scope label to your PR: `scope:electron`, `scope:tauri`, or `scope:shared`
-2. Add a version label: `release:patch`, `release:minor`, `release:major`, or prerelease variants
+2. Add a version label: `bump:patch`, `bump:minor`, `bump:major`, or prerelease variants
 3. After CI passes and the PR is merged, the release workflow automatically publishes packages
 
 **Preview:** The `release-preview.yml` workflow runs on PRs with release labels to show what will be released.
 
 **Examples:**
-- `scope:electron` + `release:major` → Electron packages at major bump
-- `scope:tauri` + `release:minor` → Tauri packages at minor bump
-- `scope:shared` + `release:patch` → Shared packages at patch bump
+- `scope:electron` + `bump:major` → Electron packages at major bump
+- `scope:tauri` + `bump:minor` → Tauri packages at minor bump
+- `scope:shared` + `bump:patch` → Shared packages at patch bump
 
 ### Manual Release
 
@@ -332,19 +332,17 @@ For releases without PR labels or for dry runs:
 | `scope:electron` | Release Electron packages |
 | `scope:tauri` | Release Tauri packages |
 | `scope:shared` | Release shared packages |
-| `release:patch` | Patch bump |
-| `release:minor` | Minor bump |
-| `release:major` | Major bump |
-| `release:prerelease` | Prerelease bump |
-| `release:prepatch` | Prepatch bump |
-| `release:preminor` | Preminor bump |
-| `release:premajor` | Premajor bump |
+| `bump:patch` | Patch bump |
+| `bump:minor` | Minor bump |
+| `bump:major` | Major bump |
+| `release:prerelease` | Prerelease modifier (use with bump labels) |
+| `release:stable` | Stable release modifier (use with bump labels to clean prerelease) |
 
 ### Pre-releases
 
-For testing changes before a stable release, use prerelease labels:
-- `scope:electron` + `release:premajor` → Electron packages as premajor (e.g., 11.0.0-beta.0)
-- `scope:shared` + `release:prerelease` → Shared packages as prerelease (e.g., 2.0.0-next.0)
+For testing changes before a stable release, use the `release:prerelease` label combined with a bump label:
+- `scope:electron` + `bump:major` + `release:prerelease` → Electron packages as major prerelease (e.g., 11.0.0-next.0)
+- `scope:shared` + `bump:patch` + `release:prerelease` → Shared packages as patch prerelease (e.g., 2.0.0-next.0)
 
 ## Getting Help
 

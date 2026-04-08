@@ -35,15 +35,18 @@ Automated releases trigger when CI completes on `main` with release labels on me
   - `scope:tauri` - Release Tauri packages
   - `scope:shared` - Release shared packages
 
-- **Release labels** (prefix `release:`):
-  - `release:patch`, `release:minor`, `release:major`
-  - `release:prerelease`, `release:prepatch`, `release:preminor`, `release:premajor`
+- **Bump labels** (prefix `bump:`):
+  - `bump:patch`, `bump:minor`, `bump:major`
+
+- **Release type labels** (prefix `release:`):
+  - `release:prerelease` - Use with bump labels for prerelease versions
+  - `release:stable` - Use with bump labels to clean prerelease to stable
 
 **Examples:**
-- `scope:electron` + `release:major` → Electron packages at major bump
-- `scope:tauri` + `release:minor` → Tauri packages at minor bump
+- `scope:electron` + `bump:major` → Electron packages at major bump
+- `scope:tauri` + `bump:minor` → Tauri packages at minor bump
 - `scope:shared` only → Shared packages at minor bump (default)
-- `release:major` only → Shared packages at major bump
+- `bump:major` only → Shared packages at major bump
 
 **Default behavior:** If only scope is specified, uses `minor` bump. If only version is specified, uses `shared` scope.
 
