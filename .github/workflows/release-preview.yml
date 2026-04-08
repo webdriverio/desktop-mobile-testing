@@ -21,6 +21,9 @@ jobs:
     name: Release Preview
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Release Preview
         uses: goosewobbler/releasekit@v0.11.0
         with:
@@ -28,7 +31,6 @@ jobs:
           pr: ${{ github.event.pull_request.number }}
           repo: ${{ github.repository }}
           project-dir: .
-          npm-token: ${{ secrets.NPM_TOKEN }}
           verbose: true
         env:
           GITHUB_TOKEN: ${{ github.token }}

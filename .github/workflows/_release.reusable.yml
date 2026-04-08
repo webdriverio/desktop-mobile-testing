@@ -133,7 +133,6 @@ jobs:
           json: 'true'
           dry-run: ${{ inputs.dry_run }}
           project-dir: .
-          npm-token: ${{ secrets.NPM_TOKEN }}
           verbose: true
           summary: 'true'
         env:
