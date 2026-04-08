@@ -75,18 +75,18 @@ jobs:
       - name: Build packages
         run: |
           case "${{ inputs.scope }}" in
-            scope:electron|electron)
+            electron)
               pnpm turbo run build \
                 --filter='@wdio/electron-service...' \
                 --filter='@wdio/electron-cdp-bridge...' \
                 --filter='@wdio/bundler...'
               ;;
-            scope:tauri|tauri)
+            tauri)
               pnpm turbo run build \
                 --filter='@wdio/tauri-service...' \
                 --filter='@wdio/tauri-plugin...'
               ;;
-            scope:shared|shared)
+            shared)
               pnpm turbo run build \
                 --filter='@wdio/native-types...' \
                 --filter='@wdio/native-utils...'
