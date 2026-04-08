@@ -72,25 +72,27 @@ jobs:
 
       - name: Build packages
         run: |
-          case "${{ inputs.scope }}" in
-            electron)
+          scope="${{ inputs.scope }}"
+          scope="${scope#scope:}"
+          case "$scope" in
+            electron) 
               pnpm turbo run build \
                 --filter='@wdio/electron-service...' \
                 --filter='@wdio/electron-cdp-bridge...' \
                 --filter='@wdio/bundler...'
               ;;
-            tauri)
+            tauri) 
               pnpm turbo run build \
                 --filter='@wdio/tauri-service...' \
                 --filter='@wdio/tauri-plugin...'
               ;;
-            shared)
+            shared) 
               pnpm turbo run build \
                 --filter='@wdio/native-types...' \
                 --filter='@wdio/native-utils...'
               ;;
-            *)
-              echo "::error::Unknown scope: ${{ inputs.scope }}"
+            *) 
+              echo "::error::Unknown scope: $scope"
               exit 1
               ;;
           esac
@@ -102,11 +104,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Setup Rust
-        if: ${{ inputs.scope == 'tauri' }}
+        if: ${{ replace(inputs.scope, 'scope:', '') == 'tauri' }}
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install GTK development libraries
-        if: ${{ inputs.scope == 'tauri' }}
+        if: ${{ replace(inputs.scope, 'scope:', '') == 'tauri' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
