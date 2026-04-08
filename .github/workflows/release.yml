@@ -25,6 +25,15 @@ on:
           - premajor
           - prerelease
         default: patch
+      scope:
+        description: 'Release scope (electron, tauri, shared)'
+        required: true
+        type: choice
+        options:
+          - shared
+          - electron
+          - tauri
+        default: shared
       dry_run:
         description: 'Dry run (show what would happen without publishing)'
         required: false
@@ -101,7 +110,7 @@ jobs:
       target_branch: main
       bump: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
-      scope: ${{ vars.DEFAULT_SCOPE }}
+      scope: ${{ inputs.scope }}
       ssh_key: ${{ secrets.DEPLOY_KEY }}
     secrets:
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
