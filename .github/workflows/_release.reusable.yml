@@ -24,12 +24,10 @@ on:
         description: 'Release scope (electron, tauri, shared) — controls build and toolchain steps'
         required: true
         type: string
+    secrets:
       ssh_key:
         description: 'SSH deploy key for pushing to the repository'
         required: false
-        type: string
-        default: ''
-    secrets:
       crates_io_token:
         description: 'Crates.io token for publishing Rust crates (required for Tauri)'
         required: false
@@ -58,7 +56,7 @@ jobs:
         with:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
-          ssh-key: ${{ inputs.ssh_key }}
+          ssh-key: ${{ secrets.ssh_key }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

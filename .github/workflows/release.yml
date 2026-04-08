@@ -92,8 +92,8 @@ jobs:
       bump: ${{ needs.gate.outputs.bump }}
       dry_run: false
       scope: ${{ needs.gate.outputs.scope }}
-      ssh_key: ${{ secrets.DEPLOY_KEY }}
     secrets:
+      ssh_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
       ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}
 
@@ -111,7 +111,7 @@ jobs:
       bump: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
       scope: ${{ inputs.scope }}
-      ssh_key: ${{ secrets.DEPLOY_KEY }}
     secrets:
+      ssh_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
       ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}
