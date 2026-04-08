@@ -24,10 +24,12 @@ on:
         description: 'Release scope (electron, tauri, shared) — controls build and toolchain steps'
         required: true
         type: string
-    secrets:
-      deploy_key:
+      ssh_key:
         description: 'SSH deploy key for pushing to the repository'
-        required: true
+        required: false
+        type: string
+        default: ''
+    secrets:
       crates_io_token:
         description: 'Crates.io token for publishing Rust crates (required for Tauri)'
         required: false
@@ -51,20 +53,12 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout (SSH)
-        if: ${{ !inputs.dry_run }}
-        uses: actions/checkout@v6
-        with:
-          ssh-key: ${{ secrets.deploy_key }}
-          ref: ${{ inputs.target_branch }}
-          fetch-depth: 0
-
-      - name: Checkout (read-only)
-        if: ${{ inputs.dry_run }}
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
+          ssh-key: ${{ inputs.ssh_key }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -130,7 +124,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.10.4
+        uses: ./
         with:
           mode: release
           target: ${{ inputs.target_packages }}
@@ -141,68 +135,8 @@ jobs:
           project-dir: .
           npm-token: ${{ secrets.NPM_TOKEN }}
           verbose: true
+          summary: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.crates_io_token }}
           OLLAMA_API_KEY: ${{ secrets.ollama_api_key }}
-
-      - name: Check for changes
-        run: |
-          if [ "${{ steps.releasekit.outputs.has-changes }}" = "true" ]; then
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Summary
-        if: always()
-        env:
-          HAS_CHANGES: ${{ steps.releasekit.outputs.has-changes }}
-          RELEASE_OUTCOME: ${{ steps.releasekit.outcome }}
-          VERSION_OUTPUT: ${{ steps.releasekit.outputs.version-output }}
-          TAGS: ${{ steps.releasekit.outputs.tags }}
-        run: |
-          echo "## Release" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Setting | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Scope | \`${{ inputs.scope }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Bump type | \`${{ inputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Packages | \`${{ inputs.target_packages }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Dry run | \`${{ inputs.dry_run }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$RELEASE_OUTCOME" = "failure" ]; then
-            echo "> **Release failed** — check the Run ReleaseKit step for details" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          if [ -z "$HAS_CHANGES" ]; then
-            echo "> **Release step did not complete — check logs above**" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          if [ "$HAS_CHANGES" != "true" ]; then
-            echo "> **No releasable changes found**" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            echo "> **Dry run** — no packages were published or pushed" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          echo "### Package Updates" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Package | Version |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---------|---------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "$VERSION_OUTPUT" | jq -r '.updates[] | "| `\(.packageName)` | \(.newVersion) |"' >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ -n "$TAGS" ]; then
-            echo "### Tags" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "$TAGS" | tr ',' '\n' | while read -r tag; do
-              echo "- \`${tag}\`" >> "$GITHUB_STEP_SUMMARY"
-            done
-          fi

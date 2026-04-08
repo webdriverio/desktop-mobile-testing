@@ -1,7 +1,5 @@
 name: Release
 
-# Automated releases trigger after CI completes on main. Release commits
-# contain [skip ci] so GitHub skips CI for them entirely, breaking the loop.
 on:
   workflow_run:
     workflows: [CI]
@@ -9,15 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      scope:
-        description: 'Release scope'
+      target_packages:
+        description: 'Comma-separated list of packages to release'
         required: true
-        type: choice
-        options:
-          - electron
-          - tauri
-          - shared
-        default: electron
+        type: string
+        default: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types'
       release_version:
         description: 'Release version type'
         required: true
@@ -47,117 +41,68 @@ permissions:
   id-token: write
 
 jobs:
-  # Check if a release should run based on merged PR labels
-  check-release:
-    name: Check Release
+  gate:
+    name: Gate
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
+      should_release: ${{ steps.gate.outputs.should-release }}
+      bump: ${{ steps.gate.outputs.bump }}
+      scope: ${{ steps.gate.outputs.scope }}
+      target: ${{ steps.gate.outputs.target }}
     steps:
-      - name: Check for release labels
-        id: check
-        run: |
-          # Get the SHA that was pushed
-          SHA="${{ github.event.workflow_run.head_sha }}"
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-          # Find the PR that was merged
-          PR_DATA=$(gh api graphql -f query='
-            query($sha: String!) {
-              commit(sha: $sha) {
-                associatedPullRequests(first: 1) {
-                  nodes {
-                    number
-                    labels(first: 20) {
-                      nodes { name }
-                    }
-                  }
-                }
-              }
-            }
-          ' -f sha="$SHA" 2>/dev/null)
-
-          # Check for release labels
-          LABELS=$(echo "$PR_DATA" | jq -r '.data.commit.associatedPullRequests.nodes[0].labels.nodes[].name' 2>/dev/null | tr '\n' ' ')
-
-          echo "PR Labels: $LABELS"
-
-          if echo "$LABELS" | grep -qE "(^| )bump:(patch|minor|major)( |$)"; then
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "Release label found"
-          else
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-            echo "No release label found"
-          fi
+      - name: Run ReleaseKit Gate
+        id: gate
+        uses: goosewobbler/releasekit@v0.11.0
+        with:
+          mode: gate
+          target: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types'
+          branch: main
+          json: 'true'
+          summary: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
   release-auto:
     name: Release (Auto)
     runs-on: ubuntu-latest
-    needs: [check-release]
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && needs.check-release.outputs.should_release == 'true'
+    needs: [gate]
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && needs.gate.outputs.should_release == 'true'
     uses: ./.github/workflows/_release.reusable.yml
     permissions:
       contents: write
       id-token: write
     with:
-      # Build all packages - releasekit will filter by scope labels from the merged PR
-      # defaultScope in config ensures shared packages are released if no scope label found
-      target_packages: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types'
+      target_packages: ${{ needs.gate.outputs.target }}
       target_branch: main
-      bump: auto
+      bump: ${{ needs.gate.outputs.bump }}
       dry_run: false
-      scope: shared
+      scope: ${{ needs.gate.outputs.scope }}
+      ssh_key: ${{ secrets.DEPLOY_KEY }}
     secrets:
-      deploy_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
       ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}
 
-  resolve-manual:
-    name: Resolve Release Parameters
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    outputs:
-      target_packages: ${{ steps.map.outputs.packages }}
-    steps:
-      - name: Validate repository
-        run: |
-          if [ "${{ github.repository }}" != "webdriverio/desktop-mobile" ]; then
-            echo "::error::This workflow must run in webdriverio/desktop-mobile"
-            exit 1
-          fi
-
-      - name: Map scope to packages
-        id: map
-        run: |
-          case "${{ inputs.scope }}" in
-            electron)
-              echo "packages=@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types" >> "$GITHUB_OUTPUT"
-              ;;
-            tauri)
-              echo "packages=@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types" >> "$GITHUB_OUTPUT"
-              ;;
-            shared)
-              echo "packages=@wdio/native-types,@wdio/native-utils" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
   release-manual:
     name: Release (Manual)
-    needs: resolve-manual
+    runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/_release.reusable.yml
     permissions:
       contents: write
       id-token: write
     with:
-      target_packages: ${{ needs.resolve-manual.outputs.target_packages }}
+      target_packages: ${{ inputs.target_packages }}
       target_branch: main
       bump: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
-      scope: ${{ inputs.scope }}
+      scope: ${{ vars.DEFAULT_SCOPE }}
+      ssh_key: ${{ secrets.DEPLOY_KEY }}
     secrets:
-      deploy_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
       ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}
