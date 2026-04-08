@@ -67,7 +67,7 @@ jobs:
 
       - name: Run ReleaseKit Gate
         id: gate
-        uses: goosewobbler/releasekit@v0.11.0
+        uses: goosewobbler/releasekit@v0.11.1
         with:
           mode: gate
           target: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types'

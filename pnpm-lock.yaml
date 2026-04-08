@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.3.0(@types/node@25.5.0)
       '@releasekit/release':
-        specifier: ^0.11.0
-        version: 0.11.0(conventional-commits-parser@6.2.1)(ws@8.19.0)
+        specifier: ^0.11.1
+        version: 0.11.1(conventional-commits-parser@6.2.1)(ws@8.19.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -1022,8 +1022,8 @@ packages:
   '@acemir/cssom@0.9.31':
     resolution: {integrity: sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA==}
 
-  '@anthropic-ai/sdk@0.82.0':
-    resolution: {integrity: sha512-xdHTjL1GlUlDugHq/I47qdOKp/ROPvuHl7ROJCgUQigbvPu7asf9KcAcU1EqdrP2LuVhEKaTs7Z+ShpZDRzHdQ==}
+  '@anthropic-ai/sdk@0.86.0':
+    resolution: {integrity: sha512-U4TAozK3V2TbfA6JvDux9oTTVaRS5471XYC3CDvQbLRV8hlU2FTyjHL2XnjLSsJK6fOEU3ZYf0Du6M1vQex+vA==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -2546,23 +2546,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.11.0':
-    resolution: {integrity: sha512-o4hr708Xdf5+0SIB1KzELGRWOGFmEHUMEiNj7W1hmDXAkJTvvta1hLu+k48sutKi9SNxlCoKq6pSlYjs9bHZdQ==}
+  '@releasekit/notes@0.11.1':
+    resolution: {integrity: sha512-8yrsXNLLCZQAeTy74YcpIWgd1Mjjq2pEd9beFqDbvxZW0gU/45FSjsk4Lkz99fNAbd2aOIrLdaQwijE9jAvSLA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.11.0':
-    resolution: {integrity: sha512-XYXe9LnWEzJXDBF6Ut6Z4YMZJx05pX687VOFnjiEEiGo55Y89ak8+SraRjQAGvPdD9Yg/dYRPU7RBoDoZlcSXQ==}
+  '@releasekit/publish@0.11.1':
+    resolution: {integrity: sha512-K0Aeht5snlEDPIi0q/nomPQE+bPhus51o2I2XdBvaO8Z59xLucuUwspdnAGr9XZ9p/KxBOs/hSze8UwdxLxChQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.11.0':
-    resolution: {integrity: sha512-RQM2P26asNQ9jcSQEUqubxdoYvAyMzoH9sWTnoxLKrrxqIRNsqqfQCAkHkon6fYxipKI5WbrklbQcLZmxr+fvw==}
+  '@releasekit/release@0.11.1':
+    resolution: {integrity: sha512-X4xCBjnkaQ5UXEX/+CJl0eYT8E38tKtwH5A9pBeBZnz3DUJb20Xl/xeaj5GvdlRGQvY67Y0I/6l/V2lP3aXazA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.11.0':
-    resolution: {integrity: sha512-+C+qTEOkhktBchWX/KyhLstXAs7mQSYPw1oQhx2tgXI0ciSmxGcyh+nUSOgdckX3RQsARQhJAdplFkuTMHoILw==}
+  '@releasekit/version@0.11.1':
+    resolution: {integrity: sha512-PKsCSLXAyaPOcDRxMNgZQxiHr3AjEebjtaXeacY5db5zrnj4WURm0UCTwheXYrUsxnvvox/9Wt9rxe7fOrbiGQ==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -3865,8 +3865,8 @@ packages:
     resolution: {integrity: sha512-6gfI3otXK5Ph5DfCOI1dblr+kN3FAm5a97hYoQkqNZxOaYa5WKfXH+AnpsmS+iUH2mgVC2Cg2Qw9m5OKcmNrIg==}
     engines: {node: '>=18'}
 
-  conventional-changelog-conventionalcommits@9.3.0:
-    resolution: {integrity: sha512-kYFx6gAyjSIMwNtASkI3ZE99U1fuVDJr0yTYgVy+I2QG46zNZfl2her+0+eoviG82c5WQvW1jMt1eOQTeJLodA==}
+  conventional-changelog-conventionalcommits@9.3.1:
+    resolution: {integrity: sha512-dTYtpIacRpcZgrvBYvBfArMmK2xvIpv2TaxM0/ZI5CBtNUzvF2x0t15HsbRABWprS6UPmvj+PzHVjSx4qAVKyw==}
     engines: {node: '>=18'}
 
   conventional-changelog-preset-loader@5.0.0:
@@ -5279,8 +5279,8 @@ packages:
     engines: {node: '>=20.17'}
     hasBin: true
 
-  liquidjs@10.25.2:
-    resolution: {integrity: sha512-ZbgcjEjGNlAIjqhuMzymO3lCpHgmVMftKfrq4/YLLxmKaFFeQMXRGrJTqKX7OXX1hKVPUDpTIrvL7lxt3X/hmw==}
+  liquidjs@10.25.5:
+    resolution: {integrity: sha512-GKiKeZjJDdVoQAu+S9rzkYsYnYhcep5W3WwZXgb5f+yq484P/k9JqamBbGYu+LBEixcUAXZr2jogdAIjB3ki1w==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -7182,7 +7182,7 @@ snapshots:
 
   '@acemir/cssom@0.9.31': {}
 
-  '@anthropic-ai/sdk@0.82.0(zod@4.3.6)':
+  '@anthropic-ai/sdk@0.86.0(zod@4.3.6)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
@@ -8849,22 +8849,22 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.11.0(ws@8.19.0)':
+  '@releasekit/notes@0.11.1(ws@8.19.0)':
     dependencies:
-      '@anthropic-ai/sdk': 0.82.0(zod@4.3.6)
+      '@anthropic-ai/sdk': 0.86.0(zod@4.3.6)
       '@octokit/rest': 22.0.1
       chalk: 5.6.2
       commander: 14.0.3
       ejs: 4.0.1
       handlebars: 4.7.9
-      liquidjs: 10.25.2
+      liquidjs: 10.25.5
       openai: 6.33.0(ws@8.19.0)(zod@4.3.6)
       smol-toml: 1.6.1
       zod: 4.3.6
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.11.0':
+  '@releasekit/publish@0.11.1':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -8872,31 +8872,31 @@ snapshots:
       smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.11.0(conventional-commits-parser@6.2.1)(ws@8.19.0)':
+  '@releasekit/release@0.11.1(conventional-commits-parser@6.2.1)(ws@8.19.0)':
     dependencies:
       '@octokit/rest': 22.0.1
-      '@releasekit/notes': 0.11.0(ws@8.19.0)
-      '@releasekit/publish': 0.11.0
-      '@releasekit/version': 0.11.0(conventional-commits-parser@6.2.1)
+      '@releasekit/notes': 0.11.1(ws@8.19.0)
+      '@releasekit/publish': 0.11.1
+      '@releasekit/version': 0.11.1(conventional-commits-parser@6.2.1)
       chalk: 5.6.2
       commander: 14.0.3
       conventional-changelog-angular: 8.3.1
-      conventional-changelog-conventionalcommits: 9.3.0
+      conventional-changelog-conventionalcommits: 9.3.1
       smol-toml: 1.6.1
       zod: 4.3.6
     transitivePeerDependencies:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.11.0(conventional-commits-parser@6.2.1)':
+  '@releasekit/version@0.11.1(conventional-commits-parser@6.2.1)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@types/minimatch': 5.1.2
       chalk: 5.6.2
       commander: 14.0.3
       conventional-changelog-angular: 8.3.1
-      conventional-changelog-conventional-commits: conventional-changelog-conventionalcommits@9.3.0
-      conventional-changelog-conventionalcommits: 9.3.0
+      conventional-changelog-conventional-commits: conventional-changelog-conventionalcommits@9.3.1
+      conventional-changelog-conventionalcommits: 9.3.1
       conventional-commits-filter: 5.0.0
       conventional-recommended-bump: 11.2.0
       figlet: 1.11.0
@@ -10366,7 +10366,7 @@ snapshots:
     dependencies:
       compare-func: 2.0.0
 
-  conventional-changelog-conventionalcommits@9.3.0:
+  conventional-changelog-conventionalcommits@9.3.1:
     dependencies:
       compare-func: 2.0.0
 
@@ -12022,7 +12022,7 @@ snapshots:
       tinyexec: 1.0.2
       yaml: 2.8.2
 
-  liquidjs@10.25.2:
+  liquidjs@10.25.5:
     dependencies:
       commander: 10.0.1
 
