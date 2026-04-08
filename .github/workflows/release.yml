@@ -39,6 +39,11 @@ on:
         required: false
         type: boolean
         default: false
+      target_branch:
+        description: 'Branch to release from (default: main)'
+        required: false
+        type: string
+        default: main
 
 concurrency:
   group: release
@@ -107,7 +112,7 @@ jobs:
       id-token: write
     with:
       target_packages: ${{ inputs.target_packages }}
-      target_branch: main
+      target_branch: ${{ inputs.target_branch }}
       bump: ${{ inputs.release_version }}
       dry_run: ${{ inputs.dry_run }}
       scope: ${{ inputs.scope }}
