@@ -335,7 +335,7 @@ export default class TauriWorkerService {
         // Function scripts: use executeAsync with .then() callbacks to handle async results
         const wrappedScript = `
             ${CONSOLE_WRAPPER_SCRIPT}
-            (${scriptString}).apply(null, arguments).then(
+            (${scriptString}).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
                 (r) => arguments[arguments.length-1](r),
                 (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
             );
