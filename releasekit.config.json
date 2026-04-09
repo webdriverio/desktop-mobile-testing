@@ -1,0 +1,112 @@
+{
+  "$schema": "https://goosewobbler.github.io/releasekit/schema.json",
+  "git": {
+    "pushMethod": "ssh",
+    "skipHooks": true
+  },
+  "version": {
+    "preset": "angular",
+    "sync": false,
+    "versionPrefix": "v",
+    "tagTemplate": "${packageName}@v${version}",
+    "commitMessage": "chore: release ${packageName}@${version} [skip ci]",
+    "prereleaseIdentifier": "next",
+    "packageSpecificTags": true,
+    "mismatchStrategy": "prefer-package",
+    "cargo": {
+      "enabled": true
+    },
+    "skip": [
+      "@repo/e2e",
+      "@wdio/bundler",
+      "electron-builder-app-example-cjs",
+      "electron-builder-app-example-esm",
+      "electron-builder-e2e-app",
+      "electron-forge-app-example-cjs",
+      "electron-forge-app-example-esm",
+      "electron-forge-e2e-app",
+      "electron-script-app-example-cjs",
+      "electron-script-app-example-esm",
+      "electron-script-e2e-app",
+      "tauri-app-example",
+      "tauri-e2e-app"
+    ]
+  },
+  "ci": {
+    "releaseTrigger": "label",
+    "scopeLabels": {
+      "scope:shared": "@wdio/native-*",
+      "scope:tauri": "@wdio/tauri-*",
+      "scope:electron": "@wdio/electron-*"
+    },
+    "defaultScope": "scope:shared"
+  },
+  "notes": {
+    "changelog": {
+      "file": "CHANGELOG.md"
+    },
+    "releaseNotes": {
+      "llm": {
+        "provider": "ollama",
+        "model": "minimax-m2.7:cloud",
+        "baseURL": "https://ollama.com/api",
+        "tasks": {
+          "enhance": true,
+          "categorize": true
+        },
+        "categories": [
+          { "name": "New", "description": "New features and additions" },
+          { "name": "Fixed", "description": "Bug fixes including security and performance fixes" },
+          { "name": "Changed", "description": "Changes to existing functionality" },
+          { "name": "Removed", "description": "Features that were removed" },
+          { "name": "Documentation", "description": "Documentation updates" },
+          {
+            "name": "Developer",
+            "description": "Internal changes",
+            "scopes": [
+              "Dependencies",
+              "CI",
+              "Testing",
+              "Build System",
+              "Code Quality",
+              "Infrastructure",
+              "Tooling",
+              "Performance",
+              "Security"
+            ]
+          }
+        ],
+        "scopes": {
+          "mode": "restricted",
+          "rules": {
+            "caseSensitive": false,
+            "invalidScopeAction": "remove"
+          }
+        },
+        "style": "Use past tense descriptions. Be concise. Focus on what changed, not implementation details."
+      }
+    }
+  },
+  "publish": {
+    "npm": {
+      "enabled": true,
+      "auth": "oidc",
+      "provenance": true,
+      "access": "public",
+      "copyFiles": ["LICENSE"]
+    },
+    "cargo": {
+      "enabled": true,
+      "noVerify": true
+    },
+    "git": {
+      "push": true,
+      "pushMethod": "ssh"
+    },
+    "githubRelease": {
+      "enabled": true,
+      "draft": true,
+      "body": "auto"
+    }
+  }
+}

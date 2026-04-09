@@ -1,36 +1,19 @@
 name: Release
 
-permissions:
-  contents: write
-  actions: read
-  id-token: write
-
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
-      service:
-        description: 'Service to release'
+      target_packages:
+        description: 'Comma-separated list of packages to release'
         required: true
-        type: choice
-        options:
-          - electron
-          - tauri
-        default: electron
-      branch:
-        description: 'Branch type to release from (main is recommended for all release types)'
-        required: true
-        type: choice
-        options:
-          - main
-          - feature
-          - maintenance
-        default: main
-      feature_branch_name:
-        description: 'Feature branch name (required when branch is "feature")'
-        required: false
         type: string
+        default: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types'
       release_version:
-        description: 'Release version type (pre* options for pre-releases)'
+        description: 'Release version type'
         required: true
         type: choice
         options:
@@ -42,25 +25,98 @@ on:
           - premajor
           - prerelease
         default: patch
+      scope:
+        description: 'Release scope (electron, tauri, shared)'
+        required: true
+        type: choice
+        options:
+          - shared
+          - electron
+          - tauri
+        default: shared
       dry_run:
         description: 'Dry run (show what would happen without publishing)'
         required: false
         type: boolean
         default: false
+      target_branch:
+        description: 'Branch to release from (default: main)'
+        required: false
+        type: string
+        default: main
 
-env:
-  NPM_CONFIG_PROVENANCE: true
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
 
 jobs:
-  release:
-    uses: ./.github/workflows/_release-orchestration.reusable.yml
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    outputs:
+      should_release: ${{ steps.gate.outputs.should-release }}
+      bump: ${{ steps.gate.outputs.bump }}
+      scope: ${{ steps.gate.outputs.gate-scope }}
+      target: ${{ steps.gate.outputs.gate-target }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run ReleaseKit Gate
+        id: gate
+        uses: goosewobbler/releasekit@v0.12.0
+        with:
+          mode: gate
+          project-dir: .
+          branch: main
+          json: 'true'
+          summary: 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  release-auto:
+    name: Release (Auto)
+    runs-on: ubuntu-latest
+    needs: [gate]
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && needs.gate.outputs.should_release == 'true'
+    uses: ./.github/workflows/_release.reusable.yml
+    permissions:
+      contents: write
+      id-token: write
     with:
-      service: ${{ inputs.service }}
-      branch: ${{ inputs.branch }}
-      feature_branch_name: ${{ inputs.feature_branch_name }}
-      release_version: ${{ inputs.release_version }}
-      dry_run: ${{ inputs.dry_run }}
+      target_packages: ${{ needs.gate.outputs.target }}
+      target_branch: main
+      bump: ${{ needs.gate.outputs.bump }}
+      dry_run: false
+      scope: ${{ needs.gate.outputs.scope }}
     secrets:
-      github_bot_token: ${{ secrets.GITHUB_TOKEN }}
-      deploy_key: ${{ secrets.DEPLOY_KEY }}
+      ssh_key: ${{ secrets.DEPLOY_KEY }}
       crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
+      ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}
+
+  release-manual:
+    name: Release (Manual)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/_release.reusable.yml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      target_packages: ${{ inputs.target_packages }}
+      target_branch: ${{ inputs.target_branch }}
+      bump: ${{ inputs.release_version }}
+      dry_run: ${{ inputs.dry_run }}
+      scope: ${{ inputs.scope }}
+    secrets:
+      ssh_key: ${{ secrets.DEPLOY_KEY }}
+      crates_io_token: ${{ secrets.CRATES_IO_TOKEN }}
+      ollama_api_key: ${{ secrets.OLLAMA_API_KEY }}

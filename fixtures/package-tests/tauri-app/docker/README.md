@@ -175,7 +175,7 @@ CMD ["bash"]
 ## CI Integration
 
 These Dockerfiles are used in:
-- `.github/workflows/test-tauri-webkit-e2e.yml` - CI workflow for WebKitWebDriver detection tests
+- `.github/workflows/ci.yml` - CI workflow for cross-distribution compatibility tests
 - Local development testing
 - Cross-distribution compatibility verification
 
@@ -312,7 +312,6 @@ All distributions are tested using Docker containers with:
 
 - **[Tauri Service README](../../README.md)** - Service usage and API reference
 - **[Package Tests README](../README.md)** - Overview of package test fixtures
-- **[WebKitWebDriver Detection Tests](../../../../e2e/wdio/tauri-webkit/)** - E2E tests for driver detection
 
 ## License
 
