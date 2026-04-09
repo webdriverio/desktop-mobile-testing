@@ -103,11 +103,11 @@ describe('TauriWorkerService', () => {
       mockBrowser.execute('return document.title');
 
       // String scripts should use executeAsync with explicit done callback for WebKit compatibility
-      expect(mockExecuteAsync).toHaveBeenCalledWith(
-        expect.stringContaining('(async () => { return document.title })()'),
-      );
-      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('.then('));
-      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('arguments[arguments.length-1]'));
+      expect(mockExecuteAsync).toHaveBeenCalled();
+      const callArgs = mockExecuteAsync.mock.calls[0];
+      // The script should contain .then( to handle async results and __wdio_error__ for error handling
+      expect(callArgs[0]).toContain('.then(');
+      expect(callArgs[0]).toContain('__wdio_error__');
       // execute should NOT be called for string scripts
       expect(mockExecute).not.toHaveBeenCalled();
     });

@@ -345,7 +345,22 @@ export default class TauriWorkerService {
                 (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
             );
         `;
-        return originalExecuteAsync(wrappedScript, ...args) as Promise<ReturnValue>;
+        // Use Promise wrapper to properly handle the result and throw on error
+        return new Promise<ReturnValue>((resolve, reject) => {
+          (originalExecuteAsync as (script: string, ...args: unknown[]) => void).call(
+            browser,
+            wrappedScript,
+            ...args,
+            (result: unknown) => {
+              // Check for error object returned via done callback and reject
+              if (result && typeof result === 'object' && '__wdio_error__' in result) {
+                reject(new Error((result as { __wdio_error__: string }).__wdio_error__));
+              } else {
+                resolve(result as ReturnValue);
+              }
+            },
+          );
+        });
       }
     };
 
