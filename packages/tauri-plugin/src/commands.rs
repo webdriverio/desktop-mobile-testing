@@ -70,7 +70,7 @@ pub(crate) async fn execute<R: Runtime>(
             .map(|ch| ch.is_whitespace() || ch == '(')
             .unwrap_or(false)
     };
-    let is_function = trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async");
+    let is_function = trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "function*") || has_keyword_prefix(trimmed, "async");
 
     let script = if !request.args.is_empty() && is_function {
         let args_json = serde_json::to_string(&request.args)
