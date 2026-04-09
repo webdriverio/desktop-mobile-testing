@@ -312,6 +312,7 @@ export default class TauriWorkerService {
     }
 
     const originalExecute = browser.execute.bind(browser);
+    const originalExecuteAsync = (browser.executeAsync as typeof browser.execute).bind(browser);
     const isEmbedded = this.driverProvider === 'embedded';
 
     const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
@@ -325,17 +326,20 @@ export default class TauriWorkerService {
       }
 
       // For functions: use .toString() - produces valid JS function source
-      // For strings: wrap in async IIFE (not invoked yet, wrappedScript will handle it)
+      // For strings: pass as-is (let the WebDriver handle it, or use executeAsync for async results)
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       // For non-embedded (tauri-driver/official): use sync execute with console wrapper
-      // Different wrapping for functions vs strings - strings need async IIFE to make statements valid
-      const wrappedScript =
-        typeof script === 'function'
-          ? `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (${scriptString}).apply(null, arguments);\n`
-          : `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (async () => { ${scriptString} })();\n`;
-
-      return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
+      // Different wrapping for functions vs strings - functions use .apply(), strings need executeAsync
+      // because WebDriver sync execute doesn't await Promises
+      if (typeof script === 'function') {
+        const wrappedScript = `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (${scriptString}).apply(null, arguments);\n`;
+        return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
+      } else {
+        // For strings: use executeAsync to properly await the async IIFE result
+        const wrappedScript = `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (async () => { ${scriptString} })();\n`;
+        return originalExecuteAsync(wrappedScript, ...args) as Promise<ReturnValue>;
+      }
     };
 
     Object.defineProperty(browser, 'execute', {

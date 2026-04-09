@@ -41,6 +41,7 @@ import { clearWindowState, ensureActiveWindowFocus } from '../src/window.js';
 function createMockBrowser(overrides: Record<string, unknown> = {}): WebdriverIO.Browser {
   return {
     execute: vi.fn().mockResolvedValue(undefined),
+    executeAsync: vi.fn().mockResolvedValue(undefined),
     isMultiremote: false,
     sessionId: 'test-session-123',
     instances: [],
@@ -92,17 +93,22 @@ describe('TauriWorkerService', () => {
       expect(firstExecute).toBe(secondExecute);
     });
 
-    it('should wrap string scripts in IIFE for non-embedded providers', () => {
+    it('should wrap string scripts in IIFE for non-embedded providers using executeAsync', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({ driverProvider: 'official' }, { 'wdio:tauriServiceOptions': {} });
 
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
-      // String scripts should be wrapped in async IIFE, NOT use .apply()
-      expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('(async () => { return document.title })()'));
-      expect(mockExecute).not.toHaveBeenCalledWith(expect.stringContaining('.apply'));
+      // String scripts should use executeAsync (not execute) because WebDriver sync doesn't await Promises
+      expect(mockExecuteAsync).toHaveBeenCalledWith(
+        expect.stringContaining('(async () => { return document.title })()'),
+      );
+      expect(mockExecuteAsync).not.toHaveBeenCalledWith(expect.stringContaining('.apply'));
+      // execute should NOT be called for string scripts
+      expect(mockExecute).not.toHaveBeenCalled();
     });
 
     it('should pass function scripts as-is for non-embedded providers', () => {
