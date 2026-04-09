@@ -73,7 +73,15 @@ pub(crate) async fn execute<R: Runtime>(
         // No args - detect function vs statement scripts
         // Function scripts need to be called with Tauri APIs, statement scripts need block-body wrapper
         let trimmed = request.script.trim();
-        let is_function = trimmed.starts_with('(') || trimmed.starts_with("function") || trimmed.starts_with("async");
+        let has_keyword_prefix = |source: &str, keyword: &str| {
+            source
+                .strip_prefix(keyword)
+                .and_then(|rest| rest.chars().next())
+                .map(|ch| ch.is_whitespace() || ch == '(')
+                .unwrap_or(false)
+        };
+        let is_function =
+            trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async");
         if is_function {
             // Function script - call it with Tauri APIs injected
             format!(
