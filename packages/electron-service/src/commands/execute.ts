@@ -14,7 +14,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  const scriptString = typeof script === 'function' ? script.toString() : JSON.stringify(script);
+  const scriptString = typeof script === 'function' ? script.toString() : script;
 
   const returnValue = await browser.execute(
     function executeWithinElectron(script: string, ...args) {
