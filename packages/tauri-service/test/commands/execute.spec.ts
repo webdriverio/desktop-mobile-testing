@@ -294,9 +294,7 @@ describe('execute', () => {
       browser = createMockBrowser();
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
-      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(
-        /Failed to parse execute result:.*something went wrong/,
-      );
+      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow('something went wrong');
     });
 
     it('should throw for window undefined error', async () => {

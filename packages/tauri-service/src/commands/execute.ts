@@ -113,21 +113,25 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   );
 
   // Extract result or error from wrapped response
-  try {
-    if (result && typeof result === 'string') {
-      const parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
-      if (parsed.__wdio_error__) {
-        throw new Error(parsed.__wdio_error__);
-      }
-      if (parsed.__wdio_value__ !== undefined) {
-        log.debug(`Execute result:`, parsed.__wdio_value__);
-        return parsed.__wdio_value__ as ReturnValue;
-      }
+  let parsed: { __wdio_error__?: string; __wdio_value__?: unknown } | undefined;
+  if (result && typeof result === 'string') {
+    try {
+      parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
+    } catch (parseError) {
+      throw new Error(
+        `Failed to parse execute result: ${parseError instanceof Error ? parseError.message : String(parseError)}, raw result: ${result}`,
+      );
     }
-  } catch (parseError) {
-    throw new Error(
-      `Failed to parse execute result: ${parseError instanceof Error ? parseError.message : String(parseError)}, raw result: ${result}`,
-    );
+  }
+
+  // Check for script errors AFTER parsing (outside try/catch to avoid re-wrapping)
+  if (parsed?.__wdio_error__) {
+    throw new Error(parsed.__wdio_error__);
+  }
+
+  if (parsed?.__wdio_value__ !== undefined) {
+    log.debug(`Execute result:`, parsed.__wdio_value__);
+    return parsed.__wdio_value__ as ReturnValue;
   }
 
   log.debug(`Execute result:`, result);
