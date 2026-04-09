@@ -93,7 +93,7 @@ describe('TauriWorkerService', () => {
       expect(firstExecute).toBe(secondExecute);
     });
 
-    it('should wrap string scripts in IIFE for non-embedded providers using executeAsync', () => {
+    it('should wrap string scripts in IIFE with done callback for non-embedded providers', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
       const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
       const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
@@ -102,11 +102,12 @@ describe('TauriWorkerService', () => {
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
-      // String scripts should use executeAsync (not execute) because WebDriver sync doesn't await Promises
+      // String scripts should use executeAsync with explicit done callback for WebKit compatibility
       expect(mockExecuteAsync).toHaveBeenCalledWith(
         expect.stringContaining('(async () => { return document.title })()'),
       );
-      expect(mockExecuteAsync).not.toHaveBeenCalledWith(expect.stringContaining('.apply'));
+      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('.then('));
+      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('arguments[arguments.length-1]'));
       // execute should NOT be called for string scripts
       expect(mockExecute).not.toHaveBeenCalled();
     });

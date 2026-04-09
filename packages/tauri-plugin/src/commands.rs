@@ -81,7 +81,7 @@ pub(crate) async fn execute<R: Runtime>(
                 .unwrap_or(false)
         };
         let is_function =
-            trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async");
+            trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async") || trimmed.contains("=>");
         if is_function {
             // Function script - call it with Tauri APIs injected
             format!(
@@ -90,12 +90,15 @@ pub(crate) async fn execute<R: Runtime>(
             )
         } else {
             // Statement/expression-style script - wrap in block-body IIFE
-            // Prepend "return" if not present, so expressions like "1 + 2" return their value
-            let script_trimmed = request.script.trim_start();
-            let needs_return = !script_trimmed.starts_with("return");
-            let body = if needs_return {
+            // Only prepend "return" for pure expressions (no statements, no existing return)
+            // Check for statements (semicolons) or existing return keyword
+            let has_semicolon = request.script.contains(';');
+            let has_return = request.script.contains("return");
+            let body = if !has_semicolon && !has_return {
+                // Pure expression - add return so it evaluates and returns
                 format!("return {};", request.script)
             } else {
+                // Has statements or already has return - pass through as-is
                 request.script.clone()
             };
             format!(
@@ -216,7 +219,7 @@ pub(crate) async fn execute<R: Runtime>(
     // This matches the WebDriver default script timeout
     let window_label = window.label().to_owned();
     let timeout_duration = Duration::from_secs(30);
-    
+
     match tokio::time::timeout(timeout_duration, rx).await {
         Ok(Ok(Ok(result))) => {
             log::debug!("Execute completed successfully");
@@ -287,7 +290,7 @@ pub(crate) async fn get_window_states<R: Runtime>(
   app: tauri::AppHandle<R>,
 ) -> Result<Vec<WindowState>> {
   let mut states = Vec::new();
-  
+
   for (label, window) in app.webview_windows() {
     let state = WindowState {
       label: label.clone(),
@@ -295,10 +298,10 @@ pub(crate) async fn get_window_states<R: Runtime>(
       is_visible: window.is_visible().unwrap_or(false),
       is_focused: window.is_focused().unwrap_or(false),
     };
-    log::debug!("[get_window_states] {}: title='{}', visible={}, focused={}", 
+    log::debug!("[get_window_states] {}: title='{}', visible={}, focused={}",
       label, state.title, state.is_visible, state.is_focused);
     states.push(state);
   }
-  
+
   Ok(states)
 }

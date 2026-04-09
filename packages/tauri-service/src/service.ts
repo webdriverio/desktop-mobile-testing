@@ -336,8 +336,15 @@ export default class TauriWorkerService {
         const wrappedScript = `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (${scriptString}).apply(null, arguments);\n`;
         return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
       } else {
-        // For strings: use executeAsync to properly await the async IIFE result
-        const wrappedScript = `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (async () => { ${scriptString} })();\n`;
+        // For strings: use executeAsync with explicit done callback
+        // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
+        const wrappedScript = `
+          ${CONSOLE_WRAPPER_SCRIPT}
+          (async () => { ${scriptString} })().then(
+            function(r) { arguments[arguments.length-1](r); },
+            function(e) { arguments[arguments.length-1](undefined); }
+          );
+        `;
         return originalExecuteAsync(wrappedScript, ...args) as Promise<ReturnValue>;
       }
     };
