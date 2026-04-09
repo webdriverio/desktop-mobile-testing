@@ -59,67 +59,67 @@ pub(crate) async fn execute<R: Runtime>(
     let (tx, rx) = tokio::sync::oneshot::channel();
     let tx = Arc::new(Mutex::new(Some(tx)));
 
-    // Build the script with args if offered
-    // For args: inject Tauri APIs as first param, then pass user args
-    // For no-args: preserve the script expression and evaluate it below
-    let script = if !request.args.is_empty() {
+    // Build the script with args if offered.
+    // Callable scripts receive Tauri APIs + user args.
+    // Statement/expression scripts run as body code (with args exposed as __wdio_args).
+    let trimmed = request.script.trim();
+    let has_keyword_prefix = |source: &str, keyword: &str| {
+        source
+            .strip_prefix(keyword)
+            .and_then(|rest| rest.chars().next())
+            .map(|ch| ch.is_whitespace() || ch == '(')
+            .unwrap_or(false)
+    };
+    let is_function = trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async");
+
+    let script = if !request.args.is_empty() && is_function {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
         format!(
             "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
             request.script, args_json
         )
+    } else if is_function {
+        // Function script - call it with Tauri APIs injected
+        format!(
+            "(function() {{ return ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
+            request.script
+        )
     } else {
-        // No args - detect function vs statement scripts
-        // Only check for function-like prefixes at the START of the script
-        // (not anywhere in the script, which would catch arrow functions inside expressions)
-        let trimmed = request.script.trim();
-        let has_keyword_prefix = |source: &str, keyword: &str| {
-            source
-                .strip_prefix(keyword)
-                .and_then(|rest| rest.chars().next())
-                .map(|ch| ch.is_whitespace() || ch == '(')
-                .unwrap_or(false)
-        };
-        let is_function = trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async");
-        if is_function {
-            // Function script - call it with Tauri APIs injected
-            format!(
-                "(function() {{ return ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
-                request.script
-            )
+        // Statement/expression-style script - wrap in block-body IIFE
+        let has_statement = request.script.trim_start().starts_with("const ")
+        || request.script.trim_start().starts_with("let ")
+        || request.script.trim_start().starts_with("var ")
+        || request.script.trim_start().starts_with("if ")
+        || request.script.trim_start().starts_with("if(")
+        || request.script.trim_start().starts_with("for ")
+        || request.script.trim_start().starts_with("for(")
+        || request.script.trim_start().starts_with("while ")
+        || request.script.trim_start().starts_with("while(")
+        || request.script.trim_start().starts_with("switch ")
+        || request.script.trim_start().starts_with("switch(")
+        || request.script.trim_start().starts_with("throw ")
+        || request.script.trim_start().starts_with("try ")
+        || request.script.trim_start().starts_with("try{")
+        || request.script.trim_start().starts_with("do ")
+        || request.script.trim_start().starts_with("do{");
+        // Only prepend "return" for pure expressions (no statements, no existing return at start)
+        // Use starts_with("return") not contains("return") to avoid false positives like "returnData"
+        let has_return = request.script.trim_start().starts_with("return");
+        let body = if !has_statement && !has_return {
+            // Pure expression - add return so it evaluates and returns
+            format!("return {};", request.script)
         } else {
-            // Statement/expression-style script - wrap in block-body IIFE
-            let has_statement = request.script.trim_start().starts_with("const ")
-            || request.script.trim_start().starts_with("let ")
-            || request.script.trim_start().starts_with("var ")
-            || request.script.trim_start().starts_with("if ")
-            || request.script.trim_start().starts_with("if(")
-            || request.script.trim_start().starts_with("for ")
-            || request.script.trim_start().starts_with("for(")
-            || request.script.trim_start().starts_with("while ")
-            || request.script.trim_start().starts_with("while(")
-            || request.script.trim_start().starts_with("switch ")
-            || request.script.trim_start().starts_with("switch(")
-            || request.script.trim_start().starts_with("throw ")
-            || request.script.trim_start().starts_with("try ")
-            || request.script.trim_start().starts_with("try{")
-            || request.script.trim_start().starts_with("do ")
-            || request.script.trim_start().starts_with("do{");
-            // Only prepend "return" for pure expressions (no statements, no existing return at start)
-            // Use starts_with("return") not contains("return") to avoid false positives like "returnData"
-            let has_return = request.script.trim_start().starts_with("return");
-            let body = if !has_statement && !has_return {
-                // Pure expression - add return so it evaluates and returns
-                format!("return {};", request.script)
-            } else {
-                // Has statements or already has return - pass through as-is
-                request.script.clone()
-            };
-            format!(
-                "(async () => {{ {0} }})()",
-                body
-            )
+            // Has statements or already has return - pass through as-is
+            request.script.clone()
+        };
+
+        if !request.args.is_empty() {
+            let args_json = serde_json::to_string(&request.args)
+                .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
+            format!("(async () => {{ const __wdio_args = {}; {body} }})()", args_json)
+        } else {
+            format!("(async () => {{ {body} }})()")
         }
     };
 
