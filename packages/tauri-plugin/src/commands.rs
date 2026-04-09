@@ -70,11 +70,23 @@ pub(crate) async fn execute<R: Runtime>(
             request.script, args_json
         )
     } else {
-        // No args - wrap in block-body IIFE to handle statement-style scripts like "return document.title"
-        format!(
-            "(async () => {{ {0} }})()",
-            request.script
-        )
+        // No args - detect function vs statement scripts
+        // Function scripts need to be called with Tauri APIs, statement scripts need block-body wrapper
+        let trimmed = request.script.trim();
+        let is_function = trimmed.starts_with('(') || trimmed.starts_with("function") || trimmed.starts_with("async");
+        if is_function {
+            // Function script - call it with Tauri APIs injected
+            format!(
+                "(function() {{ return ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
+                request.script
+            )
+        } else {
+            // Statement-style script - wrap in block-body IIFE
+            format!(
+                "(async () => {{ {0} }})()",
+                request.script
+            )
+        }
     };
 
     // Generate unique event ID for this execution
