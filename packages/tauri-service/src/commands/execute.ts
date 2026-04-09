@@ -66,7 +66,8 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   }
 
   // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
-  const scriptString = typeof script === 'function' ? script.toString() : script;
+  // For strings, use JSON.stringify to safely escape special characters
+  const scriptString = typeof script === 'function' ? script.toString() : JSON.stringify(script);
 
   // Execute via plugin's execute command with better error handling
   // The plugin will inject the Tauri APIs object as the first argument

@@ -63,7 +63,9 @@ pub(crate) async fn execute<R: Runtime>(
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
-        format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, request.script)
+        let script_json = serde_json::to_string(&request.script)
+            .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize script: {}", e)))?;
+        format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, script_json)
     } else {
         request.script.clone()
     };

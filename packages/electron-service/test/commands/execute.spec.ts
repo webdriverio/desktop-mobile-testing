@@ -44,7 +44,40 @@ describe('execute Command', () => {
 
   it('should execute a stringified function', async () => {
     await execute(globalThis.browser, '() => 1 + 2 + 3');
-    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), '() => 1 + 2 + 3');
-    expect(globalThis.wdioElectron.execute).toHaveBeenCalledWith('() => 1 + 2 + 3', []);
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), JSON.stringify('() => 1 + 2 + 3'));
+    expect(globalThis.wdioElectron.execute).toHaveBeenCalledWith(JSON.stringify('() => 1 + 2 + 3'), []);
+  });
+
+  it('should handle scripts with quotes', async () => {
+    const scriptWithQuotes = '() => "He said \\"hello\\""';
+    await execute(globalThis.browser, scriptWithQuotes);
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), JSON.stringify(scriptWithQuotes));
+  });
+
+  it('should handle scripts with newlines', async () => {
+    const scriptWithNewlines = '() => "line1\\nline2"';
+    await execute(globalThis.browser, scriptWithNewlines);
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), JSON.stringify(scriptWithNewlines));
+  });
+
+  it('should handle scripts with unicode', async () => {
+    const scriptWithUnicode = '() => "Hello 世界"';
+    await execute(globalThis.browser, scriptWithUnicode);
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), JSON.stringify(scriptWithUnicode));
+  });
+
+  it('should handle scripts with backslashes', async () => {
+    const scriptWithBackslashes = '() => "C:\\\\path\\\\file"';
+    await execute(globalThis.browser, scriptWithBackslashes);
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      JSON.stringify(scriptWithBackslashes),
+    );
+  });
+
+  it('should handle mixed special characters', async () => {
+    const script = '() => "Test \\n \\t \\u001b and \\\\ backslash"';
+    await execute(globalThis.browser, script);
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), JSON.stringify(script));
   });
 });

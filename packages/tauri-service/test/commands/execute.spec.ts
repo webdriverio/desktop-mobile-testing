@@ -189,7 +189,7 @@ describe('execute', () => {
       expect(secondCall[3]).toBe(2);
     });
 
-    it('should pass strings as-is', async () => {
+    it('should pass strings properly stringified', async () => {
       const mockExecute = vi.fn();
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'hello' }));
@@ -199,7 +199,7 @@ describe('execute', () => {
       await execute<string, []>(browser, 'return "hello"');
 
       const secondCall = mockExecute.mock.calls[1];
-      expect(secondCall[1]).toBe('return "hello"');
+      expect(secondCall[1]).toBe(JSON.stringify('return "hello"'));
     });
   });
 
