@@ -311,7 +311,6 @@ export default class TauriWorkerService {
       return;
     }
 
-    const originalExecute = browser.execute.bind(browser);
     const originalExecuteAsync = (browser.executeAsync as typeof browser.execute).bind(browser);
     const isEmbedded = this.driverProvider === 'embedded';
 
@@ -320,9 +319,29 @@ export default class TauriWorkerService {
       ...args: InnerArguments
     ): Promise<ReturnValue> {
       if (isEmbedded) {
-        // For embedded WebDriver: pass the script through untouched so WDIO
-        // can invoke function scripts correctly.
-        return originalExecute(script as Parameters<typeof originalExecute>[0], ...args) as Promise<ReturnValue>;
+        const scriptString = typeof script === 'function' ? script.toString() : script;
+        const wrappedScript =
+          typeof script === 'function'
+            ? `
+                Promise.resolve((${scriptString}).apply(null, Array.from(arguments).slice(0, arguments.length - 1))).then(
+                  (r) => arguments[arguments.length - 1](r),
+                  (e) => arguments[arguments.length - 1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+                );
+              `
+            : `
+                (async function() { ${scriptString} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
+                  (r) => arguments[arguments.length - 1](r),
+                  (e) => arguments[arguments.length - 1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+                );
+              `;
+        const asyncResult = await (originalExecuteAsync as (script: string, ...a: unknown[]) => Promise<unknown>)(
+          wrappedScript,
+          ...args,
+        );
+        if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+          throw new Error((asyncResult as { __wdio_error__: string }).__wdio_error__);
+        }
+        return asyncResult as ReturnValue;
       }
 
       // For functions: use .toString() - produces valid JS function source
