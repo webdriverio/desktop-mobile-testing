@@ -60,6 +60,7 @@ pub(crate) async fn execute<R: Runtime>(
     let tx = Arc::new(Mutex::new(Some(tx)));
 
     // Build the script with args if offered
+    // Note: TypeScript sends scripts as-is (not JSON.stringify'd), so we serialize here
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
