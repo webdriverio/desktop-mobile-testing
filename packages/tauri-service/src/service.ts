@@ -339,11 +339,11 @@ export default class TauriWorkerService {
         // For strings: use executeAsync with explicit done callback
         // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
         const wrappedScript = `
-          ${CONSOLE_WRAPPER_SCRIPT}
-          (async () => { ${scriptString} })().then(
-            function(r) { arguments[arguments.length-1](r); },
-            function(e) { arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) }); }
-          );
+            ${CONSOLE_WRAPPER_SCRIPT}
+            (async () => { ${scriptString} })().then(
+                (r) => arguments[arguments.length-1](r),
+                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+            );
         `;
         return originalExecuteAsync(wrappedScript, ...args) as Promise<ReturnValue>;
       }
