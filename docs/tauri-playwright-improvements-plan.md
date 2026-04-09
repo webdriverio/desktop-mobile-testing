@@ -7,14 +7,14 @@
 
 ## Improvement Summary
 
-| # | Improvement | Applies To | Effort | Impact |
-|---|-------------|------------|--------|--------|
-| 1 | Browser-only test mode with mocked native IPC | Tauri + Electron | Large | High |
-| 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High |
-| 3 | Multi-window label configuration | Tauri | Small | Medium |
-| 4 | Native screenshot capture | Tauri + Electron | Medium | Low |
-| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium |
-| 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium |
+| # | Improvement | Applies To | Effort | Impact | Status |
+|---|-------------|------------|--------|--------|--------|
+| 1 | Browser-only test mode with mocked native IPC | Tauri + Electron | Large | High | Pending |
+| 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High | Pending |
+| 3 | Multi-window label configuration | Tauri | Small | Medium | Pending |
+| 4 | Native screenshot capture | Tauri + Electron | Medium | Low | Pending |
+| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | **Done** |
+| 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium | Pending |
 
 ---
 
