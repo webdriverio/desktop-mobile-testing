@@ -71,12 +71,13 @@ Always run with `dry_run: true` first to verify:
 
 ```
 release.yml
-    ├── check-labels (autorelease only)
-    ├── resolve-packages / resolve-manual
+    ├── gate (autorelease only)
     └── _release.reusable.yml
             ├── Checkout (SSH or read-only)
             ├── Setup Node.js/pnpm
             ├── Install dependencies
+            ├── Setup Rust (tauri scope only)
+            ├── Install GTK (tauri scope only)
             ├── Build packages (by scope)
             ├── Configure Git
             ├── Run releasekit (version + publish)
