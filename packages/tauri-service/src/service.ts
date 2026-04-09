@@ -340,7 +340,7 @@ export default class TauriWorkerService {
         // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
         const wrappedScript = `
             ${CONSOLE_WRAPPER_SCRIPT}
-            (async () => { ${scriptString} })().then(
+            (async function() { ${scriptString} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
                 (r) => arguments[arguments.length-1](r),
                 (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
             );
