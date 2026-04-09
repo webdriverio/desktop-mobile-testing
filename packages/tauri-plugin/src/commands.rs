@@ -60,13 +60,13 @@ pub(crate) async fn execute<R: Runtime>(
     let tx = Arc::new(Mutex::new(Some(tx)));
 
     // Build the script with args if offered
-    // For args: evaluate the script as a callable and pass args
-    // For no-args: evaluate the script expression directly (callable detection happens in JS wrapper)
+    // For args: inject Tauri APIs as first param, then pass user args
+    // For no-args: preserve the script expression and evaluate it below
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
         format!(
-            "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return __wdio_fn(...__wdio_args); }})()",
+            "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
             request.script, args_json
         )
     } else {
