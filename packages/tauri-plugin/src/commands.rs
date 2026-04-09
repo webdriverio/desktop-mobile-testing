@@ -60,14 +60,17 @@ pub(crate) async fn execute<R: Runtime>(
     let tx = Arc::new(Mutex::new(Some(tx)));
 
     // Build the script with args if offered
-    // Note: TypeScript sends scripts as-is (not JSON.stringify'd), so we serialize here
+    // For args: evaluate the script as a callable and pass args
+    // For no-args: evaluate the script expression directly (callable detection happens in JS wrapper)
     let script = if !request.args.is_empty() {
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
-        let script_json = serde_json::to_string(&request.script)
-            .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize script: {}", e)))?;
-        format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, script_json)
+        format!(
+            "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return __wdio_fn(...__wdio_args); }})()",
+            request.script, args_json
+        )
     } else {
+        // No args - preserve the script expression and evaluate it below
         request.script.clone()
     };
 
@@ -125,8 +128,13 @@ pub(crate) async fn execute<R: Runtime>(
                     throw new Error('window.__TAURI__.core.invoke not available after timeout');
                 }}
 
-                // Execute the user's script
-                const result = await ({});
+                // Execute the user's script.
+                // If expression resolves to a function, call it with Tauri APIs.
+                // Otherwise, await the value directly.
+                const __wdio_script = ({});
+                const result = typeof __wdio_script === 'function'
+                    ? await __wdio_script({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event }})
+                    : await __wdio_script;
 
                 // Emit the result using the current window's event emitter
                 // This ensures the event goes to the same window where we're listening
