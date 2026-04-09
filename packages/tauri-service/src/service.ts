@@ -342,7 +342,7 @@ export default class TauriWorkerService {
           ${CONSOLE_WRAPPER_SCRIPT}
           (async () => { ${scriptString} })().then(
             function(r) { arguments[arguments.length-1](r); },
-            function(e) { arguments[arguments.length-1](undefined); }
+            function(e) { arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) }); }
           );
         `;
         return originalExecuteAsync(wrappedScript, ...args) as Promise<ReturnValue>;
