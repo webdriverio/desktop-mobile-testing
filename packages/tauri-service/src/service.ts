@@ -325,16 +325,15 @@ export default class TauriWorkerService {
       }
 
       // For functions: use .toString() - produces valid JS function source
-      // For strings:
-      //   - embedded: pass as-is (WebDriver handles execution)
-      //   - non-embedded: wrap in async IIFE to make statement expressions callable
-      const scriptString = typeof script === 'function' ? script.toString() : `(async () => { ${script} })()`;
+      // For strings: wrap in async IIFE (not invoked yet, wrappedScript will handle it)
+      const scriptString = typeof script === 'function' ? script.toString() : script;
 
       // For non-embedded (tauri-driver/official): use sync execute with console wrapper
-      const wrappedScript = `
-            ${CONSOLE_WRAPPER_SCRIPT}
-            return (${scriptString}).apply(null, arguments);
-          `;
+      // Different wrapping for functions vs strings - strings need async IIFE to make statements valid
+      const wrappedScript =
+        typeof script === 'function'
+          ? `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (${scriptString}).apply(null, arguments);\n`
+          : `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (async () => { ${scriptString} })();\n`;
 
       return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
     };

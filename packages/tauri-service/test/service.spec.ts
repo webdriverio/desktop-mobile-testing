@@ -100,7 +100,9 @@ describe('TauriWorkerService', () => {
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
+      // String scripts should be wrapped in async IIFE, NOT use .apply()
       expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('(async () => { return document.title })()'));
+      expect(mockExecute).not.toHaveBeenCalledWith(expect.stringContaining('.apply'));
     });
 
     it('should pass function scripts as-is for non-embedded providers', () => {
