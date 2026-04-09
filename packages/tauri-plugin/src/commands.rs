@@ -92,7 +92,9 @@ pub(crate) async fn execute<R: Runtime>(
             // Statement/expression-style script - wrap in block-body IIFE
             // Only prepend "return" for pure expressions (no statements, no existing return at start)
             // Use starts_with("return") not contains("return") to avoid false positives like "returnData"
-            let has_semicolon = request.script.contains(';');
+            let has_semicolon = request.script.trim_start().starts_with("const ")
+                || request.script.trim_start().starts_with("let ")
+                || request.script.trim_start().starts_with("var ");
             let has_return = request.script.trim_start().starts_with("return");
             let body = if !has_semicolon && !has_return {
                 // Pure expression - add return so it evaluates and returns
