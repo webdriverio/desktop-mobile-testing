@@ -71,11 +71,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Setup Rust
-        if: ${{ replace(inputs.scope, 'scope:', '') == 'tauri' }}
+        if: ${{ contains(inputs.scope, 'tauri') }}
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install GTK development libraries
-        if: ${{ replace(inputs.scope, 'scope:', '') == 'tauri' }}
+        if: ${{ contains(inputs.scope, 'tauri') }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
