@@ -318,12 +318,9 @@ export default class TauriWorkerService {
       script: string | ((...args: InnerArguments) => ReturnValue),
       ...args: InnerArguments
     ): Promise<ReturnValue> {
-      // For functions, always use .toString() - produces valid JS function source
-      // For strings:
-      //   - embedded path: pass as-is (WebDriver handles execution)
-      //   - tauri-driver path: use JSON.stringify (wrapped in template literal)
-      const scriptString =
-        typeof script === 'function' ? script.toString() : isEmbedded ? script : JSON.stringify(script);
+      // For functions: use .toString() - produces valid JS function source
+      // For strings: pass as-is (wrapper template wraps in parentheses to make callable)
+      const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
         // For embedded WebDriver: skip console wrapper as console forwarding
@@ -332,10 +329,12 @@ export default class TauriWorkerService {
       }
 
       // For tauri-driver: use sync execute with console wrapper
-      // Note: scriptString is already properly escaped via JSON.stringify above
+      // Note: scriptString is passed as-is - wrap in IIFE to make both strings and functions callable
+      // For string scripts: "return x" -> "(() => return x)()" - wraps statement as expression
+      // For function scripts: "(a,b) => a+b" -> "((a,b) => a+b)()" - works as IIFE
       const wrappedScript = `
             ${CONSOLE_WRAPPER_SCRIPT}
-            return (${scriptString}).apply(null, arguments);
+            return ((${scriptString})()).apply(null, arguments);
           `;
 
       return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
