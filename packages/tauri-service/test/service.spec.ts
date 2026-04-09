@@ -135,7 +135,7 @@ describe('TauriWorkerService', () => {
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('(a, b) => a + b'), 1, 2);
+      expect(mockExecute).toHaveBeenCalledWith(testFn, 1, 2);
     });
   });
 

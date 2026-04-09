@@ -318,18 +318,17 @@ export default class TauriWorkerService {
       script: string | ((...args: InnerArguments) => ReturnValue),
       ...args: InnerArguments
     ): Promise<ReturnValue> {
+      if (isEmbedded) {
+        // For embedded WebDriver: pass the script through untouched so WDIO
+        // can invoke function scripts correctly.
+        return originalExecute(script as Parameters<typeof originalExecute>[0], ...args) as Promise<ReturnValue>;
+      }
+
       // For functions: use .toString() - produces valid JS function source
       // For strings:
       //   - embedded: pass as-is (WebDriver handles execution)
       //   - non-embedded: wrap in async IIFE to make statement expressions callable
-      const scriptString =
-        typeof script === 'function' ? script.toString() : isEmbedded ? script : `(async () => { ${script} })()`;
-
-      if (isEmbedded) {
-        // For embedded WebDriver: skip console wrapper as console forwarding
-        // is handled by tauri-plugin-webdriver.
-        return originalExecute(scriptString, ...args) as Promise<ReturnValue>;
-      }
+      const scriptString = typeof script === 'function' ? script.toString() : `(async () => { ${script} })()`;
 
       // For non-embedded (tauri-driver/official): use sync execute with console wrapper
       const wrappedScript = `
