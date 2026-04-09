@@ -65,9 +65,10 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     log.debug('Plugin availability cached, skipping check');
   }
 
-  // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
-  // For strings, use JSON.stringify to safely escape special characters
-  const scriptString = typeof script === 'function' ? script.toString() : JSON.stringify(script);
+  // Convert function to string - keep parameters intact, plugin will handle escaping
+  // For functions: use .toString() (produces valid JS function source)
+  // For strings: send as-is (Rust handles proper escaping when args present)
+  const scriptString = typeof script === 'function' ? script.toString() : script;
 
   // Execute via plugin's execute command with better error handling
   // The plugin will inject the Tauri APIs object as the first argument
