@@ -150,7 +150,10 @@ export async function executeTauriCommand<T = unknown>(
   log.debug(`Executing Tauri command: ${command} with args:`, args);
 
   try {
-    const result = await execute(browser, ({ core }) => core.invoke(command, ...args));
+    const result = await execute(
+      browser,
+      `({ core }) => core.invoke(${JSON.stringify(command)}, ...${JSON.stringify(args)})`,
+    );
 
     return {
       ok: true,

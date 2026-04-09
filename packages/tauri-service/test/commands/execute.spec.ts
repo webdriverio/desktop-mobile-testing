@@ -359,6 +359,24 @@ describe('executeTauriCommand', () => {
     browser = createMockBrowser();
   });
 
+  it('should embed command and args in script string instead of using closure', async () => {
+    const mockExecute = vi.fn();
+    mockExecute.mockResolvedValueOnce(true); // plugin check
+    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'test-result' }));
+    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+
+    await executeTauriCommand<string>(browser, 'get_version', 'arg1', 42);
+
+    // The second call is the actual execute - verify the script embeds the command/args
+    const secondCall = mockExecute.mock.calls[1];
+    const scriptArg = secondCall[1] as string;
+    expect(scriptArg).toContain('"get_version"');
+    expect(scriptArg).toContain('"arg1"');
+    expect(scriptArg).toContain('42');
+    // Should NOT contain the variable name 'command' (which would indicate closure reference)
+    expect(scriptArg).not.toContain('command');
+  });
+
   it('should return ok result on success', async () => {
     const mockExecute = vi.fn();
     mockExecute.mockResolvedValueOnce(true);
