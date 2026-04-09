@@ -70,12 +70,24 @@ pub(crate) async fn execute<R: Runtime>(
             .map(|ch| ch.is_whitespace() || ch == '(')
             .unwrap_or(false)
     };
-    // Check for arrow functions (=>) anywhere in the script - catches single-param arrows like "x => x + 1"
+    // Detect arrow functions at START of script:
+    // - "(args) => ..." (parenthesized params)
+    // - "param => ..." (single param, alphanumeric start)
+    // Don't use contains("=>") as it falsely catches expressions like "return items.filter(x => x > 0).length"
+    let starts_with_paren_arrow = trimmed.starts_with('(') && trimmed.contains("=>");
+    let single_param_arrow = trimmed.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+        && trimmed.contains("=>")
+        && trimmed.find("=>").map(|pos| {
+            let before = trimmed[..pos].trim();
+            // Single param: alphanumeric chars only, no spaces (except for the param name)
+            !before.is_empty() && !before.contains(' ')
+        }).unwrap_or(false);
     let is_function = trimmed.starts_with('(') 
-        || trimmed.contains("=>")
         || has_keyword_prefix(trimmed, "function") 
         || has_keyword_prefix(trimmed, "function*") 
-        || has_keyword_prefix(trimmed, "async");
+        || has_keyword_prefix(trimmed, "async")
+        || starts_with_paren_arrow
+        || single_param_arrow;
 
     let script = if !request.args.is_empty() && is_function {
         let args_json = serde_json::to_string(&request.args)
