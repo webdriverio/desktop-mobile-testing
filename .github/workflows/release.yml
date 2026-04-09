@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
     inputs:
       target_packages:
-        description: 'Comma-separated list of packages to release'
+        description: "Comma-separated list of packages to release"
         required: true
         type: string
-        default: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types'
+        default: "@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types"
       release_version:
-        description: 'Release version type'
+        description: "Release version type"
         required: true
         type: choice
         options:
@@ -26,7 +26,7 @@ on:
           - prerelease
         default: patch
       scope:
-        description: 'Release scope (electron, tauri, shared)'
+        description: "Release scope (electron, tauri, shared)"
         required: true
         type: choice
         options:
@@ -35,12 +35,12 @@ on:
           - tauri
         default: shared
       dry_run:
-        description: 'Dry run (show what would happen without publishing)'
+        description: "Dry run (show what would happen without publishing)"
         required: false
         type: boolean
         default: false
       target_branch:
-        description: 'Branch to release from (default: main)'
+        description: "Branch to release from (default: main)"
         required: false
         type: string
         default: main
@@ -77,14 +77,13 @@ jobs:
           mode: gate
           project-dir: .
           branch: main
-          json: 'true'
-          summary: 'true'
+          json: "true"
+          summary: "true"
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
   release-auto:
     name: Release (Auto)
-    runs-on: ubuntu-latest
     needs: [gate]
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && needs.gate.outputs.should_release == 'true'
     uses: ./.github/workflows/_release.reusable.yml
@@ -104,7 +103,6 @@ jobs:
 
   release-manual:
     name: Release (Manual)
-    runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/_release.reusable.yml
     permissions:
