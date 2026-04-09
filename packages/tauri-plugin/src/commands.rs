@@ -71,7 +71,8 @@ pub(crate) async fn execute<R: Runtime>(
         )
     } else {
         // No args - detect function vs statement scripts
-        // Function scripts need to be called with Tauri APIs, statement scripts need block-body wrapper
+        // Only check for function-like prefixes at the START of the script
+        // (not anywhere in the script, which would catch arrow functions inside expressions)
         let trimmed = request.script.trim();
         let has_keyword_prefix = |source: &str, keyword: &str| {
             source
@@ -80,8 +81,7 @@ pub(crate) async fn execute<R: Runtime>(
                 .map(|ch| ch.is_whitespace() || ch == '(')
                 .unwrap_or(false)
         };
-        let is_function =
-            trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async") || trimmed.contains("=>");
+        let is_function = trimmed.starts_with('(') || has_keyword_prefix(trimmed, "function") || has_keyword_prefix(trimmed, "async");
         if is_function {
             // Function script - call it with Tauri APIs injected
             format!(
