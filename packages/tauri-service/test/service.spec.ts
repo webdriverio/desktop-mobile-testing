@@ -130,31 +130,25 @@ describe('TauriWorkerService', () => {
 
     it('should pass string scripts as-is for embedded provider', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
+      const mockBrowser = createMockBrowser({ execute: mockExecute });
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
 
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
-      expect(mockExecuteAsync).toHaveBeenCalled();
-      const callArgs = mockExecuteAsync.mock.calls[0];
-      expect(callArgs[0]).toContain('(async function() { return document.title })');
-      expect(mockExecute).not.toHaveBeenCalled();
+      expect(mockExecute).toHaveBeenCalledWith('return document.title');
     });
 
     it('should pass function scripts as-is for embedded provider', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
+      const mockBrowser = createMockBrowser({ execute: mockExecute });
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
 
       (service as any).patchBrowserExecute(mockBrowser);
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('Promise.resolve(('), 1, 2);
-      expect(mockExecute).not.toHaveBeenCalled();
+      expect(mockExecute).toHaveBeenCalledWith(testFn, 1, 2);
     });
   });
 
