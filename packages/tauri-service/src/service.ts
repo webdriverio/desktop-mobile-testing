@@ -318,9 +318,12 @@ export default class TauriWorkerService {
       script: string | ((...args: InnerArguments) => ReturnValue),
       ...args: InnerArguments
     ): Promise<ReturnValue> {
-      // For strings, use JSON.stringify to safely escape special characters
-      // For functions, toString() gives the function source which is already valid JS
-      const scriptString = typeof script === 'function' ? script.toString() : JSON.stringify(script);
+      // For functions, always use .toString() - produces valid JS function source
+      // For strings:
+      //   - embedded path: pass as-is (WebDriver handles execution)
+      //   - tauri-driver path: use JSON.stringify (wrapped in template literal)
+      const scriptString =
+        typeof script === 'function' ? script.toString() : isEmbedded ? script : JSON.stringify(script);
 
       if (isEmbedded) {
         // For embedded WebDriver: skip console wrapper as console forwarding
@@ -329,8 +332,7 @@ export default class TauriWorkerService {
       }
 
       // For tauri-driver: use sync execute with console wrapper
-      // Note: scriptString is already properly escaped from above - functions use .toString()
-      // which produces valid JS, strings use JSON.stringify() which also produces valid JS
+      // Note: scriptString is already properly escaped via JSON.stringify above
       const wrappedScript = `
             ${CONSOLE_WRAPPER_SCRIPT}
             return (${scriptString}).apply(null, arguments);
