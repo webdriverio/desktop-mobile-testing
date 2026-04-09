@@ -323,7 +323,7 @@ export default class TauriWorkerService {
       //   - embedded: pass as-is (WebDriver handles execution)
       //   - non-embedded: wrap in async IIFE to make statement expressions callable
       const scriptString =
-        typeof script === 'function' ? script.toString() : isEmbedded ? script : `(async () => ${script})()`;
+        typeof script === 'function' ? script.toString() : isEmbedded ? script : `(async () => { ${script} })()`;
 
       if (isEmbedded) {
         // For embedded WebDriver: skip console wrapper as console forwarding

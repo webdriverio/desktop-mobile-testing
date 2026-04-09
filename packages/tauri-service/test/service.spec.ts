@@ -100,7 +100,7 @@ describe('TauriWorkerService', () => {
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
-      expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('(async () => return document.title)()'));
+      expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('(async () => { return document.title })()'));
     });
 
     it('should pass function scripts as-is for non-embedded providers', () => {
