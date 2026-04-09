@@ -24,7 +24,7 @@
     "@wdio/mocha-framework": "^9.25.0",
     "@wdio/spec-reporter": "^9.25.0",
     "cross-env": "^10.1.0",
-    "electron": "41.0.2",
+    "electron": "41.2.0",
     "electron-vite": "^5.0.0",
     "semver": "^7.7.4",
     "typescript": "^5.9.3"
