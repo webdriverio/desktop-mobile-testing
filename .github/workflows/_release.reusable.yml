@@ -75,23 +75,23 @@ jobs:
           scope="${{ inputs.scope }}"
           scope="${scope#scope:}"
           case "$scope" in
-            electron) 
+            electron)
               pnpm turbo run build \
                 --filter='@wdio/electron-service...' \
                 --filter='@wdio/electron-cdp-bridge...' \
                 --filter='@wdio/bundler...'
               ;;
-            tauri) 
+            tauri)
               pnpm turbo run build \
                 --filter='@wdio/tauri-service...' \
                 --filter='@wdio/tauri-plugin...'
               ;;
-            shared) 
+            shared)
               pnpm turbo run build \
                 --filter='@wdio/native-types...' \
                 --filter='@wdio/native-utils...'
               ;;
-            *) 
+            *)
               echo "::error::Unknown scope: $scope"
               exit 1
               ;;
@@ -124,7 +124,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.11.1
+        uses: goosewobbler/releasekit@v0.12.0
         with:
           mode: release
           target: ${{ inputs.target_packages }}

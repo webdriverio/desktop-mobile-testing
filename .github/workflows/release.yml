@@ -72,10 +72,9 @@ jobs:
 
       - name: Run ReleaseKit Gate
         id: gate
-        uses: goosewobbler/releasekit@v0.11.1
+        uses: goosewobbler/releasekit@v0.12.0
         with:
           mode: gate
-          target: '@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/tauri-service,@wdio/tauri-plugin,@wdio/native-utils,@wdio/native-types'
           branch: main
           json: 'true'
           summary: 'true'
