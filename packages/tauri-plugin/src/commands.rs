@@ -90,13 +90,24 @@ pub(crate) async fn execute<R: Runtime>(
             )
         } else {
             // Statement/expression-style script - wrap in block-body IIFE
+            let has_statement = request.script.trim_start().starts_with("const ")
+            || request.script.trim_start().starts_with("let ")
+            || request.script.trim_start().starts_with("var ")
+            || request.script.trim_start().starts_with("if ")
+            || request.script.trim_start().starts_with("if(")
+            || request.script.trim_start().starts_with("for ")
+            || request.script.trim_start().starts_with("for(")
+            || request.script.trim_start().starts_with("while ")
+            || request.script.trim_start().starts_with("while(")
+            || request.script.trim_start().starts_with("switch ")
+            || request.script.trim_start().starts_with("switch(")
+            || request.script.trim_start().starts_with("throw ")
+            || request.script.trim_start().starts_with("try ")
+            || request.script.trim_start().starts_with("try{");
             // Only prepend "return" for pure expressions (no statements, no existing return at start)
             // Use starts_with("return") not contains("return") to avoid false positives like "returnData"
-            let has_semicolon = request.script.trim_start().starts_with("const ")
-                || request.script.trim_start().starts_with("let ")
-                || request.script.trim_start().starts_with("var ");
             let has_return = request.script.trim_start().starts_with("return");
-            let body = if !has_semicolon && !has_return {
+            let body = if !has_statement && !has_return {
                 // Pure expression - add return so it evaluates and returns
                 format!("return {};", request.script)
             } else {
