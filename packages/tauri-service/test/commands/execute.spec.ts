@@ -359,7 +359,7 @@ describe('executeTauriCommand', () => {
     browser = createMockBrowser();
   });
 
-  it('should embed command and args in script string instead of using closure', async () => {
+  it('should pass command and args as function arguments, not closure references', async () => {
     const mockExecute = vi.fn();
     mockExecute.mockResolvedValueOnce(true); // plugin check
     mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'test-result' }));
@@ -367,14 +367,13 @@ describe('executeTauriCommand', () => {
 
     await executeTauriCommand<string>(browser, 'get_version', 'arg1', 42);
 
-    // The second call is the actual execute - verify the script embeds the command/args
+    // The second call is the actual execute - verify command and args are passed as separate arguments
+    // This ensures they don't become closure references in the serialized script
     const secondCall = mockExecute.mock.calls[1];
-    const scriptArg = secondCall[1] as string;
-    expect(scriptArg).toContain('"get_version"');
-    expect(scriptArg).toContain('"arg1"');
-    expect(scriptArg).toContain('42');
-    // Should NOT contain the variable name 'command' (which would indicate closure reference)
-    expect(scriptArg).not.toContain('command');
+    // Script is converted to string by execute(), but command and args are passed separately
+    expect(secondCall[1]).toBe('({ core }, invokeCommand, invokeArgs) => core.invoke(invokeCommand, ...invokeArgs)');
+    expect(secondCall[2]).toBe('get_version');
+    expect(secondCall[3]).toEqual(['arg1', 42]);
   });
 
   it('should return ok result on success', async () => {
