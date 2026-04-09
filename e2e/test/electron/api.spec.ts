@@ -83,6 +83,56 @@ describe('Electron APIs', () => {
       );
     });
 
+    describe('execute - different script types', () => {
+      it('should execute function with args (with-args branch)', async () => {
+        const result = await browser.electron.execute(
+          (electron, arg1, arg2) => {
+            return { appName: electron.app.getName(), arg1, arg2 };
+          },
+          'first',
+          'second',
+        );
+        expect(result.appName).toBeDefined();
+        expect(result.arg1).toBe('first');
+        expect(result.arg2).toBe('second');
+      });
+
+      it('should execute statement-style string (return statement)', async () => {
+        const result = await browser.electron.execute('return 42');
+        expect(result).toBe(42);
+      });
+
+      it('should execute expression-style string', async () => {
+        const result = await browser.electron.execute('1 + 2 + 3');
+        expect(result).toBe(6);
+      });
+
+      it('should execute string with variable declaration', async () => {
+        const result = await browser.electron.execute(`
+          const x = 10;
+          const y = 20;
+          return x + y;
+        `);
+        expect(result).toBe(30);
+      });
+
+      it('should execute function without args', async () => {
+        const result = await browser.electron.execute((electron) => {
+          return { name: electron.app.getName() };
+        });
+        expect(result.name).toBeDefined();
+      });
+
+      it('should execute async function with args', async () => {
+        const result = await browser.electron.execute(async (electron, value) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return { received: value, appName: electron.app.getName() };
+        }, 'async-test');
+        expect(result.received).toBe('async-test');
+        expect(result.appName).toBeDefined();
+      });
+    });
+
     describe('workaround for TSX issue', () => {
       // Tests for the following issue - can be removed when the TSX issue is resolved
       // https://github.com/webdriverio-community/wdio-electron-service/issues/756
