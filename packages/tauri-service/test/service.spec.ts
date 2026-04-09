@@ -112,16 +112,20 @@ describe('TauriWorkerService', () => {
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should pass function scripts as-is for non-embedded providers', () => {
+    it('should pass function scripts as-is for non-embedded providers using executeAsync', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({ driverProvider: 'official' }, { 'wdio:tauriServiceOptions': {} });
 
       (service as any).patchBrowserExecute(mockBrowser);
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      expect(mockExecute).toHaveBeenCalledWith(expect.stringContaining('(a, b) => a + b'), 1, 2);
+      // Functions should use executeAsync for WebKit compatibility
+      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('(a, b) => a + b'), 1, 2);
+      // execute should NOT be called
+      expect(mockExecute).not.toHaveBeenCalled();
     });
 
     it('should pass string scripts as-is for embedded provider', () => {
@@ -179,27 +183,32 @@ describe('TauriWorkerService', () => {
 
     it('should wait for plugin initialization on standard browser', async () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
 
       await service.before({} as any, [], mockBrowser);
 
-      expect(mockExecute).toHaveBeenCalled();
+      // For non-embedded providers, executeAsync is used (WebKit compatibility)
+      expect(mockExecuteAsync).toHaveBeenCalled();
     });
 
     it('should skip plugin initialization wait for crabnebula driver provider', async () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({ driverProvider: 'crabnebula' }, { 'wdio:tauriServiceOptions': {} });
 
       await service.before({} as any, [], mockBrowser);
 
+      // CrabNebula skips the plugin initialization wait entirely
       expect(mockExecute).not.toHaveBeenCalled();
+      expect(mockExecuteAsync).not.toHaveBeenCalled();
     });
 
     it('should handle plugin initialization error gracefully', async () => {
-      const mockExecute = vi.fn().mockRejectedValue(new Error('plugin not ready'));
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
 
       await expect(service.before({} as any, [], mockBrowser)).resolves.not.toThrow();

@@ -329,12 +329,25 @@ export default class TauriWorkerService {
       // For strings: pass as-is (let the WebDriver handle it, or use executeAsync for async results)
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
-      // For non-embedded (tauri-driver/official): use sync execute with console wrapper
-      // Different wrapping for functions vs strings - functions use .apply(), strings need executeAsync
-      // because WebDriver sync execute doesn't await Promises
+      // For non-embedded (tauri-driver/official): use executeAsync for both functions and strings
+      // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute
       if (typeof script === 'function') {
-        const wrappedScript = `\n${CONSOLE_WRAPPER_SCRIPT}\nreturn (${scriptString}).apply(null, arguments);\n`;
-        return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
+        // Function scripts: use executeAsync with .then() callbacks to handle async results
+        const wrappedScript = `
+            ${CONSOLE_WRAPPER_SCRIPT}
+            (${scriptString}).apply(null, arguments).then(
+                (r) => arguments[arguments.length-1](r),
+                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+            );
+        `;
+        const asyncResult = await (originalExecuteAsync as (script: string, ...a: unknown[]) => Promise<unknown>)(
+          wrappedScript,
+          ...args,
+        );
+        if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+          throw new Error((asyncResult as { __wdio_error__: string }).__wdio_error__);
+        }
+        return asyncResult as ReturnValue;
       } else {
         // For strings: use executeAsync with explicit done callback
         // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
