@@ -70,8 +70,11 @@ pub(crate) async fn execute<R: Runtime>(
             request.script, args_json
         )
     } else {
-        // No args - preserve the script expression and evaluate it below
-        request.script.clone()
+        // No args - wrap in block-body IIFE to handle statement-style scripts like "return document.title"
+        format!(
+            "(async () => {{ {0} }})()",
+            request.script
+        )
     };
 
     // Generate unique event ID for this execution
@@ -128,13 +131,10 @@ pub(crate) async fn execute<R: Runtime>(
                     throw new Error('window.__TAURI__.core.invoke not available after timeout');
                 }}
 
-                // Execute the user's script.
-                // If expression resolves to a function, call it with Tauri APIs.
-                // Otherwise, await the value directly.
+                // Execute the user's script (already wrapped in both branches)
+                // Both with-args and no-args paths return a complete async IIFE
                 const __wdio_script = ({});
-                const result = typeof __wdio_script === 'function'
-                    ? await __wdio_script({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event }})
-                    : await __wdio_script;
+                const result = await __wdio_script;
 
                 // Emit the result using the current window's event emitter
                 // This ensures the event goes to the same window where we're listening
