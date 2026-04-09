@@ -103,7 +103,9 @@ pub(crate) async fn execute<R: Runtime>(
             || request.script.trim_start().starts_with("switch(")
             || request.script.trim_start().starts_with("throw ")
             || request.script.trim_start().starts_with("try ")
-            || request.script.trim_start().starts_with("try{");
+            || request.script.trim_start().starts_with("try{")
+            || request.script.trim_start().starts_with("do ")
+            || request.script.trim_start().starts_with("do{");
             // Only prepend "return" for pure expressions (no statements, no existing return at start)
             // Use starts_with("return") not contains("return") to avoid false positives like "returnData"
             let has_return = request.script.trim_start().starts_with("return");
