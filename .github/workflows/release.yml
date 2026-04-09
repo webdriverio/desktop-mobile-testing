@@ -75,6 +75,7 @@ jobs:
         uses: goosewobbler/releasekit@v0.12.0
         with:
           mode: gate
+          project-dir: .
           branch: main
           json: 'true'
           summary: 'true'
