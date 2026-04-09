@@ -81,10 +81,18 @@ pub(crate) async fn execute<R: Runtime>(
                 request.script
             )
         } else {
-            // Statement-style script - wrap in block-body IIFE
+            // Statement/expression-style script - wrap in block-body IIFE
+            // Prepend "return" if not present, so expressions like "1 + 2" return their value
+            let script_trimmed = request.script.trim_start();
+            let needs_return = !script_trimmed.starts_with("return");
+            let body = if needs_return {
+                format!("return {};", request.script)
+            } else {
+                request.script.clone()
+            };
             format!(
                 "(async () => {{ {0} }})()",
-                request.script
+                body
             )
         }
     };
