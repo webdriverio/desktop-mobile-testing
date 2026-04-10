@@ -70,13 +70,45 @@ pub(crate) async fn execute<R: Runtime>(
             .map(|ch| ch.is_whitespace() || ch == '(')
             .unwrap_or(false)
     };
-    // Detect arrow functions at START of script:
+
+    // Check if => appears outside of string literals (to avoid false positives like "foo"=>"bar")
+    fn contains_arrow_outside_quotes(s: &str) -> bool {
+        let mut in_single_quote = false;
+        let mut in_double_quote = false;
+        let mut in_backtick = false;
+
+        for (i, c) in s.char_indices() {
+            // Skip escaped characters
+            if i > 0 && s.chars().nth(i - 1) == Some('\\') {
+                continue;
+            }
+
+            // Track quote state
+            if c == '\'' && !in_double_quote && !in_backtick {
+                in_single_quote = !in_single_quote;
+            } else if c == '"' && !in_single_quote && !in_backtick {
+                in_double_quote = !in_double_quote;
+            } else if c == '`' && !in_single_quote && !in_double_quote {
+                in_backtick = !in_backtick;
+            }
+
+            // Check for => outside of quotes
+            if c == '=' && !in_single_quote && !in_double_quote && !in_backtick {
+                if s.len() > i + 1 && s.chars().nth(i + 1) == Some('>') {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    // Check for arrow functions at START of script:
     // - "(args) => ..." (parenthesized params)
     // - "param => ..." (single param, alphanumeric start)
-    // Don't use contains("=>") as it falsely catches expressions like "return items.filter(x => x > 0).length"
-    let starts_with_paren_arrow = trimmed.starts_with('(') && trimmed.contains("=>");
+    // Only detect arrows that are NOT inside string literals
+    let starts_with_paren_arrow = trimmed.starts_with('(') && contains_arrow_outside_quotes(trimmed);
     let single_param_arrow = trimmed.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
-        && trimmed.contains("=>")
+        && contains_arrow_outside_quotes(trimmed)
         && trimmed.find("=>").map(|pos| {
             let before = trimmed[..pos].trim();
             // Single param: alphanumeric chars only, no spaces (except for the param name)
