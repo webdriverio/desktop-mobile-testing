@@ -91,16 +91,18 @@ pub(crate) async fn execute<R: Runtime>(
 
     let script = if !request.args.is_empty() && is_function {
         // With args + callable function: inject Tauri APIs and pass user args
+        // Must await the result because core.invoke returns a Promise
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
         format!(
-            "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
+            "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return await __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
             request.script, args_json
         )
     } else if is_function {
         // Function script (no args): call it with Tauri APIs injected
+        // Must await the result because core.invoke returns a Promise
         format!(
-            "(function() {{ return ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
+            "(function() {{ return await ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
             request.script
         )
     } else if !request.args.is_empty() {
