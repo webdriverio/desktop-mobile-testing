@@ -109,8 +109,15 @@ describe('execute Command', () => {
     });
   });
 
-  it('should throw error when pass not function definition', async () => {
-    await expect(() => execute(globalThis.browser, client, 'const a = 1')).rejects.toThrowError();
+  it('should wrap statement-style string scripts in async IIFE', async () => {
+    // Statements like 'const a = 1' are now wrapped and executed properly (no longer throw)
+    await execute(globalThis.browser, client, 'const a = 1');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringContaining('(async () => { const a = 1 })()'),
+      }),
+    );
   });
 
   it('should call `mock.update()` when mockStore has some mocks', async () => {

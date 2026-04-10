@@ -47,9 +47,27 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     return undefined;
   }
 
-  // Handle string scripts - convert to string and let the normal parsing handle them
-  // The parsing will fail for non-function strings, which is the expected behavior
-  const functionDeclaration = getCachedOrParse(typeof script === 'string' ? script : script.toString());
+  // Handle string scripts - wrap them in async IIFE before parsing
+  // This prevents recast from trying to parse them as function definitions
+  // Only pass through to recast if it's clearly a function-like string that needs transformation
+  let functionDeclaration: string;
+  if (typeof script === 'string') {
+    const trimmed = script.trim();
+    // Only let recast handle arrow functions starting with ( and containing =>
+    // These get transformed to add electron parameter
+    const isArrowFunction = trimmed.startsWith('(') && trimmed.includes('=>') && !trimmed.includes('function');
+
+    if (isArrowFunction) {
+      // Arrow function - recast handles electron param injection
+      functionDeclaration = getCachedOrParse(script);
+    } else {
+      // Not a simple arrow function - wrap it ourselves
+      functionDeclaration = wrapStringScriptForCdp(script);
+    }
+  } else {
+    functionDeclaration = getCachedOrParse(script.toString());
+  }
+
   const argsArray = args.map((arg) => ({ value: arg }));
 
   log.debug('Executing script length:', Buffer.byteLength(functionDeclaration, 'utf-8'));
@@ -65,6 +83,72 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   await syncMockStatus(args);
 
   return (result.result.value as ReturnValue) ?? undefined;
+}
+
+/**
+ * Wrap string scripts in async IIFE for proper CDP execution
+ * Handles statement and expression scripts that would otherwise fail parsing
+ */
+function wrapStringScriptForCdp(script: string): string {
+  const trimmed = script.trim();
+
+  // Check if it's a simple arrow function that can be transformed by recast
+  // These patterns can be safely passed to recast which adds the electron parameter
+  const canRecastHandle = trimmed.startsWith('(') && trimmed.includes('=>') && !trimmed.includes('function');
+
+  if (canRecastHandle) {
+    // Simple arrow function - pass to recast for transformation
+    return script;
+  }
+
+  // For all other strings, wrap them to avoid parsing errors
+  // This includes:
+  // - "function() {}" (recast handles these differently)
+  // - "1 + 2 + 3" (expression - would be called as function)
+  // - "return 42" (statement - parsing error)
+  // - "const x = 1" (statement - parsing error)
+
+  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
+  const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
+
+  if (hasRealSemicolon || hasStatementKeyword) {
+    return `(async () => { ${script} })()`;
+  } else {
+    return `(async () => { return ${script}; })()`;
+  }
+}
+
+function hasSemicolonOutsideQuotes(str: string): boolean {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplateLiteral = false;
+  let bracketDepth = 0;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    const prevChar = i > 0 ? str[i - 1] : '';
+
+    if (prevChar === '\\') continue;
+
+    if (char === "'" && !inDoubleQuote && !inTemplateLiteral) {
+      inSingleQuote = !inSingleQuote;
+    } else if (char === '"' && !inSingleQuote && !inTemplateLiteral) {
+      inDoubleQuote = !inDoubleQuote;
+    } else if (char === '`' && !inSingleQuote && !inDoubleQuote) {
+      inTemplateLiteral = !inTemplateLiteral;
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
+      if (char === '{' || char === '[' || char === '(') bracketDepth++;
+      if (char === '}' || char === ']' || char === ')') bracketDepth--;
+    }
+
+    if (char === ';' && bracketDepth === 0 && !inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function syncMockStatus(args: unknown[]) {
