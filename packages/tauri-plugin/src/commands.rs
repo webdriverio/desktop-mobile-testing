@@ -78,9 +78,24 @@ pub(crate) async fn execute<R: Runtime>(
         let mut in_backtick = false;
 
         for (i, c) in s.char_indices() {
-            // Skip escaped characters
-            if i > 0 && s.chars().nth(i - 1) == Some('\\') {
-                continue;
+            // Check for escape sequences - count consecutive backslashes before this position
+            // Odd number of backslashes means the character is escaped
+            if c != '=' {
+                let mut backslash_count = 0;
+                let mut j = i;
+                while j > 0 {
+                    let prev_char = s.chars().nth(j - 1);
+                    if prev_char == Some('\\') {
+                        backslash_count += 1;
+                        j -= 1;
+                    } else {
+                        break;
+                    }
+                }
+                // Skip this character if it's preceded by an odd number of backslashes
+                if backslash_count % 2 == 1 {
+                    continue;
+                }
             }
 
             // Track quote state

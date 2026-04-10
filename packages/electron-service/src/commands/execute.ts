@@ -83,10 +83,21 @@ function hasSemicolonOutsideQuotes(str: string): boolean {
 
   for (let i = 0; i < str.length; i++) {
     const char = str[i];
-    const prevChar = i > 0 ? str[i - 1] : '';
 
-    // Handle escape sequences
-    if (prevChar === '\\') continue;
+    // Handle escape sequences - count consecutive backslashes before this char
+    // Odd number of backslashes means the character is escaped
+    if (char !== '\\') {
+      let backslashCount = 0;
+      let j = i - 1;
+      while (j >= 0 && str[j] === '\\') {
+        backslashCount++;
+        j--;
+      }
+      if (backslashCount % 2 === 1) {
+        // Odd backslashes = escaped character, skip
+        continue;
+      }
+    }
 
     // Track quote states
     if (char === "'" && !inDoubleQuote && !inTemplateLiteral) {
