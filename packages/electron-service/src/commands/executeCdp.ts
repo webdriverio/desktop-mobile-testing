@@ -47,7 +47,9 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     return undefined;
   }
 
-  const functionDeclaration = getCachedOrParse(script.toString());
+  // Handle string scripts - convert to string and let the normal parsing handle them
+  // The parsing will fail for non-function strings, which is the expected behavior
+  const functionDeclaration = getCachedOrParse(typeof script === 'string' ? script : script.toString());
   const argsArray = args.map((arg) => ({ value: arg }));
 
   log.debug('Executing script length:', Buffer.byteLength(functionDeclaration, 'utf-8'));
