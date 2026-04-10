@@ -82,9 +82,9 @@ pub(crate) async fn execute<R: Runtime>(
             // Single param: alphanumeric chars only, no spaces (except for the param name)
             !before.is_empty() && !before.contains(' ')
         }).unwrap_or(false);
-    let is_function = trimmed.starts_with('(') 
-        || has_keyword_prefix(trimmed, "function") 
-        || has_keyword_prefix(trimmed, "function*") 
+    let is_function = trimmed.starts_with('(')
+        || has_keyword_prefix(trimmed, "function")
+        || has_keyword_prefix(trimmed, "function*")
         || has_keyword_prefix(trimmed, "async")
         || starts_with_paren_arrow
         || single_param_arrow;
@@ -95,14 +95,14 @@ pub(crate) async fn execute<R: Runtime>(
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
         format!(
-            "(function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return await __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
+            "(async function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return await __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
             request.script, args_json
         )
     } else if is_function {
         // Function script (no args): call it with Tauri APIs injected
         // Must await the result because core.invoke returns a Promise
         format!(
-            "(function() {{ return await ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
+            "(async function() {{ return await ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
             request.script
         )
     } else if !request.args.is_empty() {
