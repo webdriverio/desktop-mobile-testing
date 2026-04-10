@@ -166,29 +166,9 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
         })()
       `.trim();
     } else {
-      // Expression/statement script - evaluate directly without function call
-      // Pass __wdio_args for compatibility, but don't call script as function
-      wrappedScript = `
-        (async () => {
-          const __wdio_tauri = window.__TAURI__;
-          const __wdio_args = ${argsJson};
-
-          // Wait for window.__TAURI__.core.invoke to be available
-          if (!__wdio_tauri?.core?.invoke) {
-            const startTime = Date.now();
-            const timeout = 5000;
-            while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
-              await new Promise(resolve => setTimeout(resolve, 50));
-            }
-            if (!__wdio_tauri?.core?.invoke) {
-              throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
-            }
-          }
-
-          // Evaluate expression/statement directly
-          return await (async () => { ${script} })();
-        })()
-      `.trim();
+      // Expression/statement script - pass through to Rust plugin for proper wrapping
+      // The Rust plugin will handle adding return statements and async wrapping
+      wrappedScript = script;
     }
 
     // Call the plugin command to execute the wrapped script
