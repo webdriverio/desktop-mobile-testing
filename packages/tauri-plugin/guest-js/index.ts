@@ -166,9 +166,8 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
         })()
       `.trim();
     } else {
-      // Expression/statement script - pass through to Rust plugin for proper wrapping
-      // The Rust plugin will handle adding return statements and async wrapping
-      wrappedScript = script;
+      // Expression/statement script - wrap with return for proper evaluation
+      wrappedScript = `(async () => { return ${script}; })()`;
     }
 
     // Call the plugin command to execute the wrapped script
