@@ -60,8 +60,8 @@ function wrapStringScript(script: string): string {
   // Only count semicolons outside of quotes/brackets
   const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
   // Match statement keywords at start: const, let, var, if, for, while, switch, throw, try, do
-  // Also catch return followed by ( or whitespace (e.g., "return 42" or "return(expr)")
-  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return[(\s])/.test(trimmed);
+  // Use word boundary check to avoid matching expressions like "document.title" (do) or "forEach()" (for)
+  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
 
   if (hasRealSemicolon || hasStatementKeyword) {
     // Multi-statement or statement-style script - wrap in async IIFE
