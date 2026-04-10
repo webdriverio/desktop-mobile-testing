@@ -128,35 +128,68 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
     // Serialize args to pass them to the plugin
     const argsJson = JSON.stringify(args);
 
-    // Wrap the script to inject the Tauri APIs object as the first argument
-    // The script is a function string that expects tauri APIs as first parameter
-    // We need to wrap it to call it with window.__TAURI__ as the first argument
-    // Note: We can't JSON.stringify window.__TAURI__ because it contains functions
-    // Instead, we reference it directly in the wrapped script
-    const wrappedScript = `
-      (async () => {
-        const __wdio_tauri = window.__TAURI__;
-        const __wdio_args = ${argsJson};
+    // Check if script is a function-like string that needs Tauri API injection
+    // Function-like: starts with (, function, async, or single-param arrow like "x =>"
+    // Non-function: expressions like "1 + 2 + 3", statements like "return 42"
+    const trimmedScript = script.trim();
+    const isFunctionLike =
+      trimmedScript.startsWith('(') ||
+      trimmedScript.startsWith('function') ||
+      trimmedScript.startsWith('async') ||
+      /^(\w+)\s*=>/.test(trimmedScript) ||
+      (trimmedScript.startsWith('(') && trimmedScript.includes('=>'));
 
-        // Wait for window.__TAURI__.core.invoke to be available
-        // This handles the race condition where window.eval() runs before dynamic imports complete
-        if (!__wdio_tauri?.core?.invoke) {
-          // Wait up to 5 seconds for core.invoke to be set up
-          const startTime = Date.now();
-          const timeout = 5000;
-          while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
+    // Wrap the script appropriately based on type
+    let wrappedScript: string;
+
+    if (isFunctionLike) {
+      // Function-like script - wrap with Tauri API injection
+      wrappedScript = `
+        (async () => {
+          const __wdio_tauri = window.__TAURI__;
+          const __wdio_args = ${argsJson};
+
+          // Wait for window.__TAURI__.core.invoke to be available
           if (!__wdio_tauri?.core?.invoke) {
-            throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
+            const startTime = Date.now();
+            const timeout = 5000;
+            while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            if (!__wdio_tauri?.core?.invoke) {
+              throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
+            }
           }
-        }
 
-        // Execute the script as a function with tauri as first arg, then spread additional args
-        // Await the result in case it's a Promise (most Tauri commands return Promises)
-        return await (${script})(__wdio_tauri, ...__wdio_args);
-      })()
-    `.trim();
+          // Execute as function with Tauri APIs
+          return await (${script})(__wdio_tauri, ...__wdio_args);
+        })()
+      `.trim();
+    } else {
+      // Expression/statement script - evaluate directly without function call
+      // Pass __wdio_args for compatibility, but don't call script as function
+      wrappedScript = `
+        (async () => {
+          const __wdio_tauri = window.__TAURI__;
+          const __wdio_args = ${argsJson};
+
+          // Wait for window.__TAURI__.core.invoke to be available
+          if (!__wdio_tauri?.core?.invoke) {
+            const startTime = Date.now();
+            const timeout = 5000;
+            while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            if (!__wdio_tauri?.core?.invoke) {
+              throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
+            }
+          }
+
+          // Evaluate expression/statement directly
+          return await (async () => { ${script} })();
+        })()
+      `.trim();
+    }
 
     // Call the plugin command to execute the wrapped script
     // Tauri v2 plugin commands use format: plugin:plugin-name|command-name
