@@ -54,15 +54,58 @@ function wrapStringScript(script: string): string {
     return script;
   }
 
-  // Check if script has statements (semicolons or statement keywords at start)
-  const hasSemicolon = trimmed.includes(';');
-  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)\s/.test(trimmed);
+  // Check if script has statements - be smarter about semicolons and keywords
+  // Only count semicolons outside of quotes/brackets
+  const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
+  // Match statement keywords at start: const, let, var, if, for, while, switch, throw, try, do
+  // Also catch return followed by ( or whitespace (e.g., "return 42" or "return(expr)")
+  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return[(\s])/.test(trimmed);
 
-  if (hasSemicolon || hasStatementKeyword) {
+  if (hasRealSemicolon || hasStatementKeyword) {
     // Multi-statement or statement-style script - wrap in async IIFE
     return `(async () => { ${script} })()`;
   } else {
     // Pure expression - add return and wrap in async IIFE
     return `(async () => { return ${script}; })()`;
   }
+}
+
+/**
+ * Check for semicolons outside of string literals and template literals
+ */
+function hasSemicolonOutsideQuotes(str: string): boolean {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplateLiteral = false;
+  let bracketDepth = 0;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    const prevChar = i > 0 ? str[i - 1] : '';
+
+    // Handle escape sequences
+    if (prevChar === '\\') continue;
+
+    // Track quote states
+    if (char === "'" && !inDoubleQuote && !inTemplateLiteral) {
+      inSingleQuote = !inSingleQuote;
+    } else if (char === '"' && !inSingleQuote && !inTemplateLiteral) {
+      inDoubleQuote = !inDoubleQuote;
+    } else if (char === '`' && !inSingleQuote && !inDoubleQuote) {
+      inTemplateLiteral = !inTemplateLiteral;
+    }
+
+    // Track bracket depth (for handling object/array literals inside quotes)
+    if (!inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
+      if (char === '{' || char === '[' || char === '(') bracketDepth++;
+      if (char === '}' || char === ']' || char === ')') bracketDepth--;
+    }
+
+    // Check for semicolon outside of quotes/brackets
+    if (char === ';' && bracketDepth === 0 && !inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
+      return true;
+    }
+  }
+
+  return false;
 }

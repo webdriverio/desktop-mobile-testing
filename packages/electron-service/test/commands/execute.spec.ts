@@ -77,4 +77,46 @@ describe('execute Command', () => {
     await execute(globalThis.browser, script);
     expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), script);
   });
+
+  it('should wrap expression-style string scripts in async IIFE with return', async () => {
+    await execute(globalThis.browser, '1 + 2 + 3');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return 1 + 2 + 3; })()'),
+    );
+  });
+
+  it('should wrap statement-style string scripts in async IIFE without adding return', async () => {
+    await execute(globalThis.browser, 'return 42');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return 42 })()'),
+    );
+  });
+
+  it('should wrap multi-statement string scripts in async IIFE', async () => {
+    await execute(globalThis.browser, 'const x = 10; const y = 20; return x + y;');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => {'),
+    );
+  });
+
+  it('should handle return(expr) pattern without adding extra return', async () => {
+    // return() pattern should be treated as statement, not expression
+    await execute(globalThis.browser, 'return(document.title)');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return(document.title) })()'),
+    );
+  });
+
+  it('should not false-positive on semicolons inside string literals', async () => {
+    // Semicolons inside string literals should not trigger statement detection
+    await execute(globalThis.browser, '"foo;bar"');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return "foo;bar"; })()'),
+    );
+  });
 });
