@@ -119,4 +119,28 @@ describe('execute Command', () => {
       expect.stringContaining('(async () => { return "foo;bar"; })()'),
     );
   });
+
+  it('should treat document.title as expression (do prefix false positive)', async () => {
+    // "document.title" starts with "do" but is NOT a statement - should add return
+    await execute(globalThis.browser, 'document.title');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return document.title; })()'),
+    );
+  });
+
+  it('should treat forEach() as expression (for prefix false positive)', async () => {
+    // "[1,2,3].forEach()" starts with "for" but is NOT a statement - should add return
+    await execute(globalThis.browser, '[1,2,3].forEach(x => x)');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), expect.stringContaining('return'));
+  });
+
+  it('should treat trySomething() as expression (try prefix false positive)', async () => {
+    // "trySomething()" starts with "try" but is NOT a statement - should add return
+    await execute(globalThis.browser, 'trySomething()');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return trySomething(); })()'),
+    );
+  });
 });
