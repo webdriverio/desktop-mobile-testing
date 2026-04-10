@@ -43,11 +43,13 @@ function wrapStringScript(script: string): string {
   const trimmed = script.trim();
 
   // Check if it's a function-like string (should be passed through as-is)
+  // Only match single-param arrow at START of script (e.g., "x => x + 1")
+  // Don't match arrows inside expressions like "return items.filter(x => x > 0)"
   const isFunctionLike =
     trimmed.startsWith('(') ||
     trimmed.startsWith('function') ||
     trimmed.startsWith('async') ||
-    /\w+\s*=>/.test(trimmed); // single-param arrow like "x => x + 1"
+    /^(\w+)\s*=>/.test(trimmed); // single-param arrow at START like "x => x + 1"
 
   if (isFunctionLike) {
     // Function-like string - pass through as-is (CDP can handle it)
