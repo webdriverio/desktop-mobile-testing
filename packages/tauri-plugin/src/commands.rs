@@ -82,9 +82,10 @@ pub(crate) async fn execute<R: Runtime>(
             // Single param: alphanumeric chars only, no spaces (except for the param name)
             !before.is_empty() && !before.contains(' ')
         }).unwrap_or(false);
-    let is_function = trimmed.starts_with('(')
-        || has_keyword_prefix(trimmed, "function")
-        || has_keyword_prefix(trimmed, "function*")
+    // Only detect function-like patterns: function, async, arrow functions
+    // Don't use starts_with('(') as it catches any parenthesized expression like (document.title)
+    let is_function = has_keyword_prefix(trimmed, "function") 
+        || has_keyword_prefix(trimmed, "function*") 
         || has_keyword_prefix(trimmed, "async")
         || starts_with_paren_arrow
         || single_param_arrow;
