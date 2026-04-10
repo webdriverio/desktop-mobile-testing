@@ -91,21 +91,14 @@ pub(crate) async fn execute<R: Runtime>(
         || single_param_arrow;
 
     let script = if !request.args.is_empty() && is_function {
-        // With args + callable function: inject Tauri APIs and pass user args
-        // Must await the result because core.invoke returns a Promise
-        let args_json = serde_json::to_string(&request.args)
-            .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
-        format!(
-            "(async function() {{ const __wdio_fn = ({}); const __wdio_args = {}; return await __wdio_fn({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}, ...__wdio_args); }})()",
-            request.script, args_json
-        )
+        // With args + callable function - pass through as-is
+        // Guest-js already handles wrapping with Tauri API injection
+        // The script parameter already contains the user's function
+        request.script.clone()
     } else if is_function {
-        // Function script (no args): call it with Tauri APIs injected
-        // Must await the result because core.invoke returns a Promise
-        format!(
-            "(async function() {{ return await ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
-            request.script
-        )
+        // Function script with no args - pass through as-is
+        // Guest-js already wraps it with proper Tauri API injection
+        request.script.clone()
     } else if !request.args.is_empty() {
         // String script with args (not a callable function) - return error
         return Err(crate::Error::ExecuteError(
