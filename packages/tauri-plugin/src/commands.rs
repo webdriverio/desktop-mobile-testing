@@ -90,6 +90,7 @@ pub(crate) async fn execute<R: Runtime>(
         || single_param_arrow;
 
     let script = if !request.args.is_empty() && is_function {
+        // With args + callable function: inject Tauri APIs and pass user args
         let args_json = serde_json::to_string(&request.args)
             .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
         format!(
@@ -97,11 +98,16 @@ pub(crate) async fn execute<R: Runtime>(
             request.script, args_json
         )
     } else if is_function {
-        // Function script - call it with Tauri APIs injected
+        // Function script (no args): call it with Tauri APIs injected
         format!(
             "(function() {{ return ({})({{ core: window.__TAURI__?.core, event: window.__TAURI__?.event, log: window.__TAURI__?.log }}); }})()",
             request.script
         )
+    } else if !request.args.is_empty() {
+        // String script with args (not a callable function) - return error
+        return Err(crate::Error::ExecuteError(
+            "browser.execute(string, args) is not supported. Use browser.execute(function, ...args) instead.".to_string(),
+        ));
     } else {
         // Statement/expression-style script - wrap in block-body IIFE
         let has_statement = request.script.trim_start().starts_with("const ")
