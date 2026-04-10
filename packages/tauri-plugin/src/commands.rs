@@ -125,7 +125,6 @@ pub(crate) async fn execute<R: Runtime>(
     let script = if !request.args.is_empty() && is_function {
         // With args + callable function - pass through as-is
         // Guest-js already handles wrapping with Tauri API injection
-        // The script parameter already contains the user's function
         request.script.clone()
     } else if is_function {
         // Function script with no args - pass through as-is
