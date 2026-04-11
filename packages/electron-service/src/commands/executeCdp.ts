@@ -112,9 +112,9 @@ function wrapStringScriptForCdp(script: string): string {
   const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
 
   if (hasRealSemicolon || hasStatementKeyword) {
-    return `(async () => { ${script} })()`;
+    return `async () => { ${script} }`;
   } else {
-    return `(async () => { return ${script}; })()`;
+    return `async () => { return ${script}; }`;
   }
 }
 

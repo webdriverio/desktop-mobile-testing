@@ -115,7 +115,7 @@ describe('execute Command', () => {
     expect(client.send).toHaveBeenCalledWith(
       'Runtime.callFunctionOn',
       expect.objectContaining({
-        functionDeclaration: expect.stringContaining('(async () => { const a = 1 })()'),
+        functionDeclaration: expect.stringContaining('async () => { const a = 1 }'),
       }),
     );
   });
