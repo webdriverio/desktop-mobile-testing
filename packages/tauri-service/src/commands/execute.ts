@@ -70,14 +70,10 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   // For strings: send as-is (Rust handles proper escaping when args present)
   const scriptString = typeof script === 'function' ? script.toString() : script;
 
-  // Execute via plugin's execute command with better error handling
-  // The plugin will inject the Tauri APIs object as the first argument
+  // Execute via plugin's execute method
+  // The plugin handles CSP-compliant script execution in the backend
   const result = await browser.execute(
-    async function executeWithinTauri(script: string, ...args) {
-      // @ts-expect-error - Running in browser context
-      if (typeof window === 'undefined') {
-        return JSON.stringify({ __wdio_error__: 'window is undefined' });
-      }
+    async function executeViaPlugin(script: string, ...scriptArgs: unknown[]) {
       // @ts-expect-error - Running in browser context
       if (typeof window.wdioTauri === 'undefined') {
         return JSON.stringify({ __wdio_error__: 'window.wdioTauri is undefined' });
@@ -87,24 +83,14 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
         // @ts-expect-error - Running in browser context
         return JSON.stringify({ __wdio_error__: `window.wdioTauri.execute is ${typeof window.wdioTauri.execute}` });
       }
+
       try {
         // @ts-expect-error - Running in browser context
-        const execResult = window.wdioTauri.execute(script, ...args);
-        // Handle Promise results - await them in browser context
-        if (execResult && typeof execResult.then === 'function') {
-          try {
-            const awaited = await execResult;
-            return JSON.stringify({ __wdio_value__: awaited });
-          } catch (promiseError) {
-            return JSON.stringify({
-              __wdio_error__: `Promise error: ${promiseError instanceof Error ? promiseError.message : String(promiseError)}`,
-            });
-          }
-        }
-        return JSON.stringify({ __wdio_value__: execResult });
+        const pluginResult = await window.wdioTauri.execute(script, ...scriptArgs);
+        return JSON.stringify({ __wdio_value__: pluginResult });
       } catch (error) {
         return JSON.stringify({
-          __wdio_error__: `Execute call error: ${error instanceof Error ? error.message : String(error)}`,
+          __wdio_error__: `Plugin execute error: ${error instanceof Error ? error.message : String(error)}`,
         });
       }
     },
