@@ -1,6 +1,7 @@
 use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
+use tokio::sync::oneshot;
 
 use crate::models::ExecuteRequest;
 use crate::Result;
@@ -56,7 +57,7 @@ pub(crate) async fn execute<R: Runtime>(
 
     // Use tokio's async oneshot channel for async waiting
     // Wrap sender in Arc<Mutex<Option>> so the Fn closure can take it once
-    let (tx, rx) = tokio::sync::oneshot::channel();
+    let (tx, rx) = tokio::sync::oneshot::channel::<crate::Result<JsonValue>>();
     let tx = Arc::new(Mutex::new(Some(tx)));
 
     // Build the script with args if offered.
@@ -192,15 +193,12 @@ pub(crate) async fn execute<R: Runtime>(
     let event_id = format!("wdio-result-{}", Uuid::new_v4());
     log::trace!("Generated event_id for result: {}", event_id);
 
-    // Listen for the result event using the window's event listener
-    // The JavaScript uses window.__TAURI__.event.emit() which emits to the window target
-    // So we listen on the window target
-    let tx_clone = Arc::clone(&tx);
-    let listener_id = window.listen(&event_id, move |event| {
+    // Helper function to handle events
+    fn handle_event(event: tauri::Event, tx: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>>) {
         log::trace!("Received result event payload: {}", event.payload());
 
         // Take the sender from the Option (only the first call will succeed)
-        let tx = match tx_clone.lock().ok().and_then(|mut guard| guard.take()) {
+        let tx = match tx.lock().ok().and_then(|mut guard| guard.take()) {
             Some(tx) => tx,
             None => {
                 log::warn!("Event received but sender already taken, ignoring");
@@ -222,6 +220,21 @@ pub(crate) async fn execute<R: Runtime>(
                 }
             }
         }
+    }
+
+    // Listen for the result event on both app and window targets for compatibility
+    // Different Tauri providers may emit to different targets
+    let tx_clone_app: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>> = Arc::clone(&tx);
+    let tx_clone_window: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>> = Arc::clone(&tx);
+
+    let listener_id_app = app.listen(&event_id.clone(), move |event| {
+        log::trace!("Received result event on app target: {}", event.payload());
+        handle_event(event, tx_clone_app.clone());
+    });
+
+    let listener_id_window = window.listen(&event_id, move |event| {
+        log::trace!("Received result event on window target: {}", event.payload());
+        handle_event(event, tx_clone_window.clone());
     });
 
     // Wrap the script to:
@@ -288,7 +301,8 @@ pub(crate) async fn execute<R: Runtime>(
     // Evaluate the script
     if let Err(e) = window.eval(&script_with_result) {
         log::error!("Failed to eval script: {}", e);
-        app.unlisten(listener_id);
+        app.unlisten(listener_id_app);
+        window.unlisten(listener_id_window);
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
     }
 
@@ -304,18 +318,21 @@ pub(crate) async fn execute<R: Runtime>(
         Ok(Ok(Ok(result))) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
-            app.unlisten(listener_id);
+            app.unlisten(listener_id_app);
+            window.unlisten(listener_id_window);
             Ok(result)
         }
         Ok(Ok(Err(e))) => {
             log::error!("JS error during execution: {}", e);
-            app.unlisten(listener_id);
+            app.unlisten(listener_id_app);
+            window.unlisten(listener_id_window);
             Err(e)
         }
         Ok(Err(_)) => {
             // Channel closed without sending (shouldn't happen)
             log::error!("Channel closed unexpectedly. Event ID: {}. Window: {}", event_id, window_label);
-            app.unlisten(listener_id);
+            app.unlisten(listener_id_app);
+            window.unlisten(listener_id_window);
             Err(crate::Error::ExecuteError(format!(
                 "Channel closed unexpectedly. Event ID: {}. Window: {}",
                 event_id, window_label
@@ -324,7 +341,8 @@ pub(crate) async fn execute<R: Runtime>(
         Err(_) => {
             log::error!("Timeout waiting for execute result after 30s. Event ID: {}. Window: {}",
                 event_id, window_label);
-            app.unlisten(listener_id);
+            app.unlisten(listener_id_app);
+            window.unlisten(listener_id_window);
             Err(crate::Error::ExecuteError(format!(
                 "Script execution timed out after 30s. Event ID: {}. Window: {}",
                 event_id, window_label
