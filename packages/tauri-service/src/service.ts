@@ -4,6 +4,7 @@ import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import mockStore from './mockStore.js';
+import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 import { clearWindowState, ensureActiveWindowFocus } from './window.js';
@@ -330,24 +331,20 @@ export default class TauriWorkerService {
       // For functions: use .toString() - produces valid JS function source
       // For strings: pass as-is (let the WebDriver handle it, or use executeAsync for async results)
 
-      // For non-embedded (tauri-driver/official): use executeAsync with function callbacks to avoid polyfill injection
+      // For non-embedded (tauri-driver/official): use executeAsync for both functions and strings
       // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute
       if (typeof script === 'function') {
-        // Use executeAsync with function callback to avoid polyfill injection issues
-        const asyncResult = await (
-          originalExecuteAsync as (fn: (...args: unknown[]) => void, ...args: unknown[]) => Promise<unknown>
-        )(
-          // Execute the user function and call done() with the result
-          async function executeUserFunction(...allArgs: unknown[]) {
-            const done = allArgs[allArgs.length - 1] as (result: unknown) => void;
-            const userArgs = allArgs.slice(0, -1) as InnerArguments;
-            try {
-              const result = await script(...userArgs);
-              done(result);
-            } catch (error) {
-              done({ __wdio_error__: error instanceof Error ? error.message : String(error) });
-            }
-          },
+        // Function scripts: use executeAsync with .then() callbacks to handle async results
+        // Wrap in Promise.resolve to handle both sync and async function return values
+        const wrappedScript = `
+            ${CONSOLE_WRAPPER_SCRIPT}
+            Promise.resolve((${scriptString}).apply(null, Array.from(arguments).slice(0, arguments.length - 1))).then(
+                (r) => arguments[arguments.length-1](r),
+                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+            );
+        `;
+        const asyncResult = await (originalExecuteAsync as (script: string, ...a: unknown[]) => Promise<unknown>)(
+          wrappedScript,
           ...args,
         );
         if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
@@ -355,22 +352,17 @@ export default class TauriWorkerService {
         }
         return asyncResult as ReturnValue;
       } else {
-        // For string scripts: execute them directly with async wrapper
-        const asyncResult = await (
-          originalExecuteAsync as (fn: (...args: unknown[]) => void, ...args: unknown[]) => Promise<unknown>
-        )(
-          // Execute the string script and call done() with the result
-          async function executeStringScript(...allArgs: unknown[]) {
-            const done = allArgs[allArgs.length - 1] as (result: unknown) => void;
-            try {
-              // Execute the string script using Function constructor for dynamic execution
-              const executeScript = new Function(`return (async function() { ${scriptString} })()`);
-              const result = await executeScript();
-              done(result);
-            } catch (error) {
-              done({ __wdio_error__: error instanceof Error ? error.message : String(error) });
-            }
-          },
+        // For strings: use executeAsync with explicit done callback
+        // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
+        const wrappedScript = `
+            ${CONSOLE_WRAPPER_SCRIPT}
+            (async function() { ${scriptString} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
+                (r) => arguments[arguments.length-1](r),
+                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+            );
+        `;
+        const asyncResult = await (originalExecuteAsync as (script: string, ...a: unknown[]) => Promise<unknown>)(
+          wrappedScript,
           ...args,
         );
         if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
