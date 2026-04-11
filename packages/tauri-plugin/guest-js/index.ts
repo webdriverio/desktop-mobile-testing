@@ -136,8 +136,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
       trimmedScript.startsWith('(') ||
       trimmedScript.startsWith('function') ||
       trimmedScript.startsWith('async') ||
-      /^(\w+)\s*=>/.test(trimmedScript) ||
-      (trimmedScript.startsWith('(') && trimmedScript.includes('=>'));
+      /^(\w+)\s*=>/.test(trimmedScript);
 
     // Wrap the script appropriately based on type
     let wrappedScript: string;
@@ -166,8 +165,19 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
         })()
       `.trim();
     } else {
-      // Expression/statement script - wrap with return for proper evaluation
-      wrappedScript = `(async () => { return ${script}; })()`;
+      // Expression/statement script - wrap appropriately based on script type
+      const trimmedScript = script.trim();
+      const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(
+        trimmedScript,
+      );
+      const hasRealSemicolon = trimmedScript.includes(';');
+      if (hasStatementKeyword || hasRealSemicolon) {
+        // Statement-style script - execute as-is
+        wrappedScript = `(async () => { ${script} })()`;
+      } else {
+        // Expression-style script - wrap with return for proper evaluation
+        wrappedScript = `(async () => { return ${script}; })()`;
+      }
     }
 
     // Call the plugin command to execute the wrapped script
