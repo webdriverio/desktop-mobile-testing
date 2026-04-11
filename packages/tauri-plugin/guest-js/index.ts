@@ -178,6 +178,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
       trimmedScript.startsWith('(') ||
       trimmedScript.startsWith('function') ||
       trimmedScript.startsWith('async ') ||
+      trimmedScript.startsWith('async (') ||
       /^(\w+)\s*=>/.test(trimmedScript);
 
     // Wrap the script appropriately based on type

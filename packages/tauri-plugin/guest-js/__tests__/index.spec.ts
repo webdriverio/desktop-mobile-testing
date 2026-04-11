@@ -186,8 +186,9 @@ describe('execute', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    originalInvoke = vi.fn().mockResolvedValue('executed');
-    (window as any).__TAURI__ = createTauriMock(originalInvoke);
+    originalInvoke = vi.fn() as ReturnType<typeof vi.fn>;
+    originalInvoke.mockResolvedValue('executed');
+    (window as any).__TAURI__ = createTauriMock(originalInvoke as (...args: unknown[]) => unknown);
 
     const mod = await import('../index.js');
     await mod.init();
@@ -245,6 +246,59 @@ describe('execute', () => {
     await expect(execute('(tauri) => tauri.core.invoke("bad")')).rejects.toThrow(
       'Failed to execute script: string error',
     );
+  });
+
+  it('should wrap async arrow functions with Tauri API injection', async () => {
+    // Test that async arrow function is routed to function-like path
+    await execute('async (tauri, value) => ({ received: value, hasTauri: !!tauri?.core })', 'test-value');
+
+    // Should be routed to function-like path (has Tauri API injected)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1]).toEqual(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          script: expect.stringContaining('__wdio_tauri'),
+        }),
+      }),
+    );
+  });
+
+  it('should route statement-style string scripts to statement path', async () => {
+    await execute('return 42');
+
+    // Should be routed to statement path (wrapped with async IIFE, not function wrapper)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    // Statement path wraps as: `(async () => { return 42 })()` - not the function-like wrapper
+    expect(pluginCalls[0][1].request.script).toContain('(async () => { return 42 })()');
+  });
+
+  it('should route expression-style string scripts to expression path', async () => {
+    await execute('1 + 2 + 3');
+
+    // Should be routed to expression path (wrapped with return - includes semicolon inside braces)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    // Expression path wraps as: `(async () => { return 1 + 2 + 3; })()` (semicolon inside)
+    expect(pluginCalls[0][1].request.script).toContain('(async () => { return 1 + 2 + 3; })()');
+  });
+
+  it('should handle statement-style string scripts', async () => {
+    originalInvoke.mockResolvedValue(42);
+    const result = await execute('return 42');
+
+    // Should be routed to statement path (no Tauri injection needed)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('return 42');
+    expect(result).toBe(42);
+  });
+
+  it('should handle expression-style string scripts', async () => {
+    originalInvoke.mockResolvedValue(6);
+    const result = await execute('1 + 2 + 3');
+
+    // Should be routed to expression path (wrapped with return)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('return 1 + 2 + 3');
+    expect(result).toBe(6);
   });
 });
 

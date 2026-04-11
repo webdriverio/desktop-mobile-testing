@@ -102,12 +102,12 @@ describe('TauriWorkerService', () => {
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
-      // String scripts should use executeAsync with explicit done callback for WebKit compatibility
+      // String scripts should use executeAsync with function callback for WebKit compatibility
       expect(mockExecuteAsync).toHaveBeenCalled();
       const callArgs = mockExecuteAsync.mock.calls[0];
-      // The script should contain .then( to handle async results and __wdio_error__ for error handling
-      expect(callArgs[0]).toContain('.then(');
-      expect(callArgs[0]).toContain('__wdio_error__');
+      // The script should be a function callback that handles async results
+      expect(typeof callArgs[0]).toBe('function');
+      expect(callArgs[0].name).toBe('executeStringScript');
       // execute should NOT be called for string scripts
       expect(mockExecute).not.toHaveBeenCalled();
     });
@@ -122,8 +122,8 @@ describe('TauriWorkerService', () => {
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      // Functions should use executeAsync for WebKit compatibility
-      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('(a, b) => a + b'), 1, 2);
+      // Functions should use executeAsync for WebKit compatibility with function callbacks
+      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.any(Function), 1, 2);
       // execute should NOT be called
       expect(mockExecute).not.toHaveBeenCalled();
     });
