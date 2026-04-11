@@ -247,21 +247,21 @@ pub(crate) async fn execute<R: Runtime>(
                 const __wdio_script = ({});
                 const result = await __wdio_script;
 
-                // Emit the result using the current window's event emitter
-                // This ensures the event goes to the same window where we're listening
+                // Emit the result using the app's event emitter
+                // This ensures the event goes to the app target where the listener is set up
                 if (window.__TAURI__?.event?.emit) {{
-                    await window.__TAURI__.event.emit('{}', {{ success: true, value: result }});
+                    await window.__TAURI__.event.emit('{}', {{ success: true, value: result }}, {{ target: 'app' }});
                 }} else {{
                     // Fallback: try dynamic import
                     try {{
                         const {{ emit }} = await import('@tauri-apps/api/event');
-                        await emit('{}', {{ success: true, value: result }});
+                        await emit('{}', {{ success: true, value: result }}, {{ target: 'app' }});
                     }} catch (importError) {{
                         console.error('[WDIO Execute] Failed to import emit:', importError);
                         // Last resort: try to use the globalTauri emit
                         if (typeof window.__TAURI__ !== 'undefined') {{
                             const {{ emit }} = await import('@tauri-apps/api/event');
-                            await emit('{}', {{ success: true, value: result }});
+                            await emit('{}', {{ success: true, value: result }}, {{ target: 'app' }});
                         }}
                     }}
                 }}
@@ -269,10 +269,10 @@ pub(crate) async fn execute<R: Runtime>(
                 // Emit error via event
                 try {{
                     if (window.__TAURI__?.event?.emit) {{
-                        await window.__TAURI__.event.emit('{}', {{ success: false, error: error.message || String(error) }});
+                        await window.__TAURI__.event.emit('{}', {{ success: false, error: error.message || String(error) }}, {{ target: 'app' }});
                     }} else {{
                         const {{ emit }} = await import('@tauri-apps/api/event');
-                        await emit('{}', {{ success: false, error: error.message || String(error) }});
+                        await emit('{}', {{ success: false, error: error.message || String(error) }}, {{ target: 'app' }});
                     }}
                 }} catch (emitError) {{
                     console.error('[WDIO Execute] Failed to emit error:', emitError);
