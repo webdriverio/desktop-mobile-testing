@@ -6,6 +6,48 @@
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import * as nativeSpy from '@wdio/native-spy';
 
+/**
+ * Check if a semicolon exists outside of quotes and brackets
+ * This is needed because simple .includes(';') gives false positives
+ * for semicolons inside string literals like "'a;b'.split(';')[0]"
+ */
+function hasSemicolonOutsideQuotes(str: string): boolean {
+  let inSingle = false;
+  let inDouble = false;
+  let inTemplate = false;
+  let depth = 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch !== '\\') {
+      let bs = 0;
+      let j = i - 1;
+      while (j >= 0 && str[j] === '\\') {
+        bs++;
+        j--;
+      }
+      if (bs % 2 === 1) continue;
+    }
+    if (ch === "'" && !inDouble && !inTemplate) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === '"' && !inSingle && !inTemplate) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (ch === '`' && !inSingle && !inDouble) {
+      inTemplate = !inTemplate;
+      continue;
+    }
+    if (!inSingle && !inDouble && !inTemplate) {
+      if ('([{'.includes(ch)) depth++;
+      if (')]}'.includes(ch)) depth--;
+      if (ch === ';' && depth === 0) return true;
+    }
+  }
+  return false;
+}
+
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
 let _invokeCache: ((cmd: string, args?: InvokeArgs) => Promise<unknown>) | null = null;
@@ -135,7 +177,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
     const isFunctionLike =
       trimmedScript.startsWith('(') ||
       trimmedScript.startsWith('function') ||
-      trimmedScript.startsWith('async') ||
+      trimmedScript.startsWith('async ') ||
       /^(\w+)\s*=>/.test(trimmedScript);
 
     // Wrap the script appropriately based on type
@@ -170,7 +212,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
       const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(
         trimmedScript,
       );
-      const hasRealSemicolon = trimmedScript.includes(';');
+      const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmedScript);
       if (hasStatementKeyword || hasRealSemicolon) {
         // Statement-style script - execute as-is
         wrappedScript = `(async () => { ${script} })()`;
