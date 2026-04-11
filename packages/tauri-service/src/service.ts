@@ -319,15 +319,16 @@ export default class TauriWorkerService {
       script: string | ((...args: InnerArguments) => ReturnValue),
       ...args: InnerArguments
     ): Promise<ReturnValue> {
+      const scriptString = typeof script === 'function' ? script.toString() : script;
+
       if (isEmbedded) {
         // For embedded WebDriver: pass the script through untouched so WDIO
         // can invoke function scripts correctly.
-        return originalExecute(script as Parameters<typeof originalExecute>[0], ...args) as Promise<ReturnValue>;
+        return originalExecute(scriptString, ...args) as Promise<ReturnValue>;
       }
 
       // For functions: use .toString() - produces valid JS function source
       // For strings: pass as-is (let the WebDriver handle it, or use executeAsync for async results)
-      const scriptString = typeof script === 'function' ? script.toString() : script;
 
       // For non-embedded (tauri-driver/official): use executeAsync for both functions and strings
       // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute
