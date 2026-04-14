@@ -54,8 +54,8 @@ pub(crate) async fn execute<R: Runtime>(
     // Determine which window to use for execution
     let target_window = if let Some(ref label) = request.window_label {
         log::debug!("Target window label specified: {}", label);
-        match app.webview_window(label) {
-            Some(w) => w,
+        match app.webview_windows().get(label) {
+            Some(w) => w.clone(),
             None => {
                 log::error!("Window with label '{}' not found", label);
                 return Err(crate::Error::ExecuteError(format!(
