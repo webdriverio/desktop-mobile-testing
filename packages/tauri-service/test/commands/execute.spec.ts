@@ -21,7 +21,7 @@ vi.mock('@wdio/native-utils', () => ({
   }),
 }));
 
-vi.mock('../window.js', () => ({
+vi.mock('../src/window.js', () => ({
   getCurrentWindowLabel: vi.fn().mockReturnValue('main'),
 }));
 

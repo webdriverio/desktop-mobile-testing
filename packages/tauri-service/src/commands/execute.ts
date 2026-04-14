@@ -105,7 +105,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
       }
       try {
         // @ts-expect-error - Running in browser context
-        const execResult = window.wdioTauri.execute(script, execOptions);
+        const execResult = window.wdioTauri.execute(script, execOptions, argsJson);
         if (execResult && typeof execResult.then === 'function') {
           try {
             const awaited = await execResult;
