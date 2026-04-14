@@ -72,11 +72,38 @@ export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promis
 
 export async function listWindowLabels(browser: WebdriverIO.Browser): Promise<string[]> {
   try {
-    const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
-    if (!Array.isArray(result)) {
-      throw new Error(`Expected array but got ${typeof result}`);
+    const result = await browser.execute(() => {
+      // @ts-expect-error - Running in browser context
+      if (typeof window.wdioTauri === 'undefined' || typeof window.wdioTauri.execute !== 'function') {
+        return JSON.stringify({ __wdio_error__: 'wdioTauri not available' });
+      }
+      try {
+        // @ts-expect-error - Running in browser context
+        const execResult = window.wdioTauri.execute(
+          // @ts-expect-error - Running in browser context
+          ({ core }) => core.invoke('plugin:wdio|list_windows'),
+          {},
+          '[]',
+        );
+        if (execResult && typeof execResult.then === 'function') {
+          return execResult.then((r: unknown) => JSON.stringify({ __wdio_value__: r }));
+        }
+        return JSON.stringify({ __wdio_value__: execResult });
+      } catch (e) {
+        return JSON.stringify({ __wdio_error__: String(e) });
+      }
+    });
+    if (!result || typeof result !== 'string') {
+      throw new Error(`Expected string but got ${typeof result}`);
     }
-    return result as string[];
+    const parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
+    if (parsed.__wdio_error__) {
+      throw new Error(parsed.__wdio_error__);
+    }
+    if (!Array.isArray(parsed.__wdio_value__)) {
+      throw new Error(`Expected array but got ${typeof parsed.__wdio_value__}`);
+    }
+    return parsed.__wdio_value__ as string[];
   } catch (error) {
     log.error('Failed to list window labels:', error);
     throw new Error(`Failed to list window labels: ${error instanceof Error ? error.message : String(error)}`);
@@ -135,8 +162,36 @@ async function switchToWindowByTitle(browser: WebdriverIO.Browser, targetTitle: 
 
 async function getWindowStates(browser: WebdriverIO.Browser): Promise<WindowState[]> {
   try {
-    const states = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_window_states'));
-    return states as WindowState[];
+    const result = await browser.execute(() => {
+      // @ts-expect-error - Running in browser context
+      if (typeof window.wdioTauri === 'undefined' || typeof window.wdioTauri.execute !== 'function') {
+        return JSON.stringify({ __wdio_error__: 'wdioTauri not available' });
+      }
+      try {
+        // @ts-expect-error - Running in browser context
+        const execResult = window.wdioTauri.execute(
+          // @ts-expect-error - Running in browser context
+          ({ core }) => core.invoke('plugin:wdio|get_window_states'),
+          {},
+          '[]',
+        );
+        if (execResult && typeof execResult.then === 'function') {
+          return execResult.then((r: unknown) => JSON.stringify({ __wdio_value__: r }));
+        }
+        return JSON.stringify({ __wdio_value__: execResult });
+      } catch (e) {
+        return JSON.stringify({ __wdio_error__: String(e) });
+      }
+    });
+    if (!result || typeof result !== 'string') {
+      return [];
+    }
+    const parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
+    if (parsed.__wdio_error__) {
+      log.warn('Failed to get window states:', parsed.__wdio_error__);
+      return [];
+    }
+    return parsed.__wdio_value__ as WindowState[];
   } catch (error) {
     log.warn('Failed to get window states:', error);
     return [];
