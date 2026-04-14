@@ -14,6 +14,7 @@ use crate::webdriver::Timeouts;
 async fn wait_for_window<R: Runtime>(
     state: &AppState<R>,
     timeout_ms: u64,
+    target_label: Option<&str>,
 ) -> Result<String, WebDriverErrorResponse> {
     let start = std::time::Instant::now();
     let timeout = std::time::Duration::from_millis(timeout_ms);
@@ -21,7 +22,14 @@ async fn wait_for_window<R: Runtime>(
 
     loop {
         let window_labels = state.get_window_labels();
-        if let Some(label) = window_labels.first().cloned() {
+
+        // If a specific label was requested, check for it
+        if let Some(label) = target_label {
+            if window_labels.contains(&label.to_string()) {
+                return Ok(label.to_string());
+            }
+        } else if let Some(label) = window_labels.first().cloned() {
+            // No specific label requested, use first available
             return Ok(label);
         }
 
@@ -31,6 +39,17 @@ async fn wait_for_window<R: Runtime>(
 
         tokio::time::sleep(poll_interval).await;
     }
+}
+
+/// Extract window label from WDIO capabilities
+fn extract_window_label(capabilities: &serde_json::Value) -> Option<String> {
+    capabilities
+        .get("alwaysMatch")
+        .or_else(|| capabilities.get("firstMatch"))
+        .and_then(|v| v.get("wdio:tauriServiceOptions"))
+        .and_then(|v| v.get("windowLabel"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 /// W3C `WebDriver` session request (capabilities are accepted but not processed)
@@ -112,10 +131,13 @@ fn parse_user_agent(user_agent: &str) -> (String, String) {
 /// POST `/session` - Create a new session
 pub async fn create<R: Runtime + 'static>(
     State(state): State<Arc<AppState<R>>>,
-    Json(_request): Json<CreateSessionRequest>,
+    Json(request): Json<CreateSessionRequest>,
 ) -> WebDriverResult {
-    // Wait for a window to become available (up to 10 seconds)
-    let initial_window = wait_for_window(&state, 10_000).await?;
+    // Extract window label from capabilities if provided
+    let target_window = extract_window_label(&request.capabilities);
+
+    // Wait for the target window (or first available if no target)
+    let initial_window = wait_for_window(&state, 10_000, target_window.as_deref()).await?;
 
     // Query the webview for its user agent to get browser info
     let executor =
