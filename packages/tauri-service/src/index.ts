@@ -20,3 +20,24 @@ export type {
   TauriServiceGlobalOptions,
   TauriServiceOptions,
 } from './types.js';
+
+import type { TauriExecuteOptions } from '@wdio/native-types';
+
+/**
+ * Create Tauri execute options with proper sentinel.
+ * Use this to avoid ambiguity between user arguments and options.
+ *
+ * @example
+ * ```js
+ * import { withExecuteOptions } from '@wdio/tauri-service';
+ *
+ * await browser.tauri.execute(
+ *   (tauri, config) => tauri.core.invoke('open', config),
+ *   withExecuteOptions({ windowLabel: 'popup' }),
+ *   { width: 400, height: 300 }
+ * );
+ * ```
+ */
+export function withExecuteOptions(options: { windowLabel?: string }): TauriExecuteOptions {
+  return { ...options, __wdioOptions__: true } as TauriExecuteOptions;
+}

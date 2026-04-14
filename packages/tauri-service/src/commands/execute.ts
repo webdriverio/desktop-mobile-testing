@@ -8,7 +8,7 @@ const log = createLogger('tauri-service', 'service');
 const pluginAvailabilityCache = new WeakMap<WebdriverIO.Browser, boolean>();
 
 function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
-  return typeof arg === 'object' && arg !== null && 'windowLabel' in arg;
+  return typeof arg === 'object' && arg !== null && '__wdioOptions__' in arg;
 }
 
 /**
