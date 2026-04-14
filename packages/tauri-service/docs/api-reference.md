@@ -156,6 +156,75 @@ See [Deeplink Testing](./deeplink-testing.md) for full usage guide.
 
 ---
 
+### `browser.tauri.switchWindow(label)`
+
+Switch the active Tauri window for subsequent operations. Changes the window that `browser.tauri.execute()` and other Tauri-specific operations target.
+
+**Parameters:**
+- `label` (string) - The window label to switch to (e.g., `'main'`, `'settings'`)
+
+**Returns:** `Promise<void>`
+
+**Example:**
+```typescript
+// Switch to the settings window
+await browser.tauri.switchWindow('settings');
+
+// Now executes in the settings window context
+const data = await browser.tauri.execute(({ core }) => core.invoke('get_settings'));
+
+// Switch back to main window
+await browser.tauri.switchWindow('main');
+```
+
+**Note:** The window label must exist in your Tauri app. Use `browser.tauri.listWindows()` to get available labels.
+
+---
+
+### `browser.tauri.listWindows()`
+
+Get a list of all available Tauri window labels in the application.
+
+**Returns:** `Promise<string[]>`
+
+**Example:**
+```typescript
+const windows = await browser.tauri.listWindows();
+console.log(windows); // ['main', 'settings', 'dialog']
+```
+
+---
+
+## Updating browser.tauri.execute with Per-Call Options
+
+The `execute` method supports optional per-call options to override session defaults:
+
+**Parameters:**
+- `script` (Function | string) - JavaScript code to execute
+- `options` (object, optional) - Per-call execution options
+  - `windowLabel` (string) - Override the default window for this call only
+- `...args` (any[]) - Additional arguments passed to the script
+
+**Example:**
+```typescript
+// Execute in a specific window without changing session default
+const result = await browser.tauri.execute(
+  (tauri) => tauri.core.invoke('get_data'),
+  { windowLabel: 'popup' }
+);
+
+// Can also pass arguments after options
+const greeting = await browser.tauri.execute(
+  (tauri, name) => tauri.core.invoke('greet', { name }),
+  { windowLabel: 'settings' },
+  'Alice'
+);
+```
+
+**Note:** Per-call windowLabel currently requires the embedded driver with direct eval channel to take effect. With official/crabnebula drivers, the session default is used.
+
+---
+
 ## TauriMock Interface
 
 When you call `browser.tauri.mock(command)`, you receive a TauriMock object with these methods:

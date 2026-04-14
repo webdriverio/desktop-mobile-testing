@@ -352,6 +352,74 @@ describe('Multiremote - Multiple App Instances', () => {
 });
 ```
 
+## Multi-Window Testing
+
+### Testing Multiple Tauri Windows
+
+Test interactions with multiple windows in a single Tauri app:
+
+```typescript
+describe('Multi-Window Testing', () => {
+  it('should list available windows', async () => {
+    const windows = await browser.tauri.listWindows();
+    console.log('Available windows:', windows);
+    expect(windows).toContain('main');
+    expect(windows).toContain('settings');
+  });
+
+  it('should switch between windows', async () => {
+    // Start in main window
+    const mainContent = await browser.tauri.execute(() => {
+      return document.querySelector('h1')?.textContent;
+    });
+    expect(mainContent).toBe('Main Window');
+
+    // Switch to settings window
+    await browser.tauri.switchWindow('settings');
+
+    // Now executing in settings context
+    const settingsContent = await browser.tauri.execute(() => {
+      return document.querySelector('h1')?.textContent;
+    });
+    expect(settingsContent).toBe('Settings');
+
+    // Switch back to main
+    await browser.tauri.switchWindow('main');
+  });
+
+  it('should execute in specific window without switching', async () => {
+    // Use per-call windowLabel to target a specific window
+    const result = await browser.tauri.execute(
+      (tauri) => tauri.core.invoke('get_window_data'),
+      { windowLabel: 'popup' }
+    );
+    expect(result).toEqual({ source: 'popup' });
+  });
+
+  it('should handle non-existent window gracefully', async () => {
+    await expect(browser.tauri.switchWindow('nonexistent')).rejects.toThrow(
+      'Window label "nonexistent" not found. Available windows: main, settings, popup'
+    );
+  });
+});
+```
+
+**Configuration:** You can also set a default window in your WDIO config:
+
+```typescript
+// wdio.conf.ts
+export const config = {
+  capabilities: [{
+    browserName: 'tauri',
+    'wdio:tauriServiceOptions': {
+      windowLabel: 'settings',  // Default to settings window
+    },
+  }],
+};
+```
+
+---
+
 ## Common Testing Patterns
 
 ### Wait for Async Operations
