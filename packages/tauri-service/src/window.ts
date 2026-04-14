@@ -73,10 +73,13 @@ export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promis
 export async function listWindowLabels(browser: WebdriverIO.Browser): Promise<string[]> {
   try {
     const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
+    if (!Array.isArray(result)) {
+      throw new Error(`Expected array but got ${typeof result}`);
+    }
     return result as string[];
   } catch (error) {
-    log.warn('Failed to list window labels:', error);
-    return ['main'];
+    log.error('Failed to list window labels:', error);
+    throw new Error(`Failed to list window labels: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
