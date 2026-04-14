@@ -51,6 +51,25 @@ pub(crate) async fn execute<R: Runtime>(
     log::debug!("Execute command called");
     log::trace!("Script length: {} chars", request.script.len());
 
+    // Determine which window to use for execution
+    let target_window = if let Some(ref label) = request.window_label {
+        log::debug!("Target window label specified: {}", label);
+        match app.webview_window(label) {
+            Some(w) => w,
+            None => {
+                log::error!("Window with label '{}' not found", label);
+                return Err(crate::Error::ExecuteError(format!(
+                    "Window with label '{}' not found. Available windows: {:?}",
+                    label,
+                    app.webview_windows().keys().collect::<Vec<_>>()
+                )));
+            }
+        }
+    } else {
+        log::debug!("No window label specified, using current window");
+        window
+    };
+
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
@@ -163,8 +182,8 @@ pub(crate) async fn execute<R: Runtime>(
 
     log::trace!("Executing script via window.eval()");
 
-    // Evaluate the script
-    if let Err(e) = window.eval(&script_with_result) {
+    // Evaluate the script in the target window
+    if let Err(e) = target_window.eval(&script_with_result) {
         log::error!("Failed to eval script: {}", e);
         app.unlisten(listener_id);
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
@@ -175,7 +194,7 @@ pub(crate) async fn execute<R: Runtime>(
     // Wait for the result event with 30s timeout using async
     // This allows the async runtime to process other tasks (like IPC) while waiting
     // This matches the WebDriver default script timeout
-    let window_label = window.label().to_owned();
+    let window_label = target_window.label().to_owned();
     let timeout_duration = Duration::from_secs(30);
     
     match tokio::time::timeout(timeout_duration, rx).await {

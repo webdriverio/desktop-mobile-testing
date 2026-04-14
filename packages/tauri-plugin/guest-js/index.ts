@@ -53,7 +53,7 @@ declare global {
       };
     };
     wdioTauri?: {
-      execute: (script: string, ...args: unknown[]) => Promise<unknown>;
+      execute: (script: string, options?: { windowLabel?: string }) => Promise<unknown>;
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
@@ -112,21 +112,26 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Options for execute function
+ */
+interface ExecuteOptions {
+  /** Window label to execute in (optional) */
+  windowLabel?: string;
+}
+
+/**
  * Execute JavaScript code in the frontend context with access to Tauri APIs
  * The script will receive the Tauri APIs object as the first argument
  * @param script - JavaScript code to execute (function string without first parameter)
- * @param args - Arguments to pass to the script (after the Tauri APIs object)
+ * @param options - Execute options (optional)
  * @returns Result of the script execution
  */
-export async function execute(script: string, ...args: unknown[]): Promise<unknown> {
+export async function execute(script: string, options?: ExecuteOptions): Promise<unknown> {
   try {
     // Ensure window.__TAURI__ is available
     if (!window.__TAURI__) {
       throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
     }
-
-    // Serialize args to pass them to the plugin
-    const argsJson = JSON.stringify(args);
 
     // Wrap the script to inject the Tauri APIs object as the first argument
     // The script is a function string that expects tauri APIs as first parameter
@@ -136,7 +141,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
     const wrappedScript = `
       (async () => {
         const __wdio_tauri = window.__TAURI__;
-        const __wdio_args = ${argsJson};
+        const __wdio_args = typeof arguments !== 'undefined' && arguments[2] ? JSON.parse(arguments[2]) : [];
 
         // Wait for window.__TAURI__.core.invoke to be available
         // This handles the race condition where window.eval() runs before dynamic imports complete
@@ -167,6 +172,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
         request: {
           script: wrappedScript,
           args: [],
+          window_label: options?.windowLabel,
         },
       } as InvokeArgs);
       console.debug('[WDIO Plugin] Invoke result:', result);
