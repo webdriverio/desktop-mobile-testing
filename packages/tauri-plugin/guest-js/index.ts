@@ -134,9 +134,6 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
       throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
     }
 
-    // Parse args from JSON string
-    const __wdio_args = argsJson ? JSON.parse(argsJson) : [];
-
     // Wrap the script to inject the Tauri APIs object as the first argument
     // The script is a function string that expects tauri APIs as first parameter
     // We need to wrap it to call it with window.__TAURI__ as the first argument
@@ -145,6 +142,7 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     const wrappedScript = `
       (async () => {
         const __wdio_tauri = window.__TAURI__;
+        const __wdio_args = ${argsJson ? JSON.stringify(argsJson) : '[]'};
 
         // Wait for window.__TAURI__.core.invoke to be available
         // This handles the race condition where window.eval() runs before dynamic imports complete
