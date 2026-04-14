@@ -230,6 +230,29 @@ describe('window management', () => {
       await switchWindowByLabel(mockBrowser, 'settings');
       expect(getCurrentWindowLabel(mockBrowser)).toBe('settings');
     });
+
+    it('should throw when getWindowStates returns empty array', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValueOnce(['main', 'settings']).mockResolvedValueOnce([]),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(switchWindowByLabel(mockBrowser, 'settings')).rejects.toThrow('Unable to retrieve window states');
+    });
+
+    it('should throw when label not found in window states', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce(['main', 'settings'])
+            .mockResolvedValueOnce([{ label: 'main', title: 'Main', is_visible: true, is_focused: true }]),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(switchWindowByLabel(mockBrowser, 'settings')).rejects.toThrow('not found in window states');
+    });
   });
 
   describe('clearWindowState clears window label cache', () => {

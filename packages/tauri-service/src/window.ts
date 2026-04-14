@@ -36,13 +36,24 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
   }
 
   const windowStates = await getWindowStates(browser);
+
+  if (windowStates.length === 0) {
+    throw new Error(
+      `Unable to retrieve window states. Cannot switch to "${label}". The wdio plugin may not be responding.`,
+    );
+  }
+
   const targetWindow = windowStates.find((w) => w.label === label);
 
-  if (targetWindow) {
-    const switched = await switchToWindowByTitle(browser, targetWindow.title);
-    if (!switched) {
-      throw new Error(`Failed to switch to window with label "${label}" (title: "${targetWindow.title}")`);
-    }
+  if (!targetWindow) {
+    throw new Error(
+      `Window with label "${label}" not found in window states. Available: ${windowStates.map((w) => w.label).join(', ')}`,
+    );
+  }
+
+  const switched = await switchToWindowByTitle(browser, targetWindow.title);
+  if (!switched) {
+    throw new Error(`Failed to switch to window with label "${label}" (title: "${targetWindow.title}")`);
   }
 
   setCurrentWindowLabel(browser, label);
