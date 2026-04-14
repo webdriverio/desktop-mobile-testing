@@ -78,6 +78,7 @@ export interface TauriMock<TArgs extends unknown[] = unknown[], TReturns = unkno
 
 /**
  * Options for browser.tauri.execute() per-call overrides
+ * Use withExecuteOptions() from @wdio/tauri-service to create properly-typed options
  */
 export interface TauriExecuteOptions {
   /**
@@ -86,10 +87,10 @@ export interface TauriExecuteOptions {
    */
   windowLabel?: string;
   /**
-   * Sentinel property to disambiguate options from user arguments.
+   * Sentinel property - set automatically by withExecuteOptions()
    * @internal - do not set manually
    */
-  __wdioOptions__?: true;
+  __wdioOptions__: true;
 }
 
 /**
