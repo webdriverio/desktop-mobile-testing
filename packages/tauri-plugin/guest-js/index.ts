@@ -142,7 +142,7 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     const wrappedScript = `
       (async () => {
         const __wdio_tauri = window.__TAURI__;
-        const __wdio_args = ${argsJson ? JSON.stringify(argsJson) : '[]'};
+        const __wdio_args = ${argsJson ?? '[]'};
 
         // Wait for window.__TAURI__.core.invoke to be available
         // This handles the race condition where window.eval() runs before dynamic imports complete
