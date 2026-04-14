@@ -180,6 +180,14 @@ function findActiveWindow(states: WindowState[]): WindowState | undefined {
  * @returns Promise that resolves when focus is ensured
  */
 export async function ensureActiveWindowFocus(browser: WebdriverIO.Browser, commandName: string): Promise<void> {
+  // Skip auto-focus if the user has explicitly set a window label via switchWindow()
+  // This prevents the auto-focus logic from silently undoing explicit switches
+  const explicitLabel = currentWindowLabelCache.get(browser.sessionId || 'default');
+  if (explicitLabel) {
+    log.debug(`Skipping auto-focus: explicit label "${explicitLabel}" is set`);
+    return;
+  }
+
   // Only check for focus on certain commands (like Electron)
   const focusCommands = ['getTitle', 'findElement', 'findElements', '$', '$$', 'elementClick'];
   if (!focusCommands.includes(commandName)) {
