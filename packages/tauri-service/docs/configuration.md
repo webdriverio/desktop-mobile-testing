@@ -146,7 +146,7 @@ windowLabel: 'settings'  // Target the settings window by default
 **Note:** 
 - Each browser instance (including multiremote) can have its own default windowLabel
 - Override at runtime with `browser.tauri.switchWindow(label)`
-- Per-call override with `browser.tauri.execute(fn, { windowLabel: 'x' })` is supported
+- Per-call override with `browser.tauri.execute(fn, withExecuteOptions({ windowLabel: 'x' }))` is supported
 
 ---
 

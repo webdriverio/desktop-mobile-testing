@@ -359,6 +359,8 @@ describe('Multiremote - Multiple App Instances', () => {
 Test interactions with multiple windows in a single Tauri app:
 
 ```typescript
+import { withExecuteOptions } from '@wdio/tauri-service';
+
 describe('Multi-Window Testing', () => {
   it('should list available windows', async () => {
     const windows = await browser.tauri.listWindows();
@@ -391,7 +393,7 @@ describe('Multi-Window Testing', () => {
     // Use per-call windowLabel to target a specific window
     const result = await browser.tauri.execute(
       (tauri) => tauri.core.invoke('get_window_data'),
-      { windowLabel: 'popup' }
+      withExecuteOptions({ windowLabel: 'popup' })
     );
     expect(result).toEqual({ source: 'popup' });
   });

@@ -207,16 +207,18 @@ The `execute` method supports optional per-call options to override session defa
 
 **Example:**
 ```typescript
+import { withExecuteOptions } from '@wdio/tauri-service';
+
 // Execute in a specific window without changing session default
 const result = await browser.tauri.execute(
   (tauri) => tauri.core.invoke('get_data'),
-  { windowLabel: 'popup' }
+  withExecuteOptions({ windowLabel: 'popup' })
 );
 
 // Can also pass arguments after options
 const greeting = await browser.tauri.execute(
   (tauri, name) => tauri.core.invoke('greet', { name }),
-  { windowLabel: 'settings' },
+  withExecuteOptions({ windowLabel: 'settings' }),
   'Alice'
 );
 ```

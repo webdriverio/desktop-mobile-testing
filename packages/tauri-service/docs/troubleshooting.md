@@ -450,12 +450,22 @@ console.log('Available:', windows);
 
 **Issue:** Using `{ windowLabel: 'popup' }` in execute call still uses the main window.
 
-**Why this happens:** The specified window may not exist in the application, or the Tauri plugin may not be responding.
+**Why this happens:** The sentinel is required to distinguish options from script arguments. Plain objects are treated as user arguments, not options.
 
 **Solutions:**
 1. Verify the window exists: `const windows = await browser.tauri.listWindows();`
 2. Use `browser.tauri.switchWindow(label)` to change the session default
 3. Check that @wdio/tauri-plugin is installed and registered in your Tauri app
+4. Use `withExecuteOptions()` wrapper for per-call windowLabel:
+
+```typescript
+import { withExecuteOptions } from '@wdio/tauri-service';
+
+const result = await browser.tauri.execute(
+  (tauri) => tauri.core.invoke('get_data'),
+  withExecuteOptions({ windowLabel: 'popup' })
+);
+```
 
 ```typescript
 // wdio.conf.ts
