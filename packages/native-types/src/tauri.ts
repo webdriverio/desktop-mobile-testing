@@ -85,6 +85,11 @@ export interface TauriExecuteOptions {
    * Overrides the session default windowLabel.
    */
   windowLabel?: string;
+  /**
+   * Sentinel property to disambiguate options from user arguments.
+   * @internal - do not set manually
+   */
+  __wdioOptions__?: true;
 }
 
 /**
