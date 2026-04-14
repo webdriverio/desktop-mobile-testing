@@ -53,7 +53,7 @@ declare global {
       };
     };
     wdioTauri?: {
-      execute: (script: string, options?: { windowLabel?: string }) => Promise<unknown>;
+      execute: (script: string, options?: { windowLabel?: string }, argsJson?: string) => Promise<unknown>;
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
@@ -124,14 +124,18 @@ interface ExecuteOptions {
  * The script will receive the Tauri APIs object as the first argument
  * @param script - JavaScript code to execute (function string without first parameter)
  * @param options - Execute options (optional)
+ * @param argsJson - Serialized user arguments as JSON string (optional)
  * @returns Result of the script execution
  */
-export async function execute(script: string, options?: ExecuteOptions): Promise<unknown> {
+export async function execute(script: string, options?: ExecuteOptions, argsJson?: string): Promise<unknown> {
   try {
     // Ensure window.__TAURI__ is available
     if (!window.__TAURI__) {
       throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
     }
+
+    // Parse args from JSON string
+    const __wdio_args = argsJson ? JSON.parse(argsJson) : [];
 
     // Wrap the script to inject the Tauri APIs object as the first argument
     // The script is a function string that expects tauri APIs as first parameter
@@ -141,7 +145,6 @@ export async function execute(script: string, options?: ExecuteOptions): Promise
     const wrappedScript = `
       (async () => {
         const __wdio_tauri = window.__TAURI__;
-        const __wdio_args = typeof arguments !== 'undefined' && arguments[2] ? JSON.parse(arguments[2]) : [];
 
         // Wait for window.__TAURI__.core.invoke to be available
         // This handles the race condition where window.eval() runs before dynamic imports complete
