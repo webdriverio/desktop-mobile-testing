@@ -7,14 +7,14 @@
 
 ## Improvement Summary
 
-| # | Improvement | Applies To | Effort | Impact |
-|---|-------------|------------|--------|--------|
-| 1 | Browser-only test mode with mocked native IPC | Tauri + Electron | Large | High |
-| 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High |
-| 3 | Multi-window label configuration | Tauri | Small | Medium |
-| 4 | Native screenshot capture | Tauri + Electron | Medium | Low |
-| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium |
-| 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium |
+| # | Improvement | Applies To | Effort | Impact | Status |
+|---|-------------|------------|--------|--------|--------|
+| 1 | Browser-only test mode with mocked native IPC | Tauri + Electron | Large | High | Pending |
+| 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High | Pending |
+| 3 | Multi-window label configuration | Tauri | Small | Medium | **Completed** |
+| 4 | Native screenshot capture | Tauri + Electron | Medium | Low | Pending |
+| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | Pending |
+| 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium | Pending |
 
 ---
 
@@ -235,6 +235,24 @@ await browser.tauri.switchWindow('settings');
 
 ### Effort: Small (1-2 days for basic support)
 
+### Status: ✅ Completed (2026-04-14)
+
+**Implementation:**
+- Added `windowLabel` option to `TauriServiceOptions` and `TauriServiceGlobalOptions`
+- Added `TauriExecuteOptions` interface for per-call window targeting
+- Added `browser.tauri.switchWindow(label)` and `browser.tauri.listWindows()` APIs
+- Updated `tauri-plugin-webdriver` session creation to accept window label from capabilities
+- Updated `tauri-plugin` execute command to target specific windows via `window_label`
+- Updated `tauri-service` execute to pass window label through the chain
+- E2E tests use existing fixture (main + splash windows)
+
+**Files modified:**
+- `packages/native-types/src/tauri.ts`
+- `packages/tauri-service/src/{service,window,commands/execute}.ts`
+- `packages/tauri-plugin/src/{commands,models}.rs`
+- `packages/tauri-plugin/guest-js/index.ts`
+- `packages/tauri-plugin-webdriver/src/server/handlers/session.rs`
+
 ---
 
 ## Improvement 4: Native Screenshot Capture
@@ -364,10 +382,7 @@ expect(mock).toHaveBeenCalledWith({ name: 'World' }); // No update() needed
 
 ```
 5. Audit JS string interpolation ──→ Both services
-3. Multi-window label config ──────→ Tauri service
 ```
-
-These are independent, low-risk, and immediately valuable.
 
 ### Phase B: Foundation (3-4 weeks)
 
@@ -397,6 +412,12 @@ These are tightly coupled. Build the mock serialization layer first, then wire i
 
 Pursue when users request it or when visual regression testing becomes a priority.
 
+### Completed
+
+```
+3. Multi-window label config ──────→ Tauri service ✅
+```
+
 ---
 
 ## Risks and Mitigations
@@ -405,7 +426,6 @@ Pursue when users request it or when visual regression testing becomes a priorit
 |------|------------|
 | Browser-only mode gives false confidence (tests pass but real app breaks) | Document clearly as "frontend-focused" mode; recommend running full integration tests in CI |
 | Direct eval channel adds complexity (two communication paths) | Clear boundaries: WebDriver for DOM, direct eval for Tauri commands and mocks |
-| Multi-window support is hard to test without multi-window fixture apps | Create a minimal multi-window Tauri fixture app in `fixtures/e2e-apps/` |
 | IPC mock serialization loses closures (`fn.toString()` limitation) | Document limitation; provide `ipcContext` escape hatch for shared state |
 | Native screenshots are platform-specific maintenance burden | Start macOS-only; add platforms incrementally based on demand |
 
