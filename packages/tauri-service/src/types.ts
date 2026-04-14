@@ -3,8 +3,7 @@ import type {
   TauriServiceOptions as BaseTauriServiceOptions,
 } from '@wdio/native-types';
 
-// Re-export types from native-types for convenience
-export type { TauriResult } from '@wdio/native-types';
+export type { TauriExecuteOptions, TauriResult } from '@wdio/native-types';
 
 /**
  * Extended Tauri service options with implementation-specific fields

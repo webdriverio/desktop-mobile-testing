@@ -1,39 +1,59 @@
-import type { TauriAPIs } from '@wdio/native-types';
+import type { TauriAPIs, TauriExecuteOptions } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriCommandContext, TauriResult } from '../types.js';
+import { getCurrentWindowLabel } from '../window.js';
 
 const log = createLogger('tauri-service', 'service');
 
-// WeakMap to store plugin availability per browser session
-// Automatically cleans up when browser objects are garbage collected
 const pluginAvailabilityCache = new WeakMap<WebdriverIO.Browser, boolean>();
+
+function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
+  return typeof arg === 'object' && arg !== null && 'windowLabel' in arg;
+}
 
 /**
  * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs
  * Matches Electron's execute pattern: accepts functions or strings, passes Tauri APIs as first parameter
+ *
+ * Supports per-call options via TauriExecuteOptions:
+ * - execute(browser, script, { windowLabel: 'settings' })
+ * - execute(browser, script, { windowLabel: 'popup' }, arg1, arg2)
  */
-export async function execute<ReturnValue, InnerArguments extends unknown[]>(
+export async function execute<ReturnValue, InnerArguments extends unknown[] = unknown[]>(
   browser: WebdriverIO.Browser,
   script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
   ...args: InnerArguments
 ): Promise<ReturnValue> {
-  /**
-   * parameter check
-   */
-  if (typeof script !== 'string' && typeof script !== 'function') {
-    throw new Error('Expecting script to be type of "string" or "function"');
-  }
-
   if (!browser) {
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  // Check cache first using WeakMap - automatically cleans up when browser is GC'd
+  const options: TauriExecuteOptions = {};
+
+  const firstArg = args[0];
+  let userArgs: unknown[];
+  if (isExecuteOptions(firstArg)) {
+    options.windowLabel = firstArg.windowLabel;
+    userArgs = args.slice(1);
+  } else {
+    userArgs = args;
+  }
+
+  const sessionWindowLabel = getCurrentWindowLabel(browser);
+  const effectiveWindowLabel = options.windowLabel || sessionWindowLabel;
+  if (options.windowLabel && options.windowLabel !== sessionWindowLabel) {
+    log.debug(`Using per-call windowLabel: ${effectiveWindowLabel} (session default: ${sessionWindowLabel})`);
+  } else if (options.windowLabel) {
+    log.debug(`Using configured windowLabel: ${effectiveWindowLabel}`);
+  }
+
+  if (typeof script !== 'string' && typeof script !== 'function') {
+    throw new Error('Expecting script to be type of "string" or "function"');
+  }
+
   if (!pluginAvailabilityCache.get(browser)) {
-    // Check if plugin is available with retry logic (handles async module loading)
-    // Use execute (sync) since executeAsync has issues with some embedded providers
-    const maxAttempts = 100; // 100 attempts * 50ms = 5 seconds max
-    const retryInterval = 50; // ms
+    const maxAttempts = 100;
+    const retryInterval = 50;
     let pluginAvailable = false;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -48,7 +68,6 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
         break;
       }
 
-      // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, retryInterval));
     }
 
@@ -58,20 +77,19 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
       );
     }
 
-    // Cache the successful check using browser object as key
     pluginAvailabilityCache.set(browser, true);
     log.debug('Plugin availability cached for browser session');
   } else {
     log.debug('Plugin availability cached, skipping check');
   }
 
-  // Convert function to string - keep parameters intact, plugin will inject tauri as first arg
   const scriptString = typeof script === 'function' ? script.toString() : script;
 
-  // Execute via plugin's execute command with better error handling
-  // The plugin will inject the Tauri APIs object as the first argument
+  const executeOptions = { windowLabel: effectiveWindowLabel };
+  const argsJson = JSON.stringify(userArgs);
+
   const result = await browser.execute(
-    async function executeWithinTauri(script: string, ...args) {
+    async function executeWithinTauri(script: string, execOptions: { windowLabel?: string }, argsJson: string) {
       // @ts-expect-error - Running in browser context
       if (typeof window === 'undefined') {
         return JSON.stringify({ __wdio_error__: 'window is undefined' });
@@ -87,8 +105,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
       }
       try {
         // @ts-expect-error - Running in browser context
-        const execResult = window.wdioTauri.execute(script, ...args);
-        // Handle Promise results - await them in browser context
+        const execResult = window.wdioTauri.execute(script, execOptions);
         if (execResult && typeof execResult.then === 'function') {
           try {
             const awaited = await execResult;
@@ -107,10 +124,10 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
       }
     },
     scriptString,
-    ...args,
+    executeOptions,
+    argsJson,
   );
 
-  // Extract result or error from wrapped response
   try {
     if (result && typeof result === 'string') {
       const parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
@@ -211,7 +228,6 @@ export async function executeTauriCommands<T = unknown>(
 
     results.push(result);
 
-    // Stop on first failure
     if (!result.ok) {
       log.warn(`Stopping command execution due to failure: ${result.error}`);
       break;

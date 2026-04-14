@@ -11,6 +11,44 @@ interface WindowState {
 
 const lastCommandCache = new Map<string, string>();
 
+const currentWindowLabelCache = new Map<string, string>();
+
+const DEFAULT_WINDOW_LABEL = 'main';
+
+export function getDefaultWindowLabel(): string {
+  return DEFAULT_WINDOW_LABEL;
+}
+
+export function getCurrentWindowLabel(browser: WebdriverIO.Browser): string {
+  return currentWindowLabelCache.get(browser.sessionId || 'default') || DEFAULT_WINDOW_LABEL;
+}
+
+export function setCurrentWindowLabel(browser: WebdriverIO.Browser, label: string): void {
+  currentWindowLabelCache.set(browser.sessionId || 'default', label);
+  log.debug(`Current window label set to: ${label}`);
+}
+
+export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: string): Promise<void> {
+  const availableWindows = await listWindowLabels(browser);
+
+  if (!availableWindows.includes(label)) {
+    throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
+  }
+
+  const windowStates = await getWindowStates(browser);
+  const targetWindow = windowStates.find((w) => w.label === label);
+
+  if (targetWindow) {
+    const switched = await switchToWindowByTitle(browser, targetWindow.title);
+    if (!switched) {
+      throw new Error(`Failed to switch to window with label "${label}" (title: "${targetWindow.title}")`);
+    }
+  }
+
+  setCurrentWindowLabel(browser, label);
+  log.debug(`Successfully switched to window: ${label}`);
+}
+
 export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promise<string> {
   try {
     const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_active_window_label'));
@@ -195,7 +233,9 @@ export function getLastCommand(browser: WebdriverIO.Browser): string | undefined
 export function clearWindowState(sessionId?: string): void {
   if (sessionId) {
     lastCommandCache.delete(sessionId);
+    currentWindowLabelCache.delete(sessionId);
   } else {
     lastCommandCache.clear();
+    currentWindowLabelCache.clear();
   }
 }

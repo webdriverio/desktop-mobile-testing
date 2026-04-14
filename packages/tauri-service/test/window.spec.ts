@@ -4,8 +4,12 @@ import {
   ensureActiveWindowFocus,
   getActiveWindowLabel,
   getCurrentDevtoolsPort,
+  getCurrentWindowLabel,
+  getDefaultWindowLabel,
   getLastCommand,
   listWindowLabels,
+  setCurrentWindowLabel,
+  switchWindowByLabel,
   updateLastCommand,
 } from '../src/window.js';
 
@@ -124,6 +128,128 @@ describe('window management', () => {
 
       expect(getLastCommand(browser1)).toBeUndefined();
       expect(getLastCommand(browser2)).toBeUndefined();
+    });
+  });
+
+  describe('getDefaultWindowLabel', () => {
+    it('should return "main" as default', () => {
+      expect(getDefaultWindowLabel()).toBe('main');
+    });
+  });
+
+  describe('getCurrentWindowLabel', () => {
+    it('should return default for unknown session', () => {
+      const mockBrowser = {
+        sessionId: 'unknown-session',
+      } as unknown as WebdriverIO.Browser;
+      expect(getCurrentWindowLabel(mockBrowser)).toBe('main');
+    });
+
+    it('should return cached label for session', () => {
+      const mockBrowser = {
+        sessionId: 'test-session',
+      } as unknown as WebdriverIO.Browser;
+      setCurrentWindowLabel(mockBrowser, 'settings');
+      expect(getCurrentWindowLabel(mockBrowser)).toBe('settings');
+    });
+
+    it('should return default for session without cached label', () => {
+      const mockBrowser = {
+        sessionId: 'new-session',
+      } as unknown as WebdriverIO.Browser;
+      expect(getCurrentWindowLabel(mockBrowser)).toBe('main');
+    });
+  });
+
+  describe('setCurrentWindowLabel', () => {
+    it('should cache window label for session', () => {
+      const mockBrowser = {
+        sessionId: 'test-session',
+      } as unknown as WebdriverIO.Browser;
+      setCurrentWindowLabel(mockBrowser, 'popup');
+      expect(getCurrentWindowLabel(mockBrowser)).toBe('popup');
+    });
+  });
+
+  describe('switchWindowByLabel', () => {
+    it('should throw when window label not found', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce(['main', 'settings'])
+            .mockResolvedValueOnce([{ label: 'main', title: 'Main', is_visible: true, is_focused: true }]),
+        },
+        getWindowHandles: vi.fn().mockResolvedValue(['h1']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+        getTitle: vi.fn().mockResolvedValue('Main'),
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(switchWindowByLabel(mockBrowser, 'nonexistent')).rejects.toThrow(
+        'Window label "nonexistent" not found',
+      );
+    });
+
+    it('should throw when window title cannot be matched', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce(['main', 'settings'])
+            .mockResolvedValueOnce([
+              { label: 'settings', title: 'Settings Window Title', is_visible: true, is_focused: true },
+            ]),
+        },
+        getWindowHandles: vi.fn().mockResolvedValue(['h1']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+        getTitle: vi.fn().mockResolvedValue('Different Title'),
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(switchWindowByLabel(mockBrowser, 'settings')).rejects.toThrow(
+        'Failed to switch to window with label "settings"',
+      );
+    });
+
+    it('should update current window label on success', async () => {
+      const mockBrowser = {
+        sessionId: 'test-session',
+        tauri: {
+          execute: vi
+            .fn()
+            .mockResolvedValueOnce(['main', 'settings'])
+            .mockResolvedValueOnce([
+              { label: 'settings', title: 'Settings Window', is_visible: true, is_focused: true },
+            ]),
+        },
+        getWindowHandles: vi.fn().mockResolvedValue(['h1']),
+        switchToWindow: vi.fn().mockResolvedValue(undefined),
+        getTitle: vi.fn().mockResolvedValue('Settings Window'),
+      } as unknown as WebdriverIO.Browser;
+
+      clearWindowState();
+      await switchWindowByLabel(mockBrowser, 'settings');
+      expect(getCurrentWindowLabel(mockBrowser)).toBe('settings');
+    });
+  });
+
+  describe('clearWindowState clears window label cache', () => {
+    it('should clear window label cache when clearing all state', () => {
+      const mockBrowser = {
+        sessionId: 'test-session',
+      } as unknown as WebdriverIO.Browser;
+      setCurrentWindowLabel(mockBrowser, 'popup');
+      clearWindowState();
+      expect(getCurrentWindowLabel(mockBrowser)).toBe('main');
+    });
+
+    it('should clear specific session window label', () => {
+      const browser1 = { sessionId: 'session-1' } as unknown as WebdriverIO.Browser;
+      const browser2 = { sessionId: 'session-2' } as unknown as WebdriverIO.Browser;
+      setCurrentWindowLabel(browser1, 'popup');
+      setCurrentWindowLabel(browser2, 'settings');
+      clearWindowState('session-1');
+      expect(getCurrentWindowLabel(browser1)).toBe('main');
+      expect(getCurrentWindowLabel(browser2)).toBe('settings');
     });
   });
 

@@ -30,13 +30,17 @@ vi.mock('../src/mockStore.js', () => ({
 vi.mock('../src/window.js', () => ({
   clearWindowState: vi.fn(),
   ensureActiveWindowFocus: vi.fn().mockResolvedValue(undefined),
+  getDefaultWindowLabel: vi.fn().mockReturnValue('main'),
+  listWindowLabels: vi.fn().mockResolvedValue(['main']),
+  setCurrentWindowLabel: vi.fn(),
+  switchWindowByLabel: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { waitUntilWindowAvailable } from '@wdio/native-utils';
 import { clearAllMocks, resetAllMocks, restoreAllMocks } from '../src/commands/mock.js';
 import mockStore from '../src/mockStore.js';
 import TauriWorkerService from '../src/service.js';
-import { clearWindowState, ensureActiveWindowFocus } from '../src/window.js';
+import { clearWindowState, ensureActiveWindowFocus, setCurrentWindowLabel } from '../src/window.js';
 
 function createMockBrowser(overrides: Record<string, unknown> = {}): WebdriverIO.Browser {
   return {
@@ -108,6 +112,26 @@ describe('TauriWorkerService', () => {
       expect(typeof (mockBrowser as any).tauri.resetAllMocks).toBe('function');
       expect(typeof (mockBrowser as any).tauri.restoreAllMocks).toBe('function');
       expect(typeof (mockBrowser as any).tauri.triggerDeeplink).toBe('function');
+      expect(typeof (mockBrowser as any).tauri.switchWindow).toBe('function');
+      expect(typeof (mockBrowser as any).tauri.listWindows).toBe('function');
+    });
+
+    it('should initialize window label from options', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({ windowLabel: 'settings' }, { 'wdio:tauriServiceOptions': {} });
+
+      await service.before({} as any, [], mockBrowser);
+
+      expect(setCurrentWindowLabel).toHaveBeenCalledWith(mockBrowser, 'settings');
+    });
+
+    it('should default window label to main when not configured', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+
+      await service.before({} as any, [], mockBrowser);
+
+      expect(setCurrentWindowLabel).toHaveBeenCalledWith(mockBrowser, 'main');
     });
 
     it('should call patchBrowserExecute for standard browser', async () => {
