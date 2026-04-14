@@ -98,19 +98,20 @@ export interface TauriExecuteOptions {
  */
 export interface TauriServiceAPI {
   /**
-   * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs.
+   * Execute JavaScript code with per-call options and arguments.
    *
    * @example
    * ```js
-   * const result = await browser.tauri.execute(({ core }) => core.invoke('get_platform_info'));
+   * const result = await browser.tauri.execute(
+   *   (tauri, name) => tauri.core.invoke('greet', { name }),
+   *   { windowLabel: 'popup' },
+   *   'Alice'
+   * );
    * ```
-   *
-   * @param script - Function to execute (receives Tauri APIs as first parameter) or string
-   * @param argsOrOptions - Additional arguments OR execute options object
-   * @param args - Remaining arguments when options object is provided
    */
   execute<ReturnValue, InnerArguments extends unknown[]>(
     script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
+    options: TauriExecuteOptions,
     ...args: InnerArguments
   ): Promise<ReturnValue>;
 
@@ -131,20 +132,18 @@ export interface TauriServiceAPI {
   ): Promise<ReturnValue>;
 
   /**
-   * Execute JavaScript code with per-call options and arguments.
+   * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs.
    *
    * @example
    * ```js
-   * const result = await browser.tauri.execute(
-   *   (tauri, name) => tauri.core.invoke('greet', { name }),
-   *   { windowLabel: 'popup' },
-   *   'Alice'
-   * );
+   * const result = await browser.tauri.execute(({ core }) => core.invoke('get_platform_info'));
    * ```
+   *
+   * @param script - Function to execute (receives Tauri APIs as first parameter) or string
+   * @param args - Additional arguments passed to the script
    */
   execute<ReturnValue, InnerArguments extends unknown[]>(
     script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
-    options: TauriExecuteOptions,
     ...args: InnerArguments
   ): Promise<ReturnValue>;
 
