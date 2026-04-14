@@ -59,15 +59,14 @@ describe('window management', () => {
       expect(result).toEqual(['main', 'splash']);
     });
 
-    it('should return ["main"] as fallback on error', async () => {
+    it('should throw error on failure', async () => {
       const mockBrowser = {
         tauri: {
           execute: vi.fn().mockRejectedValue(new Error('API error')),
         },
       } as unknown as WebdriverIO.Browser;
 
-      const result = await listWindowLabels(mockBrowser);
-      expect(result).toEqual(['main']);
+      await expect(listWindowLabels(mockBrowser)).rejects.toThrow('Failed to list window labels');
     });
   });
 
