@@ -221,8 +221,6 @@ const greeting = await browser.tauri.execute(
 );
 ```
 
-**Note:** Per-call windowLabel currently requires the embedded driver with direct eval channel to take effect. With official/crabnebula drivers, the session default is used.
-
 ---
 
 ## TauriMock Interface

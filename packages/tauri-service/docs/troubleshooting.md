@@ -450,11 +450,12 @@ console.log('Available:', windows);
 
 **Issue:** Using `{ windowLabel: 'popup' }` in execute call still uses the main window.
 
-**Why this happens:** Per-call windowLabel requires the embedded driver with direct eval channel (Improvement 2 in the roadmap).
+**Why this happens:** The specified window may not exist in the application, or the Tauri plugin may not be responding.
 
 **Solutions:**
-1. Use `browser.tauri.switchWindow(label)` to change the session default
-2. Use the embedded driver provider for full multi-window support:
+1. Verify the window exists: `const windows = await browser.tauri.listWindows();`
+2. Use `browser.tauri.switchWindow(label)` to change the session default
+3. Check that @wdio/tauri-plugin is installed and registered in your Tauri app
 
 ```typescript
 // wdio.conf.ts
