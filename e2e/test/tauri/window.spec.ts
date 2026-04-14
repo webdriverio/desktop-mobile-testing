@@ -1,5 +1,5 @@
 import { expect } from '@wdio/globals';
-import { browser } from '@wdio/tauri-service';
+import { browser, withExecuteOptions } from '@wdio/tauri-service';
 
 describe('Multi-Window Support', () => {
   beforeEach(async () => {
@@ -72,18 +72,24 @@ describe('Multi-Window Support', () => {
 describe('per-call windowLabel option', () => {
   it('should execute in main window without switching session default', async () => {
     // Execute with explicit windowLabel
-    const result = (await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_active_window_label'), {
-      windowLabel: 'main',
-    })) as string;
+    const result = (await browser.tauri.execute(
+      ({ core }) => core.invoke('plugin:wdio|get_active_window_label'),
+      withExecuteOptions({
+        windowLabel: 'main',
+      }),
+    )) as string;
 
     expect(result).toBe('main');
   });
 
   it('should throw when executing in non-existent window', async () => {
     await expect(
-      browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_active_window_label'), {
-        windowLabel: 'nonexistent-window-999',
-      }),
+      browser.tauri.execute(
+        ({ core }) => core.invoke('plugin:wdio|get_active_window_label'),
+        withExecuteOptions({
+          windowLabel: 'nonexistent-window-999',
+        }),
+      ),
     ).rejects.toThrow();
   });
 
@@ -95,9 +101,12 @@ describe('per-call windowLabel option', () => {
       return;
     }
 
-    const result = (await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_active_window_label'), {
-      windowLabel: 'splash',
-    })) as string;
+    const result = (await browser.tauri.execute(
+      ({ core }) => core.invoke('plugin:wdio|get_active_window_label'),
+      withExecuteOptions({
+        windowLabel: 'splash',
+      }),
+    )) as string;
 
     expect(result).toBe('splash');
   });
