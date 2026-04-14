@@ -1,7 +1,7 @@
 import type { TauriAPIs, TauriExecuteOptions } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriCommandContext, TauriResult } from '../types.js';
-import { getCurrentWindowLabel } from '../window.js';
+import { getCurrentWindowLabel, getDefaultWindowLabel } from '../window.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -40,11 +40,25 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
   }
 
   const sessionWindowLabel = getCurrentWindowLabel(browser);
+  const defaultWindowLabel = getDefaultWindowLabel();
+  const sessionWindowLabelIsExplicit = sessionWindowLabel !== defaultWindowLabel;
   const effectiveWindowLabel = options.windowLabel || sessionWindowLabel;
+
+  // Only forward window_label when the user explicitly targeted a window
+  // (per-call options or a prior switchWindow call), not when it's the initial default
+  let executeOptions: { windowLabel?: string } = {};
+  if (options.windowLabel) {
+    executeOptions = { windowLabel: effectiveWindowLabel };
+  } else if (sessionWindowLabelIsExplicit) {
+    executeOptions = { windowLabel: sessionWindowLabel };
+  }
+
   if (options.windowLabel && options.windowLabel !== sessionWindowLabel) {
     log.debug(`Using per-call windowLabel: ${effectiveWindowLabel} (session default: ${sessionWindowLabel})`);
   } else if (options.windowLabel) {
     log.debug(`Using configured windowLabel: ${effectiveWindowLabel}`);
+  } else if (sessionWindowLabelIsExplicit) {
+    log.debug(`Using session windowLabel: ${sessionWindowLabel}`);
   }
 
   if (typeof script !== 'string' && typeof script !== 'function') {
@@ -84,8 +98,6 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
   }
 
   const scriptString = typeof script === 'function' ? script.toString() : script;
-
-  const executeOptions = { windowLabel: effectiveWindowLabel };
   const argsJson = JSON.stringify(userArgs);
 
   const result = await browser.execute(

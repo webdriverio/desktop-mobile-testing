@@ -23,6 +23,7 @@ vi.mock('@wdio/native-utils', () => ({
 
 vi.mock('../src/window.js', () => ({
   getCurrentWindowLabel: vi.fn().mockReturnValue('main'),
+  getDefaultWindowLabel: vi.fn().mockReturnValue('main'),
 }));
 
 function createMockBrowser(executeFn?: (...args: unknown[]) => unknown) {
@@ -189,7 +190,7 @@ describe('execute', () => {
       // Second call is the actual execute - first arg is the inner function, second is options, third is argsJson
       const secondCall = mockExecute.mock.calls[1];
       expect(secondCall[1]).toBe(fn.toString());
-      expect(secondCall[2]).toEqual({ windowLabel: 'main' }); // options object
+      expect(secondCall[2]).toEqual({}); // No windowLabel sent when using default
       expect(secondCall[3]).toBe('[1,2]'); // argsJson
     });
 
