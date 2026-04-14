@@ -28,7 +28,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  const options: TauriExecuteOptions = {};
+  const options: { windowLabel?: string } = {};
 
   const firstArg = args[0];
   let userArgs: unknown[];
