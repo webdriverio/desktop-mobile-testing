@@ -43,13 +43,30 @@ async fn wait_for_window<R: Runtime>(
 
 /// Extract window label from WDIO capabilities
 fn extract_window_label(capabilities: &serde_json::Value) -> Option<String> {
-    capabilities
+    // Check alwaysMatch first (WDIO typically uses this)
+    if let Some(window_label) = capabilities
         .get("alwaysMatch")
-        .or_else(|| capabilities.get("firstMatch"))
         .and_then(|v| v.get("wdio:tauriServiceOptions"))
         .and_then(|v| v.get("windowLabel"))
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
+    {
+        return Some(window_label.to_string());
+    }
+
+    // Check firstMatch - it's an array per W3C spec, iterate to find the first match
+    if let Some(arr) = capabilities.get("firstMatch").and_then(|v| v.as_array()) {
+        for item in arr {
+            if let Some(window_label) = item
+                .get("wdio:tauriServiceOptions")
+                .and_then(|v| v.get("windowLabel"))
+                .and_then(|v| v.as_str())
+            {
+                return Some(window_label.to_string());
+            }
+        }
+    }
+
+    None
 }
 
 /// W3C `WebDriver` session request (capabilities are accepted but not processed)
