@@ -349,20 +349,6 @@ describe('window management', () => {
       expect(mockBrowser.tauri.execute).not.toHaveBeenCalled();
     });
 
-    it('should skip auto-focus when window label is set to main', async () => {
-      const mockBrowser = {
-        sessionId: 'test-session',
-        tauri: {
-          execute: vi.fn(),
-        },
-      } as unknown as WebdriverIO.Browser;
-
-      setCurrentWindowLabel(mockBrowser, 'main');
-
-      await ensureActiveWindowFocus(mockBrowser, '$');
-      expect(mockBrowser.tauri.execute).not.toHaveBeenCalled();
-    });
-
     it('should check focus for DOM commands', async () => {
       const mockBrowser = {
         tauri: {

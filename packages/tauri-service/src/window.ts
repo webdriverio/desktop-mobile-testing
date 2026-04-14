@@ -181,9 +181,10 @@ function findActiveWindow(states: WindowState[]): WindowState | undefined {
  */
 export async function ensureActiveWindowFocus(browser: WebdriverIO.Browser, commandName: string): Promise<void> {
   // Skip auto-focus if the user has explicitly set a window label via switchWindow()
-  // This prevents the auto-focus logic from silently undoing explicit switches
+  // This prevents the auto-focus logic from silently undoing explicit switches.
+  // Only skip when the label is a non-default value (user explicitly switched, not just initialized).
   const explicitLabel = currentWindowLabelCache.get(browser.sessionId || 'default');
-  if (explicitLabel) {
+  if (explicitLabel && explicitLabel !== DEFAULT_WINDOW_LABEL) {
     log.debug(`Skipping auto-focus: explicit label "${explicitLabel}" is set`);
     return;
   }
