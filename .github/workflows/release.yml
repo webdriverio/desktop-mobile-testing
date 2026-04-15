@@ -7,6 +7,18 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      scope:
+        description: "Release scope (electron, tauri, utils, types, spy, shared)"
+        required: true
+        type: choice
+        options:
+          - shared
+          - utils
+          - types
+          - spy
+          - electron
+          - tauri
+        default: shared
       release_version:
         description: "Release version type"
         required: true
@@ -20,28 +32,16 @@ on:
           - premajor
           - prerelease
         default: patch
-      scope:
-        description: "Release scope (electron, tauri, utils, types, spy, shared)"
-        required: true
-        type: choice
-        options:
-          - shared
-          - utils
-          - types
-          - spy
-          - electron
-          - tauri
-        default: shared
-      dry_run:
-        description: "Dry run (show what would happen without publishing)"
-        required: false
-        type: boolean
-        default: false
       target_branch:
         description: "Branch to release from (default: main)"
         required: false
         type: string
         default: main
+      dry_run:
+        description: "Dry run (show what would happen without publishing)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: release
