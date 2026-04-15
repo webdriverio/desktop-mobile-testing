@@ -63,8 +63,9 @@
     "update:tauri": "tsx ./scripts/update-tauri-version.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.6",
+    "@biomejs/biome": "2.4.12",
     "@inquirer/prompts": "^8.3.0",
+    "@releasekit/release": "^0.13.2",
     "@types/node": "^25.5.0",
     "@typescript-eslint/parser": "^8.57.0",
     "@vitest/eslint-plugin": "^1.6.11",
@@ -76,10 +77,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.3.3",
     "ora": "^9.3.0",
-    "@releasekit/release": "^0.13.2",
     "shx": "^0.4.0",
     "tsx": "^4.21.0",
-    "turbo": "2.8.16",
+    "turbo": "2.9.6",
     "typescript": "^5.9.3",
     "yaml": "^2.8.2"
   },
