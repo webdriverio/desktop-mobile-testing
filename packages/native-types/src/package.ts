@@ -27,5 +27,5 @@ export type NormalizedReadResult = {
 };
 
 export type ReadPackageUpOptions = {
-  cwd?: string | URL;
+  cwd?: string | URL | { pathname: string };
 };
