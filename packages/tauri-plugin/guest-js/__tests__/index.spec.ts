@@ -548,10 +548,10 @@ describe('init', () => {
 
     const backendCleanup = vi.fn();
     const frontendCleanup = vi.fn();
-    window.wdioTauri!.cleanupBackendLogListener = backendCleanup;
-    window.wdioTauri!.cleanupFrontendLogListener = frontendCleanup;
+    (window.wdioTauri as any).cleanupBackendLogListener = backendCleanup;
+    (window.wdioTauri as any).cleanupFrontendLogListener = frontendCleanup;
 
-    window.wdioTauri!.cleanupAll();
+    window.wdioTauri?.cleanupAll();
 
     expect(backendCleanup).toHaveBeenCalledOnce();
     expect(frontendCleanup).toHaveBeenCalledOnce();

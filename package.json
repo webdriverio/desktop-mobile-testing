@@ -13,10 +13,7 @@
   "engines": {
     "node": ">=24.11.0"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["electron", "electron-nightly"]
-  },
-  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "scripts": {
     "build": "turbo run build --filter=./packages/* --filter=./e2e",
     "build:electron": "turbo run build --filter=@wdio/electron-service --filter=@wdio/electron-cdp-bridge --filter=@wdio/native-types --filter=@wdio/native-utils --filter=@wdio/bundler",
@@ -66,8 +63,9 @@
     "update:tauri": "tsx ./scripts/update-tauri-version.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.6",
+    "@biomejs/biome": "2.4.12",
     "@inquirer/prompts": "^8.3.0",
+    "@releasekit/release": "^0.13.2",
     "@types/node": "^25.5.0",
     "@typescript-eslint/parser": "^8.57.0",
     "@vitest/eslint-plugin": "^1.6.11",
@@ -79,15 +77,17 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.3.3",
     "ora": "^9.3.0",
-    "@releasekit/release": "^0.13.0",
     "shx": "^0.4.0",
     "tsx": "^4.21.0",
-    "turbo": "2.8.16",
+    "turbo": "2.9.6",
     "typescript": "^5.9.3",
     "yaml": "^2.8.2"
   },
   "lint-staged": {
     "**/*.{j,t}s": ["biome check --write", "eslint --fix --cache"],
     "**/*.{yml,md,json}": ["biome format --write ."]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "electron", "electron-nightly"]
   }
 }

@@ -74,7 +74,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     (_tauri, cmd) => {
       // @ts-expect-error - window is available in browser context
       const spy = window.__wdio_spy__;
-      if (!spy || !spy.fn) {
+      if (!spy?.fn) {
         throw new Error(
           '@wdio/native-spy not available. Make sure @wdio/tauri-plugin is imported and initialized in your app.',
         );
