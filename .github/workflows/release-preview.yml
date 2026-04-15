@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
 
       - name: Release Preview
-        uses: goosewobbler/releasekit@v0.13.3
+        uses: goosewobbler/releasekit@v0.13.4
         with:
           node-version: '24'
           mode: preview
