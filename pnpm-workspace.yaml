@@ -17,7 +17,7 @@ allowBuilds:
   edgedriver: false
   electron: false
   electron-winstaller: false
-  esbuild: false
+  esbuild: true
   geckodriver: false
 
 catalogs:
