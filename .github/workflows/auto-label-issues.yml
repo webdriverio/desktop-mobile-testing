@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Extract scope and apply area label
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Get issue number from context.payload since context.issue may be undefined
@@ -48,7 +48,7 @@ jobs:
     if: startsWith(github.event.issue.title, '[🐛 Bug]')
     steps:
       - name: Extract platform and apply OS label
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const issueNumber = context.payload.issue.number;

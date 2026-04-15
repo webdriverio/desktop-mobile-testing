@@ -303,7 +303,7 @@ jobs:
 
       - name: 🪄 Generate Test Commands
         id: gen-test
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const ALLOWED = ['standard', 'window', 'multiremote', 'standalone', 'deeplink'];
