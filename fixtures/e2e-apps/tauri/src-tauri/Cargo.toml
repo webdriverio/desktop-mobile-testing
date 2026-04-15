@@ -13,7 +13,7 @@ tauri-build = { version = "2.5.0", features = [] }
 
 [dependencies]
 tauri = { version = "2.10.1", features = ["tray-icon"] }
-tauri-plugin-fs = "2.4.5"
+tauri-plugin-fs = "2.5.0"
 tauri-plugin-deep-link = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-wdio = { path = "../../../../packages/tauri-plugin" }
