@@ -19,6 +19,7 @@ allowBuilds:
   electron-winstaller: false
   esbuild: true
   geckodriver: false
+blockExoticSubdeps: false
 
 catalogs:
   default:
