@@ -15,12 +15,12 @@ packages:
   - fixtures/package-tests/tauri-app
 allowBuilds:
   edgedriver: false
-  electron: false
+  electron: true
+  electron-nightly: true
   electron-winstaller: false
   esbuild: true
   geckodriver: false
 blockExoticSubdeps: false
-
 catalogs:
   default:
     '@wdio/cli': ^9.27.0
