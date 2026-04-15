@@ -202,6 +202,7 @@ jobs:
         uses: goosewobbler/releasekit@v0.13.1
         with:
           mode: release
+          node-version: '24'
           target: ${{ steps.targets.outputs.packages }}
           branch: ${{ inputs.target_branch }}
           bump: ${{ steps.params.outputs.bump }}

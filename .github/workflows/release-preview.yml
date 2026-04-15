@@ -29,6 +29,7 @@ jobs:
       - name: Release Preview
         uses: goosewobbler/releasekit@v0.13.1
         with:
+          node-version: '24'
           mode: preview
           pr: ${{ github.event.pull_request.number }}
           repo: ${{ github.repository }}
