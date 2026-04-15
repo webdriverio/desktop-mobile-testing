@@ -887,14 +887,14 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
         // 1. Executes the user's script (handles both function expressions and function bodies)
         // 2. Stores result in a global variable for polling
         // Note: We use an IIFE that returns `undefined` to avoid Promise serialization issues
-        // 
+        //
         // WDIO sends scripts as function expressions like: "() => { return x; }"
         // WebDriver spec expects function bodies like: "return x;"
         // We handle both by wrapping the script in a way that works for both cases
         let wrapper = format!(
             r"(function() {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
-                
+
                 function serializeValue(value) {{
                     if (value === null || value === undefined) return null;
                     if (typeof value === 'boolean') return value;
@@ -922,7 +922,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                     }}
                     return null;
                 }}
-                
+
                 function deserializeArg(arg) {{
                     if (arg === null || arg === undefined) return arg;
                     if (Array.isArray(arg)) return arg.map(deserializeArg);
@@ -940,7 +940,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                     }}
                     return arg;
                 }}
-                
+
                 // Start async execution (fire and forget)
                 (async function() {{
                     try {{
@@ -953,7 +953,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                         window['{result_var}'] = {{ __wd_success: false, __wd_error: e.message || String(e) }};
                     }}
                 }})();
-                
+
                 // Return undefined to avoid Promise serialization issues
                 return undefined;
             }})()",
@@ -971,13 +971,13 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
         loop {
             let poll_result = self.evaluate_js(&poll_script).await?;
             let inner = poll_result.get("value").cloned().unwrap_or(Value::Null);
-            
+
             // Check if we have a result
             if !inner.is_null() && inner.get("__wd_success").is_some() {
                 // Clean up the global variable
                 let cleanup_script = format!("delete window['{}']", result_var);
                 let _ = self.evaluate_js(&cleanup_script).await;
-                
+
                 return extract_script_result_from_inner(&inner);
             }
 
@@ -985,7 +985,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                 // Clean up on timeout
                 let cleanup_script = format!("delete window['{}']", result_var);
                 let _ = self.evaluate_js(&cleanup_script).await;
-                
+
                 return Err(WebDriverErrorResponse::script_timeout());
             }
 
@@ -1785,24 +1785,6 @@ fn extract_value(result: &Value) -> Result<Value, WebDriverErrorResponse> {
         }
     }
     Ok(Value::Null)
-}
-
-/// Extract result from `execute_script` wrapper (handles `WebView2` null-on-error)
-fn extract_script_result(result: &Value) -> Result<Value, WebDriverErrorResponse> {
-    // First unwrap the evaluate_js result wrapper
-    let inner = if let Some(success) = result.get("success").and_then(Value::as_bool) {
-        if success {
-            result.get("value").cloned().unwrap_or(Value::Null)
-        } else if let Some(error) = result.get("error").and_then(Value::as_str) {
-            return Err(WebDriverErrorResponse::javascript_error(error, None));
-        } else {
-            Value::Null
-        }
-    } else {
-        Value::Null
-    };
-
-    extract_script_result_from_inner(&inner)
 }
 
 /// Extract result from inner value (the __wd_success/__wd_value object)
