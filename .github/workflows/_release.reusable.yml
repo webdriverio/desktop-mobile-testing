@@ -4,9 +4,10 @@ on:
   workflow_call:
     inputs:
       target_packages:
-        description: 'Comma-separated list of packages to release'
-        required: true
+        description: 'Comma-separated list of packages to release (derived from scope if not provided)'
+        required: false
         type: string
+        default: ''
       target_branch:
         description: 'Branch to release from'
         required: true
@@ -89,6 +90,34 @@ jobs:
           sudo apt-get install -y libayatana-appindicator3-dev || true
           sudo apt-get install -y libsoup3-dev || true
 
+      - name: Compute target packages from scope
+        id: targets
+        run: |
+          case "${{ inputs.scope }}" in
+            electron)
+              echo "packages=@wdio/electron-service,@wdio/electron-cdp-bridge" >> $GITHUB_OUTPUT
+              ;;
+            tauri)
+              echo "packages=@wdio/tauri-service,@wdio/tauri-plugin" >> $GITHUB_OUTPUT
+              ;;
+            utils)
+              echo "packages=@wdio/native-utils" >> $GITHUB_OUTPUT
+              ;;
+            types)
+              echo "packages=@wdio/native-types" >> $GITHUB_OUTPUT
+              ;;
+            spy)
+              echo "packages=@wdio/native-spy" >> $GITHUB_OUTPUT
+              ;;
+            shared)
+              echo "packages=@wdio/native-utils,@wdio/native-types,@wdio/native-spy" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "::error::Unknown scope: ${{ inputs.scope }}"
+              exit 1
+              ;;
+          esac
+
       - name: Build packages
         run: |
           scope="${{ inputs.scope }}"
@@ -137,7 +166,7 @@ jobs:
         uses: goosewobbler/releasekit@v0.12.0
         with:
           mode: release
-          target: ${{ inputs.target_packages }}
+          target: ${{ steps.targets.outputs.packages }}
           branch: ${{ inputs.target_branch }}
           bump: ${{ inputs.bump }}
           json: 'true'
