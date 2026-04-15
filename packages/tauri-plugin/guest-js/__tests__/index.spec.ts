@@ -551,7 +551,7 @@ describe('init', () => {
     window.wdioTauri!.cleanupBackendLogListener = backendCleanup;
     window.wdioTauri!.cleanupFrontendLogListener = frontendCleanup;
 
-    window.wdioTauri!.cleanupAll();
+    window.wdioTauri?.cleanupAll();
 
     expect(backendCleanup).toHaveBeenCalledOnce();
     expect(frontendCleanup).toHaveBeenCalledOnce();
