@@ -11,7 +11,7 @@ on:
         description: "Comma-separated list of packages to release"
         required: true
         type: string
-        default: "@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types"
+        default: "@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types,@wdio/native-spy"
       release_version:
         description: "Release version type"
         required: true
@@ -26,11 +26,14 @@ on:
           - prerelease
         default: patch
       scope:
-        description: "Release scope (electron, tauri, shared)"
+        description: "Release scope (electron, tauri, utils, types, spy, shared)"
         required: true
         type: choice
         options:
           - shared
+          - utils
+          - types
+          - spy
           - electron
           - tauri
         default: shared

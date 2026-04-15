@@ -105,10 +105,20 @@ jobs:
                 --filter='@wdio/tauri-service...' \
                 --filter='@wdio/tauri-plugin...'
               ;;
+            utils)
+              pnpm turbo run build --filter='@wdio/native-utils...'
+              ;;
+            types)
+              pnpm turbo run build --filter='@wdio/native-types...'
+              ;;
+            spy)
+              pnpm turbo run build --filter='@wdio/native-spy...'
+              ;;
             shared)
               pnpm turbo run build \
                 --filter='@wdio/native-types...' \
-                --filter='@wdio/native-utils...'
+                --filter='@wdio/native-utils...' \
+                --filter='@wdio/native-spy...'
               ;;
             *)
               echo "::error::Unknown scope: $scope"
