@@ -210,7 +210,7 @@ jobs:
           json: 'true'
           dry-run: ${{ inputs.dry_run }}
           project-dir: .
-          verbose: true
+          verbose: 'true'
           summary: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
