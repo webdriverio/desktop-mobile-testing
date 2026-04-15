@@ -76,7 +76,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -133,13 +133,13 @@ jobs:
         run: |
           bump="${{ inputs.bump }}"
           release_type="${{ inputs.release_type }}"
-          
+
           # If bump already starts with 'pre', it's already in releasekit format (from auto gate)
           if [[ "$bump" == pre* ]]; then
             echo "bump=$bump stable=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           case "$release_type" in
             stable)
               # stable release - use bump value
@@ -199,7 +199,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.13.0
+        uses: goosewobbler/releasekit@v0.13.1
         with:
           mode: release
           target: ${{ steps.targets.outputs.packages }}
