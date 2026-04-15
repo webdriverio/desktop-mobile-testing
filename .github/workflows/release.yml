@@ -19,19 +19,23 @@ on:
           - electron
           - tauri
         default: shared
-      release_version:
-        description: "Release version type"
+      bump:
+        description: "Version increment"
         required: true
         type: choice
         options:
           - patch
           - minor
           - major
-          - prepatch
-          - preminor
-          - premajor
-          - prerelease
         default: patch
+      release_type:
+        description: "Release type"
+        required: true
+        type: choice
+        options:
+          - stable
+          - prerelease
+        default: stable
       target_branch:
         description: "Branch to release from (default: main)"
         required: false
@@ -92,6 +96,7 @@ jobs:
       target_packages: ${{ needs.gate.outputs.target }}
       target_branch: main
       bump: ${{ needs.gate.outputs.bump }}
+      release_type: prerelease
       dry_run: false
       scope: ${{ needs.gate.outputs.scope }}
     secrets:
@@ -108,7 +113,8 @@ jobs:
       id-token: write
     with:
       target_branch: ${{ inputs.target_branch }}
-      bump: ${{ inputs.release_version }}
+      bump: ${{ inputs.bump }}
+      release_type: ${{ inputs.release_type }}
       dry_run: ${{ inputs.dry_run }}
       scope: ${{ inputs.scope }}
     secrets:
