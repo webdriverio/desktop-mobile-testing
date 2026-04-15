@@ -36,6 +36,10 @@
     "test:dev": "vitest --coverage",
     "lint": "biome check ."
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@vitest/coverage-v8": "^4.1.0",
@@ -44,7 +48,6 @@
     "vitest": "^4.0.18"
   },
   "files": ["dist", "LICENSE"],
-  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
