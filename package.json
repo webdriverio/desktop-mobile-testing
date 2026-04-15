@@ -16,7 +16,7 @@
   "pnpm": {
     "onlyBuiltDependencies": ["electron", "electron-nightly"]
   },
-  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a",
+  "packageManager": "pnpm@11.0.0-rc.0+sha512.1f08eadeea025e91448de6d5dee42a6c94764257000c043a9e36b8ff12849a72ebcb9c65fc1885094747249e52f53d8b73ada1181446bba81866810c8a4d3f6c",
   "scripts": {
     "build": "turbo run build --filter=./packages/* --filter=./e2e",
     "build:electron": "turbo run build --filter=@wdio/electron-service --filter=@wdio/electron-cdp-bridge --filter=@wdio/native-types --filter=@wdio/native-utils --filter=@wdio/bundler",

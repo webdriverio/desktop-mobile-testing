@@ -13,6 +13,12 @@ packages:
   - fixtures/package-tests/electron-script-app-cjs
   - fixtures/package-tests/electron-script-app-esm
   - fixtures/package-tests/tauri-app
+allowBuilds:
+  edgedriver: false
+  electron: false
+  electron-winstaller: false
+  esbuild: false
+  geckodriver: false
 
 catalogs:
   default:
