@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## @wdio/native-spy@1.0.0 - 2026-04-16
+
+### Added
+- implement per-worker backend management for CrabNebula, enable E2E testing (#171)
+- tauri window management (#106)
+- `@wdio/native-spy` (#88)
+
+### Changed
+- update package.json homepage and repository URLs for multiple packages
+- release version 1.0.0 for @wdio/native-spy
+- bump version to 1.0.0-next.1 in package.json for @wdio/native-spy
+- update package.json for public access and provenance
+- update Node.js engine requirements across multiple packages
+- update dependencies and improve package configurations (#203)
+- update native-spy version to 1.0.0-next.0
+- update package.json files to enable releases
+- **electron**: update createElectronCapabilities interface (#165)
+- rename repo, docs rework (#95)
+
 ## [Unreleased]
 
 ### Repository
