@@ -2,7 +2,7 @@
   "name": "@wdio/native-spy",
   "version": "1.0.0",
   "description": "Minimal mock function implementation for WebdriverIO Native Desktop Services",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/native-spy",
+  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/native-spy",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -50,7 +50,7 @@
   "files": ["dist", "LICENSE"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
     "directory": "packages/native-spy"
   }
 }
