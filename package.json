@@ -65,7 +65,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.12",
     "@inquirer/prompts": "^8.3.0",
-    "@releasekit/release": "^0.13.11",
+    "@releasekit/release": "^0.13.12",
     "@types/node": "^25.5.0",
     "@typescript-eslint/parser": "^8.57.0",
     "@vitest/eslint-plugin": "^1.6.11",

@@ -74,7 +74,7 @@ jobs:
 
       - name: Run ReleaseKit Gate
         id: gate
-        uses: goosewobbler/releasekit@v0.13.11
+        uses: goosewobbler/releasekit@v0.13.12
         with:
           mode: gate
           node-version: '24'
