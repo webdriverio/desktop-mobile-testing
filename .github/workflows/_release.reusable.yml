@@ -193,7 +193,7 @@ jobs:
               echo "::error::Unknown scope: $scope"
               exit 1
               ;;
-          esac
+           esac
 
       - name: Verify package contents
         run: |
