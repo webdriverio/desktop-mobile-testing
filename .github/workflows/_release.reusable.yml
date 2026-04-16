@@ -203,7 +203,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.13.10
+        uses: goosewobbler/releasekit@v0.13.11
         with:
           mode: release
           node-version: '24'
