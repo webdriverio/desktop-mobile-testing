@@ -41,8 +41,7 @@
       "scope:spy": "@wdio/native-spy",
       "scope:tauri": "@wdio/tauri-*",
       "scope:electron": "@wdio/electron-*"
-    },
-    "defaultScope": "scope:shared"
+    }
   },
   "notes": {
     "changelog": {
