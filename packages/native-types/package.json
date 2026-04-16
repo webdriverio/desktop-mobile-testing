@@ -45,7 +45,7 @@
     "typescript": "^5.9.3",
     "webdriverio": "catalog:default"
   },
-  "files": ["dist", "LICENSE"],
+  "files": ["dist/**/*", "LICENSE"],
   "publishConfig": {
     "access": "public",
     "provenance": true
