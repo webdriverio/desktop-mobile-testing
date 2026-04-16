@@ -136,21 +136,25 @@ jobs:
 
           # If bump already starts with 'pre', it's already in releasekit format (from auto gate)
           if [[ "$bump" == pre* ]]; then
-            echo "bump=$bump stable=false" >> $GITHUB_OUTPUT
+            echo "bump=$bump" >> $GITHUB_OUTPUT
+            echo "stable=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           case "$release_type" in
             stable)
               # stable release - use bump value
-              echo "bump=$bump stable=true" >> $GITHUB_OUTPUT
+              echo "bump=$bump" >> $GITHUB_OUTPUT
+              echo "stable=true" >> $GITHUB_OUTPUT
               ;;
             prerelease)
               # prepend 'pre' to make it a prerelease
-              echo "bump=pre$bump stable=false" >> $GITHUB_OUTPUT
+              echo "bump=pre$bump" >> $GITHUB_OUTPUT
+              echo "stable=false" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "bump=$bump stable=false" >> $GITHUB_OUTPUT
+              echo "bump=$bump" >> $GITHUB_OUTPUT
+              echo "stable=false" >> $GITHUB_OUTPUT
               ;;
           esac
 
