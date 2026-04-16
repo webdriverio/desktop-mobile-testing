@@ -195,6 +195,22 @@ jobs:
               ;;
           esac
 
+      - name: Verify package contents
+        run: |
+          scope="${{ inputs.scope }}"
+          scope="${scope#scope:}"
+          case "$scope" in
+            spy)
+              echo "Verifying @wdio/native-spy package contents..."
+              cd packages/native-spy
+              ls -la dist/
+              npm pack --dry-run
+              ;;
+            *)
+              echo "Skipping package verification for scope: $scope"
+              ;;
+          esac
+
       - name: Configure Git
         if: ${{ !inputs.dry_run }}
         run: |
