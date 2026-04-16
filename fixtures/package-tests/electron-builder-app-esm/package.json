@@ -38,7 +38,7 @@
     "directories": {
       "output": "dist-electron"
     },
-    "files": ["dist/**/*", "package.json"],
+    "files": ["dist", "package.json"],
     "mac": {
       "category": "public.app-category.utilities",
       "target": "dir",
