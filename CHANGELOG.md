@@ -6,16 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [@wdio/electron-service@10.0.1-next.0] - 2026-04-17
+## [@wdio/electron-service@10.0.0-next.7] - 2026-04-17
 
-[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-electron-service@v10.0.0-next.6...10.0.1-next.0)
-
-### Changed
-- Update version to 10.0.1-next.0
-
-## [@wdio/electron-cdp-bridge@10.0.1-next.0] - 2026-04-17
-
-[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-electron-cdp-bridge@v10.0.0-next.6...10.0.1-next.0)
+[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-electron-service@v10.0.0-next.6...10.0.0-next.7)
 
 ### Changed
-- Update version to 10.0.1-next.0
+- release @wdio/electron-service, @wdio/electron-cdp-bridge@10.0.0-next.6 [skip ci]
+- release @wdio/electron-service, @wdio/electron-cdp-bridge@10.0.1-next.0 [skip ci]
+
+## [@wdio/electron-cdp-bridge@10.0.0-next.7] - 2026-04-17
+
+[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-electron-cdp-bridge@v10.0.0-next.6...10.0.0-next.7)
+
+### Changed
+- release @wdio/electron-service, @wdio/electron-cdp-bridge@10.0.0-next.6 [skip ci]
+- release @wdio/electron-service, @wdio/electron-cdp-bridge@10.0.1-next.0 [skip ci]
