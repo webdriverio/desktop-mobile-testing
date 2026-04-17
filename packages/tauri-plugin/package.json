@@ -14,22 +14,13 @@
       }
     }
   },
-  "files": [
-    "README.md",
-    "dist-js",
-    "LICENSE"
-  ],
+  "files": ["README.md", "dist-js", "LICENSE"],
   "scripts": {
     "build": "tsx scripts/build-guest-js.ts",
     "build:js": "tsx scripts/build-guest-js.ts",
     "test": "vitest run"
   },
-  "keywords": [
-    "tauri",
-    "webdriverio",
-    "testing",
-    "automation"
-  ],
+  "keywords": ["tauri", "webdriverio", "testing", "automation"],
   "author": "WebDriverIO Community",
   "license": "MIT",
   "engines": {
@@ -44,5 +35,10 @@
     "esbuild": "^0.27.4",
     "tsx": "^4.19.0",
     "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
+    "directory": "packages/tauri-plugin"
   }
 }
