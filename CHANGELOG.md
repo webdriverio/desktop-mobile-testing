@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [@wdio/native-spy@1.0.9] - 2026-04-17
+
+[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-spy@v1.0.6...1.0.9)
+
+### Changed
+- bump version of @wdio/native-spy to 1.0.8
+- bump version of @wdio/native-spy to 1.0.7
+
 ## [@wdio/native-spy@1.0.6] - 2026-04-17
 
 [Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-spy@v1.0.5...1.0.6)
