@@ -13,6 +13,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## @wdio/native-types@2.0.0 - 2026-04-17
+
+### Added
+- implement per-worker backend management for CrabNebula, enable E2E testing (#171)
+- **tauri**: add embedded WebDriver provider support (#166)
+- standardise tauri API with electron (#146)
+- complete tauri mocking (#143)
+- tauri deeplinking (#128)
+- CrabNebula support (#122)
+- `@wdio/native-spy` (#88)
+- js-only mocking, logging rework (#67)
+- class mocks (#73)
+- add support for electron-builder custom config files (#65)
+- deeplink testing (#60)
+- **electron**: port logging improvements to electron service (#57)
+- ci release workflows (#53)
+- **tauri**: logging integration (#39)
+- tauri plugin (#23)
+
+### Changed
+- add README files for @wdio/native-types and @wdio/native-utils
+- update package.json homepage and repository URLs for multiple packages
+- update dependencies (#230)
+- update Node.js engine requirements across multiple packages
+- update dependencies and improve package configurations (#203)
+- replace `read-package-up` with custom implementation
+- use custom implementation of `read-package-up`
+- update `read-package-up`
+- update package.json files to enable releases
+- types (#174)
+- **electron**: update createElectronCapabilities interface (#165)
+- rename repo, docs rework (#95)
+- tweak mock types
+- use packed webdriverio & puppeteer
+- update deps
+- fix trusted publishing
+- downgrade `read-package-up`
+- update deps
+- standardise published files, add LICENSE
+- release @wdio/native-types@2.0.0 [skip-ci]
+- fix tarball bloat
+- update versions & homepage values
+- clean up and separate types (#52)
+
+### Fixed
+- update files field in package.json to simplify file inclusion
+- update files field in package.json to include all dist files
+
 ## [@wdio/native-spy@1.0.9] - 2026-04-17
 
 [Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-spy@v1.0.6...1.0.9)

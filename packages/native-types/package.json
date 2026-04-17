@@ -45,7 +45,11 @@
     "typescript": "^5.9.3",
     "webdriverio": "catalog:default"
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "provenance": true
