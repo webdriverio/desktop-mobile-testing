@@ -1,0 +1,11 @@
+{
+  "name": "@wdio/tauri-plugin-webdriver",
+  "version": "0.0.1",
+  "description": "Embedded WebDriver server for WDIO Tauri testing",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio/desktop-mobile",
+    "directory": "packages/tauri-plugin-webdriver"
+  }
+}
