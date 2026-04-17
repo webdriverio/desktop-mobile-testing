@@ -217,6 +217,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config --global --add safe.directory "${{ github.workspace }}"
+          git config --local gc.auto 0
+          # Ensure we're on a branch with proper remote tracking
+          if ! git symbolic-ref HEAD > /dev/null 2>&1; then
+            echo "Currently in detached HEAD, checking out branch..."
+            git checkout -B ${{ inputs.branch || 'main' }} origin/${{ inputs.branch || 'main' }} 2>/dev/null || git checkout ${{ inputs.branch || 'main' }}
+          fi
 
       - name: Run ReleaseKit
         id: releasekit
