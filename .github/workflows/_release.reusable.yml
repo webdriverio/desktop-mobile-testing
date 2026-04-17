@@ -226,7 +226,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.14.3
+        uses: goosewobbler/releasekit@v0.15.0
         with:
           mode: release
           node-version: '24'
