@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [@wdio/native-types@2.1.0] - 2026-04-17
+
+[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-types@v2.0.0...2.1.0)
+
+### Changed
+- Update version to 2.1.0
+
 ## @wdio/native-types@2.0.0 - 2026-04-17
 
 ### Added
