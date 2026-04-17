@@ -15,6 +15,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## @wdio/native-utils@2.0.0 - 2026-04-17
+
+### Added
+- implement per-worker backend management for CrabNebula, enable E2E testing (#171)
+- add support for electron-builder custom config files (#65)
+- deeplink testing (#60)
+- ci release workflows (#53)
+- tauri plugin (#23)
+- ensure multiremote works with the tauri service (#17)
+- tauri service (#6)
+
+### Changed
+- add README files for @wdio/native-types and @wdio/native-utils
+- update package.json homepage and repository URLs for multiple packages
+- update dependencies (#230)
+- update Node.js engine requirements across multiple packages
+- update dependencies and improve package configurations (#203)
+- replace `read-package-up` with custom implementation
+- use custom implementation of `read-package-up`
+- migrate `readPackageUp` function to `@wdio/native-utils` and update imports in launcher and pathResolver
+- update `read-package-up`
+- update package.json files to enable releases
+- types (#174)
+- **electron**: update createElectronCapabilities interface (#165)
+- electron service standardisation with tauri, update agent-os standards (#158)
+- rename repo, docs rework (#95)
+- standardize E2E apps (#72)
+- extend path creation for `linux/arm64`
+- fix trusted publishing
+- downgrade `read-package-up`
+- update deps
+- standardise published files, add LICENSE
+- release @wdio/native-utils@2.0.0 [skip-ci]
+- fix tarball bloat
+- update versions & homepage values
+
+### Fixed
+- update files field in package.json to simplify file inclusion
+- update files field in package.json to include all dist files
+
 ## [@wdio/native-types@2.1.0] - 2026-04-17
 
 [Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-types@v2.0.0...2.1.0)
