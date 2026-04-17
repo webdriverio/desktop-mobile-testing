@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.4.1(@types/node@25.6.0)
       '@releasekit/release':
-        specifier: ^0.15.2
-        version: 0.15.2(conventional-commits-parser@6.4.0)(ws@8.20.0)
+        specifier: ^0.15.3
+        version: 0.15.3(conventional-commits-parser@6.4.0)(ws@8.20.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.6.0
@@ -2351,23 +2351,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.15.2':
-    resolution: {integrity: sha512-/UyqxSj+K4r4mxS4pqulzBxKDDnyVks4AzqPuhm3pjDwxH3IV2MQxHPGDqakThcO1QGip40yMd+oPT1lBeqnwg==}
+  '@releasekit/notes@0.15.3':
+    resolution: {integrity: sha512-Kq4gbKuCwLVsHz++CGuzCyM/5o0NwC+Z+DWFhTdhJFRscMdduV96ZD4YKDcX0gkHjt/He9ccGUmCCf81vFPMKA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.15.2':
-    resolution: {integrity: sha512-c4JBekwvrJ3WraTpk9BNnR3xeTOajSPL+e0MFYEgJQ21h0CjUJyxgbYycmRpKSny7NRggL+dtdu5QT/CFnnxDw==}
+  '@releasekit/publish@0.15.3':
+    resolution: {integrity: sha512-iDSyBzTPXmaflMmkHYoeqnl4JiDhuKRlrL05mKMuSatGy4pWSCqrRWnoXoATyuf+P+NPCq/2bR1rIL7AGHmnAQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.15.2':
-    resolution: {integrity: sha512-2b6zGcqU+CYulIo6495FqFiWV0VSj1qMbq3j2SHh4KjZTw+6ZFvwSWIwBP+Vx9lWD1qGi2TnpfGKmUtluzQ7aA==}
+  '@releasekit/release@0.15.3':
+    resolution: {integrity: sha512-dzKw6YualODiJ3HnIi72TRDi8GnG9fp3IZmMy3RSG8qCxTeRm2Y0PmHihmaGukJf5kLbTSowCbx+157ZWJ3m2A==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.15.2':
-    resolution: {integrity: sha512-4QfeTGgEmU14rAbxqi6ha54dsdf8dQU278NziPOqA6V2nA3nt+9Q6BaUf4nVlszyK9JsyW+evyxQsPgYiy68NA==}
+  '@releasekit/version@0.15.3':
+    resolution: {integrity: sha512-gWCqRCOu3dA8N/e9Y+M/lfomQP6DkbrYZU9znvngEuoPJO0M7hl0MLGVXlKTTJfRwyL2lr5GgCGMVZ1vr2jkbA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -8183,7 +8183,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.15.2(ws@8.20.0)':
+  '@releasekit/notes@0.15.3(ws@8.20.0)':
     dependencies:
       '@anthropic-ai/sdk': 0.86.1(zod@4.3.6)
       '@octokit/rest': 22.0.1
@@ -8199,7 +8199,7 @@ snapshots:
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.15.2':
+  '@releasekit/publish@0.15.3':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -8208,13 +8208,13 @@ snapshots:
       smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.15.2(conventional-commits-parser@6.4.0)(ws@8.20.0)':
+  '@releasekit/release@0.15.3(conventional-commits-parser@6.4.0)(ws@8.20.0)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@octokit/rest': 22.0.1
-      '@releasekit/notes': 0.15.2(ws@8.20.0)
-      '@releasekit/publish': 0.15.2
-      '@releasekit/version': 0.15.2(conventional-commits-parser@6.4.0)
+      '@releasekit/notes': 0.15.3(ws@8.20.0)
+      '@releasekit/publish': 0.15.3
+      '@releasekit/version': 0.15.3(conventional-commits-parser@6.4.0)
       chalk: 5.6.2
       commander: 14.0.3
       conventional-changelog-angular: 8.3.1
@@ -8226,7 +8226,7 @@ snapshots:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.15.2(conventional-commits-parser@6.4.0)':
+  '@releasekit/version@0.15.3(conventional-commits-parser@6.4.0)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@types/minimatch': 5.1.2
