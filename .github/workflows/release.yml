@@ -27,6 +27,7 @@ on:
           - patch
           - minor
           - major
+          - prerelease
         default: patch
       release_type:
         description: "Release type"
@@ -74,7 +75,7 @@ jobs:
 
       - name: Run ReleaseKit Gate
         id: gate
-        uses: goosewobbler/releasekit@v0.15.3
+        uses: goosewobbler/releasekit@v0.16.0
         with:
           mode: gate
           node-version: '24'

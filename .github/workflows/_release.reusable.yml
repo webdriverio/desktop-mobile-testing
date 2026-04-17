@@ -148,8 +148,12 @@ jobs:
               echo "stable=true" >> $GITHUB_OUTPUT
               ;;
             prerelease)
-              # prepend 'pre' to make it a prerelease
-              echo "bump=pre$bump" >> $GITHUB_OUTPUT
+              # For prerelease increment, use 'prerelease'; otherwise prepend 'pre'
+              if [ "$bump" = "prerelease" ]; then
+                echo "bump=prerelease" >> $GITHUB_OUTPUT
+              else
+                echo "bump=pre$bump" >> $GITHUB_OUTPUT
+              fi
               echo "stable=false" >> $GITHUB_OUTPUT
               ;;
             *)
@@ -226,7 +230,7 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.15.3
+        uses: goosewobbler/releasekit@v0.16.0
         with:
           mode: release
           node-version: '24'
