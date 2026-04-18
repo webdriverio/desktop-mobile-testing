@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.4.1(@types/node@25.6.0)
       '@releasekit/release':
-        specifier: ^0.16.1
-        version: 0.16.1(conventional-commits-parser@6.4.0)(ws@8.20.0)
+        specifier: ^0.17.0
+        version: 0.17.0(conventional-commits-parser@6.4.0)(ws@8.20.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.6.0
@@ -952,6 +952,8 @@ importers:
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
+
+  packages/tauri-plugin-webdriver: {}
 
   packages/tauri-service:
     dependencies:
@@ -2351,23 +2353,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.16.1':
-    resolution: {integrity: sha512-nK8yIXqEGDMJAcTnhRHasTOK7ahLY6QKQ8KE1O+XENCeNiz1XLPRrUBVX5sd0iJiuquNnp/W7XsHvcKFso2yHA==}
+  '@releasekit/notes@0.17.0':
+    resolution: {integrity: sha512-pR87E73CnYWaAXav8rvU1hlDFgzBLjPbR4PzFljWpJ7R/Aw94rTHGL3uCreJa7Pr4h0Vl7aNbaaNZT++nxxWmQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.16.1':
-    resolution: {integrity: sha512-U1c5GF9Hn0GPqyFfGlBgTgCfJol8NIIJqryqiZxso2iImzKL3YYqgayO7HQX5zj9Kj9QEUXS7Bu8jdWKn8hBjQ==}
+  '@releasekit/publish@0.17.0':
+    resolution: {integrity: sha512-OYYB5fZIytixXNhlK+kt8wmyKRmsJGPULDxJ3CEiRv7z83UP4RZifWGSC30830zuwRCBw6zoUqHmqvlGg768sQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.16.1':
-    resolution: {integrity: sha512-tgxKVf5QVM+ZsnY8yVdIZ4QCSuHNmL/6OoOQu9f22c7oTvHsmukJhosmgl476EtKFMbRFtk30sZUWbMSJqu2Sg==}
+  '@releasekit/release@0.17.0':
+    resolution: {integrity: sha512-Su8anYqt9tu3MKerW3tsMMP8GuIZ6rM6OUj1OTBNVo9AmjMUV7KAe5DXDIMdmujTvCFqEh6+4n4bLgvOPlo9vQ==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.16.1':
-    resolution: {integrity: sha512-MYtKsGqeAO77VvQ2vyX+NfqF+olQiuREnziR8ZRdSyUbJOvDbCFH43jEkwgkQ8XV5szbn31TlTpZXf+ant7xOg==}
+  '@releasekit/version@0.17.0':
+    resolution: {integrity: sha512-R/A4aVYrY/9Op4eZB0C++LN2BB7aR5ovZvRV9RNztb9lU0cIocSxCY0+uHe3tQ2fRqDM/LvTKR9z/DZysMyTog==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -8183,7 +8185,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.16.1(ws@8.20.0)':
+  '@releasekit/notes@0.17.0(ws@8.20.0)':
     dependencies:
       '@anthropic-ai/sdk': 0.86.1(zod@4.3.6)
       '@octokit/rest': 22.0.1
@@ -8199,7 +8201,7 @@ snapshots:
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.16.1':
+  '@releasekit/publish@0.17.0':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -8208,13 +8210,13 @@ snapshots:
       smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.16.1(conventional-commits-parser@6.4.0)(ws@8.20.0)':
+  '@releasekit/release@0.17.0(conventional-commits-parser@6.4.0)(ws@8.20.0)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@octokit/rest': 22.0.1
-      '@releasekit/notes': 0.16.1(ws@8.20.0)
-      '@releasekit/publish': 0.16.1
-      '@releasekit/version': 0.16.1(conventional-commits-parser@6.4.0)
+      '@releasekit/notes': 0.17.0(ws@8.20.0)
+      '@releasekit/publish': 0.17.0
+      '@releasekit/version': 0.17.0(conventional-commits-parser@6.4.0)
       chalk: 5.6.2
       commander: 14.0.3
       conventional-changelog-angular: 8.3.1
@@ -8226,7 +8228,7 @@ snapshots:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.16.1(conventional-commits-parser@6.4.0)':
+  '@releasekit/version@0.17.0(conventional-commits-parser@6.4.0)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@types/minimatch': 5.1.2
