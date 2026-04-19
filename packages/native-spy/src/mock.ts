@@ -153,6 +153,8 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
     return this;
   };
 
+  mockFn.getMockImplementation = (): T | undefined => implementationFn;
+
   mockFn.mockReturnValue = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
     defaultReturnValue = value;
     defaultResolvedValue = undefined;

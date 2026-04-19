@@ -104,6 +104,11 @@ export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unkn
   mockImplementationOnce(fn: T): this;
 
   /**
+   * Get the current mock implementation
+   */
+  getMockImplementation(): T | undefined;
+
+  /**
    * Return a specific value
    */
   mockReturnValue(value: ReturnType<T>): this;

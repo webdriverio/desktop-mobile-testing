@@ -52,6 +52,20 @@ describe('native-spy', () => {
       expect(mock()).toBe('implemented');
     });
 
+    it('should get implementation with getMockImplementation', () => {
+      const mock = fn();
+      const impl = () => 'implemented';
+      mock.mockImplementation(impl);
+
+      expect(mock.getMockImplementation()).toBe(impl);
+    });
+
+    it('should return undefined when no implementation set', () => {
+      const mock = fn();
+
+      expect(mock.getMockImplementation()).toBeUndefined();
+    });
+
     it('should set implementation for next call with mockImplementationOnce', () => {
       const mock = fn();
       mock.mockImplementationOnce(() => 'once');
