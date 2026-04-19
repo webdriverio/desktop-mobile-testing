@@ -66,6 +66,13 @@ describe('native-spy', () => {
       expect(mock.getMockImplementation()).toBeUndefined();
     });
 
+    it('should return initial implementation passed to fn()', () => {
+      const impl = () => 'initial';
+      const mock = fn(impl as (...args: unknown[]) => unknown);
+
+      expect(mock.getMockImplementation()).toBe(impl);
+    });
+
     it('should set implementation for next call with mockImplementationOnce', () => {
       const mock = fn();
       mock.mockImplementationOnce(() => 'once');
