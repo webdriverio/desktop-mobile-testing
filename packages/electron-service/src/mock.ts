@@ -367,6 +367,7 @@ export async function createMock(
   // Ensure all mock methods are properly bound to the wrapper
   wrapperMock.mockImplementation = mock.mockImplementation.bind(mock);
   wrapperMock.mockImplementationOnce = mock.mockImplementationOnce.bind(mock);
+  wrapperMock.getMockImplementation = mock.getMockImplementation.bind(mock);
   wrapperMock.mockReturnValue = mock.mockReturnValue.bind(mock);
   wrapperMock.mockReturnValueOnce = mock.mockReturnValueOnce.bind(mock);
   wrapperMock.mockResolvedValue = mock.mockResolvedValue.bind(mock);
