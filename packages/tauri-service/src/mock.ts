@@ -360,6 +360,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
 
   wrapperMock.mockImplementation = mock.mockImplementation.bind(mock);
   wrapperMock.mockImplementationOnce = mock.mockImplementationOnce.bind(mock);
+  wrapperMock.getMockImplementation = mock.getMockImplementation.bind(mock);
   wrapperMock.mockReturnValue = mock.mockReturnValue.bind(mock);
   wrapperMock.mockReturnValueOnce = mock.mockReturnValueOnce.bind(mock);
   wrapperMock.mockResolvedValue = mock.mockResolvedValue.bind(mock);
