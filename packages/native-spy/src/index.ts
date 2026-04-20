@@ -6,5 +6,6 @@
  * be bundled directly into the application context.
  */
 
+export type { FnOptions } from './mock.js';
 export { fn } from './mock.js';
 export type { Mock, MockContext, MockMetadata, MockResult, MockResultType } from './types.js';

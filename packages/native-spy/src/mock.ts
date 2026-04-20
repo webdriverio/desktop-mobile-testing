@@ -7,8 +7,13 @@ import type { Mock, MockMetadata, MockResult } from './types.js';
 
 let globalCallId = 0;
 
+export interface FnOptions<T extends (...args: unknown[]) => unknown> {
+  original?: T;
+}
+
 export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown>(
   implementation?: T,
+  options?: FnOptions<T>,
 ): Mock<T> {
   let mockNameValue = '';
   let defaultReturnValue: ReturnType<T> | undefined;
@@ -16,6 +21,7 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   let defaultRejectedValue: unknown;
   let returnThis = false;
   let implementationFn = implementation;
+  const originalFn = options?.original;
   const implementationQueue: T[] = [];
 
   // State that needs to be shared across calls
@@ -47,6 +53,13 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
     } else if (implementationFn !== undefined) {
       try {
         const value = implementationFn(...(args as Parameters<T>));
+        result = { type: 'return', value };
+      } catch (error) {
+        result = { type: 'throw', value: error };
+      }
+    } else if (originalFn !== undefined) {
+      try {
+        const value = originalFn(...(args as Parameters<T>));
         result = { type: 'return', value };
       } catch (error) {
         result = { type: 'throw', value: error };
@@ -138,7 +151,8 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
 
   mockFn.mockRestore = function (this: Mock<T>): Mock<T> {
     mockFn.mockReset();
-    implementationFn = undefined;
+    // Restore to original function if available, otherwise just clear implementation
+    implementationFn = originalFn;
     return this;
   };
 
