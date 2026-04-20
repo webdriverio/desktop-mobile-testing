@@ -14,21 +14,41 @@ const log = createLogger('electron-service', 'mock');
 
 async function restoreElectronFunctionality(apiName: string, funcName: string, browserContext?: WebdriverIO.Browser) {
   const browserToUse = browserContext || browser;
-  await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
+  const result = await browserToUse.electron.execute<string, [string, string, ExecuteOpts]>(
     (electron, apiName, funcName) => {
-      const electronApi = electron[apiName as keyof typeof electron];
+      try {
+        const electronApi = electron[apiName as keyof typeof electron] as unknown as Record<
+          string,
+          { mockRestore?: () => void }
+        >;
+        const fn = electronApi[funcName];
 
-      // Always restore to the original function from globalThis.originalApi
-      const originalApi = globalThis.originalApi as Record<ElectronInterface, ElectronType[ElectronInterface]>;
-      const originalApiMethod = originalApi[apiName as keyof typeof originalApi][
-        funcName as keyof ElectronType[ElectronInterface]
-      ] as ElectronApiFn;
-      Reflect.set(electronApi as unknown as object, funcName, originalApiMethod as unknown as ElectronApiFn);
+        // First try calling mockRestore on the mock itself
+        if (fn?.mockRestore) {
+          fn.mockRestore();
+          return 'SUCCESS_MOCK_RESTORE';
+        }
+
+        // Fallback: restore from globalThis.originalApi
+        const originalApi = globalThis.originalApi as unknown as Record<string, Record<string, () => unknown>>;
+        const originalFn = originalApi?.[apiName]?.[funcName];
+        if (originalFn) {
+          const targetApi = electron[apiName as keyof typeof electron] as unknown as Record<string, () => unknown>;
+          targetApi[funcName] = originalFn;
+          return 'SUCCESS_FALLBACK';
+        }
+
+        return 'NO_RESTORE_AVAILABLE';
+      } catch (e) {
+        return `ERROR: ${String(e)}`;
+      }
     },
     apiName,
     funcName,
     { internal: true },
   );
+  log.debug(`[${apiName}.${funcName}] restoreElectronFunctionality result:`, result);
+  return result;
 }
 
 export async function createMock(
@@ -94,17 +114,45 @@ export async function createMock(
 
   log.debug(`[${apiName}.${funcName}] Using browser context:`, typeof browserToUse, browserToUse?.constructor?.name);
 
+  // First, capture the original function and store in globalThis.originalApi
+  await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
+    (electron, apiName, funcName) => {
+      const electronApi = electron[apiName as keyof typeof electron] as unknown as Record<string, () => unknown>;
+      const originalFn = electronApi[funcName];
+
+      if (originalFn) {
+        // Store in globalThis.originalApi for restore fallback
+        const globalOrigApi = globalThis as unknown as Record<string, Record<string, Record<string, () => unknown>>>;
+        if (!globalOrigApi.originalApi) {
+          globalOrigApi.originalApi = {};
+        }
+        if (!globalOrigApi.originalApi[apiName]) {
+          globalOrigApi.originalApi[apiName] = {};
+        }
+        globalOrigApi.originalApi[apiName][funcName] = originalFn;
+      }
+    },
+    apiName,
+    funcName,
+    { internal: true },
+  );
+
   // initialise inner (Electron) mock
   await browserToUse.electron.execute<void, [string, string, ExecuteOpts]>(
     async (electron, apiName, funcName) => {
       const electronApi = electron[apiName as keyof typeof electron];
       const spy = await import('@wdio/native-spy');
-      const mockFn = spy.fn(function (this: unknown) {
-        // Default implementation returns undefined (does not call the original function)
-        // This prevents real dialogs/actions from occurring when mocking
-        // Users can call mockImplementation() to provide custom behavior
-        return undefined;
-      });
+
+      // Try to get original from globalThis.originalApi
+      const originalApi = globalThis.originalApi as unknown as Record<string, Record<string, () => unknown>>;
+      const originalFn = originalApi?.[apiName]?.[funcName];
+
+      const mockFn = spy.fn(
+        function (this: unknown) {
+          return undefined;
+        },
+        { original: originalFn },
+      );
 
       // replace target API with mock
       electronApi[funcName as keyof typeof electronApi] = mockFn as ElectronApiFn;
@@ -376,7 +424,11 @@ export async function createMock(
   wrapperMock.mockRejectedValueOnce = mock.mockRejectedValueOnce.bind(mock);
   wrapperMock.mockClear = mock.mockClear.bind(mock);
   wrapperMock.mockReset = mock.mockReset.bind(mock);
-  wrapperMock.mockRestore = mock.mockRestore.bind(mock);
+  wrapperMock.mockRestore = async function (this: ElectronFunctionMock) {
+    await mock.mockRestore();
+    await restoreElectronFunctionality(apiName, funcName, browserToUse);
+    return this;
+  };
   wrapperMock.mockReturnThis = mock.mockReturnThis.bind(mock);
   wrapperMock.withImplementation = mock.withImplementation.bind(mock);
   wrapperMock.update = mock.update.bind(mock);
