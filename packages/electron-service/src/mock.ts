@@ -149,6 +149,8 @@ export async function createMock(
 
       const mockFn = spy.fn(
         function (this: unknown) {
+          // DEBUG: log what's happening
+          console.log('[inner mock] called for', apiName, funcName);
           return undefined;
         },
         { original: originalFn },
@@ -396,11 +398,16 @@ export async function createMock(
         const callback = new Function(`return ${callbackFnStr}`)() as AbstractFn;
         const impl = new Function(`return ${implFnStr}`)() as AbstractFn;
         let result: unknown | Promise<unknown>;
-        (
-          electron[apiName as keyof typeof electron][funcName as keyof ElectronType[ElectronInterface]] as Mock
-        ).withImplementation(impl, () => {
+        const fn = electron[apiName as keyof typeof electron][
+          funcName as keyof ElectronType[ElectronInterface]
+        ] as unknown as { withImplementation?: (impl: unknown, cb: () => unknown) => unknown };
+        if (fn?.withImplementation) {
+          fn.withImplementation(impl, () => {
+            result = callback(electron);
+          });
+        } else {
           result = callback(electron);
-        });
+        }
 
         return (result as Promise<unknown>)?.then ? await result : result;
       },
