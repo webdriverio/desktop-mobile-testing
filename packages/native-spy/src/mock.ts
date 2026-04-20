@@ -89,13 +89,21 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   // Mark as mock function (vitest compatibility)
   (mockFn as unknown as { _isMockFunction: boolean })._isMockFunction = true;
 
-  // Use direct value assignment (NOT getters) - matches vitest's approach
+  // Use direct value assignment for state - matches vitest's approach
   // This is critical for CDP serialization to work correctly
   Object.defineProperty(mockFn, 'mock', {
     configurable: false,
     enumerable: true,
     writable: false,
     value: state,
+  });
+
+  // Add lastCall as a non-enumerable getter on state itself
+  // This way JSON.stringify(state) will include lastCall as a property
+  Object.defineProperty(state, 'lastCall', {
+    get: () => state.calls[state.calls.length - 1],
+    enumerable: false,
+    configurable: true,
   });
 
   // These are convenience aliases that point to state properties
@@ -120,6 +128,12 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
 
   Object.defineProperty(mockFn, 'instances', {
     get: () => state.instances,
+    enumerable: true,
+    configurable: true,
+  });
+
+  Object.defineProperty(mockFn, 'lastCall', {
+    get: () => state.calls[state.calls.length - 1],
     enumerable: true,
     configurable: true,
   });
@@ -176,7 +190,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
 
   mockFn.mockReturnValue = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
     implementationFn = undefined;
-    implementationQueue = [];
     defaultReturnValue = value;
     defaultResolvedValue = undefined;
     defaultRejectedValue = undefined;
@@ -192,7 +205,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
 
   mockFn.mockResolvedValue = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
     implementationFn = undefined;
-    implementationQueue = [];
     defaultResolvedValue = value;
     defaultReturnValue = undefined;
     defaultRejectedValue = undefined;
@@ -208,7 +220,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
 
   mockFn.mockRejectedValue = function (this: Mock<T>, reason: unknown): Mock<T> {
     implementationFn = undefined;
-    implementationQueue = [];
     defaultRejectedValue = reason;
     defaultReturnValue = undefined;
     defaultResolvedValue = undefined;

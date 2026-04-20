@@ -27,6 +27,7 @@ export interface MockMetadata<T extends (...args: unknown[]) => unknown = (...ar
   results: MockResult[];
   invocationCallOrder: number[];
   instances: unknown[];
+  lastCall?: Parameters<T>; // Last call arguments (computed, not stored)
 }
 
 /**
