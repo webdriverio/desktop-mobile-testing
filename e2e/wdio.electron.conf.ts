@@ -113,6 +113,7 @@ const { envContext, appEntryPoint, appBinaryPath } = context;
 
 // Configure specs based on test type
 let specs: string[] = [];
+let exclude: string[] = [];
 switch (envContext.testType) {
   case 'window':
     specs = ['./test/electron/window.spec.ts'];
@@ -132,16 +133,11 @@ switch (envContext.testType) {
     break;
   default:
     // Standard tests - core functionality without specialized test modes
-    specs = [
-      './test/electron/api.spec.ts',
-      './test/electron/application.spec.ts',
-      './test/electron/dom.spec.ts',
-      './test/electron/interaction.spec.ts',
-      './test/electron/logging.spec.ts',
-      './test/electron/mocking.spec.ts',
-    ];
-    // Deeplink tests are excluded from standard suite - they run only in dedicated deeplink variant
-    // (protocol handlers require special setup and single-instance mode)
+    specs = ['./test/electron/*.spec.ts'];
+    // Exclude:
+    // - window tests (require splash)
+    // - deeplink tests (require single-instance)
+    exclude = ['./test/electron/window.spec.ts', './test/electron/deeplink.spec.ts'];
     break;
 }
 
@@ -230,7 +226,7 @@ const logDir = join(__dirname, 'logs', `${envContext.testType}-${envContext.appD
 export const config: WdioElectronConfig = {
   runner: 'local',
   specs,
-  exclude: [],
+  exclude,
   maxInstances: 1,
   capabilities,
   logLevel: envContext.env.WDIO_VERBOSE === 'true' ? 'debug' : 'info',

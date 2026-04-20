@@ -136,12 +136,10 @@ switch (envContext.testType) {
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
     // Exclude:
-    // - mocking tests (require special setup)
     // - window tests (require splash)
     // - deeplink tests (require single-instance)
     // - trace-debug tests (WebKit limitation - not captured in embedded mode)
     exclude = [
-      './test/tauri/mocking.spec.ts',
       './test/tauri/window.spec.ts',
       './test/tauri/deeplink.spec.ts',
       './test/tauri/logging.tauri-driver.spec.ts',
