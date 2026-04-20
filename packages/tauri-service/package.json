@@ -26,12 +26,7 @@
       "./dist/cjs/index.js"
     ]
   },
-  "files": [
-    "dist",
-    "docs",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "docs", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsx ../../scripts/build-package.ts",
     "build:console-wrapper": "tsx scripts/minify-console-wrapper.ts",
@@ -80,15 +75,7 @@
       "optional": false
     }
   },
-  "keywords": [
-    "webdriverio",
-    "wdio",
-    "wdio-service",
-    "tauri",
-    "testing",
-    "e2e",
-    "desktop"
-  ],
+  "keywords": ["webdriverio", "wdio", "wdio-service", "tauri", "testing", "e2e", "desktop"],
   "repository": {
     "type": "git",
     "url": "https://github.com/webdriverio/desktop-mobile.git",
