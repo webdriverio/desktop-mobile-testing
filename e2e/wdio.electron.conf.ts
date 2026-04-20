@@ -138,6 +138,7 @@ switch (envContext.testType) {
       './test/electron/dom.spec.ts',
       './test/electron/interaction.spec.ts',
       './test/electron/logging.spec.ts',
+      './test/electron/mocking.spec.ts',
     ];
     // Deeplink tests are excluded from standard suite - they run only in dedicated deeplink variant
     // (protocol handlers require special setup and single-instance mode)
