@@ -21,8 +21,9 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   let defaultRejectedValue: unknown;
   let returnThis = false;
   let implementationFn = implementation;
+  let implementationQueue: T[] = [];
   const originalFn = options?.original;
-  const implementationQueue: T[] = [];
+  let mockRestored = false; // Track if mock has been restored
 
   // State that needs to be shared across calls
   const state: MockMetadata<T> = {
@@ -46,10 +47,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
       }
     } else if (defaultRejectedValue !== undefined) {
       result = { type: 'throw', value: defaultRejectedValue };
-    } else if (defaultResolvedValue !== undefined) {
-      result = { type: 'return', value: Promise.resolve(defaultResolvedValue) };
-    } else if (returnThis) {
-      result = { type: 'return', value: this };
     } else if (implementationFn !== undefined) {
       try {
         const value = implementationFn(...(args as Parameters<T>));
@@ -57,15 +54,21 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
       } catch (error) {
         result = { type: 'throw', value: error };
       }
-    } else if (originalFn !== undefined) {
+    } else if (defaultResolvedValue !== undefined) {
+      result = { type: 'return', value: Promise.resolve(defaultResolvedValue) };
+    } else if (returnThis) {
+      result = { type: 'return', value: this };
+    } else if (mockRestored && originalFn !== undefined) {
       try {
         const value = originalFn(...(args as Parameters<T>));
         result = { type: 'return', value };
       } catch (error) {
         result = { type: 'throw', value: error };
       }
-    } else {
+    } else if (defaultReturnValue !== undefined) {
       result = { type: 'return', value: defaultReturnValue };
+    } else {
+      result = { type: 'return', value: undefined };
     }
 
     // Record the call (matches vitest's structure)
@@ -142,16 +145,18 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   mockFn.mockReset = function (this: Mock<T>): Mock<T> {
     mockFn.mockClear();
     implementationFn = undefined;
+    implementationQueue = [];
     defaultReturnValue = undefined;
     defaultResolvedValue = undefined;
     defaultRejectedValue = undefined;
     returnThis = false;
+    mockRestored = false;
     return this;
   };
 
   mockFn.mockRestore = function (this: Mock<T>): Mock<T> {
     mockFn.mockReset();
-    // Restore to original function if available, otherwise just clear implementation
+    mockRestored = true;
     implementationFn = originalFn;
     return this;
   };
@@ -170,6 +175,8 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   mockFn.getMockImplementation = (): T | undefined => implementationFn;
 
   mockFn.mockReturnValue = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
+    implementationFn = undefined;
+    implementationQueue = [];
     defaultReturnValue = value;
     defaultResolvedValue = undefined;
     defaultRejectedValue = undefined;
@@ -178,11 +185,14 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   };
 
   mockFn.mockReturnValueOnce = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
+    implementationFn = undefined;
     implementationQueue.push((() => value) as T);
     return this;
   };
 
   mockFn.mockResolvedValue = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
+    implementationFn = undefined;
+    implementationQueue = [];
     defaultResolvedValue = value;
     defaultReturnValue = undefined;
     defaultRejectedValue = undefined;
@@ -191,11 +201,14 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   };
 
   mockFn.mockResolvedValueOnce = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
+    implementationFn = undefined;
     implementationQueue.push((async () => value) as T);
     return this;
   };
 
   mockFn.mockRejectedValue = function (this: Mock<T>, reason: unknown): Mock<T> {
+    implementationFn = undefined;
+    implementationQueue = [];
     defaultRejectedValue = reason;
     defaultReturnValue = undefined;
     defaultResolvedValue = undefined;
