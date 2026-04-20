@@ -109,6 +109,15 @@ export async function createMock(
     },
   });
 
+  // Also expose lastCall for convenience (computed from calls)
+  Object.defineProperty(wrapperMock, 'lastCall', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      return originalMock.calls[originalMock.calls.length - 1];
+    },
+  });
+
   // Use provided browser context or fallback to global browser
   const browserToUse = browserContext || browser;
 
