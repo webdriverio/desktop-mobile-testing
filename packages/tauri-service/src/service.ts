@@ -232,19 +232,29 @@ export default class TauriWorkerService {
    */
   private getTauriAPI(browser: WebdriverIO.Browser): TauriServiceAPI {
     return {
-      execute: <ReturnValue, InnerArguments extends unknown[]>(
+      execute: async <ReturnValue, InnerArguments extends unknown[]>(
         script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
         ...args: InnerArguments
       ): Promise<ReturnValue> => {
-        return execute<ReturnValue, InnerArguments>(browser, script, ...args);
+        const result = await execute<ReturnValue, InnerArguments>(browser, script, ...args);
+        await updateAllMocks();
+        return result;
       },
 
       clearAllMocks: async (commandPrefix?: string): Promise<void> => {
         return clearAllMocks.call({ browser }, commandPrefix);
       },
 
-      isMockFunction: (fn: unknown) => {
-        return isMockFunction(fn);
+      isMockFunction: (commandOrFn: unknown) => {
+        if (typeof commandOrFn === 'string') {
+          try {
+            mockStore.getMock(`tauri.${commandOrFn}`);
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        return isMockFunction(commandOrFn);
       },
 
       mock: async (command: string) => {

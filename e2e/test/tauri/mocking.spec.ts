@@ -165,18 +165,12 @@ describe('Tauri Mocking', () => {
     describe('mockImplementation', () => {
       it('should use the specified implementation for an existing mock', async () => {
         const mockReadClipboard = await browser.tauri.mock('read_clipboard');
-        let callsCount = 0;
 
-        await mockReadClipboard.mockImplementation(() => {
-          if (typeof callsCount !== 'undefined') {
-            callsCount++;
-          }
-          return 'mocked clipboard value';
-        });
+        await mockReadClipboard.mockImplementation(() => 'mocked clipboard value');
 
         const result = await browser.tauri.execute(async ({ core }) => await core.invoke('read_clipboard'));
 
-        expect(callsCount).toBe(1);
+        expect(mockReadClipboard.mock.calls).toHaveLength(1);
         expect(result).toBe('mocked clipboard value');
       });
     });
@@ -558,8 +552,30 @@ describe('Tauri Mocking', () => {
       });
     });
 
-    describe('update() synchronization', () => {
+    describe('synchronization', () => {
       it('should synchronize mock calls after update', async () => {
+        const mockReadClipboard = await browser.tauri.mock('read_clipboard');
+
+        // Use browser.execute (raw WebDriver, no auto-sync) to invoke the inner mock directly
+        await browser.execute(() => {
+          // @ts-expect-error - window is available in browser context
+          const mockFn = window.__wdio_mocks__?.read_clipboard;
+          if (typeof mockFn === 'function') {
+            mockFn();
+            mockFn();
+          }
+        });
+
+        // Before update(), outer mock has no calls (inner mock has 2)
+        expect(mockReadClipboard.mock.calls).toStrictEqual([]);
+
+        await mockReadClipboard.update();
+
+        // After update(), calls are synchronized from inner mock
+        expect(mockReadClipboard.mock.calls).toHaveLength(2);
+      });
+
+      it('should auto-synchronize mock calls after execute', async () => {
         const mockReadClipboard = await browser.tauri.mock('read_clipboard');
 
         await browser.tauri.execute(async ({ core }) => {
@@ -567,12 +583,7 @@ describe('Tauri Mocking', () => {
           await core.invoke('read_clipboard');
         });
 
-        // Before update, calls should be empty
-        expect(mockReadClipboard.mock.calls).toStrictEqual([]);
-
-        await mockReadClipboard.update();
-
-        // After update, calls should be synchronized
+        // After tauri.execute (auto-synced), calls should be synchronized without calling update()
         expect(mockReadClipboard.mock.calls).toHaveLength(2);
       });
 

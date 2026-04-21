@@ -91,7 +91,12 @@ pub(crate) async fn execute<R: Runtime>(
         if let Ok(payload) = serde_json::from_str::<serde_json::Value>(event.payload()) {
             if let Some(success) = payload.get("success").and_then(|s| s.as_bool()) {
                 if success {
-                    let value: JsonValue = payload.get("value").unwrap_or(&JsonValue::Null).clone();
+                    let is_undefined = payload.get("__wdio_undefined__").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let value: JsonValue = if is_undefined {
+                        serde_json::json!({"__wdio_undefined__": true})
+                    } else {
+                        payload.get("value").unwrap_or(&JsonValue::Null).clone()
+                    };
                     let _ = tx.send(Ok(value));
                 } else {
                     let error_msg = payload.get("error")
@@ -105,60 +110,58 @@ pub(crate) async fn execute<R: Runtime>(
     });
 
     // Wrap the script to:
-    // 1. Wait for window.__TAURI__.core.invoke to be available (handles race condition)
+    // 1. Wait for Tauri core.invoke to be available (handles race condition)
     // 2. Execute the user's script
     // 3. Emit the result via a Tauri event using the current window's emit
+    //
+    // NOTE: We use window.__wdio_original_core__ and window.__wdio_original_tauri__ (set by
+    // the @wdio/tauri-plugin frontend before any Proxy interception) rather than accessing
+    // window.__TAURI__ directly. On macOS/WKWebView the plugin may replace window.__TAURI__
+    // with a Proxy; reading non-configurable/non-writable own properties through that Proxy
+    // triggers a JavaScript invariant violation. The snapshots are plain objects and are safe.
     let script_with_result = format!(
         r#"
         (async () => {{
+            // Helper: emit a result event via the snapshotted original tauri or dynamic import
+            async function __wdio_emit(eventName, payload) {{
+                const origTauri = window.__wdio_original_tauri__;
+                if (origTauri?.event?.emit) {{
+                    await origTauri.event.emit(eventName, payload);
+                }} else {{
+                    const {{ emit }} = await import('@tauri-apps/api/event');
+                    await emit(eventName, payload);
+                }}
+            }}
+
             try {{
-                // Wait for window.__TAURI__.core.invoke to be available
+                // Wait for core.invoke using the snapshotted original core (avoids Proxy issues)
                 const maxWait = 5000;
                 const startTime = Date.now();
-                while (!window.__TAURI__?.core?.invoke && (Date.now() - startTime) < maxWait) {{
+                while (!window.__wdio_original_core__?.invoke && (Date.now() - startTime) < maxWait) {{
                     await new Promise(r => setTimeout(r, 10));
                 }}
-                if (!window.__TAURI__?.core?.invoke) {{
-                    throw new Error('window.__TAURI__.core.invoke not available after timeout');
+                if (!window.__wdio_original_core__?.invoke) {{
+                    throw new Error('Tauri core.invoke not available after timeout');
                 }}
 
                 // Execute the user's script
                 const result = await ({});
 
-                // Emit the result using the current window's event emitter
-                // This ensures the event goes to the same window where we're listening
-                if (window.__TAURI__?.event?.emit) {{
-                    await window.__TAURI__.event.emit('{}', {{ success: true, value: result }});
+                if (result === undefined) {{
+                    await __wdio_emit('{}', {{ success: true, __wdio_undefined__: true }});
                 }} else {{
-                    // Fallback: try dynamic import
-                    try {{
-                        const {{ emit }} = await import('@tauri-apps/api/event');
-                        await emit('{}', {{ success: true, value: result }});
-                    }} catch (importError) {{
-                        console.error('[WDIO Execute] Failed to import emit:', importError);
-                        // Last resort: try to use the globalTauri emit
-                        if (typeof window.__TAURI__ !== 'undefined') {{
-                            const {{ emit }} = await import('@tauri-apps/api/event');
-                            await emit('{}', {{ success: true, value: result }});
-                        }}
-                    }}
+                    await __wdio_emit('{}', {{ success: true, value: result }});
                 }}
             }} catch (error) {{
-                // Emit error via event
                 try {{
-                    if (window.__TAURI__?.event?.emit) {{
-                        await window.__TAURI__.event.emit('{}', {{ success: false, error: error.message || String(error) }});
-                    }} else {{
-                        const {{ emit }} = await import('@tauri-apps/api/event');
-                        await emit('{}', {{ success: false, error: error.message || String(error) }});
-                    }}
+                    await __wdio_emit('{}', {{ success: false, error: error.message || String(error) }});
                 }} catch (emitError) {{
                     console.error('[WDIO Execute] Failed to emit error:', emitError);
                 }}
             }}
         }})();
         "#,
-        script, event_id, event_id, event_id, event_id, event_id
+        script, event_id, event_id, event_id
     );
 
     log::trace!("Executing script via window.eval()");

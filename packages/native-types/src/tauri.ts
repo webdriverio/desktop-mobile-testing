@@ -97,21 +97,27 @@ export interface TauriServiceAPI {
   ): Promise<ReturnValue>;
 
   /**
-   * Check if a value is a Tauri mock function.
-   * This is a TypeScript type guard that narrows the type when true.
+   * Check if a value is a Tauri mock function or if a command is mocked.
+   * Accepts either a mock function object or a command name string.
    *
-   * @param fn - Value to check
-   * @returns True if the value is a TauriMockInstance
+   * @param commandOrFn - Command name (string) or mock function object to check
+   * @returns True if the command is mocked or the value is a TauriMockInstance
    * @example
    * ```js
-   * const mock = await browser.tauri.mock('clipboard_read');
+   * // Check by command name
+   * if (await browser.tauri.isMockFunction('read_clipboard')) {
+   *   // read_clipboard is mocked
+   * }
+   *
+   * // Check by function object
+   * const mock = await browser.tauri.mock('read_clipboard');
    * if (browser.tauri.isMockFunction(mock)) {
-   *   // TypeScript knows mock is TauriMockInstance here
+   *   // mock is a TauriMockInstance
    *   expect(mock.mock.calls).toHaveLength(1);
    * }
    * ```
    */
-  isMockFunction: (fn: unknown) => fn is TauriMockInstance;
+  isMockFunction: (commandOrFn: unknown) => boolean;
 
   /**
    * Mock a Tauri backend command.

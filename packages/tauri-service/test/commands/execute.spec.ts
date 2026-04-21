@@ -238,6 +238,17 @@ describe('execute', () => {
       expect(result).toBe(42);
     });
 
+    it('should return undefined for __wdio_undefined__ response', async () => {
+      const mockExecute = vi.fn();
+      mockExecute.mockResolvedValueOnce(true);
+      mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_undefined__: true }));
+      browser = createMockBrowser();
+      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+
+      const result = await execute<undefined, []>(browser, '() => undefined');
+      expect(result).toBeUndefined();
+    });
+
     it('should return raw result when __wdio_value__ is undefined in parsed response', async () => {
       const mockExecute = vi.fn();
       mockExecute.mockResolvedValueOnce(true);
