@@ -493,67 +493,11 @@ function setupInvokeInterception(): void {
       console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete (defineProperty)');
       return;
     } catch (_defineError) {
-      // Falls through to Proxy fallback (e.g. macOS/WKWebView where invoke is non-configurable)
-    }
-
-    // Strategy 2 & 3: Proxy-based fallback for non-configurable invoke
-    // A Proxy intercepts property access without needing to modify the frozen object
-    const coreProxy = new Proxy(core, {
-      get(target, prop, receiver) {
-        if (prop === 'invoke') return wrappedInvoke;
-        if (prop === '_wdioInvokeInterceptor') return true;
-        const val = Reflect.get(target, prop, receiver);
-        return typeof val === 'function' ? (val as (...args: unknown[]) => unknown).bind(target) : val;
-      },
-      set(target, prop, value) {
-        if (prop === 'invoke') {
-          _baseInvoke =
-            typeof value === 'function' ? (value as (cmd: string, args?: InvokeArgs) => Promise<unknown>) : null;
-          return true;
-        }
-        try {
-          return Reflect.set(target, prop, value);
-        } catch {
-          return false;
-        }
-      },
-    });
-
-    // window.__TAURI__ is guaranteed non-null here: core = window.__TAURI__?.core is truthy above
-    const tauri = window.__TAURI__ as NonNullable<Window['__TAURI__']>;
-
-    // Strategy 2: replace window.__TAURI__.core with coreProxy
-    let proxyInstalled = false;
-    try {
-      const coreDescriptor = Object.getOwnPropertyDescriptor(tauri, 'core');
-      if (coreDescriptor?.writable || typeof coreDescriptor?.set === 'function') {
-        (tauri as unknown as { core: unknown }).core = coreProxy;
-        proxyInstalled = true;
-        console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete (core proxy)');
-      }
-    } catch (_coreProxyError) {
-      // fall through to strategy 3
-    }
-
-    if (!proxyInstalled) {
-      // Strategy 3: replace window.__TAURI__ with a Proxy that returns coreProxy for .core
-      try {
-        const tauriProxy = new Proxy(tauri, {
-          get(target, prop, receiver) {
-            if (prop === 'core') return coreProxy;
-            return Reflect.get(target, prop, receiver);
-          },
-        }) as typeof window.__TAURI__;
-        window.__TAURI__ = tauriProxy;
-        proxyInstalled = true;
-        console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete (__TAURI__ proxy)');
-      } catch (_tauriProxyError) {
-        // fall through
-      }
-    }
-
-    if (!proxyInstalled) {
-      console.error('[WDIO Tauri Plugin] ❌ All interception strategies failed - mocking will not work');
+      // invoke is non-configurable; defineProperty failed. Mock routing still works via
+      // window.__wdio_mocks__ in execute()'s wrappedScript — invoke interception is not required.
+      console.warn(
+        '[WDIO Tauri Plugin] ⚠️ Invoke interception via defineProperty failed; mock routing via window.__wdio_mocks__ remains active',
+      );
     }
   };
 
