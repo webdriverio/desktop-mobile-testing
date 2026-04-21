@@ -182,6 +182,30 @@ describe('native-spy', () => {
       expect(mock()).toBe(undefined);
     });
 
+    it('should allow mockReturnValue after mockRestore', () => {
+      const mock = fn(() => 'original');
+      mock.mockRestore();
+      mock.mockReturnValue('new value');
+
+      expect(mock()).toBe('new value');
+    });
+
+    it('should allow mockResolvedValue after mockRestore', async () => {
+      const mock = fn(async () => 'original');
+      mock.mockRestore();
+      mock.mockResolvedValue('new resolved');
+
+      expect(await mock()).toBe('new resolved');
+    });
+
+    it('should allow mockRejectedValue after mockRestore', () => {
+      const mock = fn(async () => 'original');
+      mock.mockRestore();
+      mock.mockRejectedValue(new Error('new error'));
+
+      expect(() => mock()).toThrow('new error');
+    });
+
     it('should track results with type throw for implementations that throw', () => {
       const mock = fn();
       mock.mockImplementation(() => {
