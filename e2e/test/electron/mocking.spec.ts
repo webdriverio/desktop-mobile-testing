@@ -275,12 +275,6 @@ describe('Electron Mocking', () => {
         });
 
         it('should restore existing mocks', async () => {
-          // Ensure clipboard has expected initial state
-          await browser.electron.execute((electron) => {
-            electron.clipboard.clear();
-            electron.clipboard.writeText('some real clipboard text');
-          });
-
           const mockGetName = await browser.electron.mock('app', 'getName');
           const mockReadText = await browser.electron.mock('clipboard', 'readText');
           await mockGetName.mockReturnValue('mocked appName');
@@ -291,8 +285,6 @@ describe('Electron Mocking', () => {
           const appName = await browser.electron.execute((electron) => electron.app.getName());
           const clipboardText = await browser.electron.execute((electron) => electron.clipboard.readText());
           expect(appName).toBe(getExpectedAppName());
-
-          // Clipboard should be restored to original state
           expect(clipboardText).toBe('some real clipboard text');
         });
 
