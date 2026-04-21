@@ -23,22 +23,20 @@ async function restoreElectronFunctionality(apiName: string, funcName: string, b
         >;
         const fn = electronApi[funcName];
 
-        // First try calling mockRestore on the mock itself
-        if (fn?.mockRestore) {
-          fn.mockRestore();
-          return 'SUCCESS_MOCK_RESTORE';
-        }
-
-        // Fallback: restore from globalThis.originalApi
         const originalApi = globalThis.originalApi as unknown as Record<string, Record<string, () => unknown>>;
         const originalFn = originalApi?.[apiName]?.[funcName];
+
+        if (fn?.mockRestore) {
+          fn.mockRestore();
+        }
+
         if (originalFn) {
           const targetApi = electron[apiName as keyof typeof electron] as unknown as Record<string, () => unknown>;
           targetApi[funcName] = originalFn;
-          return 'SUCCESS_FALLBACK';
+          return 'SUCCESS_RESTORE';
         }
 
-        return 'NO_RESTORE_AVAILABLE';
+        return fn?.mockRestore ? 'SUCCESS_MOCK_RESTORE' : 'NO_RESTORE_AVAILABLE';
       } catch (e) {
         return `ERROR: ${String(e)}`;
       }
@@ -158,8 +156,6 @@ export async function createMock(
 
       const mockFn = spy.fn(
         function (this: unknown) {
-          // DEBUG: log what's happening
-          console.log('[inner mock] called for', apiName, funcName);
           return undefined;
         },
         { original: originalFn },
@@ -176,17 +172,18 @@ export async function createMock(
   mock.update = async () => {
     log.debug(`[${apiName}.${funcName}] Starting mock update`);
     // synchronises inner and outer mocks
-    const calls = await browserToUse.electron.execute<unknown[][], [string, string, ExecuteOpts]>(
-      (electron, apiName, funcName) => {
-        const mockObj = electron[apiName as keyof typeof electron][
-          funcName as keyof ElectronType[ElectronInterface]
-        ] as ElectronFunctionMock;
-        return mockObj.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
-      },
-      apiName,
-      funcName,
-      { internal: true },
-    );
+    const calls =
+      (await browserToUse.electron.execute<unknown[][], [string, string, ExecuteOpts]>(
+        (electron, apiName, funcName) => {
+          const api = electron[apiName as keyof typeof electron];
+          if (!api) return [];
+          const mockObj = api[funcName as keyof ElectronType[ElectronInterface]] as ElectronFunctionMock;
+          return mockObj?.mock?.calls ? JSON.parse(JSON.stringify(mockObj.mock?.calls)) : [];
+        },
+        apiName,
+        funcName,
+        { internal: true },
+      )) ?? [];
 
     log.debug(
       `[${apiName}.${funcName}] Retrieved ${calls.length} calls from inner mock, outer mock has ${originalMock.calls.length} calls`,
