@@ -58,6 +58,8 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
       result = { type: 'return', value: Promise.resolve(defaultResolvedValue) };
     } else if (returnThis) {
       result = { type: 'return', value: this };
+    } else if (defaultReturnValue !== undefined) {
+      result = { type: 'return', value: defaultReturnValue };
     } else if (mockRestored && originalFn !== undefined) {
       try {
         const value = originalFn(...(args as Parameters<T>));
@@ -65,8 +67,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
       } catch (error) {
         result = { type: 'throw', value: error };
       }
-    } else if (defaultReturnValue !== undefined) {
-      result = { type: 'return', value: defaultReturnValue };
     } else {
       result = { type: 'return', value: undefined };
     }
