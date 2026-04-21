@@ -55,7 +55,7 @@ export interface TauriMockInstance extends Omit<Mock, MockOverride> {
   mockClear(): Promise<TauriMock>;
   mockReset(): Promise<TauriMock>;
   mockRestore(): Promise<TauriMock>;
-  mockReturnThis(): Promise<unknown>;
+  mockReturnThis(): Promise<TauriMock>;
   withImplementation<ReturnValue, InnerArguments extends unknown[]>(
     implFn: AbstractFn,
     callbackFn: (tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue,

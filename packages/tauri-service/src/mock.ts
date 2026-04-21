@@ -333,7 +333,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockReturnThis = async () => {
-    return await tauriExecute<void, [string]>(
+    await tauriExecute<void, [string]>(
       browserToUse,
       (_tauri, cmd) => {
         // @ts-expect-error - window is available in browser context
@@ -342,6 +342,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       },
       command,
     );
+    return mock;
   };
 
   mock.withImplementation = async (implFn, callbackFn) => {
