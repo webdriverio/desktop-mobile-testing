@@ -7,7 +7,7 @@ import type {
   ExecuteOpts,
 } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
-import { buildMockMethods, restoreElectronFunctionality } from './mockFactory.js';
+import { buildMockMethods } from './mockFactory.js';
 
 const log = createLogger('electron-service', 'mock');
 
@@ -170,7 +170,6 @@ export async function createMock(
   wrapperMock.mockReset = mock.mockReset.bind(mock);
   wrapperMock.mockRestore = async function (this: ElectronFunctionMock) {
     await mock.mockRestore();
-    await restoreElectronFunctionality(apiName, funcName, browserToUse);
     return this;
   };
   wrapperMock.mockReturnThis = mock.mockReturnThis.bind(mock);
