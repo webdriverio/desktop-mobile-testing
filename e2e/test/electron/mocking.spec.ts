@@ -1032,9 +1032,8 @@ describe('Electron Mocking', () => {
 
           await browser.electron.execute((electron) => {
             new electron.Tray('/path/to/icon1.png');
-            new (electron.Tray as unknown as new (...args: unknown[]) => unknown)('/path/to/icon2.png', {
-              title: 'Test',
-            });
+            // @ts-expect-error — Tray constructor accepts extra args at runtime but types are narrow
+            new electron.Tray('/path/to/icon2.png', { title: 'Test' });
           });
 
           expect(mockTray.__constructor).toHaveBeenCalledTimes(2);
@@ -1050,7 +1049,8 @@ describe('Electron Mocking', () => {
 
           await browser.electron.execute((electron) => {
             const tray = new electron.Tray('/path/to/icon.png');
-            (tray.setTitle('App') as unknown as typeof tray).setToolTip('Menu'); // Should work if chaining works
+            // @ts-expect-error — mockReturnThis makes setTitle return `this`; types don't reflect it
+            tray.setTitle('App').setToolTip('Menu');
           });
 
           expect(mockTray.setToolTip).toHaveBeenCalledWith('Menu');
@@ -1169,9 +1169,8 @@ describe('Electron Mocking', () => {
 
             await browser.electron.execute((electron) => {
               new electron.Tray('/path/to/icon1.png');
-              new (electron.Tray as unknown as new (...args: unknown[]) => unknown)('/path/to/icon2.png', {
-                title: 'Test',
-              });
+              // @ts-expect-error — Tray constructor accepts extra args at runtime but types are narrow
+              new electron.Tray('/path/to/icon2.png', { title: 'Test' });
             });
 
             expect(mockTray.__constructor.mock.calls).toStrictEqual([
