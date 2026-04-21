@@ -198,7 +198,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   };
 
   mockFn.mockReturnValueOnce = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
-    implementationFn = undefined;
     implementationQueue.push((() => value) as T);
     return this;
   };
@@ -213,7 +212,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   };
 
   mockFn.mockResolvedValueOnce = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
-    implementationFn = undefined;
     implementationQueue.push((async () => value) as T);
     return this;
   };
