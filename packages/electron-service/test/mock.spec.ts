@@ -8,7 +8,17 @@ let mockFn: Mock;
 let mockExecute: Mock;
 
 vi.doMock('@wdio/native-spy', () => ({
-  fn: () => mockFn,
+  fn: (_impl: unknown, options?: { original?: (...args: unknown[]) => unknown }) => {
+    if (options?.original) {
+      const originalFn = options.original;
+      mockFn.mockRestore = vi.fn(function () {
+        mockFn.mockClear();
+        mockFn.mockImplementation(originalFn);
+        return mockFn;
+      }) as unknown as typeof mockFn.mockRestore;
+    }
+    return mockFn;
+  },
 }));
 vi.mock('../src/commands/execute', () => {
   return {
