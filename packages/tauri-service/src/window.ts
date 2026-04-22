@@ -81,33 +81,32 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
     throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
   }
 
-  // Suppress auto-focus BEFORE any switching or iteration to prevent focus-change races
-  // during handle discovery (ensureActiveWindowFocus checks this flag first).
-  userSwitchedWindowCache.add(browser.sessionId || 'default');
-
+  const sessionKey = browser.sessionId || 'default';
   const provider = getSessionProvider(browser);
 
-  let originalHandle: string;
-  try {
-    originalHandle = await browser.getWindowHandle();
-  } catch (error) {
-    userSwitchedWindowCache.delete(browser.sessionId || 'default');
-    throw error;
-  }
+  // Suppress auto-focus BEFORE any switching or iteration to prevent focus-change races
+  // during handle discovery (ensureActiveWindowFocus checks this flag first).
+  userSwitchedWindowCache.add(sessionKey);
 
   try {
-    if (provider === 'embedded') {
-      await browser.switchToWindow(label);
-    } else {
-      const handle = await resolveLabelToHandle(browser, label);
-      await browser.switchToWindow(handle);
+    const originalHandle = await browser.getWindowHandle();
+
+    try {
+      if (provider === 'embedded') {
+        await browser.switchToWindow(label);
+      } else {
+        const handle = await resolveLabelToHandle(browser, label);
+        await browser.switchToWindow(handle);
+      }
+    } catch (switchError) {
+      await browser.switchToWindow(originalHandle).catch(() => {});
+      throw new Error(
+        `Failed to switch to window with label "${label}": ${switchError instanceof Error ? switchError.message : String(switchError)}`,
+      );
     }
   } catch (error) {
-    userSwitchedWindowCache.delete(browser.sessionId || 'default');
-    await browser.switchToWindow(originalHandle).catch(() => {});
-    throw new Error(
-      `Failed to switch to window with label "${label}": ${error instanceof Error ? error.message : String(error)}`,
-    );
+    userSwitchedWindowCache.delete(sessionKey);
+    throw error;
   }
 
   setCurrentWindowLabel(browser, label);
