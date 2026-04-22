@@ -40,6 +40,13 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    * @default undefined
    */
   logDir?: string;
+  /**
+   * Timeout in milliseconds for the /status endpoint poll during embedded server startup
+   * In slow CI environments (containerised Windows runners), a healthy-but-busy WebDriver server
+   * may miss the default 2000ms deadline, causing false-positive restarts
+   * @default 2000
+   */
+  statusPollTimeout?: number;
 }
 
 /**

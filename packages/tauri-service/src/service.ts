@@ -382,30 +382,63 @@ export default class TauriWorkerService {
   }
 }
 
-/**
- * Update all existing mocks by syncing inner (browser) mock state to outer (test) mocks
- */
-async function updateAllMocks() {
-  log.debug('updateAllMocks called');
-  const mocks = mockStore.getMocks();
-  log.debug(`Found ${mocks.length} mocks to update`);
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+/**
+ * Update all existing mocks by syncing inner (browser) mock state to outer (test) mocks.
+ * On Windows, updates run sequentially to avoid saturating WebView2 with concurrent
+ * ExecuteScript calls. Each update is retried once (after 50 ms) before failing hard.
+ * Silent swallow of mock-update errors leads to empty mock.calls assertions, which is
+ * harder to diagnose than an explicit AggregateError.
+ */
+async function updateAllMocks(): Promise<void> {
+  const mocks = mockStore.getMocks();
   if (mocks.length === 0) {
-    log.debug('No mocks to update, returning');
     return;
   }
 
-  try {
-    log.debug('Starting mock update batch');
-    await Promise.all(
-      mocks.map(async ([mockId, mockInstance]) => {
-        log.debug(`Updating mock: ${mockId}`);
-        await mockInstance.update();
-        log.debug(`Mock update completed: ${mockId}`);
-      }),
-    );
-    log.debug('All mock updates completed successfully');
-  } catch (error) {
-    log.warn('Mock update batch failed:', error);
+  const tryUpdate = async (
+    mockId: string,
+    mockInstance: ReturnType<typeof mockStore.getMocks>[0][1],
+  ): Promise<void> => {
+    try {
+      await mockInstance.update();
+    } catch (firstError) {
+      log.debug(`Mock update failed for ${mockId}, retrying in 50ms:`, firstError);
+      await sleep(50);
+      await mockInstance.update();
+    }
+  };
+
+  if (process.platform === 'win32') {
+    const errors: Array<{ mockId: string; error: unknown }> = [];
+    for (const [mockId, mockInstance] of mocks) {
+      try {
+        await tryUpdate(mockId, mockInstance);
+      } catch (error) {
+        errors.push({ mockId, error });
+      }
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(
+        errors.map((e) => e.error),
+        `Mock updates failed for: ${errors.map((e) => e.mockId).join(', ')}`,
+      );
+    }
+  } else {
+    const results = await Promise.allSettled(mocks.map(([mockId, mockInstance]) => tryUpdate(mockId, mockInstance)));
+    const failures = results
+      .map((result, i) => ({ result, mockId: mocks[i][0] }))
+      .filter(
+        (entry): entry is { result: PromiseRejectedResult; mockId: string } => entry.result.status === 'rejected',
+      );
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map((f) => f.result.reason),
+        `Mock updates failed for: ${failures.map((f) => f.mockId).join(', ')}`,
+      );
+    }
   }
 }

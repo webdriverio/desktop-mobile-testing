@@ -34,6 +34,25 @@ use crate::webdriver::Timeouts;
 /// Handler name used for postMessage calls
 const HANDLER_NAME: &str = "webdriver_async";
 
+/// Serializes concurrent WebView2 ExecuteScript calls per webview window.
+/// On Windows, issuing multiple concurrent ExecuteScript calls against the same
+/// CoreWebView2 can cause completion handlers to be silently dropped or the
+/// webview to enter an invalid state, causing script timeouts or app crashes.
+/// A per-label tokio::sync::Mutex ensures only one script executes at a time.
+#[derive(Default)]
+pub struct ScriptExecutionLocks {
+    locks: std::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
+}
+
+impl ScriptExecutionLocks {
+    pub fn get(&self, label: &str) -> Arc<tokio::sync::Mutex<()>> {
+        let mut m = self.locks.lock().expect("ScriptExecutionLocks poisoned");
+        m.entry(label.to_string())
+            .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+            .clone()
+    }
+}
+
 /// Shared state for pending async script operations.
 /// This is managed via Tauri's state system (`app.manage()`).
 #[derive(Default)]
@@ -109,6 +128,72 @@ impl<R: Runtime> WindowsExecutor<R> {
     }
 }
 
+impl<R: Runtime + 'static> WindowsExecutor<R> {
+    /// Core WebView2 script execution — no per-webview lock.
+    /// Callers that need serialization must acquire the lock from
+    /// `ScriptExecutionLocks` before calling this method.
+    async fn evaluate_js_inner(&self, script: &str) -> Result<Value, WebDriverErrorResponse> {
+        let (tx, rx) = oneshot::channel();
+        let script_preview: String = script.chars().take(100).collect();
+        let script_owned = wrap_script_for_frame_context(script, &self.frame_context);
+
+        let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
+
+        let result = self.window.with_webview({
+            let tx = tx.clone();
+            move |webview| unsafe {
+                let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+
+                if let Ok(webview2) = webview.controller().CoreWebView2() {
+                    let script_hstring = HSTRING::from(&script_owned);
+
+                    let handler: ICoreWebView2ExecuteScriptCompletedHandler =
+                        ExecuteScriptHandler::new(tx.clone()).into();
+
+                    if let Err(e) = webview2.ExecuteScript(PCWSTR(script_hstring.as_ptr()), &handler) {
+                        tracing::error!("ExecuteScript call failed for script '{}...': {e:?}", script_preview);
+                        if let Ok(mut guard) = tx.lock() {
+                            if let Some(tx) = guard.take() {
+                                let _ = tx.send(Err(format!("ExecuteScript failed: {e:?}")));
+                            }
+                        }
+                    }
+                } else {
+                    tracing::error!("Failed to get CoreWebView2 for script execution");
+                    if let Ok(mut guard) = tx.lock() {
+                        if let Some(tx) = guard.take() {
+                            let _ = tx.send(Err("Failed to get CoreWebView2".to_string()));
+                        }
+                    }
+                }
+            }
+        });
+
+        if let Err(e) = result {
+            tracing::error!("with_webview failed: {e}");
+            if let Ok(mut guard) = tx.lock() {
+                if let Some(tx) = guard.take() {
+                    let _ = tx.send(Err(e.to_string()));
+                }
+            }
+        }
+
+        let timeout = std::time::Duration::from_millis(self.timeouts.script_ms);
+        match tokio::time::timeout(timeout, rx).await {
+            Ok(Ok(Ok(value))) => Ok(serde_json::json!({
+                "success": true,
+                "value": value
+            })),
+            Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::javascript_error(&error, None)),
+            Ok(Err(_)) => {
+                tracing::error!("Channel closed unexpectedly during script execution");
+                Err(WebDriverErrorResponse::unknown_error("Channel closed"))
+            },
+            Err(_) => Err(WebDriverErrorResponse::script_timeout()),
+        }
+    }
+}
+
 /// Register `WebView2` handlers at webview creation time.
 /// This is called from the plugin's `on_webview_ready` hook to ensure
 /// the script dialog handler is registered before any navigation completes.
@@ -167,70 +252,10 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
     // =========================================================================
 
     async fn evaluate_js(&self, script: &str) -> Result<Value, WebDriverErrorResponse> {
-        let (tx, rx) = oneshot::channel();
-        let script_preview: String = script.chars().take(100).collect();
-        let script_owned = wrap_script_for_frame_context(script, &self.frame_context);
-
-        // Wrap tx in Arc<Mutex<Option<...>>> early so we can send errors from failure paths
-        let tx = Arc::new(std::sync::Mutex::new(Some(tx)));
-
-        let result = self.window.with_webview({
-            let tx = tx.clone();
-            move |webview| unsafe {
-                let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-
-                if let Ok(webview2) = webview.controller().CoreWebView2() {
-                    let script_hstring = HSTRING::from(&script_owned);
-
-                    // Clone tx for the handler - we keep a reference for error handling
-                    let handler: ICoreWebView2ExecuteScriptCompletedHandler =
-                        ExecuteScriptHandler::new(tx.clone()).into();
-
-                    if let Err(e) = webview2.ExecuteScript(PCWSTR(script_hstring.as_ptr()), &handler) {
-                        // Failed to start script execution - send error through channel
-                        // The handler won't be called, so we need to send the error ourselves
-                        tracing::error!("ExecuteScript call failed for script '{}...': {e:?}", script_preview);
-                        if let Ok(mut guard) = tx.lock() {
-                            if let Some(tx) = guard.take() {
-                                let _ = tx.send(Err(format!("ExecuteScript failed: {e:?}")));
-                            }
-                        }
-                    }
-                } else {
-                    // Failed to get CoreWebView2 - send error through channel
-                    tracing::error!("Failed to get CoreWebView2 for script execution");
-                    if let Ok(mut guard) = tx.lock() {
-                        if let Some(tx) = guard.take() {
-                            let _ = tx.send(Err("Failed to get CoreWebView2".to_string()));
-                        }
-                    }
-                }
-            }
-        });
-
-        if let Err(e) = result {
-            // with_webview itself failed - try to send error if channel still open
-            tracing::error!("with_webview failed: {e}");
-            if let Ok(mut guard) = tx.lock() {
-                if let Some(tx) = guard.take() {
-                    let _ = tx.send(Err(e.to_string()));
-                }
-            }
-        }
-
-        let timeout = std::time::Duration::from_millis(self.timeouts.script_ms);
-        match tokio::time::timeout(timeout, rx).await {
-            Ok(Ok(Ok(value))) => Ok(serde_json::json!({
-                "success": true,
-                "value": value
-            })),
-            Ok(Ok(Err(error))) => Err(WebDriverErrorResponse::javascript_error(&error, None)),
-            Ok(Err(_)) => {
-                tracing::error!("Channel closed unexpectedly during script execution");
-                Err(WebDriverErrorResponse::unknown_error("Channel closed"))
-            },
-            Err(_) => Err(WebDriverErrorResponse::script_timeout()),
-        }
+        let locks = self.window.state::<ScriptExecutionLocks>();
+        let lock = locks.get(self.window.label());
+        let _guard = lock.lock().await;
+        self.evaluate_js_inner(script).await
     }
 
     // =========================================================================
@@ -583,10 +608,16 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
             }})()"
         );
 
-        // Execute the wrapper (returns immediately)
-        self.evaluate_js(&wrapper).await?;
+        // Acquire the per-webview lock and hold it across the entire async script lifecycle.
+        // This prevents another ExecuteScript from preempting the in-flight async JS callback.
+        let locks = self.window.state::<ScriptExecutionLocks>();
+        let lock = locks.get(self.window.label());
+        let _guard = lock.lock().await;
 
-        // Wait for result with timeout
+        // Execute the wrapper using the unlocked inner method (we already hold the lock).
+        self.evaluate_js_inner(&wrapper).await?;
+
+        // Wait for result with timeout (lock is still held; released when _guard drops).
         let timeout_ms = self.timeouts.script_ms;
         let timeout = std::time::Duration::from_millis(timeout_ms);
 
