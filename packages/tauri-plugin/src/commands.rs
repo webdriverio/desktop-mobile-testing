@@ -188,9 +188,14 @@ pub(crate) async fn execute<R: Runtime>(
         || request.script.trim_start().starts_with("try{")
         || request.script.trim_start().starts_with("do ")
         || request.script.trim_start().starts_with("do{");
-        // Only prepend "return" for pure expressions (no statements, no existing return at start)
-        // Use starts_with("return") not contains("return") to avoid false positives like "returnData"
-        let has_return = request.script.trim_start().starts_with("return");
+        let has_return = {
+            let t = request.script.trim_start();
+            if let Some(rest) = t.strip_prefix("return") {
+                rest.is_empty() || rest.starts_with(char::is_whitespace) || rest.starts_with(';')
+            } else {
+                false
+            }
+        };
         let body = if !has_statement && !has_return {
             // Pure expression - add return so it evaluates and returns
             format!("return {};", request.script)
