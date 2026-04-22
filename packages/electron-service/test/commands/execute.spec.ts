@@ -143,4 +143,20 @@ describe('execute Command', () => {
       expect.stringContaining('(async () => { return trySomething(); })()'),
     );
   });
+
+  it('should treat asyncData.fetchAll() as expression (async prefix false positive)', async () => {
+    await execute(globalThis.browser, 'asyncData.fetchAll()');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return asyncData.fetchAll(); })()'),
+    );
+  });
+
+  it('should treat functionResult.call() as expression (function prefix false positive)', async () => {
+    await execute(globalThis.browser, 'functionResult.call()');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return functionResult.call(); })()'),
+    );
+  });
 });

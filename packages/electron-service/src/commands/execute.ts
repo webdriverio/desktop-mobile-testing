@@ -47,8 +47,8 @@ function wrapStringScript(script: string): string {
   // Don't match arrows inside expressions like "return items.filter(x => x > 0)"
   const isFunctionLike =
     trimmed.startsWith('(') ||
-    trimmed.startsWith('function') ||
-    trimmed.startsWith('async') ||
+    /^function[\s(]/.test(trimmed) ||
+    /^async[\s(]/.test(trimmed) ||
     /^(\w+)\s*=>/.test(trimmed); // single-param arrow at START like "x => x + 1"
 
   if (isFunctionLike) {
