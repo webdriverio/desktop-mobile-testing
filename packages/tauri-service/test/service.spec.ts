@@ -167,6 +167,47 @@ describe('TauriWorkerService', () => {
       expect(mockBrowser.overwriteCommand).toHaveBeenCalledWith('setValue', expect.any(Function), true);
       expect(mockBrowser.overwriteCommand).toHaveBeenCalledWith('clearValue', expect.any(Function), true);
     });
+
+    it('should clear stale mocks at session start for embedded driver provider', async () => {
+      const mockBrowser = createMockBrowser();
+      // Capture before patchBrowserExecute replaces browser.execute; patchBrowserExecute converts
+      // functions to strings before delegating to originalExecute, so we match on script content.
+      const originalExecute = mockBrowser.execute as ReturnType<typeof vi.fn>;
+      const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
+
+      await service.before({} as any, [], mockBrowser);
+
+      const clearCall = originalExecute.mock.calls.find(
+        ([script]) => typeof script === 'string' && script.includes('__wdio_mocks__'),
+      );
+      expect(clearCall).toBeDefined();
+    });
+
+    it('should not clear stale mocks for non-embedded driver providers', async () => {
+      const mockBrowser = createMockBrowser();
+      const originalExecute = mockBrowser.execute as ReturnType<typeof vi.fn>;
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+
+      await service.before({} as any, [], mockBrowser);
+
+      const clearCall = originalExecute.mock.calls.find(
+        ([script]) => typeof script === 'string' && script.includes('__wdio_mocks__'),
+      );
+      expect(clearCall).toBeUndefined();
+    });
+
+    it('should handle stale mock clearing errors gracefully for embedded provider', async () => {
+      const mockExecute = vi.fn().mockImplementation((script: unknown) => {
+        if (typeof script === 'string' && script.includes('__wdio_mocks__')) {
+          return Promise.reject(new Error('execute failed'));
+        }
+        return Promise.resolve(undefined);
+      });
+      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
+
+      await expect(service.before({} as any, [], mockBrowser)).resolves.not.toThrow();
+    });
   });
 
   describe('tauri.execute()', () => {

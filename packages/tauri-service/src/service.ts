@@ -116,6 +116,32 @@ export default class TauriWorkerService {
     // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
 
+    // In embedded mode the Tauri app process persists between WDIO runs, so
+    // window.__wdio_mocks__ can carry stale state from a previous run into a
+    // fresh session. Reset it here so every session starts clean.
+    if (this.driverProvider === 'embedded') {
+      try {
+        if (browser.isMultiremote) {
+          const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
+          for (const instanceName of mrBrowser.instances) {
+            const mrInstance = mrBrowser.getInstance(instanceName);
+            await mrInstance.execute(function clearStaleMocks() {
+              // @ts-expect-error - window is available in browser context
+              if (window.__wdio_mocks__) window.__wdio_mocks__ = {};
+            });
+          }
+        } else {
+          await (browser as WebdriverIO.Browser).execute(function clearStaleMocks() {
+            // @ts-expect-error - window is available in browser context
+            if (window.__wdio_mocks__) window.__wdio_mocks__ = {};
+          });
+        }
+        log.debug('Cleared stale mocks at session start');
+      } catch (error) {
+        log.warn('Failed to clear stale mocks at session start:', error);
+      }
+    }
+
     // Install command overrides to trigger mock updates after DOM interactions
     this.installCommandOverrides();
   }
