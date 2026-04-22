@@ -86,16 +86,19 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
   userSwitchedWindowCache.add(browser.sessionId || 'default');
 
   const provider = getSessionProvider(browser);
-  const originalHandle = await browser.getWindowHandle();
+
+  let originalHandle: string;
+  try {
+    originalHandle = await browser.getWindowHandle();
+  } catch (error) {
+    userSwitchedWindowCache.delete(browser.sessionId || 'default');
+    throw error;
+  }
 
   try {
     if (provider === 'embedded') {
-      // Embedded provider: Tauri labels ARE WebDriver handles (tauri-plugin-webdriver
-      // returns labels directly from /session/{id}/window/handles).
       await browser.switchToWindow(label);
     } else {
-      // Official / CrabNebula providers proxy through msedgedriver or WebKitWebDriver
-      // which use opaque W3C UUID handles. Resolve the label to a handle via IPC.
       const handle = await resolveLabelToHandle(browser, label);
       await browser.switchToWindow(handle);
     }
