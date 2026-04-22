@@ -61,12 +61,17 @@ jobs:
   gate:
     name: Gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     outputs:
       should_release: ${{ steps.gate.outputs.should-release }}
       bump: ${{ steps.gate.outputs.bump }}
       scope: ${{ steps.gate.outputs.gate-scope }}
       target: ${{ steps.gate.outputs.gate-target }}
+      stable: ${{ steps.gate.outputs.gate-stable }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -83,6 +88,7 @@ jobs:
           branch: main
           json: "true"
           summary: "true"
+          skip-checkout: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
@@ -98,8 +104,8 @@ jobs:
       target_packages: ${{ needs.gate.outputs.target }}
       target_branch: main
       bump: ${{ needs.gate.outputs.bump }}
-      stable: 'false'
-      release_type: prerelease
+      stable: ${{ needs.gate.outputs.stable }}
+      release_type: ${{ needs.gate.outputs.stable == 'true' && 'stable' || 'prerelease' }}
       dry_run: false
       scope: ${{ needs.gate.outputs.scope }}
     secrets:

@@ -234,7 +234,7 @@ jobs:
         with:
           mode: release
           node-version: '24'
-          target: ${{ steps.targets.outputs.packages }}
+          target: ${{ inputs.target_packages || steps.targets.outputs.packages }}
           branch: ${{ inputs.target_branch }}
           bump: ${{ steps.params.outputs.bump }}
           stable: ${{ steps.params.outputs.stable }}
