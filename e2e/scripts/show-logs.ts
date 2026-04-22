@@ -12,15 +12,25 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOGS_DIR = path.resolve(__dirname, '../logs');
 
-function showLogs(follow = false): void {
+function matchesProvider(dirName: string, provider?: string): boolean {
+  if (!provider) return true;
+  if (provider === 'official') {
+    return !dirName.startsWith('embedded-') && !dirName.startsWith('crabnebula-');
+  }
+  return dirName.startsWith(`${provider}-`);
+}
+
+function showLogs(follow = false, provider?: string): void {
   // Check if logs directory exists
   if (!fs.existsSync(LOGS_DIR)) {
     console.log('No logs found');
     process.exit(0);
   }
 
-  // Get all subdirectories in logs/
-  const dirs = fs.readdirSync(LOGS_DIR, { withFileTypes: true }).filter((dirent) => dirent.isDirectory());
+  // Get all subdirectories in logs/, filtered by provider if specified
+  const dirs = fs
+    .readdirSync(LOGS_DIR, { withFileTypes: true })
+    .filter((dirent) => dirent.isDirectory() && matchesProvider(dirent.name, provider));
 
   if (dirs.length === 0) {
     console.log('No logs found');
@@ -68,7 +78,7 @@ function showLogs(follow = false): void {
   if (follow) {
     console.log('--- Watching for log changes (Ctrl+C to exit) ---');
 
-    // Watch each existing log file
+    // Watch each existing log file (apply same provider filter)
     dirs.forEach((dir) => {
       const dirPath = path.join(LOGS_DIR, dir.name);
       const logs = fs.readdirSync(dirPath).filter((file) => file.endsWith('.log'));
@@ -107,5 +117,7 @@ function showLogs(follow = false): void {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const followMode = args.includes('--follow') || args.includes('-f');
+const providerIdx = args.indexOf('--provider');
+const providerFilter = providerIdx !== -1 ? args[providerIdx + 1] : undefined;
 
-showLogs(followMode);
+showLogs(followMode, providerFilter);
