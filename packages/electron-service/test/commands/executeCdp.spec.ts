@@ -120,6 +120,18 @@ describe('execute Command', () => {
     );
   });
 
+  it('should treat semicolon after escaped backslash as real (not skip it)', async () => {
+    // "foo\\";bar" — the backslash is itself escaped, so the " closes the string
+    // and the ; is outside quotes. Single-char prevChar check wrongly skips the ;.
+    await execute(globalThis.browser, client, '"foo\\\\";bar');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringContaining('async () => {'),
+      }),
+    );
+  });
+
   it('should call `mock.update()` when mockStore has some mocks', async () => {
     const updateMock = vi.fn();
     vi.mocked(mockStore.getMocks).mockReturnValue([['dummy', { update: updateMock } as unknown as ElectronMock]]);

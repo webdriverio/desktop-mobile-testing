@@ -137,9 +137,18 @@ function hasSemicolonOutsideQuotes(str: string): boolean {
 
   for (let i = 0; i < str.length; i++) {
     const char = str[i];
-    const prevChar = i > 0 ? str[i - 1] : '';
 
-    if (prevChar === '\\') continue;
+    if (char !== '\\') {
+      let backslashCount = 0;
+      let j = i - 1;
+      while (j >= 0 && str[j] === '\\') {
+        backslashCount++;
+        j--;
+      }
+      if (backslashCount % 2 === 1) {
+        continue;
+      }
+    }
 
     if (char === "'" && !inDoubleQuote && !inTemplateLiteral) {
       inSingleQuote = !inSingleQuote;
