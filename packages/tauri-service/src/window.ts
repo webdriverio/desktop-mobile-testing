@@ -13,6 +13,8 @@ const lastCommandCache = new Map<string, string>();
 
 const currentWindowLabelCache = new Map<string, string>();
 
+const userSwitchedWindowCache = new Set<string>();
+
 const DEFAULT_WINDOW_LABEL = 'main';
 
 export function getDefaultWindowLabel(): string {
@@ -35,28 +37,16 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
     throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
   }
 
-  const windowStates = await getWindowStates(browser);
-
-  if (windowStates.length === 0) {
+  try {
+    await browser.switchToWindow(label);
+  } catch (error) {
     throw new Error(
-      `Unable to retrieve window states. Cannot switch to "${label}". The wdio plugin may not be responding.`,
+      `Failed to switch to window with label "${label}": ${error instanceof Error ? error.message : String(error)}`,
     );
-  }
-
-  const targetWindow = windowStates.find((w) => w.label === label);
-
-  if (!targetWindow) {
-    throw new Error(
-      `Window with label "${label}" not found in window states. Available: ${windowStates.map((w) => w.label).join(', ')}`,
-    );
-  }
-
-  const switched = await switchToWindowByTitle(browser, targetWindow.title);
-  if (!switched) {
-    throw new Error(`Failed to switch to window with label "${label}" (title: "${targetWindow.title}")`);
   }
 
   setCurrentWindowLabel(browser, label);
+  userSwitchedWindowCache.add(browser.sessionId || 'default');
   log.debug(`Successfully switched to window: ${label}`);
 }
 
@@ -183,9 +173,8 @@ export async function ensureActiveWindowFocus(browser: WebdriverIO.Browser, comm
   // Skip auto-focus if the user has explicitly set a window label via switchWindow()
   // This prevents the auto-focus logic from silently undoing explicit switches.
   // Only skip when the label is a non-default value (user explicitly switched, not just initialized).
-  const explicitLabel = currentWindowLabelCache.get(browser.sessionId || 'default');
-  if (explicitLabel && explicitLabel !== DEFAULT_WINDOW_LABEL) {
-    log.debug(`Skipping auto-focus: explicit label "${explicitLabel}" is set`);
+  if (userSwitchedWindowCache.has(browser.sessionId || 'default')) {
+    log.debug('Skipping auto-focus: user has explicitly switched windows');
     return;
   }
 
@@ -257,8 +246,10 @@ export function clearWindowState(sessionId?: string): void {
   if (sessionId) {
     lastCommandCache.delete(sessionId);
     currentWindowLabelCache.delete(sessionId);
+    userSwitchedWindowCache.delete(sessionId);
   } else {
     lastCommandCache.clear();
     currentWindowLabelCache.clear();
+    userSwitchedWindowCache.clear();
   }
 }

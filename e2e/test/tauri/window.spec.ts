@@ -113,15 +113,16 @@ describe('per-call windowLabel option', () => {
 });
 
 describe('application window tests', () => {
+  before(async () => {
+    const windows = await browser.tauri.listWindows();
+    if (windows.includes('splash')) {
+      await browser.tauri.switchWindow('splash');
+    }
+  });
+
   it('should launch the application splash screen window', async () => {
     const switchButton = await browser.$('.switch-main-window');
-    const hasSwitchButton = await switchButton.isExisting();
-
-    const windowHandles = await browser.getWindowHandles();
-    const currentTitle = await browser.getTitle();
-    console.log('[DEBUG] Window handles:', windowHandles);
-    console.log('[DEBUG] Current window title:', currentTitle);
-    console.log('[DEBUG] hasSwitchButton:', hasSwitchButton);
+    const hasSwitchButton = await switchButton.isDisplayed();
 
     if (!hasSwitchButton) {
       console.log('[DEBUG] Splash not enabled, checking main window title');
@@ -129,7 +130,6 @@ describe('application window tests', () => {
       return;
     }
 
-    console.log('[DEBUG] Splash enabled, checking splash window title');
     if (browser.isMultiremote) {
       const multi = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       const browserA = multi.getInstance('browserA');
@@ -143,7 +143,7 @@ describe('application window tests', () => {
 
   it('should switch to the application main window', async () => {
     const switchButton = await browser.$('.switch-main-window');
-    const hasSwitchButton = await switchButton.isExisting();
+    const hasSwitchButton = await switchButton.isDisplayed();
 
     if (!hasSwitchButton) {
       console.log('[DEBUG] Splash not enabled, verifying main window');
@@ -152,13 +152,14 @@ describe('application window tests', () => {
       return;
     }
 
-    console.log('[DEBUG] Splash enabled, clicking switch button');
     if (browser.isMultiremote) {
       const multi = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       const browserA = multi.getInstance('browserA');
       const browserB = multi.getInstance('browserB');
       await (await browserA.$('.switch-main-window')).click();
       await (await browserB.$('.switch-main-window')).click();
+      await browserA.tauri.switchWindow('main');
+      await browserB.tauri.switchWindow('main');
       const titleA = await browserA.getTitle();
       const titleB = await browserB.getTitle();
       expect(titleA).toMatch(/Tauri.*E2E Test App/);
@@ -166,6 +167,7 @@ describe('application window tests', () => {
     } else {
       const elem = await browser.$('.switch-main-window');
       await elem.click();
+      await browser.tauri.switchWindow('main');
       const title = await browser.getTitle();
       expect(title).toMatch(/Tauri.*E2E Test App/);
     }

@@ -233,27 +233,12 @@ pub(crate) async fn execute<R: Runtime>(
     }
 }
 
-/// Get the label of the currently focused/active window
-/// Note: Tauri 2.x doesn't expose window focus state, so this returns
-/// the "main" window if it exists, or the first window in lexicographic order
+/// Get the label of the window that invoked this command
 #[command]
 pub(crate) async fn get_active_window_label<R: Runtime>(
-  app: tauri::AppHandle<R>,
+  window: WebviewWindow<R>,
 ) -> Result<String> {
-  let windows = app.webview_windows();
-  if windows.is_empty() {
-    return Err(Error::WindowError("No windows available".to_string()));
-  }
-  // Return the "main" window if it exists for predictable behavior
-  if let Some(main) = windows.get("main") {
-    return Ok(main.label().to_string());
-  }
-  // Otherwise, return the first window in lexicographic order for consistency
-  let mut labels: Vec<_> = windows.keys().collect();
-  labels.sort();
-  let first_label = labels.first()
-    .ok_or_else(|| Error::WindowError("No windows available".to_string()))?;
-  Ok(first_label.to_string())
+  Ok(window.label().to_string())
 }
 
 /// List all window labels in the application
