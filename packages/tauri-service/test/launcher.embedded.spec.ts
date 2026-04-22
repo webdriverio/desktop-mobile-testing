@@ -102,7 +102,7 @@ describe('ensureEmbeddedServersHealthy', () => {
     (launcher as any).embeddedProcesses.set('0', stubDriverInfo);
   });
 
-  it('does nothing when the server is reachable', async () => {
+  it('should do nothing when the server is reachable', async () => {
     vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(true);
 
     await (launcher as any).ensureEmbeddedServersHealthy();
@@ -111,7 +111,7 @@ describe('ensureEmbeddedServersHealthy', () => {
     expect(startEmbeddedDriver).not.toHaveBeenCalled();
   });
 
-  it('stops the old process and starts a new one when the server is unreachable', async () => {
+  it('should stop the old process and start a new one when the server is unreachable', async () => {
     const newInfo = { proc: { pid: 456 } as any, logHandlers: [] };
     vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(false);
     vi.mocked(startEmbeddedDriver).mockResolvedValue(newInfo);
@@ -123,7 +123,7 @@ describe('ensureEmbeddedServersHealthy', () => {
     expect((launcher as any).embeddedProcesses.get('0')).toBe(newInfo);
   });
 
-  it('still restarts when stopEmbeddedDriver throws (process already dead)', async () => {
+  it('should still restart when stopEmbeddedDriver throws (process already dead)', async () => {
     const newInfo = { proc: { pid: 456 } as any, logHandlers: [] };
     vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(false);
     vi.mocked(stopEmbeddedDriver).mockRejectedValue(new Error('No such process'));
@@ -134,7 +134,7 @@ describe('ensureEmbeddedServersHealthy', () => {
     expect((launcher as any).embeddedProcesses.get('0')).toBe(newInfo);
   });
 
-  it('throws SevereServiceError when restart fails', async () => {
+  it('should throw SevereServiceError when restart fails', async () => {
     vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(false);
     vi.mocked(startEmbeddedDriver).mockRejectedValue(new Error('Binary not found'));
 
@@ -143,7 +143,7 @@ describe('ensureEmbeddedServersHealthy', () => {
     );
   });
 
-  it('restarts only the crashed instance when multiple instances are running', async () => {
+  it('should restart only the crashed instance when multiple instances are running', async () => {
     const config2 = { appBinaryPath: APP_BINARY, port: 4446, options: {} };
     const driverInfo2 = { proc: { pid: 789 } as any, logHandlers: [] };
     (launcher as any).embeddedConfigs.set('1', config2);
@@ -161,7 +161,7 @@ describe('ensureEmbeddedServersHealthy', () => {
     expect((launcher as any).embeddedProcesses.get('1')).toBe(driverInfo2);
   });
 
-  it('does nothing when embeddedConfigs is empty', async () => {
+  it('should do nothing when embeddedConfigs is empty', async () => {
     (launcher as any).embeddedConfigs.clear();
 
     await (launcher as any).ensureEmbeddedServersHealthy();
@@ -170,12 +170,79 @@ describe('ensureEmbeddedServersHealthy', () => {
   });
 });
 
+describe('verifyEmbeddedServerStable — Windows stability probes', () => {
+  const originalPlatform = process.platform;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.clearAllMocks();
+    vi.mocked(stopEmbeddedDriver).mockResolvedValue(undefined);
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+  });
+
+  it('should run 3 additional probes on win32 after a passing health check', async () => {
+    vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(true);
+
+    const launcher = createEmbeddedLauncher();
+    (launcher as any).embeddedConfigs.set('0', stubConfig);
+    (launcher as any).embeddedProcesses.set('0', stubDriverInfo);
+
+    const promise = (launcher as any).ensureEmbeddedServersHealthy();
+    await vi.advanceTimersByTimeAsync(1600);
+    await promise;
+
+    // 1 initial check + 3 stability probes
+    expect(checkEmbeddedServerAlive).toHaveBeenCalledTimes(4);
+    expect(startEmbeddedDriver).not.toHaveBeenCalled();
+  });
+
+  it('should restart when a stability probe flips to false', async () => {
+    let callCount = 0;
+    vi.mocked(checkEmbeddedServerAlive).mockImplementation(async () => {
+      callCount++;
+      return callCount !== 2; // initial=true, first stability probe=false
+    });
+    const newInfo = { proc: { pid: 999 } as any, logHandlers: [] };
+    vi.mocked(startEmbeddedDriver).mockResolvedValue(newInfo);
+
+    const launcher = createEmbeddedLauncher();
+    (launcher as any).embeddedConfigs.set('0', stubConfig);
+    (launcher as any).embeddedProcesses.set('0', stubDriverInfo);
+
+    const promise = (launcher as any).ensureEmbeddedServersHealthy();
+    await vi.advanceTimersByTimeAsync(600);
+    await promise;
+
+    expect(startEmbeddedDriver).toHaveBeenCalledWith(APP_BINARY, EMBEDDED_PORT, {}, '0');
+    expect((launcher as any).embeddedProcesses.get('0')).toBe(newInfo);
+  });
+
+  it('should not run stability probes on non-win32', async () => {
+    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+    vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(true);
+
+    const launcher = createEmbeddedLauncher();
+    (launcher as any).embeddedConfigs.set('0', stubConfig);
+    (launcher as any).embeddedProcesses.set('0', stubDriverInfo);
+
+    await (launcher as any).ensureEmbeddedServersHealthy();
+
+    // Only the single initial check — no stability probes
+    expect(checkEmbeddedServerAlive).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('onWorkerStart — embedded health check guard', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('runs health check when isEmbeddedMode=true and perWorkerMode=false', async () => {
+  it('should run health check when isEmbeddedMode=true and perWorkerMode=false', async () => {
     vi.mocked(checkEmbeddedServerAlive).mockResolvedValue(true);
     const launcher = createEmbeddedLauncher();
     (launcher as any).embeddedConfigs.set('0', stubConfig);
@@ -186,7 +253,7 @@ describe('onWorkerStart — embedded health check guard', () => {
     expect(checkEmbeddedServerAlive).toHaveBeenCalledWith(EMBEDDED_PORT, undefined);
   });
 
-  it('skips health check when isEmbeddedMode=false', async () => {
+  it('should skip health check when isEmbeddedMode=false', async () => {
     const launcher = createEmbeddedLauncher();
     (launcher as any).isEmbeddedMode = false;
     (launcher as any).embeddedConfigs.set('0', stubConfig);
@@ -196,7 +263,7 @@ describe('onWorkerStart — embedded health check guard', () => {
     expect(checkEmbeddedServerAlive).not.toHaveBeenCalled();
   });
 
-  it('skips health check when perWorkerMode=true', async () => {
+  it('should skip health check when perWorkerMode=true', async () => {
     const launcher = createEmbeddedLauncher();
     (launcher as any).perWorkerMode = true;
     (launcher as any).embeddedConfigs.set('0', stubConfig);

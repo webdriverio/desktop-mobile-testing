@@ -736,33 +736,71 @@ export default class TauriLaunchService {
    * Health-check all embedded WebDriver servers and restart any that have crashed.
    * Required on Windows where the Tauri process can die after session deletion,
    * making all subsequent spec files fail with ECONNREFUSED.
+   *
+   * On Windows, additional stability probes run after a passing check to close the
+   * race window between the health check and WDIO's POST /session.
    */
   private async ensureEmbeddedServersHealthy(): Promise<void> {
     for (const [instanceId, config] of this.embeddedConfigs) {
       const isAlive = await checkEmbeddedServerAlive(config.port, config.options.statusPollTimeout);
       if (!isAlive) {
-        log.warn(`Embedded WebDriver on port ${config.port} (instance: ${instanceId}) is unreachable — restarting...`);
-        const existing = this.embeddedProcesses.get(instanceId);
-        if (existing) {
-          try {
-            await stopEmbeddedDriver(existing);
-          } catch {
-            // Process may already be dead; ignore
-          }
-        }
-        try {
-          const newInfo = await startEmbeddedDriver(config.appBinaryPath, config.port, config.options, instanceId);
-          this.embeddedProcesses.set(instanceId, newInfo);
-          log.info(`✅ Embedded WebDriver restarted on port ${config.port} (instance: ${instanceId})`);
-        } catch (error) {
-          throw new SevereServiceError(
-            `Failed to restart embedded WebDriver on port ${config.port}: ${(error as Error).message}`,
-          );
-        }
+        await this.restartEmbeddedServer(instanceId, config);
       } else {
         log.debug(`Embedded WebDriver on port ${config.port} (instance: ${instanceId}) is healthy`);
+        if (process.platform === 'win32') {
+          await this.verifyEmbeddedServerStable(instanceId, config);
+        }
       }
     }
+  }
+
+  private async restartEmbeddedServer(
+    instanceId: string,
+    config: { appBinaryPath: string; port: number; options: TauriServiceOptions },
+  ): Promise<void> {
+    log.warn(`Embedded WebDriver on port ${config.port} (instance: ${instanceId}) is unreachable — restarting...`);
+    const existing = this.embeddedProcesses.get(instanceId);
+    if (existing) {
+      try {
+        await stopEmbeddedDriver(existing);
+      } catch {
+        // Process may already be dead; ignore
+      }
+    }
+    try {
+      const newInfo = await startEmbeddedDriver(config.appBinaryPath, config.port, config.options, instanceId);
+      this.embeddedProcesses.set(instanceId, newInfo);
+      log.info(`✅ Embedded WebDriver restarted on port ${config.port} (instance: ${instanceId})`);
+    } catch (error) {
+      throw new SevereServiceError(
+        `Failed to restart embedded WebDriver on port ${config.port}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * After a passing health check on Windows, re-probe several times at short intervals
+   * to catch a server that is about to crash. Closes the race window between the
+   * initial probe and WDIO's first POST /session request.
+   */
+  private async verifyEmbeddedServerStable(
+    instanceId: string,
+    config: { appBinaryPath: string; port: number; options: TauriServiceOptions },
+  ): Promise<void> {
+    const PROBE_COUNT = 3;
+    const PROBE_INTERVAL_MS = 500;
+    for (let i = 0; i < PROBE_COUNT; i++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, PROBE_INTERVAL_MS));
+      const isAlive = await checkEmbeddedServerAlive(config.port, config.options.statusPollTimeout);
+      if (!isAlive) {
+        log.warn(
+          `Embedded WebDriver on port ${config.port} died during stability check (probe ${i + 1}/${PROBE_COUNT}), restarting...`,
+        );
+        await this.restartEmbeddedServer(instanceId, config);
+        return;
+      }
+    }
+    log.debug(`Embedded WebDriver on port ${config.port} passed ${PROBE_COUNT} stability probes`);
   }
 
   /**
