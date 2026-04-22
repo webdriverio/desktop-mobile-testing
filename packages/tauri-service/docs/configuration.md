@@ -132,6 +132,24 @@ logLevel: 'debug'  // More verbose
 
 ---
 
+### `windowLabel` (string, optional)
+
+The default window label to target for Tauri operations. This controls which webview window `browser.tauri.execute()` and other Tauri-specific operations target by default.
+
+**Example:**
+```typescript
+windowLabel: 'settings'  // Target the settings window by default
+```
+
+**Default:** `'main'`
+
+**Note:** 
+- Each browser instance (including multiremote) can have its own default windowLabel
+- Override at runtime with `browser.tauri.switchWindow(label)`
+- Per-call override with `browser.tauri.execute(fn, withExecuteOptions({ windowLabel: 'x' }))` is supported
+
+---
+
 ### `commandTimeout` (number, optional)
 
 Timeout in milliseconds for individual command execution.

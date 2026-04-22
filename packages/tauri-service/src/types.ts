@@ -3,8 +3,12 @@ import type {
   TauriServiceOptions as BaseTauriServiceOptions,
 } from '@wdio/native-types';
 
-// Re-export types from native-types for convenience
-export type { TauriResult } from '@wdio/native-types';
+export type { TauriExecuteOptions, TauriResult } from '@wdio/native-types';
+
+/**
+ * WebDriver provider for Tauri testing
+ */
+export type DriverProvider = 'official' | 'crabnebula' | 'embedded';
 
 /**
  * Extended Tauri service options with implementation-specific fields

@@ -72,6 +72,7 @@ export type {
   TauriAPIs,
   TauriBrowserExtension,
   TauriCapabilities,
+  TauriExecuteOptions,
   TauriMock,
   TauriMockInstance,
   TauriResult,

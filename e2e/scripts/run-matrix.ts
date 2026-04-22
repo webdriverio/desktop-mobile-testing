@@ -162,6 +162,7 @@ async function runTest(
   variant: TestVariant,
   buildManager: BuildManager,
   envContext: EnvironmentContext,
+  collectedLogDirs: string[],
 ): Promise<TestResult> {
   const testName = getTestName(variant);
   const startTime = Date.now();
@@ -209,6 +210,8 @@ async function runTest(
     const logDirName = getLogDirName(envContext.testType, appDirName, envContext.driverProvider);
     const logDir = join(process.cwd(), 'logs', logDirName);
     const outputLogPath = join(logDir, 'wdio-output.log');
+
+    collectedLogDirs.push(logDir);
 
     // Ensure log directory exists
     if (!existsSync(logDir)) {
@@ -309,18 +312,10 @@ async function runTest(
 
 /**
  * Display full test output at the end of the run
- * Reads wdio-output.log from each test's log directory and displays it
+ * Only shows logs from the directories created during this invocation
  */
-function displayFullOutput(): void {
-  const logsDir = join(process.cwd(), 'logs');
-
-  if (!existsSync(logsDir)) {
-    return;
-  }
-
-  const dirs = readdirSync(logsDir, { withFileTypes: true }).filter((dirent) => dirent.isDirectory());
-
-  if (dirs.length === 0) {
+function displayFullOutput(logDirs: string[]): void {
+  if (logDirs.length === 0) {
     return;
   }
 
@@ -328,12 +323,12 @@ function displayFullOutput(): void {
   console.log('📋 FULL TEST OUTPUT');
   console.log('='.repeat(80));
 
-  for (const dir of dirs) {
-    const logDir = join(logsDir, dir.name);
+  for (const logDir of logDirs) {
     const outputLogPath = join(logDir, 'wdio-output.log');
 
     if (existsSync(outputLogPath)) {
-      console.log(`\n--- ${dir.name}/wdio-output.log ---`);
+      const dirName = logDir.split(/[\\/]/).at(-1) ?? logDir;
+      console.log(`\n--- ${dirName}/wdio-output.log ---`);
       const content = readFileSync(outputLogPath, 'utf8');
       if (content.trim()) {
         console.log(content);
@@ -424,6 +419,8 @@ async function runTests(): Promise<void> {
     console.log(`    Uptime: ${process.uptime()}s`);
     console.log(`    Load average: ${process.platform !== 'win32' ? JSON.stringify(loadavg()) : 'N/A (Windows)'}`);
 
+    const collectedLogDirs: string[] = [];
+
     // Run all tests with controlled concurrency
     const results: TestResult[] = await Promise.all(
       filteredVariants.map((variant, index) =>
@@ -435,7 +432,7 @@ async function runTests(): Promise<void> {
           statusTracker.startTest(testName);
 
           const variantStartTime = Date.now();
-          const result = await runTest(variant, buildManager, envContext);
+          const result = await runTest(variant, buildManager, envContext, collectedLogDirs);
           const variantDuration = Date.now() - variantStartTime;
 
           console.log(
@@ -458,6 +455,9 @@ async function runTests(): Promise<void> {
     console.log(`🔍 Debug: Printing final summary...`);
     // Print final summary
     statusBar.printFinalSummary(results, startTime);
+
+    // Display output only for directories created during this run
+    displayFullOutput(collectedLogDirs);
 
     console.log(`🔍 Debug: Analyzing test results...`);
     // Check if all tests passed
@@ -625,9 +625,6 @@ async function main(): Promise<void> {
 
   // Run tests
   await runTests();
-
-  // Display full test output at the end
-  displayFullOutput();
 }
 
 // Run the tests

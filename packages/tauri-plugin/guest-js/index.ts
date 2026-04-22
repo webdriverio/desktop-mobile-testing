@@ -65,7 +65,7 @@ declare global {
       };
     };
     wdioTauri?: {
-      execute: (script: string, ...args: unknown[]) => Promise<unknown>;
+      execute: (script: string, options?: { windowLabel?: string }, argsJson?: string) => Promise<unknown>;
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
@@ -126,18 +126,25 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Options for execute function
+ */
+interface ExecuteOptions {
+  /** Window label to execute in (optional) */
+  windowLabel?: string;
+}
+
+/**
  * Execute JavaScript code in the frontend context with access to Tauri APIs
  * The script will receive the Tauri APIs object as the first argument
  * @param script - JavaScript code to execute (function string without first parameter)
- * @param args - Arguments to pass to the script (after the Tauri APIs object)
+ * @param options - Execute options (optional)
+ * @param argsJson - Serialized user arguments as JSON string (optional)
  * @returns Result of the script execution
  */
-export async function execute(script: string, ...args: unknown[]): Promise<unknown> {
+export async function execute(script: string, options?: ExecuteOptions, argsJson?: string): Promise<unknown> {
   if (!window.__TAURI__) {
     throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
   }
-
-  const argsJson = JSON.stringify(args);
 
   // Build a minimal tauri object with a mock-routing invoke. We deliberately avoid
   // spreading/Object.assign on window.__TAURI__ or window.__TAURI__.core because on
@@ -146,7 +153,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
   // trigger Proxy invariant violations when iterated. Only core.invoke is needed by scripts.
   const wrappedScript = `
     (async () => {
-      const __wdio_args = ${argsJson};
+      const __wdio_args = ${argsJson ?? '[]'};
 
       // Resolve the real invoke: prefer the snapshotted original (set by init() before any
       // Proxy was installed), fall back to window.__TAURI__.core.invoke.
@@ -184,6 +191,7 @@ export async function execute(script: string, ...args: unknown[]): Promise<unkno
       request: {
         script: wrappedScript,
         args: [],
+        window_label: options?.windowLabel,
       },
     } as InvokeArgs);
     return result;

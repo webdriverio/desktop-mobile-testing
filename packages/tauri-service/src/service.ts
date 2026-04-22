@@ -6,7 +6,15 @@ import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import mockStore from './mockStore.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
-import { clearWindowState, ensureActiveWindowFocus } from './window.js';
+import {
+  clearWindowState,
+  ensureActiveWindowFocus,
+  getDefaultWindowLabel,
+  listWindowLabels,
+  setCurrentWindowLabel,
+  setSessionProvider,
+  switchWindowByLabel,
+} from './window.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -26,6 +34,7 @@ export default class TauriWorkerService {
   private restoreMocks: boolean;
   private restoreMocksPrefix?: string;
   private driverProvider?: 'official' | 'crabnebula' | 'embedded';
+  private windowLabel: string;
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
@@ -35,6 +44,7 @@ export default class TauriWorkerService {
     this.restoreMocks = options.restoreMocks ?? false;
     this.restoreMocksPrefix = options.restoreMocksPrefix;
     this.driverProvider = options.driverProvider;
+    this.windowLabel = options.windowLabel || getDefaultWindowLabel();
     log.debug('TauriWorkerService initialized');
   }
 
@@ -62,6 +72,8 @@ export default class TauriWorkerService {
         log.debug(`Initializing instance: ${instanceName}`);
         this.addTauriApi(mrInstance);
         this.patchBrowserExecute(mrInstance);
+        setCurrentWindowLabel(mrInstance, this.windowLabel);
+        setSessionProvider(mrInstance, this.driverProvider ?? 'embedded');
         await waitUntilWindowAvailable(mrInstance);
         log.debug(`Instance ${instanceName} ready`);
 
@@ -89,6 +101,8 @@ export default class TauriWorkerService {
       log.debug('Initializing standard browser');
       this.addTauriApi(browser as WebdriverIO.Browser);
       this.patchBrowserExecute(browser as WebdriverIO.Browser);
+      setCurrentWindowLabel(browser as WebdriverIO.Browser, this.windowLabel);
+      setSessionProvider(browser as WebdriverIO.Browser, this.driverProvider ?? 'embedded');
       await waitUntilWindowAvailable(browser as WebdriverIO.Browser);
       log.debug('Standard browser ready');
     }
@@ -297,6 +311,14 @@ export default class TauriWorkerService {
 
       triggerDeeplink: async (url: string): Promise<void> => {
         return triggerDeeplink.call({ browser }, url);
+      },
+
+      switchWindow: async (label: string): Promise<void> => {
+        await switchWindowByLabel(browser, label);
+      },
+
+      listWindows: async (): Promise<string[]> => {
+        return listWindowLabels(browser);
       },
     };
   }
