@@ -159,4 +159,25 @@ describe('execute Command', () => {
       expect.stringContaining('(async () => { return functionResult.call(); })()'),
     );
   });
+
+  it('should treat (document.title) as expression (paren without arrow)', async () => {
+    await execute(globalThis.browser, '(document.title)');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return (document.title); })()'),
+    );
+  });
+
+  it('should treat (a + b) as expression (paren without arrow)', async () => {
+    await execute(globalThis.browser, '(a + b)');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return (a + b); })()'),
+    );
+  });
+
+  it('should treat (x, y) => x + y as function-like (paren arrow)', async () => {
+    await execute(globalThis.browser, '(x, y) => x + y');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), '(x, y) => x + y');
+  });
 });
