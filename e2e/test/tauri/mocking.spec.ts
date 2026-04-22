@@ -289,6 +289,21 @@ describe('Tauri Mocking', () => {
 
         expect(error).toBe('This is a mock error');
       });
+
+      it('should reject with an Error object preserving message', async () => {
+        const mockGetPlatformInfo = await browser.tauri.mock('get_platform_info');
+        await mockGetPlatformInfo.mockRejectedValue(new Error('connection failed'));
+
+        const error = await browser.tauri.execute(async ({ core }) => {
+          try {
+            return await core.invoke('get_platform_info');
+          } catch (e) {
+            return e instanceof Error ? e.message : String(e);
+          }
+        });
+
+        expect(error).toBe('connection failed');
+      });
     });
 
     describe('mockRejectedValueOnce', () => {
@@ -323,6 +338,27 @@ describe('Tauri Mocking', () => {
 
         info = await getInfo();
         expect(info).toBe('default error');
+      });
+
+      it('should reject with Error objects preserving message', async () => {
+        const mockGetPlatformInfo = await browser.tauri.mock('get_platform_info');
+
+        await mockGetPlatformInfo.mockRejectedValue(new Error('default error'));
+        await mockGetPlatformInfo.mockRejectedValueOnce(new Error('first error'));
+        await mockGetPlatformInfo.mockRejectedValueOnce(new Error('second error'));
+
+        const getMsg = async () =>
+          await browser.tauri.execute(async ({ core }) => {
+            try {
+              return await core.invoke('get_platform_info');
+            } catch (e) {
+              return e instanceof Error ? e.message : String(e);
+            }
+          });
+
+        expect(await getMsg()).toBe('first error');
+        expect(await getMsg()).toBe('second error');
+        expect(await getMsg()).toBe('default error');
       });
     });
 
