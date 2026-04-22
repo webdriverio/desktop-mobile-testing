@@ -123,12 +123,6 @@ describe('Tauri Mocking', () => {
   });
 
   describe('browser.tauri.restoreAllMocks', () => {
-    beforeEach(async () => {
-      await browser.tauri.execute(async ({ core }) => {
-        await core.invoke('write_clipboard', { content: 'real clipboard text' });
-      });
-    });
-
     it('should restore existing mocks', async () => {
       const mockReadClipboard = await browser.tauri.mock('read_clipboard');
       const mockGetPlatformInfo = await browser.tauri.mock('get_platform_info');
@@ -137,6 +131,11 @@ describe('Tauri Mocking', () => {
       await mockGetPlatformInfo.mockReturnValue({ os: 'mock_os' });
 
       await browser.tauri.restoreAllMocks();
+
+      // Write to clipboard AFTER restoring — any write_clipboard mock from prior tests is now gone
+      await browser.tauri.execute(async ({ core }) => {
+        await core.invoke('write_clipboard', { content: 'real clipboard text' });
+      });
 
       const clipboardContent = await browser.tauri.execute(async ({ core }) => await core.invoke('read_clipboard'));
       const platformInfo = await browser.tauri.execute(async ({ core }) => await core.invoke('get_platform_info'));
