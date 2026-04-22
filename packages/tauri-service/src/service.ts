@@ -400,12 +400,13 @@ async function updateAllMocks(): Promise<void> {
   }
 
   const tryUpdate = async (
-    _mockId: string,
+    mockId: string,
     mockInstance: ReturnType<typeof mockStore.getMocks>[0][1],
   ): Promise<void> => {
     try {
       await mockInstance.update();
-    } catch {
+    } catch (firstError) {
+      log.debug(`Mock update failed for ${mockId}, retrying in 50ms:`, firstError);
       await sleep(50);
       await mockInstance.update();
     }
