@@ -12,6 +12,7 @@ import {
   getDefaultWindowLabel,
   listWindowLabels,
   setCurrentWindowLabel,
+  setSessionProvider,
   switchWindowByLabel,
 } from './window.js';
 
@@ -72,6 +73,7 @@ export default class TauriWorkerService {
         this.addTauriApi(mrInstance);
         this.patchBrowserExecute(mrInstance);
         setCurrentWindowLabel(mrInstance, this.windowLabel);
+        setSessionProvider(mrInstance, this.driverProvider ?? 'embedded');
         await waitUntilWindowAvailable(mrInstance);
         log.debug(`Instance ${instanceName} ready`);
 
@@ -100,6 +102,7 @@ export default class TauriWorkerService {
       this.addTauriApi(browser as WebdriverIO.Browser);
       this.patchBrowserExecute(browser as WebdriverIO.Browser);
       setCurrentWindowLabel(browser as WebdriverIO.Browser, this.windowLabel);
+      setSessionProvider(browser as WebdriverIO.Browser, this.driverProvider ?? 'embedded');
       await waitUntilWindowAvailable(browser as WebdriverIO.Browser);
       log.debug('Standard browser ready');
     }

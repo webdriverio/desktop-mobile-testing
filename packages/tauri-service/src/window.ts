@@ -1,4 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
+import type { DriverProvider } from './types.js';
 
 const log = createLogger('tauri-service', 'window');
 
@@ -15,6 +16,8 @@ const currentWindowLabelCache = new Map<string, string>();
 
 const userSwitchedWindowCache = new Set<string>();
 
+const sessionProviderCache = new Map<string, DriverProvider>();
+
 const DEFAULT_WINDOW_LABEL = 'main';
 
 export function getDefaultWindowLabel(): string {
@@ -30,6 +33,47 @@ export function setCurrentWindowLabel(browser: WebdriverIO.Browser, label: strin
   log.debug(`Current window label set to: ${label}`);
 }
 
+export function setSessionProvider(browser: WebdriverIO.Browser, provider: DriverProvider): void {
+  sessionProviderCache.set(browser.sessionId || 'default', provider);
+  log.debug(`Session provider set to: ${provider}`);
+}
+
+function getSessionProvider(browser: WebdriverIO.Browser): DriverProvider {
+  return sessionProviderCache.get(browser.sessionId || 'default') ?? 'embedded';
+}
+
+async function resolveLabelToHandle(browser: WebdriverIO.Browser, targetLabel: string): Promise<string> {
+  const handles = await browser.getWindowHandles();
+  const discovered = new Map<string, string>();
+
+  for (const handle of handles) {
+    try {
+      await browser.switchToWindow(handle);
+      const handleLabel = await browser.executeAsync<string | null, []>(
+        `var done = arguments[arguments.length - 1];
+         try {
+           window.__TAURI__.core.invoke('plugin:wdio|get_active_window_label')
+             .then(function(l) { done(l); })
+             ['catch'](function() { done(null); });
+         } catch(e) { done(null); }`,
+      );
+      if (handleLabel) {
+        discovered.set(handleLabel, handle);
+        if (handleLabel === targetLabel) {
+          return handle;
+        }
+      }
+    } catch {
+      log.debug(`Handle ${handle.substring(0, 8)}... is stale or unreachable, skipping`);
+    }
+  }
+
+  const discoveredLabels = [...discovered.keys()].join(', ');
+  throw new Error(
+    `No window with label "${targetLabel}" found after checking all handles. Discovered: ${discoveredLabels || 'none'}`,
+  );
+}
+
 export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: string): Promise<void> {
   const availableWindows = await listWindowLabels(browser);
 
@@ -37,8 +81,23 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
     throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
   }
 
+  // Suppress auto-focus BEFORE any switching or iteration to prevent focus-change races
+  // during handle discovery (ensureActiveWindowFocus checks this flag first).
+  userSwitchedWindowCache.add(browser.sessionId || 'default');
+
+  const provider = getSessionProvider(browser);
+
   try {
-    await browser.switchToWindow(label);
+    if (provider === 'embedded') {
+      // Embedded provider: Tauri labels ARE WebDriver handles (tauri-plugin-webdriver
+      // returns labels directly from /session/{id}/window/handles).
+      await browser.switchToWindow(label);
+    } else {
+      // Official / CrabNebula providers proxy through msedgedriver or WebKitWebDriver
+      // which use opaque W3C UUID handles. Resolve the label to a handle via IPC.
+      const handle = await resolveLabelToHandle(browser, label);
+      await browser.switchToWindow(handle);
+    }
   } catch (error) {
     throw new Error(
       `Failed to switch to window with label "${label}": ${error instanceof Error ? error.message : String(error)}`,
@@ -46,7 +105,6 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
   }
 
   setCurrentWindowLabel(browser, label);
-  userSwitchedWindowCache.add(browser.sessionId || 'default');
   log.debug(`Successfully switched to window: ${label}`);
 }
 
@@ -247,9 +305,11 @@ export function clearWindowState(sessionId?: string): void {
     lastCommandCache.delete(sessionId);
     currentWindowLabelCache.delete(sessionId);
     userSwitchedWindowCache.delete(sessionId);
+    sessionProviderCache.delete(sessionId);
   } else {
     lastCommandCache.clear();
     currentWindowLabelCache.clear();
     userSwitchedWindowCache.clear();
+    sessionProviderCache.clear();
   }
 }

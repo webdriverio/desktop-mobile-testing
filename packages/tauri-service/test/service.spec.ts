@@ -38,6 +38,7 @@ vi.mock('../src/window.js', () => ({
   getDefaultWindowLabel: vi.fn().mockReturnValue('main'),
   listWindowLabels: vi.fn().mockResolvedValue(['main']),
   setCurrentWindowLabel: vi.fn(),
+  setSessionProvider: vi.fn(),
   switchWindowByLabel: vi.fn().mockResolvedValue(undefined),
 }));
 

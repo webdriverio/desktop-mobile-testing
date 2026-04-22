@@ -9,6 +9,7 @@ import {
   getLastCommand,
   listWindowLabels,
   setCurrentWindowLabel,
+  setSessionProvider,
   switchWindowByLabel,
   updateLastCommand,
 } from '../src/window.js';
@@ -108,41 +109,177 @@ describe('window management', () => {
   });
 
   describe('switchWindowByLabel', () => {
-    it('should switch to an existing window when label is found', async () => {
-      const mockBrowser = {
-        sessionId: 'test-session',
-        tauri: {
-          execute: vi
-            .fn()
-            .mockResolvedValueOnce(['main', 'splash'])
-            .mockResolvedValueOnce([
-              { label: 'main', title: 'Tauri E2E Test App', is_visible: true, is_focused: true },
-            ]),
-        },
-        getWindowHandles: vi.fn().mockResolvedValue(['handle1', 'handle2']),
-        switchToWindow: vi.fn().mockResolvedValue(undefined),
-        getTitle: vi.fn().mockResolvedValueOnce('Other').mockResolvedValueOnce('Tauri E2E Test App'),
-      } as unknown as WebdriverIO.Browser;
-
-      await switchWindowByLabel(mockBrowser, 'main');
-      expect(mockBrowser.tauri.execute).toHaveBeenCalled();
-      expect(mockBrowser.switchToWindow).toHaveBeenCalled();
-    });
-
     it('should throw when window label is not found', async () => {
       const mockBrowser = {
         sessionId: 'test-session',
         tauri: {
-          execute: vi
-            .fn()
-            .mockResolvedValueOnce(['main', 'splash'])
-            .mockResolvedValueOnce([{ label: 'main', title: 'Main', is_visible: true, is_focused: true }]),
+          execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
         },
       } as unknown as WebdriverIO.Browser;
 
       await expect(switchWindowByLabel(mockBrowser, 'nonexistent')).rejects.toThrow(
         'Window label "nonexistent" not found',
       );
+    });
+
+    describe('embedded provider (default)', () => {
+      it('should switch directly using the label as the window handle', async () => {
+        const mockBrowser = {
+          sessionId: 'embedded-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+        } as unknown as WebdriverIO.Browser;
+
+        // No setSessionProvider call — default is 'embedded'
+        await switchWindowByLabel(mockBrowser, 'splash');
+
+        expect(mockBrowser.switchToWindow).toHaveBeenCalledWith('splash');
+        expect(mockBrowser.switchToWindow).toHaveBeenCalledTimes(1);
+      });
+
+      it('should not call getWindowHandles for embedded provider', async () => {
+        const mockBrowser = {
+          sessionId: 'embedded-session-2',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main']),
+          },
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          getWindowHandles: vi.fn(),
+        } as unknown as WebdriverIO.Browser;
+
+        await switchWindowByLabel(mockBrowser, 'main');
+
+        expect(mockBrowser.getWindowHandles).not.toHaveBeenCalled();
+      });
+
+      it('should throw a descriptive error when embedded direct switch fails', async () => {
+        const mockBrowser = {
+          sessionId: 'embedded-err-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          switchToWindow: vi.fn().mockRejectedValue(new Error('no such window')),
+        } as unknown as WebdriverIO.Browser;
+
+        await expect(switchWindowByLabel(mockBrowser, 'splash')).rejects.toThrow(
+          'Failed to switch to window with label "splash": no such window',
+        );
+      });
+    });
+
+    describe('official provider', () => {
+      it('should iterate handles and resolve label via IPC', async () => {
+        const mockBrowser = {
+          sessionId: 'official-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          getWindowHandles: vi.fn().mockResolvedValue(['uuid-aaa', 'uuid-bbb']),
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          executeAsync: vi.fn().mockResolvedValueOnce('main').mockResolvedValueOnce('splash'),
+        } as unknown as WebdriverIO.Browser;
+
+        setSessionProvider(mockBrowser, 'official');
+        await switchWindowByLabel(mockBrowser, 'splash');
+
+        expect(mockBrowser.getWindowHandles).toHaveBeenCalled();
+        expect(mockBrowser.switchToWindow).toHaveBeenCalledWith('uuid-bbb');
+      });
+
+      it('should stop iterating handles once the target label is found', async () => {
+        const mockBrowser = {
+          sessionId: 'official-stop-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          getWindowHandles: vi.fn().mockResolvedValue(['uuid-1', 'uuid-2', 'uuid-3']),
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          executeAsync: vi.fn().mockResolvedValueOnce('main'),
+        } as unknown as WebdriverIO.Browser;
+
+        setSessionProvider(mockBrowser, 'official');
+        await switchWindowByLabel(mockBrowser, 'main');
+
+        // Should call executeAsync only once (found on first handle)
+        expect(mockBrowser.executeAsync).toHaveBeenCalledTimes(1);
+        expect(mockBrowser.switchToWindow).toHaveBeenLastCalledWith('uuid-1');
+      });
+
+      it('should skip stale handles and continue', async () => {
+        const mockBrowser = {
+          sessionId: 'official-stale-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          getWindowHandles: vi.fn().mockResolvedValue(['stale-uuid', 'uuid-splash']),
+          switchToWindow: vi.fn().mockRejectedValueOnce(new Error('no such window')).mockResolvedValue(undefined),
+          executeAsync: vi.fn().mockResolvedValueOnce('splash'),
+        } as unknown as WebdriverIO.Browser;
+
+        setSessionProvider(mockBrowser, 'official');
+        await switchWindowByLabel(mockBrowser, 'splash');
+
+        expect(mockBrowser.switchToWindow).toHaveBeenLastCalledWith('uuid-splash');
+      });
+
+      it('should throw with discovered labels when no handle matches', async () => {
+        const mockBrowser = {
+          sessionId: 'official-nomatch-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'ghost']),
+          },
+          getWindowHandles: vi.fn().mockResolvedValue(['uuid-1']),
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          executeAsync: vi.fn().mockResolvedValueOnce('main'),
+        } as unknown as WebdriverIO.Browser;
+
+        setSessionProvider(mockBrowser, 'official');
+        await expect(switchWindowByLabel(mockBrowser, 'ghost')).rejects.toThrow('ghost');
+      });
+    });
+
+    describe('crabnebula provider', () => {
+      it('should use handle iteration (same path as official)', async () => {
+        const mockBrowser = {
+          sessionId: 'cn-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          getWindowHandles: vi.fn().mockResolvedValue(['cn-uuid-main', 'cn-uuid-splash']),
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          executeAsync: vi.fn().mockResolvedValueOnce('main').mockResolvedValueOnce('splash'),
+        } as unknown as WebdriverIO.Browser;
+
+        setSessionProvider(mockBrowser, 'crabnebula');
+        await switchWindowByLabel(mockBrowser, 'splash');
+
+        expect(mockBrowser.getWindowHandles).toHaveBeenCalled();
+        expect(mockBrowser.switchToWindow).toHaveBeenLastCalledWith('cn-uuid-splash');
+      });
+    });
+
+    describe('auto-focus suppression', () => {
+      it('should suppress ensureActiveWindowFocus after switchWindowByLabel', async () => {
+        const mockBrowser = {
+          sessionId: 'autofocus-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main']),
+          },
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+        } as unknown as WebdriverIO.Browser;
+
+        await switchWindowByLabel(mockBrowser, 'main');
+
+        // After an explicit switchWindow, ensureActiveWindowFocus should skip IPC
+        vi.clearAllMocks();
+        const focusBrowser = { ...mockBrowser, tauri: { execute: vi.fn() } } as unknown as WebdriverIO.Browser;
+        // Re-use same sessionId so the cache check applies
+        Object.defineProperty(focusBrowser, 'sessionId', { value: 'autofocus-session' });
+        await ensureActiveWindowFocus(focusBrowser, 'getTitle');
+        expect(focusBrowser.tauri.execute).not.toHaveBeenCalled();
+      });
     });
   });
 

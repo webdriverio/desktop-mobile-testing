@@ -6,6 +6,11 @@ import type {
 export type { TauriExecuteOptions, TauriResult } from '@wdio/native-types';
 
 /**
+ * WebDriver provider for Tauri testing
+ */
+export type DriverProvider = 'official' | 'crabnebula' | 'embedded';
+
+/**
  * Extended Tauri service options with implementation-specific fields
  * Extends the base TauriServiceOptions from native-types with:
  * - env: Environment variables for the driver process
