@@ -739,7 +739,7 @@ export default class TauriLaunchService {
    */
   private async ensureEmbeddedServersHealthy(): Promise<void> {
     for (const [instanceId, config] of this.embeddedConfigs) {
-      const isAlive = await checkEmbeddedServerAlive(config.port);
+      const isAlive = await checkEmbeddedServerAlive(config.port, config.options.statusPollTimeout);
       if (!isAlive) {
         log.warn(`Embedded WebDriver on port ${config.port} (instance: ${instanceId}) is unreachable — restarting...`);
         const existing = this.embeddedProcesses.get(instanceId);

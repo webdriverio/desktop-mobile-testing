@@ -208,10 +208,10 @@ export async function stopEmbeddedDriver(info: EmbeddedDriverInfo): Promise<void
 /**
  * Check if the embedded WebDriver server is reachable on the given port
  */
-export async function checkEmbeddedServerAlive(port: number): Promise<boolean> {
+export async function checkEmbeddedServerAlive(port: number, timeoutMs: number = 2000): Promise<boolean> {
   try {
     const response = await fetch(`http://127.0.0.1:${port}/status`, {
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     return response.ok;
   } catch {

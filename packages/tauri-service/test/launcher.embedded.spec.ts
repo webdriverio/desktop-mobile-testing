@@ -183,7 +183,7 @@ describe('onWorkerStart — embedded health check guard', () => {
 
     await launcher.onWorkerStart('0-0', stdCaps as any);
 
-    expect(checkEmbeddedServerAlive).toHaveBeenCalledWith(EMBEDDED_PORT);
+    expect(checkEmbeddedServerAlive).toHaveBeenCalledWith(EMBEDDED_PORT, undefined);
   });
 
   it('skips health check when isEmbeddedMode=false', async () => {
