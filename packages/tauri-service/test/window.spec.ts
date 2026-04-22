@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as executeModule from '../src/commands/execute.js';
 import {
   clearWindowState,
   ensureActiveWindowFocus,
@@ -60,15 +61,24 @@ describe('window management', () => {
       expect(result).toEqual(['main', 'splash']);
     });
 
-    it('should return ["main"] as fallback on error', async () => {
+    it('should propagate errors', async () => {
       const mockBrowser = {
         tauri: {
           execute: vi.fn().mockRejectedValue(new Error('API error')),
         },
       } as unknown as WebdriverIO.Browser;
 
-      const result = await listWindowLabels(mockBrowser);
-      expect(result).toEqual(['main']);
+      await expect(listWindowLabels(mockBrowser)).rejects.toThrow('API error');
+    });
+
+    it('should throw when result is not an array', async () => {
+      const mockBrowser = {
+        tauri: {
+          execute: vi.fn().mockResolvedValue('not-an-array'),
+        },
+      } as unknown as WebdriverIO.Browser;
+
+      await expect(listWindowLabels(mockBrowser)).rejects.toThrow('Expected array but got string');
     });
   });
 
@@ -269,6 +279,53 @@ describe('window management', () => {
 
         expect(mockBrowser.getWindowHandles).toHaveBeenCalled();
         expect(mockBrowser.switchToWindow).toHaveBeenLastCalledWith('cn-uuid-splash');
+      });
+    });
+
+    describe('IPC validation failure handling', () => {
+      it('should attempt switch directly when listWindowLabels throws a transient IPC error', async () => {
+        const mockBrowser = {
+          sessionId: 'ipc-fail-session',
+          tauri: {
+            execute: vi.fn().mockRejectedValueOnce(new Error('Tauri plugin not available')),
+          },
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
+        } as unknown as WebdriverIO.Browser;
+
+        await expect(switchWindowByLabel(mockBrowser, 'settings')).resolves.not.toThrow();
+        expect(mockBrowser.switchToWindow).toHaveBeenCalledWith('settings');
+      });
+
+      it('should still reject with a clear error when label is genuinely absent', async () => {
+        const mockBrowser = {
+          sessionId: 'absent-label-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
+          },
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
+        } as unknown as WebdriverIO.Browser;
+
+        await expect(switchWindowByLabel(mockBrowser, 'ghost')).rejects.toThrow(
+          'Window label "ghost" not found. Available windows: main, splash',
+        );
+      });
+
+      it('should clear pluginAvailabilityCache after a successful switch', async () => {
+        const spy = vi.spyOn(executeModule, 'clearPluginAvailabilityCache');
+        const mockBrowser = {
+          sessionId: 'cache-clear-session',
+          tauri: {
+            execute: vi.fn().mockResolvedValueOnce(['main', 'settings']),
+          },
+          switchToWindow: vi.fn().mockResolvedValue(undefined),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
+        } as unknown as WebdriverIO.Browser;
+
+        await switchWindowByLabel(mockBrowser, 'settings');
+
+        expect(spy).toHaveBeenCalledWith(mockBrowser);
+        spy.mockRestore();
       });
     });
 

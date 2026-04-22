@@ -1,4 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
+import { clearPluginAvailabilityCache } from './commands/execute.js';
 import type { DriverProvider } from './types.js';
 
 const log = createLogger('tauri-service', 'window');
@@ -75,10 +76,16 @@ async function resolveLabelToHandle(browser: WebdriverIO.Browser, targetLabel: s
 }
 
 export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: string): Promise<void> {
-  const availableWindows = await listWindowLabels(browser);
-
-  if (!availableWindows.includes(label)) {
-    throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
+  try {
+    const availableWindows = await listWindowLabels(browser);
+    if (!availableWindows.includes(label)) {
+      throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
+    }
+  } catch (validationError) {
+    if (validationError instanceof Error && validationError.message.startsWith('Window label')) {
+      throw validationError;
+    }
+    log.warn(`Could not validate window label "${label}" via IPC, attempting switch directly:`, validationError);
   }
 
   const sessionKey = browser.sessionId || 'default';
@@ -109,6 +116,7 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
     throw error;
   }
 
+  clearPluginAvailabilityCache(browser);
   setCurrentWindowLabel(browser, label);
   log.debug(`Successfully switched to window: ${label}`);
 }
@@ -124,16 +132,11 @@ export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promis
 }
 
 export async function listWindowLabels(browser: WebdriverIO.Browser): Promise<string[]> {
-  try {
-    const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
-    if (!Array.isArray(result)) {
-      throw new Error(`Expected array but got ${typeof result}`);
-    }
-    return result as string[];
-  } catch (error) {
-    log.warn('Failed to list window labels:', error);
-    return ['main'];
+  const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
+  if (!Array.isArray(result)) {
+    throw new Error(`Expected array but got ${typeof result}`);
   }
+  return result as string[];
 }
 
 export async function getCurrentDevtoolsPort(browser: WebdriverIO.Browser): Promise<number | undefined> {
