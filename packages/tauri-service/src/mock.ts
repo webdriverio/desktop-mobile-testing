@@ -314,10 +314,16 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       command,
     );
 
-    // Call outerMockClear synchronously before outerMockReset, because outerMockReset internally
-    // calls mock.mockClear (now async) without awaiting — this ensures state is cleared immediately.
+    // Temporarily restore the sync mockClear so outerMockReset's internal mockFn.mockClear()
+    // call doesn't fire the async override, which would defer outerMockClear() and race
+    // against auto-sync populating state.calls.
+    const asyncMockClearFn = mock.mockClear;
+    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
+    wrapperMock.mockClear = outerMockClear as unknown as typeof wrapperMock.mockClear;
     outerMockClear();
     outerMockReset();
+    mock.mockClear = asyncMockClearFn;
+    wrapperMock.mockClear = asyncMockClearFn;
     outerMock.mockName(currentName);
 
     return mock;
