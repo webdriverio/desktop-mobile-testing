@@ -86,6 +86,7 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
   userSwitchedWindowCache.add(browser.sessionId || 'default');
 
   const provider = getSessionProvider(browser);
+  const originalHandle = await browser.getWindowHandle();
 
   try {
     if (provider === 'embedded') {
@@ -100,6 +101,7 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
     }
   } catch (error) {
     userSwitchedWindowCache.delete(browser.sessionId || 'default');
+    await browser.switchToWindow(originalHandle).catch(() => {});
     throw new Error(
       `Failed to switch to window with label "${label}": ${error instanceof Error ? error.message : String(error)}`,
     );

@@ -115,6 +115,7 @@ describe('window management', () => {
         tauri: {
           execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
         },
+        getWindowHandle: vi.fn().mockReturnValue('original-handle'),
       } as unknown as WebdriverIO.Browser;
 
       await expect(switchWindowByLabel(mockBrowser, 'nonexistent')).rejects.toThrow(
@@ -130,6 +131,7 @@ describe('window management', () => {
             execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
           },
           switchToWindow: vi.fn().mockResolvedValue(undefined),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         // No setSessionProvider call — default is 'embedded'
@@ -147,6 +149,7 @@ describe('window management', () => {
           },
           switchToWindow: vi.fn().mockResolvedValue(undefined),
           getWindowHandles: vi.fn(),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         await switchWindowByLabel(mockBrowser, 'main');
@@ -160,12 +163,16 @@ describe('window management', () => {
           tauri: {
             execute: vi.fn().mockResolvedValueOnce(['main', 'splash']),
           },
-          switchToWindow: vi.fn().mockRejectedValue(new Error('no such window')),
+          switchToWindow: vi.fn().mockRejectedValueOnce(new Error('no such window')).mockResolvedValue(undefined),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         await expect(switchWindowByLabel(mockBrowser, 'splash')).rejects.toThrow(
           'Failed to switch to window with label "splash": no such window',
         );
+
+        // Should have restored focus to original window
+        expect(mockBrowser.switchToWindow).toHaveBeenCalledWith('original-handle');
       });
     });
 
@@ -179,6 +186,7 @@ describe('window management', () => {
           getWindowHandles: vi.fn().mockResolvedValue(['uuid-aaa', 'uuid-bbb']),
           switchToWindow: vi.fn().mockResolvedValue(undefined),
           executeAsync: vi.fn().mockResolvedValueOnce('main').mockResolvedValueOnce('splash'),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         setSessionProvider(mockBrowser, 'official');
@@ -197,6 +205,7 @@ describe('window management', () => {
           getWindowHandles: vi.fn().mockResolvedValue(['uuid-1', 'uuid-2', 'uuid-3']),
           switchToWindow: vi.fn().mockResolvedValue(undefined),
           executeAsync: vi.fn().mockResolvedValueOnce('main'),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         setSessionProvider(mockBrowser, 'official');
@@ -216,6 +225,7 @@ describe('window management', () => {
           getWindowHandles: vi.fn().mockResolvedValue(['stale-uuid', 'uuid-splash']),
           switchToWindow: vi.fn().mockRejectedValueOnce(new Error('no such window')).mockResolvedValue(undefined),
           executeAsync: vi.fn().mockResolvedValueOnce('splash'),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         setSessionProvider(mockBrowser, 'official');
@@ -233,6 +243,7 @@ describe('window management', () => {
           getWindowHandles: vi.fn().mockResolvedValue(['uuid-1']),
           switchToWindow: vi.fn().mockResolvedValue(undefined),
           executeAsync: vi.fn().mockResolvedValueOnce('main'),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         setSessionProvider(mockBrowser, 'official');
@@ -250,6 +261,7 @@ describe('window management', () => {
           getWindowHandles: vi.fn().mockResolvedValue(['cn-uuid-main', 'cn-uuid-splash']),
           switchToWindow: vi.fn().mockResolvedValue(undefined),
           executeAsync: vi.fn().mockResolvedValueOnce('main').mockResolvedValueOnce('splash'),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         setSessionProvider(mockBrowser, 'crabnebula');
@@ -268,6 +280,7 @@ describe('window management', () => {
             execute: vi.fn().mockResolvedValueOnce(['main']),
           },
           switchToWindow: vi.fn().mockResolvedValue(undefined),
+          getWindowHandle: vi.fn().mockReturnValue('original-handle'),
         } as unknown as WebdriverIO.Browser;
 
         await switchWindowByLabel(mockBrowser, 'main');
