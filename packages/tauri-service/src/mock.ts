@@ -256,31 +256,57 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockRejectedValue = async (value: unknown) => {
-    await tauriExecute<void, [string, unknown]>(
-      browserToUse,
-      (_tauri, cmd, rejectedValue) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockRejectedValue?.(rejectedValue);
-      },
-      command,
-      value,
-    );
+    if (value instanceof Error) {
+      await tauriExecute<void, [string, string]>(
+        browserToUse,
+        (_tauri, cmd, errMsg) => {
+          // @ts-expect-error - window is available in browser context
+          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
+          mockObj?.mockRejectedValue?.(new Error(errMsg));
+        },
+        command,
+        value.message,
+      );
+    } else {
+      await tauriExecute<void, [string, unknown]>(
+        browserToUse,
+        (_tauri, cmd, rejectedValue) => {
+          // @ts-expect-error - window is available in browser context
+          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
+          mockObj?.mockRejectedValue?.(rejectedValue);
+        },
+        command,
+        value,
+      );
+    }
 
     return mock;
   };
 
   mock.mockRejectedValueOnce = async (value: unknown) => {
-    await tauriExecute<void, [string, unknown]>(
-      browserToUse,
-      (_tauri, cmd, rejectedValue) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockRejectedValueOnce?.(rejectedValue);
-      },
-      command,
-      value,
-    );
+    if (value instanceof Error) {
+      await tauriExecute<void, [string, string]>(
+        browserToUse,
+        (_tauri, cmd, errMsg) => {
+          // @ts-expect-error - window is available in browser context
+          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
+          mockObj?.mockRejectedValueOnce?.(new Error(errMsg));
+        },
+        command,
+        value.message,
+      );
+    } else {
+      await tauriExecute<void, [string, unknown]>(
+        browserToUse,
+        (_tauri, cmd, rejectedValue) => {
+          // @ts-expect-error - window is available in browser context
+          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
+          mockObj?.mockRejectedValueOnce?.(rejectedValue);
+        },
+        command,
+        value,
+      );
+    }
 
     return mock;
   };
