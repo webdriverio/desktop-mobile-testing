@@ -37,14 +37,7 @@
     "test:dev": "vitest --coverage",
     "lint": "biome check ."
   },
-  "keywords": [
-    "webdriverio",
-    "wdio",
-    "wdio-service",
-    "electron",
-    "chromedriver",
-    "tests"
-  ],
+  "keywords": ["webdriverio", "wdio", "wdio-service", "electron", "chromedriver", "tests"],
   "peerDependencies": {
     "electron": "*",
     "webdriverio": ">9.0.0"
@@ -97,12 +90,7 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
-  "files": [
-    "dist",
-    "docs",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "docs", "README.md", "LICENSE"],
   "publishConfig": {
     "access": "public",
     "provenance": true

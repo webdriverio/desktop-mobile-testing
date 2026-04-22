@@ -7,8 +7,13 @@ import type { Mock, MockMetadata, MockResult } from './types.js';
 
 let globalCallId = 0;
 
+export interface FnOptions<T extends (...args: unknown[]) => unknown> {
+  original?: T;
+}
+
 export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown>(
   implementation?: T,
+  options?: FnOptions<T>,
 ): Mock<T> {
   let mockNameValue = '';
   let defaultReturnValue: ReturnType<T> | undefined;
@@ -16,7 +21,9 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   let defaultRejectedValue: unknown;
   let returnThis = false;
   let implementationFn = implementation;
-  const implementationQueue: T[] = [];
+  let implementationQueue: T[] = [];
+  const originalFn = options?.original;
+  let mockRestored = false; // Track if mock has been restored
 
   // State that needs to be shared across calls
   const state: MockMetadata<T> = {
@@ -40,10 +47,6 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
       }
     } else if (defaultRejectedValue !== undefined) {
       result = { type: 'throw', value: defaultRejectedValue };
-    } else if (defaultResolvedValue !== undefined) {
-      result = { type: 'return', value: Promise.resolve(defaultResolvedValue) };
-    } else if (returnThis) {
-      result = { type: 'return', value: this };
     } else if (implementationFn !== undefined) {
       try {
         const value = implementationFn(...(args as Parameters<T>));
@@ -51,8 +54,21 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
       } catch (error) {
         result = { type: 'throw', value: error };
       }
-    } else {
+    } else if (defaultResolvedValue !== undefined) {
+      result = { type: 'return', value: Promise.resolve(defaultResolvedValue) };
+    } else if (returnThis) {
+      result = { type: 'return', value: this };
+    } else if (defaultReturnValue !== undefined) {
       result = { type: 'return', value: defaultReturnValue };
+    } else if (mockRestored && originalFn !== undefined) {
+      try {
+        const value = originalFn(...(args as Parameters<T>));
+        result = { type: 'return', value };
+      } catch (error) {
+        result = { type: 'throw', value: error };
+      }
+    } else {
+      result = { type: 'return', value: undefined };
     }
 
     // Record the call (matches vitest's structure)
@@ -73,13 +89,21 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   // Mark as mock function (vitest compatibility)
   (mockFn as unknown as { _isMockFunction: boolean })._isMockFunction = true;
 
-  // Use direct value assignment (NOT getters) - matches vitest's approach
+  // Use direct value assignment for state - matches vitest's approach
   // This is critical for CDP serialization to work correctly
   Object.defineProperty(mockFn, 'mock', {
     configurable: false,
     enumerable: true,
     writable: false,
     value: state,
+  });
+
+  // Add lastCall as a non-enumerable getter on state itself
+  // This way JSON.stringify(state) will include lastCall as a property
+  Object.defineProperty(state, 'lastCall', {
+    get: () => state.calls[state.calls.length - 1],
+    enumerable: false,
+    configurable: true,
   });
 
   // These are convenience aliases that point to state properties
@@ -108,6 +132,12 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
     configurable: true,
   });
 
+  Object.defineProperty(mockFn, 'lastCall', {
+    get: () => state.calls[state.calls.length - 1],
+    enumerable: true,
+    configurable: true,
+  });
+
   // Attach all mock methods
   mockFn.mockName = function (this: Mock<T>, name: string): Mock<T> {
     mockNameValue = name;
@@ -129,16 +159,19 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   mockFn.mockReset = function (this: Mock<T>): Mock<T> {
     mockFn.mockClear();
     implementationFn = undefined;
+    implementationQueue = [];
     defaultReturnValue = undefined;
     defaultResolvedValue = undefined;
     defaultRejectedValue = undefined;
     returnThis = false;
+    mockRestored = false;
     return this;
   };
 
   mockFn.mockRestore = function (this: Mock<T>): Mock<T> {
     mockFn.mockReset();
-    implementationFn = undefined;
+    mockRestored = true;
+    implementationFn = originalFn;
     return this;
   };
 
@@ -153,7 +186,10 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
     return this;
   };
 
+  mockFn.getMockImplementation = (): T | undefined => implementationFn;
+
   mockFn.mockReturnValue = function (this: Mock<T>, value: ReturnType<T>): Mock<T> {
+    implementationFn = undefined;
     defaultReturnValue = value;
     defaultResolvedValue = undefined;
     defaultRejectedValue = undefined;
@@ -167,6 +203,7 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   };
 
   mockFn.mockResolvedValue = function (this: Mock<T>, value: Awaited<ReturnType<T>>): Mock<T> {
+    implementationFn = undefined;
     defaultResolvedValue = value;
     defaultReturnValue = undefined;
     defaultRejectedValue = undefined;
@@ -180,6 +217,7 @@ export function fn<T extends (...args: unknown[]) => unknown = (...args: unknown
   };
 
   mockFn.mockRejectedValue = function (this: Mock<T>, reason: unknown): Mock<T> {
+    implementationFn = undefined;
     defaultRejectedValue = reason;
     defaultReturnValue = undefined;
     defaultResolvedValue = undefined;

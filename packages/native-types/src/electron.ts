@@ -38,11 +38,10 @@ export interface ElectronServiceAPI {
    * @param mockReturnValue value to return when the mocked function is called
    * @returns a {@link Promise} that resolves once the mock is registered
    */
-  mock: <Interface extends ElectronInterface>(
-    apiName: Interface,
-    funcName?: string,
-    returnValue?: unknown,
-  ) => Promise<ElectronMock>;
+  mock: {
+    (className: string): Promise<ElectronClassMock>;
+    (apiName: string, funcName: string, returnValue?: unknown): Promise<ElectronFunctionMock>;
+  };
   /**
    * Mock all functions from an Electron API.
    *
@@ -365,15 +364,29 @@ export interface ElectronMockInstance extends Omit<Mock, MockOverride> {
 }
 
 /**
- * Type for class mock - an object with all instance methods as ElectronFunctionMock
- * and a __constructor mock for tracking instantiation calls.
+ * Type for a mocked Electron class (e.g. `Tray`, `BrowserWindow`).
+ *
+ * The intersection design intentionally separates the well-known lifecycle
+ * members from the dynamic per-method mocks:
+ *
+ * - The object literal on the left side gives precise return types for
+ *   `__constructor`, `mockRestore`, and `getMockName` — which every class
+ *   mock exposes regardless of which class was mocked.
+ * - `& Record<string, ElectronFunctionMock>` on the right side lets callers
+ *   index by any method name (e.g. `mock.setTitle`) and get back
+ *   `ElectronFunctionMock` without TypeScript complaining about an unknown key.
+ *
+ * An interface with an index signature would require every named property to be
+ * assignable to the index value type, which breaks for `mockRestore` and
+ * `getMockName` (their return types differ from `ElectronFunctionMock`).
+ * The intersection avoids that constraint while still providing typed dynamic
+ * access.
  */
-export interface ElectronClassMock {
+export type ElectronClassMock = {
   __constructor: ElectronFunctionMock;
   mockRestore: () => Promise<void>;
   getMockName: () => string;
-  [methodName: string]: ElectronFunctionMock | (() => Promise<void>) | (() => string);
-}
+} & Record<string, ElectronFunctionMock>;
 
 export interface ElectronFunctionMock<TArgs extends unknown[] = unknown[], TReturns = unknown>
   extends ElectronMockInstance {

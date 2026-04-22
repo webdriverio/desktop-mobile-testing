@@ -52,6 +52,27 @@ describe('native-spy', () => {
       expect(mock()).toBe('implemented');
     });
 
+    it('should get implementation with getMockImplementation', () => {
+      const mock = fn();
+      const impl = () => 'implemented';
+      mock.mockImplementation(impl);
+
+      expect(mock.getMockImplementation()).toBe(impl);
+    });
+
+    it('should return undefined when no implementation set', () => {
+      const mock = fn();
+
+      expect(mock.getMockImplementation()).toBeUndefined();
+    });
+
+    it('should return initial implementation passed to fn()', () => {
+      const impl = () => 'initial';
+      const mock = fn(impl as (...args: unknown[]) => unknown);
+
+      expect(mock.getMockImplementation()).toBe(impl);
+    });
+
     it('should set implementation for next call with mockImplementationOnce', () => {
       const mock = fn();
       mock.mockImplementationOnce(() => 'once');
@@ -159,6 +180,30 @@ describe('native-spy', () => {
 
       expect(mock.calls.length).toBe(0);
       expect(mock()).toBe(undefined);
+    });
+
+    it('should allow mockReturnValue after mockRestore', () => {
+      const mock = fn(() => 'original');
+      mock.mockRestore();
+      mock.mockReturnValue('new value');
+
+      expect(mock()).toBe('new value');
+    });
+
+    it('should allow mockResolvedValue after mockRestore', async () => {
+      const mock = fn(async () => 'original');
+      mock.mockRestore();
+      mock.mockResolvedValue('new resolved');
+
+      expect(await mock()).toBe('new resolved');
+    });
+
+    it('should allow mockRejectedValue after mockRestore', () => {
+      const mock = fn(async () => 'original');
+      mock.mockRestore();
+      mock.mockRejectedValue(new Error('new error'));
+
+      expect(() => mock()).toThrow('new error');
     });
 
     it('should track results with type throw for implementations that throw', () => {

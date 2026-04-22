@@ -517,6 +517,28 @@ describe('init', () => {
     expect((window as any).__wdio_spy__).toBeDefined();
   });
 
+  it('should snapshot __wdio_original_tauri__ before invoke interception', async () => {
+    vi.resetModules();
+    const tauri = createTauriMock();
+    (window as any).__TAURI__ = tauri;
+
+    const mod = await import('../index.js');
+    await mod.init();
+
+    expect((window as any).__wdio_original_tauri__).toBe(tauri);
+  });
+
+  it('should snapshot __wdio_original_core__ before invoke interception', async () => {
+    vi.resetModules();
+    const tauri = createTauriMock();
+    (window as any).__TAURI__ = tauri;
+
+    const mod = await import('../index.js');
+    await mod.init();
+
+    expect((window as any).__wdio_original_core__).toBe(tauri.core);
+  });
+
   it('should not re-initialize when called twice', async () => {
     vi.resetModules();
     (window as any).__TAURI__ = createTauriMock();
