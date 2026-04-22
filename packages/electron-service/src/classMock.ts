@@ -254,7 +254,13 @@ export async function createClassMock(
       className,
       { internal: true },
     );
+    // Temporarily restore the sync mockClear so constructorOuterMockReset's internal
+    // mockFn.mockClear() doesn't fire the async CDP override unawaited, racing against
+    // the explicit await below.
+    const asyncMockClearFn = constructorMock.mockClear;
+    (constructorMock as unknown as { mockClear: () => void }).mockClear = constructorOuterMockClear;
     constructorOuterMockReset();
+    constructorMock.mockClear = asyncMockClearFn;
     await constructorMock.mockClear();
     return constructorMock;
   };

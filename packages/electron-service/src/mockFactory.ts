@@ -362,7 +362,12 @@ export async function buildMockMethods(mock: ElectronFunctionMock, opts: BuildMo
       accessor,
       { internal: true },
     );
+    // Temporarily restore the sync mockClear so outerMockReset's internal mockFn.mockClear()
+    // doesn't fire the async CDP override unawaited, racing against the explicit await below.
+    const asyncMockClearFn = mock.mockClear;
+    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
     outerMockReset();
+    mock.mockClear = asyncMockClearFn;
     outerMock.mockName(currentName);
     await mock.mockClear();
     return mock;
