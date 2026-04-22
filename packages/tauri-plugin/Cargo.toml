@@ -18,10 +18,19 @@ categories = [ "gui", "development-tools::testing" ]
 [dependencies]
 serde_json = "1.0"
 thiserror = "1.0"
-log = { version = "0.4", features = ["std"] }
-uuid = { version = "1", features = ["v4"] }
 tauri-plugin = "2.0"
-tokio = { version = "1", features = ["sync", "time"] }
+
+[dependencies.log]
+version = "0.4"
+features = [ "std" ]
+
+[dependencies.uuid]
+version = "1"
+features = [ "v4" ]
+
+[dependencies.tokio]
+version = "1"
+features = [ "sync", "time" ]
 
 [dependencies.tauri]
 version = "2.0.0"
@@ -30,7 +39,6 @@ version = "2.0.0"
 version = "1.0"
 features = [ "derive" ]
 
-[build-dependencies]
 [build-dependencies.tauri-build]
 version = "2.0.0"
 

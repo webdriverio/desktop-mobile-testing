@@ -1,8 +1,8 @@
 {
   "name": "@wdio/native-types",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Type definitions for WebdriverIO Native Desktop Services (Electron and Tauri)",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/native-types",
+  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/native-types",
   "license": "MIT",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -45,14 +45,14 @@
     "typescript": "^5.9.3",
     "webdriverio": "catalog:default"
   },
-  "files": ["dist", "LICENSE"],
+  "files": ["dist", "LICENSE", "README.md"],
   "publishConfig": {
     "access": "public",
     "provenance": true
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webdriverio/desktop-mobile-testing.git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
     "directory": "packages/native-types"
   }
 }

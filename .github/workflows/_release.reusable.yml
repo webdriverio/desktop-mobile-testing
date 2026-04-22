@@ -4,17 +4,23 @@ on:
   workflow_call:
     inputs:
       target_packages:
-        description: 'Comma-separated list of packages to release'
-        required: true
+        description: 'Comma-separated list of packages to release (derived from scope if not provided)'
+        required: false
         type: string
+        default: ''
       target_branch:
         description: 'Branch to release from'
         required: true
         type: string
       bump:
-        description: 'Bump type (patch, minor, major, prepatch, preminor, premajor, prerelease)'
+        description: 'Version increment (patch, minor, major)'
         required: true
         type: string
+      release_type:
+        description: 'Release type (stable or prerelease)'
+        required: false
+        type: string
+        default: 'prerelease'
       dry_run:
         description: 'Dry run mode'
         required: false
@@ -65,7 +71,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -89,6 +95,68 @@ jobs:
           sudo apt-get install -y libayatana-appindicator3-dev || true
           sudo apt-get install -y libsoup3-dev || true
 
+      - name: Compute target packages from scope
+        id: targets
+        run: |
+          case "${{ inputs.scope }}" in
+            electron)
+              echo "packages=@wdio/electron-service,@wdio/electron-cdp-bridge" >> $GITHUB_OUTPUT
+              ;;
+            tauri)
+              echo "packages=@wdio/tauri-service,@wdio/tauri-plugin" >> $GITHUB_OUTPUT
+              ;;
+            utils)
+              echo "packages=@wdio/native-utils" >> $GITHUB_OUTPUT
+              ;;
+            types)
+              echo "packages=@wdio/native-types" >> $GITHUB_OUTPUT
+              ;;
+            spy)
+              echo "packages=@wdio/native-spy" >> $GITHUB_OUTPUT
+              ;;
+            shared)
+              echo "packages=@wdio/native-utils,@wdio/native-types,@wdio/native-spy" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "::error::Unknown scope: ${{ inputs.scope }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Compute releasekit parameters
+        id: params
+        run: |
+          bump="${{ inputs.bump }}"
+          release_type="${{ inputs.release_type }}"
+
+          # If bump already starts with 'pre', it's already in releasekit format (from auto gate)
+          if [[ "$bump" == pre* ]]; then
+            echo "bump=$bump" >> $GITHUB_OUTPUT
+            echo "stable=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          case "$release_type" in
+            stable)
+              # stable release - use bump value
+              echo "bump=$bump" >> $GITHUB_OUTPUT
+              echo "stable=true" >> $GITHUB_OUTPUT
+              ;;
+            prerelease)
+              # For prerelease increment, use 'prerelease'; otherwise prepend 'pre'
+              if [ "$bump" = "prerelease" ]; then
+                echo "bump=prerelease" >> $GITHUB_OUTPUT
+              else
+                echo "bump=pre$bump" >> $GITHUB_OUTPUT
+              fi
+              echo "stable=false" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "bump=$bump" >> $GITHUB_OUTPUT
+              echo "stable=false" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
       - name: Build packages
         run: |
           scope="${{ inputs.scope }}"
@@ -105,14 +173,40 @@ jobs:
                 --filter='@wdio/tauri-service...' \
                 --filter='@wdio/tauri-plugin...'
               ;;
+            utils)
+              pnpm turbo run build --filter='@wdio/native-utils...'
+              ;;
+            types)
+              pnpm turbo run build --filter='@wdio/native-types...'
+              ;;
+            spy)
+              pnpm turbo run build --filter='@wdio/native-spy...'
+              ;;
             shared)
               pnpm turbo run build \
                 --filter='@wdio/native-types...' \
-                --filter='@wdio/native-utils...'
+                --filter='@wdio/native-utils...' \
+                --filter='@wdio/native-spy...'
               ;;
             *)
               echo "::error::Unknown scope: $scope"
               exit 1
+              ;;
+           esac
+
+      - name: Verify package contents
+        run: |
+          scope="${{ inputs.scope }}"
+          scope="${scope#scope:}"
+          case "$scope" in
+            spy)
+              echo "Verifying @wdio/native-spy package contents..."
+              cd packages/native-spy
+              ls -la dist/
+              npm pack --dry-run
+              ;;
+            *)
+              echo "Skipping package verification for scope: $scope"
               ;;
           esac
 
@@ -121,20 +215,30 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "${{ github.workspace }}"
+          git config --local gc.auto 0
+          # Ensure we're on a branch with proper remote tracking
+          if ! git symbolic-ref HEAD > /dev/null 2>&1; then
+            echo "Currently in detached HEAD, checking out branch..."
+            git checkout -B ${{ inputs.branch || 'main' }} origin/${{ inputs.branch || 'main' }} 2>/dev/null || git checkout ${{ inputs.branch || 'main' }}
+          fi
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.12.0
+        uses: goosewobbler/releasekit@v0.17.1
         with:
           mode: release
-          target: ${{ inputs.target_packages }}
+          node-version: '24'
+          target: ${{ inputs.target_packages || steps.targets.outputs.packages }}
           branch: ${{ inputs.target_branch }}
-          bump: ${{ inputs.bump }}
+          bump: ${{ steps.params.outputs.bump }}
+          stable: ${{ steps.params.outputs.stable }}
           json: 'true'
           dry-run: ${{ inputs.dry_run }}
           project-dir: .
-          verbose: true
+          verbose: 'true'
           summary: 'true'
+          skip-checkout: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.crates_io_token }}

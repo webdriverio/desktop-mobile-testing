@@ -52,9 +52,7 @@ describe('application window tests', () => {
     } else {
       const elem = await browser.$('.switch-main-window');
       await elem.click();
-      // Verify the app switched to main window with an Electron E2E test app title
-      const title = await browser.getTitle();
-      expect(title).toMatch(/Electron.*E2E Test App/);
+      await expect(browser).toHaveTitle(/Electron.*E2E Test App/);
     }
   });
 });

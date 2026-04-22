@@ -22,6 +22,16 @@ const config: BundlerConfig = {
         bundleReplace: (importName: string) => `const ${importName} = { $1 };`,
       },
     },
+    {
+      type: 'injectDependency',
+      options: {
+        packageName: '@wdio/native-spy',
+        targetFile: 'src/classMock.ts',
+        bundleRegExp: /export\s*\{\s*([^}]+)\s*\}\s*;/,
+        importName: 'spy',
+        bundleReplace: (importName: string) => `const ${importName} = { $1 };`,
+      },
+    },
   ],
   esm: {
     bundle: ['@wdio/native-spy'],

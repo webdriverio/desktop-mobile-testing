@@ -135,13 +135,15 @@ switch (envContext.testType) {
   default:
     // Standard tests - core functionality without specialized test modes
     specs = ['./test/tauri/*.spec.ts'];
+    // Sequential execution required: embedded mode shares a single Tauri app instance
+    // across all workers, so window.__wdio_mocks__ is global shared state. Running
+    // specs one at a time ensures afterSession cleans up mocks before the next spec starts.
+    maxInstances = 1;
     // Exclude:
-    // - mocking tests (require special setup)
     // - window tests (require splash)
     // - deeplink tests (require single-instance)
     // - trace-debug tests (WebKit limitation - not captured in embedded mode)
     exclude = [
-      './test/tauri/mocking.spec.ts',
       './test/tauri/window.spec.ts',
       './test/tauri/deeplink.spec.ts',
       './test/tauri/logging.tauri-driver.spec.ts',
@@ -305,7 +307,7 @@ export const config = {
   reporters: ['spec'],
   mochaOpts: {
     ui: 'bdd',
-    timeout: 60000,
+    timeout: 120000,
   },
   outputDir: logDir,
 };

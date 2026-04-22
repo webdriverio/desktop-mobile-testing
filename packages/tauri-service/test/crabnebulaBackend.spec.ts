@@ -242,7 +242,7 @@ describe('CrabNebula Backend', () => {
       await vi.advanceTimersByTimeAsync(600);
 
       expect(rejection).toBeDefined();
-      expect(rejection!.message).toContain('did not become ready within 500ms');
+      expect(rejection?.message).toContain('did not become ready within 500ms');
 
       vi.useRealTimers();
     });

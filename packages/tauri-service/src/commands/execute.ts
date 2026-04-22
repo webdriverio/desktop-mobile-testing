@@ -121,12 +121,26 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
         if (execResult && typeof execResult.then === 'function') {
           try {
             const awaited = await execResult;
+            if (
+              awaited !== null &&
+              typeof awaited === 'object' &&
+              (awaited as { __wdio_undefined__?: boolean }).__wdio_undefined__ === true
+            ) {
+              return JSON.stringify({ __wdio_undefined__: true });
+            }
             return JSON.stringify({ __wdio_value__: awaited });
           } catch (promiseError) {
             return JSON.stringify({
               __wdio_error__: `Promise error: ${promiseError instanceof Error ? promiseError.message : String(promiseError)}`,
             });
           }
+        }
+        if (
+          execResult !== null &&
+          typeof execResult === 'object' &&
+          (execResult as { __wdio_undefined__?: boolean }).__wdio_undefined__ === true
+        ) {
+          return JSON.stringify({ __wdio_undefined__: true });
         }
         return JSON.stringify({ __wdio_value__: execResult });
       } catch (error) {
@@ -142,9 +156,17 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
 
   try {
     if (result && typeof result === 'string') {
-      const parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
+      const parsed = JSON.parse(result) as {
+        __wdio_error__?: string;
+        __wdio_value__?: unknown;
+        __wdio_undefined__?: boolean;
+      };
       if (parsed.__wdio_error__) {
         throw new Error(parsed.__wdio_error__);
+      }
+      if (parsed.__wdio_undefined__) {
+        log.debug(`Execute result: undefined`);
+        return undefined as unknown as ReturnValue;
       }
       if (parsed.__wdio_value__ !== undefined) {
         log.debug(`Execute result:`, parsed.__wdio_value__);

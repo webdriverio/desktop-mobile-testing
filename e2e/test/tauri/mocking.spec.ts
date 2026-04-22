@@ -123,12 +123,6 @@ describe('Tauri Mocking', () => {
   });
 
   describe('browser.tauri.restoreAllMocks', () => {
-    beforeEach(async () => {
-      await browser.tauri.execute(async ({ core }) => {
-        await core.invoke('write_clipboard', { content: 'real clipboard text' });
-      });
-    });
-
     it('should restore existing mocks', async () => {
       const mockReadClipboard = await browser.tauri.mock('read_clipboard');
       const mockGetPlatformInfo = await browser.tauri.mock('get_platform_info');
@@ -137,6 +131,11 @@ describe('Tauri Mocking', () => {
       await mockGetPlatformInfo.mockReturnValue({ os: 'mock_os' });
 
       await browser.tauri.restoreAllMocks();
+
+      // Write to clipboard AFTER restoring — any write_clipboard mock from prior tests is now gone
+      await browser.tauri.execute(async ({ core }) => {
+        await core.invoke('write_clipboard', { content: 'real clipboard text' });
+      });
 
       const clipboardContent = await browser.tauri.execute(async ({ core }) => await core.invoke('read_clipboard'));
       const platformInfo = await browser.tauri.execute(async ({ core }) => await core.invoke('get_platform_info'));
@@ -165,18 +164,12 @@ describe('Tauri Mocking', () => {
     describe('mockImplementation', () => {
       it('should use the specified implementation for an existing mock', async () => {
         const mockReadClipboard = await browser.tauri.mock('read_clipboard');
-        let callsCount = 0;
 
-        await mockReadClipboard.mockImplementation(() => {
-          if (typeof callsCount !== 'undefined') {
-            callsCount++;
-          }
-          return 'mocked clipboard value';
-        });
+        await mockReadClipboard.mockImplementation(() => 'mocked clipboard value');
 
         const result = await browser.tauri.execute(async ({ core }) => await core.invoke('read_clipboard'));
 
-        expect(callsCount).toBe(1);
+        expect(mockReadClipboard.mock.calls).toHaveLength(1);
         expect(result).toBe('mocked clipboard value');
       });
     });
@@ -296,6 +289,21 @@ describe('Tauri Mocking', () => {
 
         expect(error).toBe('This is a mock error');
       });
+
+      it('should reject with an Error object preserving message', async () => {
+        const mockGetPlatformInfo = await browser.tauri.mock('get_platform_info');
+        await mockGetPlatformInfo.mockRejectedValue(new Error('connection failed'));
+
+        const error = await browser.tauri.execute(async ({ core }) => {
+          try {
+            return await core.invoke('get_platform_info');
+          } catch (e) {
+            return e instanceof Error ? e.message : String(e);
+          }
+        });
+
+        expect(error).toBe('connection failed');
+      });
     });
 
     describe('mockRejectedValueOnce', () => {
@@ -330,6 +338,27 @@ describe('Tauri Mocking', () => {
 
         info = await getInfo();
         expect(info).toBe('default error');
+      });
+
+      it('should reject with Error objects preserving message', async () => {
+        const mockGetPlatformInfo = await browser.tauri.mock('get_platform_info');
+
+        await mockGetPlatformInfo.mockRejectedValue(new Error('default error'));
+        await mockGetPlatformInfo.mockRejectedValueOnce(new Error('first error'));
+        await mockGetPlatformInfo.mockRejectedValueOnce(new Error('second error'));
+
+        const getMsg = async () =>
+          await browser.tauri.execute(async ({ core }) => {
+            try {
+              return await core.invoke('get_platform_info');
+            } catch (e) {
+              return e instanceof Error ? e.message : String(e);
+            }
+          });
+
+        expect(await getMsg()).toBe('first error');
+        expect(await getMsg()).toBe('second error');
+        expect(await getMsg()).toBe('default error');
       });
     });
 
@@ -558,8 +587,30 @@ describe('Tauri Mocking', () => {
       });
     });
 
-    describe('update() synchronization', () => {
+    describe('synchronization', () => {
       it('should synchronize mock calls after update', async () => {
+        const mockReadClipboard = await browser.tauri.mock('read_clipboard');
+
+        // Use browser.execute (raw WebDriver, no auto-sync) to invoke the inner mock directly
+        await browser.execute(() => {
+          // @ts-expect-error - window is available in browser context
+          const mockFn = window.__wdio_mocks__?.read_clipboard;
+          if (typeof mockFn === 'function') {
+            mockFn();
+            mockFn();
+          }
+        });
+
+        // Before update(), outer mock has no calls (inner mock has 2)
+        expect(mockReadClipboard.mock.calls).toStrictEqual([]);
+
+        await mockReadClipboard.update();
+
+        // After update(), calls are synchronized from inner mock
+        expect(mockReadClipboard.mock.calls).toHaveLength(2);
+      });
+
+      it('should auto-synchronize mock calls after execute', async () => {
         const mockReadClipboard = await browser.tauri.mock('read_clipboard');
 
         await browser.tauri.execute(async ({ core }) => {
@@ -567,12 +618,7 @@ describe('Tauri Mocking', () => {
           await core.invoke('read_clipboard');
         });
 
-        // Before update, calls should be empty
-        expect(mockReadClipboard.mock.calls).toStrictEqual([]);
-
-        await mockReadClipboard.update();
-
-        // After update, calls should be synchronized
+        // After tauri.execute (auto-synced), calls should be synchronized without calling update()
         expect(mockReadClipboard.mock.calls).toHaveLength(2);
       });
 

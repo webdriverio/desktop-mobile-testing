@@ -1,6 +1,5 @@
 import { createLogger } from './log.js';
 
-export { createLogger };
 export { readConfig } from './config/read.js';
 export {
   type DiagnosticResult,
@@ -28,3 +27,4 @@ export {
 } from './result.js';
 export { selectExecutable, validateBinaryPaths } from './selectExecutable.js';
 export { waitUntilWindowAvailable } from './window.js';
+export { createLogger };

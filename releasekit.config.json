@@ -36,10 +36,12 @@
     "releaseTrigger": "label",
     "scopeLabels": {
       "scope:shared": "@wdio/native-*",
+      "scope:utils": "@wdio/native-utils",
+      "scope:types": "@wdio/native-types",
+      "scope:spy": "@wdio/native-spy",
       "scope:tauri": "@wdio/tauri-*",
       "scope:electron": "@wdio/electron-*"
-    },
-    "defaultScope": "scope:shared"
+    }
   },
   "notes": {
     "changelog": {

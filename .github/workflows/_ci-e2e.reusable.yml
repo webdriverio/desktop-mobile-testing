@@ -104,7 +104,7 @@ jobs:
       # This converts the scenario input into Turbo filter syntax
       - name: 🪄 Generate Build Filter for Test Apps
         id: gen-build
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           result-encoding: string
           script: |
@@ -206,7 +206,7 @@ jobs:
       # This handles both single and multiple scenarios
       - name: 🪄 Generate Test Execution Plan
         id: gen-test
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           result-encoding: string
           script: |
@@ -253,7 +253,7 @@ jobs:
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment
       - name: 🐛 Debug Build on Failure
-        uses: goosewobbler/vscode-server-action@v1.3.0
+        uses: goosewobbler/vscode-server-action@v1.5.0
         if: failure()
         with:
           timeout: '300000'

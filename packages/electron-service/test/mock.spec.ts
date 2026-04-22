@@ -2,13 +2,23 @@ import { isAsyncFunction } from 'node:util/types';
 import type { ElectronInterface, ElectronType } from '@wdio/native-types';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-import { createClassMock, createMock } from '../src/mock.js';
+import { createMock } from '../src/mock.js';
 
 let mockFn: Mock;
 let mockExecute: Mock;
 
 vi.doMock('@wdio/native-spy', () => ({
-  fn: () => mockFn,
+  fn: (_impl: unknown, options?: { original?: (...args: unknown[]) => unknown }) => {
+    if (options?.original) {
+      const originalFn = options.original;
+      mockFn.mockRestore = vi.fn(function () {
+        mockFn.mockClear();
+        mockFn.mockImplementation(originalFn);
+        return mockFn;
+      }) as unknown as typeof mockFn.mockRestore;
+    }
+    return mockFn;
+  },
 }));
 vi.mock('../src/commands/execute', () => {
   return {
@@ -375,129 +385,6 @@ describe('Mock API', () => {
 
         expect(executeResults).toStrictEqual(['temporary name']);
       });
-    });
-  });
-
-  describe('createClassMock()', () => {
-    it('should create a mock with methods from the class prototype', async () => {
-      mockExecute.mockImplementation((fn, className) => {
-        if (typeof fn === 'function') {
-          class MockTray {
-            setImage() {}
-            destroy() {}
-            setContextMenu() {}
-          }
-          const electron = { Tray: MockTray };
-          return fn(electron, className);
-        }
-        return [];
-      });
-
-      const mockTray = await createClassMock('Tray');
-
-      expect(mockTray.setImage).toBeDefined();
-      expect(mockTray.destroy).toBeDefined();
-      expect(mockTray.setContextMenu).toBeDefined();
-    });
-
-    it('should have a __constructor property that is a mock function', async () => {
-      mockExecute.mockImplementation((fn, className) => {
-        if (typeof fn === 'function') {
-          class MockBrowserWindow {
-            loadURL() {}
-          }
-          const electron = { BrowserWindow: MockBrowserWindow };
-          return fn(electron, className);
-        }
-        return [];
-      });
-
-      const mockBrowserWindow = await createClassMock('BrowserWindow');
-
-      expect(mockBrowserWindow.__constructor).toBeDefined();
-      expect(mockBrowserWindow.__constructor.getMockName()).toBe('electron.BrowserWindow.__constructor');
-    });
-
-    it('should sync constructor calls from inner mock via update()', async () => {
-      mockExecute.mockImplementation((fn, className) => {
-        if (typeof fn === 'function') {
-          class MockTray {
-            setImage() {}
-          }
-          const electron = { Tray: MockTray };
-          return fn(electron, className);
-        }
-        return [];
-      });
-
-      const mockTray = await createClassMock('Tray');
-
-      mockExecute.mockImplementation((fn, className) => {
-        return fn(
-          {
-            Tray: {
-              mock: {
-                calls: [['/path/to/icon.png'], ['/path/to/other-icon.png']],
-              },
-            },
-          },
-          className,
-        );
-      });
-
-      await mockTray.__constructor.update();
-      const constructorMock = mockTray.__constructor as unknown as Mock;
-
-      expect(constructorMock).toHaveBeenCalledTimes(2);
-      expect(constructorMock).toHaveBeenCalledWith('/path/to/icon.png');
-      expect(constructorMock).toHaveBeenCalledWith('/path/to/other-icon.png');
-    });
-
-    it('should call execute to restore the original class on mockRestore', async () => {
-      mockExecute.mockImplementation((fn, className) => {
-        if (typeof fn === 'function') {
-          class MockTray {
-            setImage() {}
-          }
-          const electron = { Tray: MockTray };
-          return fn(electron, className);
-        }
-        return [];
-      });
-
-      const mockTray = await createClassMock('Tray');
-
-      mockExecute.mockClear();
-      await mockTray.mockRestore();
-
-      expect(mockExecute).toHaveBeenCalledTimes(1);
-      expect(mockExecute).toHaveBeenCalledWith(expect.any(Function), 'Tray', { internal: true });
-    });
-
-    it('should return electron.ClassName from getMockName', async () => {
-      mockExecute.mockImplementation((fn, className) => {
-        if (typeof fn === 'function') {
-          class MockTray {
-            setImage() {}
-          }
-          const electron = { Tray: MockTray };
-          return fn(electron, className);
-        }
-        return [];
-      });
-
-      const mockTray = await createClassMock('Tray');
-
-      expect(mockTray.getMockName()).toBe('electron.Tray');
-    });
-
-    it('should throw error for non-class APIs', async () => {
-      mockExecute.mockImplementation((fn, className) => {
-        const electron = { app: { getName: () => 'test' } };
-        return fn(electron, className);
-      });
-
-      await expect(createClassMock('app')).rejects.toThrow('electron.app is not a class');
     });
   });
 });

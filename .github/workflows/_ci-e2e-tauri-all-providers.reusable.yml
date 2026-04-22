@@ -303,7 +303,7 @@ jobs:
 
       - name: 🪄 Generate Test Commands
         id: gen-test
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const ALLOWED = ['standard', 'window', 'multiremote', 'standalone', 'deeplink'];
@@ -539,6 +539,6 @@ jobs:
 
       - name: 🐛 Debug Build on Failure
         if: failure()
-        uses: goosewobbler/vscode-server-action@v1.3.0
+        uses: goosewobbler/vscode-server-action@v1.5.0
         with:
           timeout: '300000'

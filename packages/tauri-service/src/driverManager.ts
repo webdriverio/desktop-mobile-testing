@@ -40,7 +40,7 @@ export function findTauriDriver(): string | undefined {
     let path = result.trim().split('\n')[0]; // 'where' can return multiple paths
 
     // On Windows, convert Git Bash-style paths (/c/...) to Windows paths (C:\...)
-    if (isWindows && path && path.startsWith('/')) {
+    if (isWindows && path?.startsWith('/')) {
       path = convertGitBashPathToWindows(path);
     }
 

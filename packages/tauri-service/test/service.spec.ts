@@ -24,7 +24,12 @@ vi.mock('../src/mockStore.js', () => ({
   default: {
     clear: vi.fn(),
     getMocks: vi.fn().mockReturnValue([]),
+    getMock: vi.fn(),
   },
+}));
+
+vi.mock('../src/commands/execute.js', () => ({
+  execute: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../src/window.js', () => ({
@@ -37,6 +42,7 @@ vi.mock('../src/window.js', () => ({
 }));
 
 import { waitUntilWindowAvailable } from '@wdio/native-utils';
+import { execute as executeCommand } from '../src/commands/execute.js';
 import { clearAllMocks, resetAllMocks, restoreAllMocks } from '../src/commands/mock.js';
 import mockStore from '../src/mockStore.js';
 import TauriWorkerService from '../src/service.js';
@@ -184,6 +190,198 @@ describe('TauriWorkerService', () => {
       expect(mockBrowser.overwriteCommand).toHaveBeenCalledWith('doubleClick', expect.any(Function), true);
       expect(mockBrowser.overwriteCommand).toHaveBeenCalledWith('setValue', expect.any(Function), true);
       expect(mockBrowser.overwriteCommand).toHaveBeenCalledWith('clearValue', expect.any(Function), true);
+    });
+
+    it('should clear stale mocks at session start for embedded driver provider', async () => {
+      const mockBrowser = createMockBrowser();
+      // Capture before patchBrowserExecute replaces browser.execute; patchBrowserExecute converts
+      // functions to strings before delegating to originalExecute, so we match on script content.
+      const originalExecute = mockBrowser.execute as ReturnType<typeof vi.fn>;
+      const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
+
+      await service.before({} as any, [], mockBrowser);
+
+      const clearCall = originalExecute.mock.calls.find(
+        ([script]) => typeof script === 'string' && script.includes('__wdio_mocks__'),
+      );
+      expect(clearCall).toBeDefined();
+    });
+
+    it('should not clear stale mocks for non-embedded driver providers', async () => {
+      const mockBrowser = createMockBrowser();
+      const originalExecute = mockBrowser.execute as ReturnType<typeof vi.fn>;
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+
+      await service.before({} as any, [], mockBrowser);
+
+      const clearCall = originalExecute.mock.calls.find(
+        ([script]) => typeof script === 'string' && script.includes('__wdio_mocks__'),
+      );
+      expect(clearCall).toBeUndefined();
+    });
+
+    it('should handle stale mock clearing errors gracefully for embedded provider', async () => {
+      const mockExecute = vi.fn().mockImplementation((script: unknown) => {
+        if (typeof script === 'string' && script.includes('__wdio_mocks__')) {
+          return Promise.reject(new Error('execute failed'));
+        }
+        return Promise.resolve(undefined);
+      });
+      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
+
+      await expect(service.before({} as any, [], mockBrowser)).resolves.not.toThrow();
+    });
+  });
+
+  describe('tauri.execute()', () => {
+    it('should call updateAllMocks after execute', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      vi.mocked(executeCommand).mockResolvedValueOnce('result' as any);
+      vi.mocked(mockStore.getMocks).mockReturnValue([]);
+
+      await (mockBrowser as any).tauri.execute(() => 'result');
+
+      expect(mockStore.getMocks).toHaveBeenCalled();
+    });
+
+    it('should return the result from execute', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      vi.mocked(executeCommand).mockResolvedValueOnce('my-result' as any);
+
+      const result = await (mockBrowser as any).tauri.execute(() => 'my-result');
+
+      expect(result).toBe('my-result');
+    });
+
+    it('should call update() on each mock in the store after execute', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      const mockUpdate = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(mockStore.getMocks).mockReturnValue([['tauri.read_clipboard', { update: mockUpdate } as any]]);
+      vi.mocked(executeCommand).mockResolvedValueOnce(undefined as any);
+
+      await (mockBrowser as any).tauri.execute(() => undefined);
+
+      expect(mockUpdate).toHaveBeenCalledOnce();
+    });
+
+    it('should throw AggregateError when a mock update fails on both initial attempt and retry', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      const failingUpdate = vi.fn().mockRejectedValue(new Error('connection refused'));
+      vi.mocked(mockStore.getMocks).mockReturnValue([['tauri.cmd', { update: failingUpdate } as any]]);
+      vi.mocked(executeCommand).mockResolvedValueOnce(undefined as any);
+
+      await expect((mockBrowser as any).tauri.execute(() => undefined)).rejects.toThrow(AggregateError);
+      expect(failingUpdate).toHaveBeenCalledTimes(2);
+    });
+
+    it('should succeed when a mock update fails on first attempt but succeeds on retry', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      const updateFn = vi.fn().mockRejectedValueOnce(new Error('transient')).mockResolvedValueOnce(undefined);
+      vi.mocked(mockStore.getMocks).mockReturnValue([['tauri.cmd', { update: updateFn } as any]]);
+      vi.mocked(executeCommand).mockResolvedValueOnce(undefined as any);
+
+      await expect((mockBrowser as any).tauri.execute(() => undefined)).resolves.not.toThrow();
+      expect(updateFn).toHaveBeenCalledTimes(2);
+    });
+
+    it('should include the failing mock ID in the AggregateError message', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      const failingUpdate = vi.fn().mockRejectedValue(new Error('fail'));
+      vi.mocked(mockStore.getMocks).mockReturnValue([['tauri.read_file', { update: failingUpdate } as any]]);
+      vi.mocked(executeCommand).mockResolvedValueOnce(undefined as any);
+
+      const err = await (mockBrowser as any).tauri.execute(() => undefined).catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(AggregateError);
+      expect((err as AggregateError).message).toContain('tauri.read_file');
+    });
+
+    it('should run mock updates sequentially on win32', async () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+
+      try {
+        const mockBrowser = createMockBrowser();
+        const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+        await service.before({} as any, [], mockBrowser);
+
+        const callOrder: string[] = [];
+        const makeUpdate = (id: string) =>
+          vi.fn().mockImplementation(async () => {
+            callOrder.push(`start:${id}`);
+            await Promise.resolve();
+            callOrder.push(`end:${id}`);
+          });
+
+        vi.mocked(mockStore.getMocks).mockReturnValue([
+          ['tauri.a', { update: makeUpdate('a') } as any],
+          ['tauri.b', { update: makeUpdate('b') } as any],
+        ]);
+        vi.mocked(executeCommand).mockResolvedValueOnce(undefined as any);
+
+        await (mockBrowser as any).tauri.execute(() => undefined);
+
+        expect(callOrder).toEqual(['start:a', 'end:a', 'start:b', 'end:b']);
+      } finally {
+        Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+      }
+    });
+  });
+
+  describe('tauri.isMockFunction()', () => {
+    it('should return true when the command name is in the mock store', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      vi.mocked(mockStore.getMock).mockReturnValue({} as any);
+
+      expect((mockBrowser as any).tauri.isMockFunction('read_clipboard')).toBe(true);
+      expect(mockStore.getMock).toHaveBeenCalledWith('tauri.read_clipboard');
+    });
+
+    it('should return false when the command name is not in the mock store', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      vi.mocked(mockStore.getMock).mockImplementation(() => {
+        throw new Error('not found');
+      });
+
+      expect((mockBrowser as any).tauri.isMockFunction('unknown_command')).toBe(false);
+    });
+
+    it('should delegate to base isMockFunction for non-string values', async () => {
+      const mockBrowser = createMockBrowser();
+      const service = new TauriWorkerService({}, { 'wdio:tauriServiceOptions': {} });
+      await service.before({} as any, [], mockBrowser);
+
+      const { isMockFunction: baseMockFn } = await import('../src/commands/mock.js');
+      vi.mocked(baseMockFn).mockReturnValue(false);
+
+      (mockBrowser as any).tauri.isMockFunction({});
+
+      expect(baseMockFn).toHaveBeenCalledWith({});
     });
   });
 

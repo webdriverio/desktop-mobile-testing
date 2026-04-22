@@ -7,43 +7,46 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      target_packages:
-        description: "Comma-separated list of packages to release"
+      scope:
+        description: "Release scope (electron, tauri, utils, types, spy, shared)"
         required: true
-        type: string
-        default: "@wdio/electron-service,@wdio/electron-cdp-bridge,@wdio/native-utils,@wdio/native-types"
-      release_version:
-        description: "Release version type"
+        type: choice
+        options:
+          - shared
+          - utils
+          - types
+          - spy
+          - electron
+          - tauri
+        default: shared
+      bump:
+        description: "Version increment"
         required: true
         type: choice
         options:
           - patch
           - minor
           - major
-          - prepatch
-          - preminor
-          - premajor
           - prerelease
         default: patch
-      scope:
-        description: "Release scope (electron, tauri, shared)"
+      release_type:
+        description: "Release type"
         required: true
         type: choice
         options:
-          - shared
-          - electron
-          - tauri
-        default: shared
-      dry_run:
-        description: "Dry run (show what would happen without publishing)"
-        required: false
-        type: boolean
-        default: false
+          - stable
+          - prerelease
+        default: stable
       target_branch:
         description: "Branch to release from (default: main)"
         required: false
         type: string
         default: main
+      dry_run:
+        description: "Dry run (show what would happen without publishing)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -58,12 +61,17 @@ jobs:
   gate:
     name: Gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     outputs:
       should_release: ${{ steps.gate.outputs.should-release }}
       bump: ${{ steps.gate.outputs.bump }}
       scope: ${{ steps.gate.outputs.gate-scope }}
       target: ${{ steps.gate.outputs.gate-target }}
+      stable: ${{ steps.gate.outputs.gate-stable }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -72,13 +80,15 @@ jobs:
 
       - name: Run ReleaseKit Gate
         id: gate
-        uses: goosewobbler/releasekit@v0.12.0
+        uses: goosewobbler/releasekit@v0.17.1
         with:
           mode: gate
+          node-version: '24'
           project-dir: .
           branch: main
           json: "true"
           summary: "true"
+          skip-checkout: 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
@@ -94,6 +104,7 @@ jobs:
       target_packages: ${{ needs.gate.outputs.target }}
       target_branch: main
       bump: ${{ needs.gate.outputs.bump }}
+      release_type: ${{ needs.gate.outputs.stable == 'true' && 'stable' || 'prerelease' }}
       dry_run: false
       scope: ${{ needs.gate.outputs.scope }}
     secrets:
@@ -109,9 +120,9 @@ jobs:
       contents: write
       id-token: write
     with:
-      target_packages: ${{ inputs.target_packages }}
       target_branch: ${{ inputs.target_branch }}
-      bump: ${{ inputs.release_version }}
+      bump: ${{ inputs.bump }}
+      release_type: ${{ inputs.release_type }}
       dry_run: ${{ inputs.dry_run }}
       scope: ${{ inputs.scope }}
     secrets:

@@ -113,6 +113,7 @@ const { envContext, appEntryPoint, appBinaryPath } = context;
 
 // Configure specs based on test type
 let specs: string[] = [];
+let exclude: string[] = [];
 switch (envContext.testType) {
   case 'window':
     specs = ['./test/electron/window.spec.ts'];
@@ -132,15 +133,11 @@ switch (envContext.testType) {
     break;
   default:
     // Standard tests - core functionality without specialized test modes
-    specs = [
-      './test/electron/api.spec.ts',
-      './test/electron/application.spec.ts',
-      './test/electron/dom.spec.ts',
-      './test/electron/interaction.spec.ts',
-      './test/electron/logging.spec.ts',
-    ];
-    // Deeplink tests are excluded from standard suite - they run only in dedicated deeplink variant
-    // (protocol handlers require special setup and single-instance mode)
+    specs = ['./test/electron/*.spec.ts'];
+    // Exclude:
+    // - window tests (require splash)
+    // - deeplink tests (require single-instance)
+    exclude = ['./test/electron/window.spec.ts', './test/electron/deeplink.spec.ts'];
     break;
 }
 
@@ -152,6 +149,7 @@ type ElectronCapability = {
     appBinaryPath?: string;
     appArgs: string[];
     apparmorAutoInstall?: boolean | 'sudo';
+    restoreMocks?: boolean;
     captureMainProcessLogs?: boolean;
     captureRendererLogs?: boolean;
     mainProcessLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
@@ -182,6 +180,7 @@ if (envContext.isMultiremote) {
           ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=A'],
           apparmorAutoInstall: 'sudo',
+          restoreMocks: true,
           captureMainProcessLogs: true,
           captureRendererLogs: true,
           mainProcessLogLevel: 'info',
@@ -196,6 +195,7 @@ if (envContext.isMultiremote) {
           ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
           appArgs: ['--foo', '--bar=baz', '--browser=B'],
           apparmorAutoInstall: 'sudo',
+          restoreMocks: true,
           captureMainProcessLogs: true,
           captureRendererLogs: true,
           mainProcessLogLevel: 'info',
@@ -213,6 +213,7 @@ if (envContext.isMultiremote) {
         ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
         appArgs: ['foo', 'bar=baz'],
         apparmorAutoInstall: 'sudo',
+        restoreMocks: true,
         captureMainProcessLogs: true,
         captureRendererLogs: true,
         mainProcessLogLevel: 'info',
@@ -229,7 +230,7 @@ const logDir = join(__dirname, 'logs', `${envContext.testType}-${envContext.appD
 export const config: WdioElectronConfig = {
   runner: 'local',
   specs,
-  exclude: [],
+  exclude,
   maxInstances: 1,
   capabilities,
   logLevel: envContext.env.WDIO_VERBOSE === 'true' ? 'debug' : 'info',

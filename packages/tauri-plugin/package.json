@@ -2,7 +2,7 @@
   "name": "@wdio/tauri-plugin",
   "version": "1.0.0-next.0",
   "description": "Tauri plugin providing execute and mocking capabilities for WebDriverIO testing",
-  "homepage": "https://github.com/webdriverio/desktop-mobile-testing/tree/main/packages/tauri-plugin",
+  "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/tauri-plugin",
   "type": "module",
   "main": "./dist-js/index.js",
   "types": "./dist-js/index.d.ts",
@@ -35,5 +35,10 @@
     "esbuild": "^0.27.4",
     "tsx": "^4.19.0",
     "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webdriverio/desktop-mobile.git",
+    "directory": "packages/tauri-plugin"
   }
 }
