@@ -6,48 +6,6 @@
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import * as nativeSpy from '@wdio/native-spy';
 
-/**
- * Check if a semicolon exists outside of quotes and brackets
- * This is needed because simple .includes(';') gives false positives
- * for semicolons inside string literals like "'a;b'.split(';')[0]"
- */
-function hasSemicolonOutsideQuotes(str: string): boolean {
-  let inSingle = false;
-  let inDouble = false;
-  let inTemplate = false;
-  let depth = 0;
-  for (let i = 0; i < str.length; i++) {
-    const ch = str[i];
-    if (ch !== '\\') {
-      let bs = 0;
-      let j = i - 1;
-      while (j >= 0 && str[j] === '\\') {
-        bs++;
-        j--;
-      }
-      if (bs % 2 === 1) continue;
-    }
-    if (ch === "'" && !inDouble && !inTemplate) {
-      inSingle = !inSingle;
-      continue;
-    }
-    if (ch === '"' && !inSingle && !inTemplate) {
-      inDouble = !inDouble;
-      continue;
-    }
-    if (ch === '`' && !inSingle && !inDouble) {
-      inTemplate = !inTemplate;
-      continue;
-    }
-    if (!inSingle && !inDouble && !inTemplate) {
-      if ('([{'.includes(ch)) depth++;
-      if (')]}'.includes(ch)) depth--;
-      if (ch === ';' && depth === 0) return true;
-    }
-  }
-  return false;
-}
-
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
 let _invokeCache: ((cmd: string, args?: InvokeArgs) => Promise<unknown>) | null = null;
@@ -57,10 +15,22 @@ async function getInvoke(): Promise<(cmd: string, args?: InvokeArgs) => Promise<
     return _invokeCache;
   }
 
-  // Check if window.__TAURI__ is available globally (withGlobalTauri: true)
-  if (typeof window !== 'undefined' && window.__TAURI__?.core?.invoke) {
-    _invokeCache = window.__TAURI__.core.invoke;
-    return _invokeCache;
+  if (typeof window !== 'undefined') {
+    // Prefer the snapshotted original core to avoid Proxy invariant violations when
+    // setupInvokeInterception has replaced window.__TAURI__.core with a Proxy.
+    const originalCore = window.__wdio_original_core__;
+    if (originalCore?.invoke) {
+      const invoke = originalCore.invoke.bind(originalCore);
+      _invokeCache = invoke;
+      return invoke;
+    }
+
+    // Fallback: use window.__TAURI__.core.invoke directly (safe when no proxy is installed)
+    if (window.__TAURI__?.core?.invoke) {
+      const invoke = window.__TAURI__.core.invoke;
+      _invokeCache = invoke;
+      return invoke;
+    }
   }
 
   // Fallback to dynamic import for bundler environments
@@ -95,7 +65,7 @@ declare global {
       };
     };
     wdioTauri?: {
-      execute: (script: string, ...args: unknown[]) => Promise<unknown>;
+      execute: (script: string, options?: { windowLabel?: string }, argsJson?: string) => Promise<unknown>;
       waitForInit: () => Promise<void>;
       cleanupBackendLogListener?: () => void;
       cleanupFrontendLogListener?: () => void;
@@ -105,6 +75,8 @@ declare global {
     };
     __wdio_spy__?: typeof nativeSpy;
     __wdio_mocks__?: Record<string, unknown>;
+    __wdio_original_tauri__?: Window['__TAURI__'];
+    __wdio_original_core__?: NonNullable<Window['__TAURI__']>['core'];
   }
 }
 
@@ -154,92 +126,75 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Options for execute function
+ */
+interface ExecuteOptions {
+  /** Window label to execute in (optional) */
+  windowLabel?: string;
+}
+
+/**
  * Execute JavaScript code in the frontend context with access to Tauri APIs
  * The script will receive the Tauri APIs object as the first argument
  * @param script - JavaScript code to execute (function string without first parameter)
- * @param args - Arguments to pass to the script (after the Tauri APIs object)
+ * @param options - Execute options (optional)
+ * @param argsJson - Serialized user arguments as JSON string (optional)
  * @returns Result of the script execution
  */
-export async function execute(script: string, ...args: unknown[]): Promise<unknown> {
-  try {
-    // Ensure window.__TAURI__ is available
-    if (!window.__TAURI__) {
-      throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
-    }
+export async function execute(script: string, options?: ExecuteOptions, argsJson?: string): Promise<unknown> {
+  if (!window.__TAURI__) {
+    throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
+  }
 
-    // Serialize args to pass them to the plugin
-    const argsJson = JSON.stringify(args);
+  // Build a minimal tauri object with a mock-routing invoke. We deliberately avoid
+  // spreading/Object.assign on window.__TAURI__ or window.__TAURI__.core because on
+  // macOS/WKWebView those objects (or their Proxy wrappers installed by
+  // setupInvokeInterception) can have non-configurable/non-writable own data properties that
+  // trigger Proxy invariant violations when iterated. Only core.invoke is needed by scripts.
+  const wrappedScript = `
+    (async () => {
+      const __wdio_args = ${argsJson ?? '[]'};
 
-    // Check if script is a function-like string that needs Tauri API injection
-    // Function-like: starts with (, function, async, or single-param arrow like "x =>"
-    // Non-function: expressions like "1 + 2 + 3", statements like "return 42"
-    const trimmedScript = script.trim();
-    const isFunctionLike =
-      trimmedScript.startsWith('(') ||
-      trimmedScript.startsWith('function') ||
-      trimmedScript.startsWith('async ') ||
-      trimmedScript.startsWith('async (') ||
-      /^(\w+)\s*=>/.test(trimmedScript);
-
-    // Wrap the script appropriately based on type
-    let wrappedScript: string;
-
-    if (isFunctionLike) {
-      // Function-like script - wrap with Tauri API injection
-      wrappedScript = `
-        (async () => {
-          const __wdio_tauri = window.__TAURI__;
-          const __wdio_args = ${argsJson};
-
-          // Wait for window.__TAURI__.core.invoke to be available
-          if (!__wdio_tauri?.core?.invoke) {
-            const startTime = Date.now();
-            const timeout = 5000;
-            while (!__wdio_tauri?.core?.invoke && (Date.now() - startTime) < timeout) {
-              await new Promise(resolve => setTimeout(resolve, 50));
-            }
-            if (!__wdio_tauri?.core?.invoke) {
-              throw new Error('window.__TAURI__.core.invoke not available after 5s timeout');
-            }
-          }
-
-          // Execute as function with Tauri APIs
-          return await (${script})(__wdio_tauri, ...__wdio_args);
-        })()
-      `.trim();
-    } else {
-      // Expression/statement script - wrap appropriately based on script type
-      const trimmedScript = script.trim();
-      const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(
-        trimmedScript,
-      );
-      const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmedScript);
-      if (hasStatementKeyword || hasRealSemicolon) {
-        // Statement-style script - execute as-is
-        wrappedScript = `(async () => { ${script} })()`;
+      // Resolve the real invoke: prefer the snapshotted original (set by init() before any
+      // Proxy was installed), fall back to window.__TAURI__.core.invoke.
+      const __wdio_core_ref = window.__wdio_original_core__;
+      let __wdio_invoke_real;
+      if (__wdio_core_ref && typeof __wdio_core_ref.invoke === 'function') {
+        __wdio_invoke_real = __wdio_core_ref.invoke.bind(__wdio_core_ref);
       } else {
-        // Expression-style script - wrap with return for proper evaluation
-        wrappedScript = `(async () => { return ${script}; })()`;
+        const startTime = Date.now();
+        while (!window.__wdio_original_core__?.invoke && (Date.now() - startTime) < 5000) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        const coreRef = window.__wdio_original_core__;
+        if (!coreRef?.invoke) throw new Error('Tauri core.invoke not available after 5s timeout');
+        __wdio_invoke_real = coreRef.invoke.bind(coreRef);
       }
-    }
 
-    // Call the plugin command to execute the wrapped script
-    // Tauri v2 plugin commands use format: plugin:plugin-name|command-name
-    const invoke = await getInvoke();
-    console.debug('[WDIO Plugin] Calling invoke with command: plugin:wdio|execute');
-    try {
-      const result = await invoke('plugin:wdio|execute', {
-        request: {
-          script: wrappedScript,
-          args: [],
-        },
-      } as InvokeArgs);
-      console.debug('[WDIO Plugin] Invoke result:', result);
-      return result;
-    } catch (error) {
-      console.error('[WDIO Plugin] Invoke error:', error);
-      throw new Error(`Failed to execute script: ${error instanceof Error ? error.message : String(error)}`);
-    }
+      const __wdio_invoke = async function(cmd, invokeArgs) {
+        const mocks = window.__wdio_mocks__;
+        if (mocks && typeof mocks[cmd] === 'function') {
+          return mocks[cmd](invokeArgs);
+        }
+        return __wdio_invoke_real(cmd, invokeArgs);
+      };
+
+      // Plain object — no spreading of window.__TAURI__ to avoid Proxy invariant issues.
+      const __wdio_tauri = { core: { invoke: __wdio_invoke } };
+      return await (${script})(__wdio_tauri, ...__wdio_args);
+    })()
+  `.trim();
+
+  const invoke = await getInvoke();
+  try {
+    const result = await invoke('plugin:wdio|execute', {
+      request: {
+        script: wrappedScript,
+        args: [],
+        window_label: options?.windowLabel,
+      },
+    } as InvokeArgs);
+    return result;
   } catch (error) {
     throw new Error(`Failed to execute script: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -486,13 +441,21 @@ function setupInvokeInterception(): void {
       return;
     }
 
-    // Get the original invoke function if it exists
-    const originalInvoke =
+    // Snapshot original references if init() ran before core was available
+    if (!window.__wdio_original_tauri__) {
+      window.__wdio_original_tauri__ = window.__TAURI__;
+    }
+    if (!window.__wdio_original_core__) {
+      window.__wdio_original_core__ = core;
+    }
+
+    // Capture the current invoke as the base (mutable so setter can update it)
+    let _baseInvoke: ((cmd: string, args?: InvokeArgs) => Promise<unknown>) | null =
       typeof (core as { invoke?: unknown }).invoke === 'function'
         ? (core as { invoke: (...args: unknown[]) => Promise<unknown> }).invoke.bind(core)
         : null;
 
-    // Create a wrapped invoke function
+    // Create a wrapped invoke function that always delegates to _baseInvoke for non-mocked commands
     const wrappedInvoke = async (cmd: string, args?: InvokeArgs): Promise<unknown> => {
       // Check if there's a mock for this command
       const mockFn = window.__wdio_mocks__?.[cmd];
@@ -500,7 +463,7 @@ function setupInvokeInterception(): void {
       if (mockFn && typeof mockFn === 'function') {
         console.log(`[WDIO Tauri Plugin] Intercepted invoke for '${cmd}' - using mock`);
         try {
-          const result = await mockFn(args);
+          const result = await (mockFn as (args: unknown) => Promise<unknown>)(args);
           return result;
         } catch (error) {
           console.error(`[WDIO Tauri Plugin] Mock error for '${cmd}':`, error);
@@ -508,12 +471,12 @@ function setupInvokeInterception(): void {
         }
       }
 
-      // No mock found, call the original invoke if available
-      if (originalInvoke) {
-        return originalInvoke(cmd, args);
+      // No mock found, call the base invoke if available
+      if (_baseInvoke) {
+        return _baseInvoke(cmd, args);
       }
 
-      // No original invoke, try to get it dynamically
+      // No base invoke, try to get it dynamically
       try {
         const { invoke } = await import('@tauri-apps/api/core');
         return invoke(cmd, args);
@@ -522,18 +485,27 @@ function setupInvokeInterception(): void {
       }
     };
 
-    // Use Object.defineProperty with a getter to ensure interception persists
+    // Strategy 1: getter/setter via Object.defineProperty (works on Linux/WebKitGTK)
     try {
       Object.defineProperty(core, 'invoke', {
-        value: wrappedInvoke,
-        writable: true,
+        get() {
+          return wrappedInvoke;
+        },
+        set(newInvoke: (cmd: string, args?: InvokeArgs) => Promise<unknown>) {
+          _baseInvoke = typeof newInvoke === 'function' ? newInvoke : null;
+        },
         configurable: true,
+        enumerable: true,
       });
       (core as { _wdioInvokeInterceptor?: boolean })._wdioInvokeInterceptor = true;
-      console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete');
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error('[WDIO Tauri Plugin] Failed to set up invoke interception:', errorMsg);
+      console.log('[WDIO Tauri Plugin] ✅ Invoke interception setup complete (defineProperty)');
+      return;
+    } catch (_defineError) {
+      // invoke is non-configurable; defineProperty failed. Mock routing still works via
+      // window.__wdio_mocks__ in execute()'s wrappedScript — invoke interception is not required.
+      console.warn(
+        '[WDIO Tauri Plugin] ⚠️ Invoke interception via defineProperty failed; mock routing via window.__wdio_mocks__ remains active',
+      );
     }
   };
 
@@ -697,6 +669,15 @@ export async function init(): Promise<void> {
 
   // Expose native spy on window for mock creation
   window.__wdio_spy__ = nativeSpy;
+
+  // Snapshot the original core reference before setupInvokeInterception may mutate
+  // window.__TAURI__.core (strategy 2) or wrap it in a Proxy.
+  // The execute() wrappedScript uses this to avoid Proxy invariant violations on
+  // macOS/WKWebView where core.invoke is non-configurable/non-writable.
+  if (window.__TAURI__?.core) {
+    window.__wdio_original_tauri__ = window.__TAURI__;
+    window.__wdio_original_core__ = window.__TAURI__.core;
+  }
 
   // Setup invoke interception for mocking support
   console.log('[WDIO Tauri Plugin] Setting up invoke interception for mocking...');

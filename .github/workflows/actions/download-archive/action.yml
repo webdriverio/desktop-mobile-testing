@@ -60,7 +60,7 @@ runs:
     - name: 🗄️ Restore Cache
       id: cache-restore
       if: inputs.use_cache != 'false-only'
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       env:
         ACTIONS_CACHE_SERVICE_V2: 'true'
       with:
@@ -194,11 +194,11 @@ runs:
         WORKSPACE="${{ github.workspace }}"
         INPUT_PATH="${{ inputs.path }}"
         ARCHIVE_PATH="$INPUT_PATH/${{ inputs.filename }}"
-        
+
         if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
           # Cache hit: zip file was restored to inputs.path, need to extract it
           echo "Cache hit detected, extracting zip file..."
-          
+
           if [ -f "$ARCHIVE_PATH" ]; then
             echo "Found zip file at $ARCHIVE_PATH, extracting..."
             SOURCE_DIR="${RUNNER_TEMP}/artifact-extract-${{ github.run_id }}-${{ github.run_attempt }}"

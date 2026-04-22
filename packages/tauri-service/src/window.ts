@@ -1,4 +1,6 @@
 import { createLogger } from '@wdio/native-utils';
+import { clearPluginAvailabilityCache } from './commands/execute.js';
+import type { DriverProvider } from './types.js';
 
 const log = createLogger('tauri-service', 'window');
 
@@ -11,6 +13,114 @@ interface WindowState {
 
 const lastCommandCache = new Map<string, string>();
 
+const currentWindowLabelCache = new Map<string, string>();
+
+const userSwitchedWindowCache = new Set<string>();
+
+const sessionProviderCache = new Map<string, DriverProvider>();
+
+const DEFAULT_WINDOW_LABEL = 'main';
+
+export function getDefaultWindowLabel(): string {
+  return DEFAULT_WINDOW_LABEL;
+}
+
+export function getCurrentWindowLabel(browser: WebdriverIO.Browser): string {
+  return currentWindowLabelCache.get(browser.sessionId || 'default') || DEFAULT_WINDOW_LABEL;
+}
+
+export function setCurrentWindowLabel(browser: WebdriverIO.Browser, label: string): void {
+  currentWindowLabelCache.set(browser.sessionId || 'default', label);
+  log.debug(`Current window label set to: ${label}`);
+}
+
+export function setSessionProvider(browser: WebdriverIO.Browser, provider: DriverProvider): void {
+  sessionProviderCache.set(browser.sessionId || 'default', provider);
+  log.debug(`Session provider set to: ${provider}`);
+}
+
+function getSessionProvider(browser: WebdriverIO.Browser): DriverProvider {
+  return sessionProviderCache.get(browser.sessionId || 'default') ?? 'embedded';
+}
+
+async function resolveLabelToHandle(browser: WebdriverIO.Browser, targetLabel: string): Promise<string> {
+  const handles = await browser.getWindowHandles();
+  const discovered = new Map<string, string>();
+
+  for (const handle of handles) {
+    try {
+      await browser.switchToWindow(handle);
+      const handleLabel = await browser.executeAsync<string | null, []>(
+        `var done = arguments[arguments.length - 1];
+         try {
+           window.__TAURI__.core.invoke('plugin:wdio|get_active_window_label')
+             .then(function(l) { done(l); })
+             ['catch'](function() { done(null); });
+         } catch(e) { done(null); }`,
+      );
+      if (handleLabel) {
+        discovered.set(handleLabel, handle);
+        if (handleLabel === targetLabel) {
+          return handle;
+        }
+      }
+    } catch {
+      log.debug(`Handle ${handle.substring(0, 8)}... is stale or unreachable, skipping`);
+    }
+  }
+
+  const discoveredLabels = [...discovered.keys()].join(', ');
+  throw new Error(
+    `No window with label "${targetLabel}" found after checking all handles. Discovered: ${discoveredLabels || 'none'}`,
+  );
+}
+
+export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: string): Promise<void> {
+  try {
+    const availableWindows = await listWindowLabels(browser);
+    if (!availableWindows.includes(label)) {
+      throw new Error(`Window label "${label}" not found. Available windows: ${availableWindows.join(', ')}`);
+    }
+  } catch (validationError) {
+    if (validationError instanceof Error && validationError.message.startsWith('Window label')) {
+      throw validationError;
+    }
+    log.warn(`Could not validate window label "${label}" via IPC, attempting switch directly:`, validationError);
+  }
+
+  const sessionKey = browser.sessionId || 'default';
+  const provider = getSessionProvider(browser);
+
+  // Suppress auto-focus BEFORE any switching or iteration to prevent focus-change races
+  // during handle discovery (ensureActiveWindowFocus checks this flag first).
+  userSwitchedWindowCache.add(sessionKey);
+
+  try {
+    const originalHandle = await browser.getWindowHandle();
+
+    try {
+      if (provider === 'embedded') {
+        await browser.switchToWindow(label);
+      } else {
+        const handle = await resolveLabelToHandle(browser, label);
+        await browser.switchToWindow(handle);
+      }
+    } catch (switchError) {
+      await browser.switchToWindow(originalHandle).catch(() => {});
+      throw new Error(
+        `Failed to switch to window with label "${label}": ${switchError instanceof Error ? switchError.message : String(switchError)}`,
+      );
+    }
+  } catch (error) {
+    userSwitchedWindowCache.delete(sessionKey);
+    throw error;
+  }
+
+  clearPluginAvailabilityCache(browser);
+  setCurrentWindowLabel(browser, label);
+  log.debug(`Successfully switched to window: ${label}`);
+}
+
 export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promise<string> {
   try {
     const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|get_active_window_label'));
@@ -22,13 +132,11 @@ export async function getActiveWindowLabel(browser: WebdriverIO.Browser): Promis
 }
 
 export async function listWindowLabels(browser: WebdriverIO.Browser): Promise<string[]> {
-  try {
-    const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
-    return result as string[];
-  } catch (error) {
-    log.warn('Failed to list window labels:', error);
-    return ['main'];
+  const result = await browser.tauri.execute(({ core }) => core.invoke('plugin:wdio|list_windows'));
+  if (!Array.isArray(result)) {
+    throw new Error(`Expected array but got ${typeof result}`);
   }
+  return result as string[];
 }
 
 export async function getCurrentDevtoolsPort(browser: WebdriverIO.Browser): Promise<number | undefined> {
@@ -128,6 +236,14 @@ function findActiveWindow(states: WindowState[]): WindowState | undefined {
  * @returns Promise that resolves when focus is ensured
  */
 export async function ensureActiveWindowFocus(browser: WebdriverIO.Browser, commandName: string): Promise<void> {
+  // Skip auto-focus if the user has explicitly set a window label via switchWindow()
+  // This prevents the auto-focus logic from silently undoing explicit switches.
+  // Only skip when the label is a non-default value (user explicitly switched, not just initialized).
+  if (userSwitchedWindowCache.has(browser.sessionId || 'default')) {
+    log.debug('Skipping auto-focus: user has explicitly switched windows');
+    return;
+  }
+
   // Only check for focus on certain commands (like Electron)
   const focusCommands = ['getTitle', 'findElement', 'findElements', '$', '$$', 'elementClick'];
   if (!focusCommands.includes(commandName)) {
@@ -195,7 +311,13 @@ export function getLastCommand(browser: WebdriverIO.Browser): string | undefined
 export function clearWindowState(sessionId?: string): void {
   if (sessionId) {
     lastCommandCache.delete(sessionId);
+    currentWindowLabelCache.delete(sessionId);
+    userSwitchedWindowCache.delete(sessionId);
+    sessionProviderCache.delete(sessionId);
   } else {
     lastCommandCache.clear();
+    currentWindowLabelCache.clear();
+    userSwitchedWindowCache.clear();
+    sessionProviderCache.clear();
   }
 }

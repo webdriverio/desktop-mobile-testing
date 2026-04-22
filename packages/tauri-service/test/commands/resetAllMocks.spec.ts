@@ -43,7 +43,7 @@ describe('resetAllMocks Command', () => {
 
   it('should reset all mocks in the injection script when no prefix is provided', async () => {
     await resetAllMocks();
-    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), undefined);
+    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), '');
 
     const callback = (globalThis.browser as any).execute.mock.calls[0][0];
     const mockResetFn = vi.fn();

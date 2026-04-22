@@ -3,8 +3,12 @@ import type {
   TauriServiceOptions as BaseTauriServiceOptions,
 } from '@wdio/native-types';
 
-// Re-export types from native-types for convenience
-export type { TauriResult } from '@wdio/native-types';
+export type { TauriExecuteOptions, TauriResult } from '@wdio/native-types';
+
+/**
+ * WebDriver provider for Tauri testing
+ */
+export type DriverProvider = 'official' | 'crabnebula' | 'embedded';
 
 /**
  * Extended Tauri service options with implementation-specific fields
@@ -40,6 +44,13 @@ export interface TauriServiceOptions extends BaseTauriServiceOptions {
    * @default undefined
    */
   logDir?: string;
+  /**
+   * Timeout in milliseconds for the /status endpoint poll during embedded server startup
+   * In slow CI environments (containerised Windows runners), a healthy-but-busy WebDriver server
+   * may miss the default 2000ms deadline, causing false-positive restarts
+   * @default 2000
+   */
+  statusPollTimeout?: number;
 }
 
 /**

@@ -8,6 +8,9 @@ pub struct ExecuteRequest {
     /// Arguments to pass to the script
     #[serde(default)]
     pub args: Vec<JsonValue>,
+    /// Window label to execute in (optional, uses current window if not specified)
+    #[serde(default)]
+    pub window_label: Option<String>,
 }
 
 /// Mock configuration
@@ -20,4 +23,3 @@ pub struct MockConfig {
     /// Mock implementation (for mockImplementation - serialized function string)
     pub implementation: Option<String>,
 }
-

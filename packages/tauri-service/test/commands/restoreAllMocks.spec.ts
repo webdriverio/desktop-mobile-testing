@@ -43,7 +43,7 @@ describe('restoreAllMocks Command', () => {
 
   it('should restore all mocks in the injection script when no prefix is provided', async () => {
     await restoreAllMocks();
-    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), undefined);
+    expect((globalThis.browser as any).execute).toHaveBeenCalledWith(expect.any(Function), '');
 
     const callback = (globalThis.browser as any).execute.mock.calls[0][0];
     const mockWindow = {

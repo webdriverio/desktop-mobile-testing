@@ -24,7 +24,7 @@ const isScript = appDirName.includes('script');
 const getExpectedAppName = (): string => {
   // In script mode, the app name will always be "Electron"
   // In binary mode, use the package name
-  return isScript ? 'Electron' : globalThis.packageJson?.name || packageJson.name;
+  return isScript ? 'Electron' : (globalThis.packageJson?.name ?? packageJson.name ?? '');
 };
 
 // Get app name and check against expected value

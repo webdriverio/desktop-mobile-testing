@@ -425,6 +425,61 @@ let builder = builder.plugin(tauri_plugin_wdio_webdriver::init());
 
 See [Plugin Setup](./plugin-setup.md) for the full setup guide.
 
+---
+
+## Multi-Window Issues
+
+### Window Label Not Found
+
+**Error:** `Window label "settings" not found. Available windows: main, dialog`
+
+**Why this happens:** The window label you specified doesn't exist in your Tauri application.
+
+**Solutions:**
+1. Check available windows with `browser.tauri.listWindows()`
+2. Verify the window label matches exactly (case-sensitive)
+3. Ensure the window is created before your test runs
+
+```typescript
+// Debug: List available windows
+const windows = await browser.tauri.listWindows();
+console.log('Available:', windows);
+```
+
+### Per-Call WindowLabel Not Taking Effect
+
+**Issue:** Using `{ windowLabel: 'popup' }` in execute call still uses the main window.
+
+**Why this happens:** The sentinel is required to distinguish options from script arguments. Plain objects are treated as user arguments, not options.
+
+**Solutions:**
+1. Verify the window exists: `const windows = await browser.tauri.listWindows();`
+2. Use `browser.tauri.switchWindow(label)` to change the session default
+3. Check that @wdio/tauri-plugin is installed and registered in your Tauri app
+4. Use `withExecuteOptions()` wrapper for per-call windowLabel:
+
+```typescript
+import { withExecuteOptions } from '@wdio/tauri-service';
+
+const result = await browser.tauri.execute(
+  (tauri) => tauri.core.invoke('get_data'),
+  withExecuteOptions({ windowLabel: 'popup' })
+);
+```
+
+```typescript
+// wdio.conf.ts
+export const config = {
+  capabilities: [{
+    'wdio:tauriServiceOptions': {
+      driverProvider: 'embedded',
+    },
+  }],
+};
+```
+
+---
+
 ## Debug Mode
 
 ### Enable Debug Logging

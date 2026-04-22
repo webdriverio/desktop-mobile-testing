@@ -80,9 +80,20 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     executionContextId: cdpBridge.contextId,
   });
 
+  let executionError: Error | undefined;
+  if (!isInternalCommand(args) && result.exceptionDetails) {
+    const message =
+      result.exceptionDetails.exception?.description ?? result.exceptionDetails.text ?? 'Script execution failed';
+    executionError = new Error(message);
+  }
+
   await syncMockStatus(args);
 
-  return (result.result.value as ReturnValue) ?? undefined;
+  if (executionError) {
+    throw executionError;
+  }
+
+  return result.result.value as ReturnValue;
 }
 
 /**

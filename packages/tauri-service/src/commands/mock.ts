@@ -87,7 +87,7 @@ export async function clearAllMocks(this: TauriServiceContext, commandPrefix?: s
   log.debug(`clearAllMocks completed - cleared ${clearedCount} of ${mocks.length} mocks`);
 }
 
-export async function resetAllMocks(this: TauriServiceContext, commandPrefix?: string): Promise<void> {
+export async function resetAllMocks(this: TauriServiceContext | undefined, commandPrefix?: string): Promise<void> {
   log.debug(`resetAllMocks command called${commandPrefix ? ` with prefix: ${commandPrefix}` : ''}`);
   const browserContext = this?.browser || globalThis.browser;
 
@@ -96,7 +96,7 @@ export async function resetAllMocks(this: TauriServiceContext, commandPrefix?: s
   }
 
   // Reset mocks in the injection script (with prefix filtering if provided)
-  await (browserContext as WebdriverIO.Browser).execute<void, [string | undefined]>((prefix) => {
+  await (browserContext as WebdriverIO.Browser).execute<void, [string]>((prefix) => {
     // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
     if (window.__wdio_mocks__) {
       // @ts-expect-error - Reset each mock
@@ -111,7 +111,7 @@ export async function resetAllMocks(this: TauriServiceContext, commandPrefix?: s
         }
       }
     }
-  }, commandPrefix);
+  }, commandPrefix ?? '');
 
   // Reset outer mocks (with prefix filtering)
   const mocks = mockStore.getMocks();
@@ -126,7 +126,7 @@ export async function resetAllMocks(this: TauriServiceContext, commandPrefix?: s
   log.debug(`resetAllMocks completed - reset ${resetCount} of ${mocks.length} mocks`);
 }
 
-export async function restoreAllMocks(this: TauriServiceContext, commandPrefix?: string): Promise<void> {
+export async function restoreAllMocks(this: TauriServiceContext | undefined, commandPrefix?: string): Promise<void> {
   log.debug(`restoreAllMocks command called${commandPrefix ? ` with prefix: ${commandPrefix}` : ''}`);
   const browserContext = this?.browser || globalThis.browser;
 
@@ -135,7 +135,7 @@ export async function restoreAllMocks(this: TauriServiceContext, commandPrefix?:
   }
 
   // Restore mocks in the injection script (with prefix filtering if provided)
-  await (browserContext as WebdriverIO.Browser).execute<void, [string | undefined]>((prefix) => {
+  await (browserContext as WebdriverIO.Browser).execute<void, [string]>((prefix) => {
     // @ts-expect-error - window.__wdio_mocks__ is defined by injection script
     if (window.__wdio_mocks__) {
       if (!prefix) {
@@ -153,7 +153,7 @@ export async function restoreAllMocks(this: TauriServiceContext, commandPrefix?:
         }
       }
     }
-  }, commandPrefix);
+  }, commandPrefix ?? '');
 
   // Restore outer mocks (with prefix filtering)
   const mocks = mockStore.getMocks();

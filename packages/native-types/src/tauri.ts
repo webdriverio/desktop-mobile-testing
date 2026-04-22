@@ -55,7 +55,7 @@ export interface TauriMockInstance extends Omit<Mock, MockOverride> {
   mockClear(): Promise<TauriMock>;
   mockReset(): Promise<TauriMock>;
   mockRestore(): Promise<TauriMock>;
-  mockReturnThis(): Promise<unknown>;
+  mockReturnThis(): Promise<TauriMock>;
   withImplementation<ReturnValue, InnerArguments extends unknown[]>(
     implFn: AbstractFn,
     callbackFn: (tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue,
@@ -77,9 +77,60 @@ export interface TauriMock<TArgs extends unknown[] = unknown[], TReturns = unkno
 }
 
 /**
+ * Options for browser.tauri.execute() per-call overrides
+ * Use withExecuteOptions() from @wdio/tauri-service to create properly-typed options
+ */
+export interface TauriExecuteOptions {
+  /**
+   * Window label to target for this execute call.
+   * Overrides the session default windowLabel.
+   */
+  windowLabel?: string;
+  /**
+   * Sentinel property - set automatically by withExecuteOptions()
+   * @internal - do not set manually
+   */
+  __wdioOptions__: true;
+}
+
+/**
  * Tauri Service API interface for browser object
  */
 export interface TauriServiceAPI {
+  /**
+   * Execute JavaScript code with per-call options and arguments.
+   *
+   * @example
+   * ```js
+   * const result = await browser.tauri.execute(
+   *   (tauri, name) => tauri.core.invoke('greet', { name }),
+   *   { windowLabel: 'popup' },
+   *   'Alice'
+   * );
+   * ```
+   */
+  execute<ReturnValue, InnerArguments extends unknown[]>(
+    script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
+    options: TauriExecuteOptions,
+    ...args: InnerArguments
+  ): Promise<ReturnValue>;
+
+  /**
+   * Execute JavaScript code with per-call options.
+   *
+   * @example
+   * ```js
+   * const result = await browser.tauri.execute(
+   *   ({ core }) => core.invoke('get_data'),
+   *   { windowLabel: 'settings' }
+   * );
+   * ```
+   */
+  execute<ReturnValue>(
+    script: string | ((tauri: TauriAPIs) => ReturnValue),
+    options: TauriExecuteOptions,
+  ): Promise<ReturnValue>;
+
   /**
    * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs.
    *
@@ -89,7 +140,7 @@ export interface TauriServiceAPI {
    * ```
    *
    * @param script - Function to execute (receives Tauri APIs as first parameter) or string
-   * @param args - Additional arguments to pass to the script
+   * @param args - Additional arguments passed to the script
    */
   execute<ReturnValue, InnerArguments extends unknown[]>(
     script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
@@ -97,21 +148,27 @@ export interface TauriServiceAPI {
   ): Promise<ReturnValue>;
 
   /**
-   * Check if a value is a Tauri mock function.
-   * This is a TypeScript type guard that narrows the type when true.
+   * Check if a value is a Tauri mock function or if a command is mocked.
+   * Accepts either a mock function object or a command name string.
    *
-   * @param fn - Value to check
-   * @returns True if the value is a TauriMockInstance
+   * @param commandOrFn - Command name (string) or mock function object to check
+   * @returns True if the command is mocked or the value is a TauriMockInstance
    * @example
    * ```js
-   * const mock = await browser.tauri.mock('clipboard_read');
+   * // Check by command name
+   * if (await browser.tauri.isMockFunction('read_clipboard')) {
+   *   // read_clipboard is mocked
+   * }
+   *
+   * // Check by function object
+   * const mock = await browser.tauri.mock('read_clipboard');
    * if (browser.tauri.isMockFunction(mock)) {
-   *   // TypeScript knows mock is TauriMockInstance here
+   *   // mock is a TauriMockInstance
    *   expect(mock.mock.calls).toHaveLength(1);
    * }
    * ```
    */
-  isMockFunction: (fn: unknown) => fn is TauriMockInstance;
+  isMockFunction: (commandOrFn: unknown) => boolean;
 
   /**
    * Mock a Tauri backend command.
@@ -174,6 +231,35 @@ export interface TauriServiceAPI {
    * ```
    */
   triggerDeeplink: (url: string) => Promise<void>;
+
+  /**
+   * Switch the active Tauri window for subsequent operations.
+   * Changes the window that browser.tauri.execute() and other
+   * Tauri-specific operations target.
+   *
+   * @param label - The window label to switch to (e.g., 'main', 'settings')
+   * @returns Promise that resolves when the window switch is complete
+   *
+   * @example
+   * ```js
+   * await browser.tauri.switchWindow('settings');
+   * const result = await browser.tauri.execute(({ core }) => core.invoke('get_data'));
+   * ```
+   */
+  switchWindow: (label: string) => Promise<void>;
+
+  /**
+   * Get a list of all available Tauri window labels.
+   *
+   * @returns Promise that resolves to an array of window label strings
+   *
+   * @example
+   * ```js
+   * const windows = await browser.tauri.listWindows();
+   * console.log(windows); // ['main', 'settings']
+   * ```
+   */
+  listWindows: () => Promise<string[]>;
 }
 
 /**
@@ -209,6 +295,15 @@ export interface TauriServiceOptions extends BaseServiceOptions, DriverProviderC
    * @default 3000
    */
   crabnebulaBackendPort?: number;
+  /**
+   * Default window label for Tauri operations.
+   * Controls which webview window browser.tauri.execute() and other
+   * Tauri-specific operations target by default.
+   * Can be overridden at runtime with browser.tauri.switchWindow()
+   * or per-call with browser.tauri.execute(script, args, { windowLabel }).
+   * @default 'main'
+   */
+  windowLabel?: string;
 }
 
 /**
@@ -235,6 +330,11 @@ export interface TauriServiceGlobalOptions extends BaseServiceGlobalOptions, Dri
    * @default 3000
    */
   crabnebulaBackendPort?: number;
+  /**
+   * Default window label for Tauri operations.
+   * @default 'main'
+   */
+  windowLabel?: string;
 }
 
 /**

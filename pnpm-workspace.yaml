@@ -13,19 +13,26 @@ packages:
   - fixtures/package-tests/electron-script-app-cjs
   - fixtures/package-tests/electron-script-app-esm
   - fixtures/package-tests/tauri-app
-
+allowBuilds:
+  edgedriver: false
+  electron: true
+  electron-nightly: true
+  electron-winstaller: false
+  esbuild: true
+  geckodriver: false
+blockExoticSubdeps: false
 catalogs:
   default:
-    '@wdio/cli': ^9.25.0
-    '@wdio/globals': ^9.23.0
-    '@wdio/local-runner': ^9.25.0
+    '@wdio/cli': ^9.27.0
+    '@wdio/globals': ^9.27.0
+    '@wdio/local-runner': ^9.27.0
     '@wdio/logger': ^9.18.0
-    '@wdio/mocha-framework': ^9.25.0
-    '@wdio/spec-reporter': ^9.25.0
-    '@wdio/types': 9.25.0
-    '@wdio/xvfb': ^9.25.0
-    electron: 41.0.2
-    webdriverio: ^9.25.0
+    '@wdio/mocha-framework': ^9.27.0
+    '@wdio/spec-reporter': ^9.27.0
+    '@wdio/types': 9.27.0
+    '@wdio/xvfb': ^9.27.0
+    electron: 41.2.0
+    webdriverio: ^9.27.0
   minimum:
     '@wdio/cli': ^8.43.0
     '@wdio/globals': ^8.43.0
@@ -46,5 +53,5 @@ catalogs:
     '@wdio/spec-reporter': latest
     '@wdio/types': latest
     '@wdio/xvfb': latest
-    electron-nightly: 42.0.0-nightly.20260311
+    electron-nightly: 43.0.0-nightly.20260415
     webdriverio: latest

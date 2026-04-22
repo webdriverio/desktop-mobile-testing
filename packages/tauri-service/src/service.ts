@@ -7,7 +7,15 @@ import mockStore from './mockStore.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
 
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
-import { clearWindowState, ensureActiveWindowFocus } from './window.js';
+import {
+  clearWindowState,
+  ensureActiveWindowFocus,
+  getDefaultWindowLabel,
+  listWindowLabels,
+  setCurrentWindowLabel,
+  setSessionProvider,
+  switchWindowByLabel,
+} from './window.js';
 
 const log = createLogger('tauri-service', 'service');
 
@@ -27,6 +35,7 @@ export default class TauriWorkerService {
   private restoreMocks: boolean;
   private restoreMocksPrefix?: string;
   private driverProvider?: 'official' | 'crabnebula' | 'embedded';
+  private windowLabel: string;
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
@@ -36,6 +45,7 @@ export default class TauriWorkerService {
     this.restoreMocks = options.restoreMocks ?? false;
     this.restoreMocksPrefix = options.restoreMocksPrefix;
     this.driverProvider = options.driverProvider;
+    this.windowLabel = options.windowLabel || getDefaultWindowLabel();
     log.debug('TauriWorkerService initialized');
   }
 
@@ -63,6 +73,8 @@ export default class TauriWorkerService {
         log.debug(`Initializing instance: ${instanceName}`);
         this.addTauriApi(mrInstance);
         this.patchBrowserExecute(mrInstance);
+        setCurrentWindowLabel(mrInstance, this.windowLabel);
+        setSessionProvider(mrInstance, this.driverProvider ?? 'embedded');
         await waitUntilWindowAvailable(mrInstance);
         log.debug(`Instance ${instanceName} ready`);
 
@@ -90,6 +102,8 @@ export default class TauriWorkerService {
       log.debug('Initializing standard browser');
       this.addTauriApi(browser as WebdriverIO.Browser);
       this.patchBrowserExecute(browser as WebdriverIO.Browser);
+      setCurrentWindowLabel(browser as WebdriverIO.Browser, this.windowLabel);
+      setSessionProvider(browser as WebdriverIO.Browser, this.driverProvider ?? 'embedded');
       await waitUntilWindowAvailable(browser as WebdriverIO.Browser);
       log.debug('Standard browser ready');
     }
@@ -116,6 +130,32 @@ export default class TauriWorkerService {
     // Frontend log capture is handled automatically by the @wdio/tauri-plugin
     // The plugin calls attachConsole() during initialization to forward console logs
     // to the Tauri log plugin, which outputs to stdout for capture by the launcher
+
+    // In embedded mode the Tauri app process persists between WDIO runs, so
+    // window.__wdio_mocks__ can carry stale state from a previous run into a
+    // fresh session. Reset it here so every session starts clean.
+    if (this.driverProvider === 'embedded') {
+      try {
+        if (browser.isMultiremote) {
+          const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
+          for (const instanceName of mrBrowser.instances) {
+            const mrInstance = mrBrowser.getInstance(instanceName);
+            await mrInstance.execute(function clearStaleMocks() {
+              // @ts-expect-error - window is available in browser context
+              if (window.__wdio_mocks__) window.__wdio_mocks__ = {};
+            });
+          }
+        } else {
+          await (browser as WebdriverIO.Browser).execute(function clearStaleMocks() {
+            // @ts-expect-error - window is available in browser context
+            if (window.__wdio_mocks__) window.__wdio_mocks__ = {};
+          });
+        }
+        log.debug('Cleared stale mocks at session start');
+      } catch (error) {
+        log.warn('Failed to clear stale mocks at session start:', error);
+      }
+    }
 
     // Install command overrides to trigger mock updates after DOM interactions
     this.installCommandOverrides();
@@ -233,19 +273,29 @@ export default class TauriWorkerService {
    */
   private getTauriAPI(browser: WebdriverIO.Browser): TauriServiceAPI {
     return {
-      execute: <ReturnValue, InnerArguments extends unknown[]>(
+      execute: async <ReturnValue, InnerArguments extends unknown[]>(
         script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
         ...args: InnerArguments
       ): Promise<ReturnValue> => {
-        return execute<ReturnValue, InnerArguments>(browser, script, ...args);
+        const result = await execute<ReturnValue, InnerArguments>(browser, script, ...args);
+        await updateAllMocks();
+        return result;
       },
 
       clearAllMocks: async (commandPrefix?: string): Promise<void> => {
         return clearAllMocks.call({ browser }, commandPrefix);
       },
 
-      isMockFunction: (fn: unknown) => {
-        return isMockFunction(fn);
+      isMockFunction: (commandOrFn: unknown) => {
+        if (typeof commandOrFn === 'string') {
+          try {
+            mockStore.getMock(`tauri.${commandOrFn}`);
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        return isMockFunction(commandOrFn);
       },
 
       mock: async (command: string) => {
@@ -262,6 +312,14 @@ export default class TauriWorkerService {
 
       triggerDeeplink: async (url: string): Promise<void> => {
         return triggerDeeplink.call({ browser }, url);
+      },
+
+      switchWindow: async (label: string): Promise<void> => {
+        await switchWindowByLabel(browser, label);
+      },
+
+      listWindows: async (): Promise<string[]> => {
+        return listWindowLabels(browser);
       },
     };
   }
@@ -393,30 +451,63 @@ export default class TauriWorkerService {
   }
 }
 
-/**
- * Update all existing mocks by syncing inner (browser) mock state to outer (test) mocks
- */
-async function updateAllMocks() {
-  log.debug('updateAllMocks called');
-  const mocks = mockStore.getMocks();
-  log.debug(`Found ${mocks.length} mocks to update`);
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+/**
+ * Update all existing mocks by syncing inner (browser) mock state to outer (test) mocks.
+ * On Windows, updates run sequentially to avoid saturating WebView2 with concurrent
+ * ExecuteScript calls. Each update is retried once (after 50 ms) before failing hard.
+ * Silent swallow of mock-update errors leads to empty mock.calls assertions, which is
+ * harder to diagnose than an explicit AggregateError.
+ */
+async function updateAllMocks(): Promise<void> {
+  const mocks = mockStore.getMocks();
   if (mocks.length === 0) {
-    log.debug('No mocks to update, returning');
     return;
   }
 
-  try {
-    log.debug('Starting mock update batch');
-    await Promise.all(
-      mocks.map(async ([mockId, mockInstance]) => {
-        log.debug(`Updating mock: ${mockId}`);
-        await mockInstance.update();
-        log.debug(`Mock update completed: ${mockId}`);
-      }),
-    );
-    log.debug('All mock updates completed successfully');
-  } catch (error) {
-    log.warn('Mock update batch failed:', error);
+  const tryUpdate = async (
+    mockId: string,
+    mockInstance: ReturnType<typeof mockStore.getMocks>[0][1],
+  ): Promise<void> => {
+    try {
+      await mockInstance.update();
+    } catch (firstError) {
+      log.debug(`Mock update failed for ${mockId}, retrying in 50ms:`, firstError);
+      await sleep(50);
+      await mockInstance.update();
+    }
+  };
+
+  if (process.platform === 'win32') {
+    const errors: Array<{ mockId: string; error: unknown }> = [];
+    for (const [mockId, mockInstance] of mocks) {
+      try {
+        await tryUpdate(mockId, mockInstance);
+      } catch (error) {
+        errors.push({ mockId, error });
+      }
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(
+        errors.map((e) => e.error),
+        `Mock updates failed for: ${errors.map((e) => e.mockId).join(', ')}`,
+      );
+    }
+  } else {
+    const results = await Promise.allSettled(mocks.map(([mockId, mockInstance]) => tryUpdate(mockId, mockInstance)));
+    const failures = results
+      .map((result, i) => ({ result, mockId: mocks[i][0] }))
+      .filter(
+        (entry): entry is { result: PromiseRejectedResult; mockId: string } => entry.result.status === 'rejected',
+      );
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map((f) => f.result.reason),
+        `Mock updates failed for: ${failures.map((f) => f.mockId).join(', ')}`,
+      );
+    }
   }
 }

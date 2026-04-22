@@ -27,6 +27,7 @@ export interface MockMetadata<T extends (...args: unknown[]) => unknown = (...ar
   results: MockResult[];
   invocationCallOrder: number[];
   instances: unknown[];
+  lastCall?: Parameters<T>; // Last call arguments (computed, not stored)
 }
 
 /**
@@ -102,6 +103,11 @@ export interface Mock<T extends (...args: unknown[]) => unknown = (...args: unkn
    * Set implementation for next call only
    */
   mockImplementationOnce(fn: T): this;
+
+  /**
+   * Get the current mock implementation
+   */
+  getMockImplementation(): T | undefined;
 
   /**
    * Return a specific value

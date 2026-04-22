@@ -1,39 +1,77 @@
-import type { TauriAPIs } from '@wdio/native-types';
+import type { TauriAPIs, TauriExecuteOptions } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import type { TauriCommandContext, TauriResult } from '../types.js';
+import { getCurrentWindowLabel, getDefaultWindowLabel } from '../window.js';
 
 const log = createLogger('tauri-service', 'service');
 
-// WeakMap to store plugin availability per browser session
-// Automatically cleans up when browser objects are garbage collected
 const pluginAvailabilityCache = new WeakMap<WebdriverIO.Browser, boolean>();
+
+export function clearPluginAvailabilityCache(browser: WebdriverIO.Browser): void {
+  pluginAvailabilityCache.delete(browser);
+}
+
+function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
+  return typeof arg === 'object' && arg !== null && '__wdioOptions__' in arg;
+}
 
 /**
  * Execute JavaScript code in the Tauri frontend context with access to Tauri APIs
  * Matches Electron's execute pattern: accepts functions or strings, passes Tauri APIs as first parameter
+ *
+ * Supports per-call options via TauriExecuteOptions:
+ * - execute(browser, script, { windowLabel: 'settings' })
+ * - execute(browser, script, { windowLabel: 'popup' }, arg1, arg2)
  */
-export async function execute<ReturnValue, InnerArguments extends unknown[]>(
+export async function execute<ReturnValue, InnerArguments extends unknown[] = unknown[]>(
   browser: WebdriverIO.Browser,
   script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
   ...args: InnerArguments
 ): Promise<ReturnValue> {
-  /**
-   * parameter check
-   */
-  if (typeof script !== 'string' && typeof script !== 'function') {
-    throw new Error('Expecting script to be type of "string" or "function"');
-  }
-
   if (!browser) {
     throw new Error('WDIO browser is not yet initialised');
   }
 
-  // Check cache first using WeakMap - automatically cleans up when browser is GC'd
+  const options: { windowLabel?: string } = {};
+
+  const firstArg = args[0];
+  let userArgs: unknown[];
+  if (isExecuteOptions(firstArg)) {
+    options.windowLabel = firstArg.windowLabel;
+    userArgs = args.slice(1);
+  } else {
+    userArgs = args;
+  }
+
+  const sessionWindowLabel = getCurrentWindowLabel(browser);
+  const defaultWindowLabel = getDefaultWindowLabel();
+  const sessionWindowLabelIsExplicit = sessionWindowLabel !== defaultWindowLabel;
+  const effectiveWindowLabel = options.windowLabel || sessionWindowLabel;
+
+  // Only forward window_label when the user explicitly targeted a window
+  // (per-call options or a prior switchWindow call), not when it's the initial default
+  let executeOptions: { windowLabel?: string } = {};
+  if (options.windowLabel) {
+    executeOptions = { windowLabel: effectiveWindowLabel };
+  } else if (sessionWindowLabelIsExplicit) {
+    executeOptions = { windowLabel: sessionWindowLabel };
+  }
+
+  if (options.windowLabel && options.windowLabel !== sessionWindowLabel) {
+    log.debug(`Using per-call windowLabel: ${effectiveWindowLabel} (session default: ${sessionWindowLabel})`);
+  } else if (options.windowLabel) {
+    log.debug(`Using configured windowLabel: ${effectiveWindowLabel}`);
+  } else if (sessionWindowLabelIsExplicit) {
+    log.debug(`Using session windowLabel: ${sessionWindowLabel}`);
+  }
+
+  if (typeof script !== 'string' && typeof script !== 'function') {
+    throw new Error('Expecting script to be type of "string" or "function"');
+  }
+
   if (!pluginAvailabilityCache.get(browser)) {
-    // Check if plugin is available with retry logic (handles async module loading)
-    // Use execute (sync) since executeAsync has issues with some embedded providers
-    const maxAttempts = 100; // 100 attempts * 50ms = 5 seconds max
-    const retryInterval = 50; // ms
+    const maxAttempts = 100;
+    const retryInterval = 50;
     let pluginAvailable = false;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -48,7 +86,6 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
         break;
       }
 
-      // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, retryInterval));
     }
 
@@ -58,22 +95,21 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
       );
     }
 
-    // Cache the successful check using browser object as key
     pluginAvailabilityCache.set(browser, true);
     log.debug('Plugin availability cached for browser session');
   } else {
     log.debug('Plugin availability cached, skipping check');
   }
 
-  // Convert function to string - keep parameters intact, plugin will handle escaping
-  // For functions: use .toString() (produces valid JS function source)
-  // For strings: send as-is (Rust handles proper escaping when args present)
   const scriptString = typeof script === 'function' ? script.toString() : script;
+  const argsJson = JSON.stringify(userArgs);
 
-  // Execute via plugin's execute method
-  // The plugin handles CSP-compliant script execution in the backend
   const result = await browser.execute(
-    async function executeViaPlugin(script: string, ...scriptArgs: unknown[]) {
+    async function executeWithinTauri(script: string, execOptions: { windowLabel?: string }, argsJson: string) {
+      // @ts-expect-error - Running in browser context
+      if (typeof window === 'undefined') {
+        return JSON.stringify({ __wdio_error__: 'window is undefined' });
+      }
       // @ts-expect-error - Running in browser context
       if (typeof window.wdioTauri === 'undefined') {
         return JSON.stringify({ __wdio_error__: 'window.wdioTauri is undefined' });
@@ -86,38 +122,66 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
 
       try {
         // @ts-expect-error - Running in browser context
-        const pluginResult = await window.wdioTauri.execute(script, ...scriptArgs);
-        return JSON.stringify({ __wdio_value__: pluginResult });
+        const execResult = window.wdioTauri.execute(script, execOptions, argsJson);
+        if (execResult && typeof execResult.then === 'function') {
+          try {
+            const awaited = await execResult;
+            if (
+              awaited !== null &&
+              typeof awaited === 'object' &&
+              (awaited as { __wdio_undefined__?: boolean }).__wdio_undefined__ === true
+            ) {
+              return JSON.stringify({ __wdio_undefined__: true });
+            }
+            return JSON.stringify({ __wdio_value__: awaited });
+          } catch (promiseError) {
+            return JSON.stringify({
+              __wdio_error__: `Promise error: ${promiseError instanceof Error ? promiseError.message : String(promiseError)}`,
+            });
+          }
+        }
+        if (
+          execResult !== null &&
+          typeof execResult === 'object' &&
+          (execResult as { __wdio_undefined__?: boolean }).__wdio_undefined__ === true
+        ) {
+          return JSON.stringify({ __wdio_undefined__: true });
+        }
+        return JSON.stringify({ __wdio_value__: execResult });
       } catch (error) {
         return JSON.stringify({
-          __wdio_error__: `Plugin execute error: ${error instanceof Error ? error.message : String(error)}`,
+          __wdio_error__: `Execute call error: ${error instanceof Error ? error.message : String(error)}`,
         });
       }
     },
     scriptString,
-    ...args,
+    executeOptions,
+    argsJson,
   );
 
-  // Extract result or error from wrapped response
-  let parsed: { __wdio_error__?: string; __wdio_value__?: unknown } | undefined;
-  if (result && typeof result === 'string') {
-    try {
-      parsed = JSON.parse(result) as { __wdio_error__?: string; __wdio_value__?: unknown };
-    } catch (parseError) {
-      throw new Error(
-        `Failed to parse execute result: ${parseError instanceof Error ? parseError.message : String(parseError)}, raw result: ${result}`,
-      );
+  try {
+    if (result && typeof result === 'string') {
+      const parsed = JSON.parse(result) as {
+        __wdio_error__?: string;
+        __wdio_value__?: unknown;
+        __wdio_undefined__?: boolean;
+      };
+      if (parsed.__wdio_error__) {
+        throw new Error(parsed.__wdio_error__);
+      }
+      if (parsed.__wdio_undefined__) {
+        log.debug(`Execute result: undefined`);
+        return undefined as unknown as ReturnValue;
+      }
+      if (parsed.__wdio_value__ !== undefined) {
+        log.debug(`Execute result:`, parsed.__wdio_value__);
+        return parsed.__wdio_value__ as ReturnValue;
+      }
     }
-  }
-
-  // Check for script errors AFTER parsing (outside try/catch to avoid re-wrapping)
-  if (parsed?.__wdio_error__) {
-    throw new Error(parsed.__wdio_error__);
-  }
-
-  if (parsed?.__wdio_value__ !== undefined) {
-    log.debug(`Execute result:`, parsed.__wdio_value__);
-    return parsed.__wdio_value__ as ReturnValue;
+  } catch (parseError) {
+    throw new Error(
+      `Failed to parse execute result: ${parseError instanceof Error ? parseError.message : String(parseError)}, raw result: ${result}`,
+    );
   }
 
   log.debug(`Execute result:`, result);
@@ -208,7 +272,6 @@ export async function executeTauriCommands<T = unknown>(
 
     results.push(result);
 
-    // Stop on first failure
     if (!result.ok) {
       log.warn(`Stopping command execution due to failure: ${result.error}`);
       break;
