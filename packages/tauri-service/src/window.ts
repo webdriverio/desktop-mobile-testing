@@ -99,6 +99,7 @@ export async function switchWindowByLabel(browser: WebdriverIO.Browser, label: s
       await browser.switchToWindow(handle);
     }
   } catch (error) {
+    userSwitchedWindowCache.delete(browser.sessionId || 'default');
     throw new Error(
       `Failed to switch to window with label "${label}": ${error instanceof Error ? error.message : String(error)}`,
     );
