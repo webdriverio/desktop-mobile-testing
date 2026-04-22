@@ -13,6 +13,50 @@ vi.mock('../src/logCapture.js', () => ({
   })),
 }));
 
+describe('checkEmbeddedServerAlive', () => {
+  let checkEmbeddedServerAlive: typeof import('../src/embeddedProvider.js').checkEmbeddedServerAlive;
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(async () => {
+    const mod = await import('../src/embeddedProvider.js');
+    checkEmbeddedServerAlive = mod.checkEmbeddedServerAlive;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('returns true when the status endpoint responds ok', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true });
+    expect(await checkEmbeddedServerAlive(4445)).toBe(true);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'http://127.0.0.1:4445/status',
+      expect.objectContaining({ signal: expect.anything() }),
+    );
+  });
+
+  it('uses the given port in the URL', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true });
+    await checkEmbeddedServerAlive(9999);
+    expect(globalThis.fetch).toHaveBeenCalledWith('http://127.0.0.1:9999/status', expect.anything());
+  });
+
+  it('returns false when fetch throws (connection refused)', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
+    expect(await checkEmbeddedServerAlive(4445)).toBe(false);
+  });
+
+  it('returns false when response.ok is false', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
+    expect(await checkEmbeddedServerAlive(4445)).toBe(false);
+  });
+
+  it('returns false when fetch times out (AbortError)', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError'));
+    expect(await checkEmbeddedServerAlive(4445)).toBe(false);
+  });
+});
+
 describe('isEmbeddedProvider', () => {
   let isEmbeddedProvider: typeof import('../src/embeddedProvider.js').isEmbeddedProvider;
 

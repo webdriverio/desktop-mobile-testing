@@ -13,6 +13,7 @@ import { ensureTauriDriver, findTestRunnerBackend } from './driverManager.js';
 import { DriverPool } from './driverPool.js';
 import { ensureMsEdgeDriver } from './edgeDriverManager.js';
 import {
+  checkEmbeddedServerAlive,
   type EmbeddedDriverInfo,
   getEmbeddedPort,
   isEmbeddedProvider,
@@ -73,6 +74,8 @@ export default class TauriLaunchService {
   private backendPortManager: PortManager;
   private driverPool: DriverPool;
   private embeddedProcesses: Map<string, EmbeddedDriverInfo> = new Map();
+  private embeddedConfigs: Map<string, { appBinaryPath: string; port: number; options: TauriServiceOptions }> =
+    new Map();
   private isEmbeddedMode: boolean = false;
   private workerBackends: Map<string, { proc: ChildProcess; port: number }> = new Map();
   private cnCycleConfigs?: Array<{
@@ -310,6 +313,7 @@ export default class TauriLaunchService {
           try {
             const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, instanceId);
             this.embeddedProcesses.set(instanceId, driverInfo);
+            this.embeddedConfigs.set(instanceId, { appBinaryPath, port: embeddedPort, options: instanceOptions });
           } catch (error) {
             throw new SevereServiceError(`Failed to start embedded WebDriver for ${key}: ${(error as Error).message}`);
           }
@@ -494,6 +498,7 @@ export default class TauriLaunchService {
         try {
           const driverInfo = await startEmbeddedDriver(appBinaryPath, embeddedPort, instanceOptions, String(i));
           this.embeddedProcesses.set(String(i), driverInfo);
+          this.embeddedConfigs.set(String(i), { appBinaryPath, port: embeddedPort, options: instanceOptions });
         } catch (error) {
           throw new SevereServiceError(
             `Failed to start embedded WebDriver for instance ${i}: ${(error as Error).message}`,
@@ -714,10 +719,50 @@ export default class TauriLaunchService {
       }
     }
 
+    // For embedded mode (non-per-worker), check if the app is still alive and restart if needed.
+    // On Windows the embedded Tauri process can crash after a WebDriver session is deleted,
+    // causing ECONNREFUSED for all subsequent spec files.
+    if (this.isEmbeddedMode && !this.perWorkerMode) {
+      await this.ensureEmbeddedServersHealthy();
+    }
+
     // Run environment diagnostics
     await this.diagnoseEnvironment(this.appBinaryPath);
 
     log.debug(`Tauri worker session started: ${cid}`);
+  }
+
+  /**
+   * Health-check all embedded WebDriver servers and restart any that have crashed.
+   * Required on Windows where the Tauri process can die after session deletion,
+   * making all subsequent spec files fail with ECONNREFUSED.
+   */
+  private async ensureEmbeddedServersHealthy(): Promise<void> {
+    for (const [instanceId, config] of this.embeddedConfigs) {
+      const isAlive = await checkEmbeddedServerAlive(config.port);
+      if (!isAlive) {
+        log.warn(`Embedded WebDriver on port ${config.port} (instance: ${instanceId}) is unreachable — restarting...`);
+        const existing = this.embeddedProcesses.get(instanceId);
+        if (existing) {
+          try {
+            await stopEmbeddedDriver(existing);
+          } catch {
+            // Process may already be dead; ignore
+          }
+        }
+        try {
+          const newInfo = await startEmbeddedDriver(config.appBinaryPath, config.port, config.options, instanceId);
+          this.embeddedProcesses.set(instanceId, newInfo);
+          log.info(`✅ Embedded WebDriver restarted on port ${config.port} (instance: ${instanceId})`);
+        } catch (error) {
+          throw new SevereServiceError(
+            `Failed to restart embedded WebDriver on port ${config.port}: ${(error as Error).message}`,
+          );
+        }
+      } else {
+        log.debug(`Embedded WebDriver on port ${config.port} (instance: ${instanceId}) is healthy`);
+      }
+    }
   }
 
   /**
@@ -901,6 +946,7 @@ export default class TauriLaunchService {
 
     await this.driverPool.stopAll();
     this.instanceOptions.clear();
+    this.embeddedConfigs.clear();
     this.portManager.clear();
     this.backendPortManager.clear();
 
