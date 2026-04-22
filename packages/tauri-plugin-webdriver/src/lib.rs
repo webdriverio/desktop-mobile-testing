@@ -52,6 +52,9 @@ pub fn init_with_port<R: Runtime>(port: u16) -> TauriPlugin<R> {
             // Manage async script state for native message handlers (Windows only)
             #[cfg(target_os = "windows")]
             app.manage(platform::AsyncScriptState::default());
+            // Serialize concurrent ExecuteScript calls per webview (Windows only)
+            #[cfg(target_os = "windows")]
+            app.manage(platform::ScriptExecutionLocks::default());
 
             // Manage per-window alert state
             app.manage(platform::AlertStateManager::default());

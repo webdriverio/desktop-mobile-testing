@@ -6,6 +6,8 @@ pub use executor::*;
 
 #[cfg(target_os = "windows")]
 pub use windows::AsyncScriptState;
+#[cfg(target_os = "windows")]
+pub use windows::ScriptExecutionLocks;
 
 #[cfg(target_os = "macos")]
 mod macos;
