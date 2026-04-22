@@ -104,7 +104,6 @@ jobs:
       target_packages: ${{ needs.gate.outputs.target }}
       target_branch: main
       bump: ${{ needs.gate.outputs.bump }}
-      stable: ${{ needs.gate.outputs.stable }}
       release_type: ${{ needs.gate.outputs.stable == 'true' && 'stable' || 'prerelease' }}
       dry_run: false
       scope: ${{ needs.gate.outputs.scope }}
@@ -123,7 +122,6 @@ jobs:
     with:
       target_branch: ${{ inputs.target_branch }}
       bump: ${{ inputs.bump }}
-      stable: 'false'
       release_type: ${{ inputs.release_type }}
       dry_run: ${{ inputs.dry_run }}
       scope: ${{ inputs.scope }}

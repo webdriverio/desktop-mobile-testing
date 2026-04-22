@@ -16,11 +16,6 @@ on:
         description: 'Version increment (patch, minor, major)'
         required: true
         type: string
-      stable:
-        description: 'Graduate prerelease to stable without bumping'
-        required: false
-        type: string
-        default: 'false'
       release_type:
         description: 'Release type (stable or prerelease)'
         required: false
