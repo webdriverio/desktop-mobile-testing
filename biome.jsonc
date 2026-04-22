@@ -19,8 +19,8 @@
       "!**/tauri-plugin/target",
       "!**/src-tauri/target",
       "!**/src-tauri/target/**/.fingerprint/**/*.json",
-      // ignore claude worktrees (nested repos with their own biome configs)
-      "!.claude/worktrees/**"
+      // ignore claude code tooling directory
+      "!.claude/**"
     ]
   },
   "formatter": {
