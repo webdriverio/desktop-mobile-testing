@@ -16,11 +16,6 @@ on:
         description: 'Version increment (patch, minor, major)'
         required: true
         type: string
-      stable:
-        description: 'Graduate prerelease to stable without bumping'
-        required: false
-        type: string
-        default: 'false'
       release_type:
         description: 'Release type (stable or prerelease)'
         required: false
@@ -230,11 +225,11 @@ jobs:
 
       - name: Run ReleaseKit
         id: releasekit
-        uses: goosewobbler/releasekit@v0.17.0
+        uses: goosewobbler/releasekit@v0.17.1
         with:
           mode: release
           node-version: '24'
-          target: ${{ steps.targets.outputs.packages }}
+          target: ${{ inputs.target_packages || steps.targets.outputs.packages }}
           branch: ${{ inputs.target_branch }}
           bump: ${{ steps.params.outputs.bump }}
           stable: ${{ steps.params.outputs.stable }}
