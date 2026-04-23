@@ -1,4 +1,4 @@
-import { type ChildProcess, execFileSync, execSync, spawn } from 'node:child_process';
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
 import { findTestRunnerBackend } from './driverManager.js';
@@ -67,8 +67,14 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
   }
   try {
     if (process.platform === 'win32') {
-      execSync(
-        `powershell -NoProfile -NonInteractive -Command "Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"`,
+      execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }`,
+        ],
         { stdio: 'ignore' },
       );
     } else {
