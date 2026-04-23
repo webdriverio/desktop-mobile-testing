@@ -115,7 +115,7 @@ describe('execute Command', () => {
     expect(client.send).toHaveBeenCalledWith(
       'Runtime.callFunctionOn',
       expect.objectContaining({
-        functionDeclaration: expect.stringContaining('async () => { const a = 1 }'),
+        functionDeclaration: expect.stringContaining('async function() { const a = 1 }'),
       }),
     );
   });
@@ -127,7 +127,7 @@ describe('execute Command', () => {
     expect(client.send).toHaveBeenCalledWith(
       'Runtime.callFunctionOn',
       expect.objectContaining({
-        functionDeclaration: expect.stringContaining('async () => {'),
+        functionDeclaration: expect.stringContaining('async function() {'),
       }),
     );
   });
@@ -164,7 +164,7 @@ describe('execute Command', () => {
       'Runtime.callFunctionOn',
       expect.objectContaining({
         // Should be wrapped (since it starts with function keyword)
-        functionDeclaration: expect.stringContaining('async () =>'),
+        functionDeclaration: expect.stringContaining('async function()'),
       }),
     );
   });
