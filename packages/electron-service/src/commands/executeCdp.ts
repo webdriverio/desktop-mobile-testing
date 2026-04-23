@@ -104,18 +104,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
 function wrapStringScriptForCdp(script: string): string {
   const trimmed = script.trim();
 
-  // Check if it's a simple arrow function that can be transformed by recast
-  // These patterns can be safely passed to recast which adds the electron parameter
-  const canRecastHandle =
-    trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.match(/^\s*(async\s+)?function\b/);
-
-  if (canRecastHandle) {
-    // Simple arrow function - pass to recast for transformation
-    return script;
-  }
-
-  // For all other strings, wrap them to avoid parsing errors
-  // This includes:
+  // For string scripts, wrap them to avoid parsing errors:
   // - "function() {}" (recast handles these differently)
   // - "1 + 2 + 3" (expression - would be called as function)
   // - "return 42" (statement - parsing error)
