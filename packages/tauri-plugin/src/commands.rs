@@ -5,7 +5,6 @@ use tokio::sync::oneshot;
 
 use crate::models::ExecuteRequest;
 use crate::Result;
-use crate::Error;
 
 /// Window state information for generic window management
 /// Mirrors Electron's window tracking - discover active window without app-specific knowledge
