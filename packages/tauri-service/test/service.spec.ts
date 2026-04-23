@@ -208,8 +208,10 @@ describe('TauriWorkerService', () => {
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      // Functions are converted to string via .toString() then passed to original execute
-      expect(mockExecute).toHaveBeenCalledWith(testFn.toString(), 1, 2);
+      // For embedded, the original function is passed directly so WDIO can invoke it with args.
+      // Converting to string would lose the invocation — the WebDriver would get a function
+      // expression as the script body and return the function object instead of its result.
+      expect(mockExecute).toHaveBeenCalledWith(testFn, 1, 2);
     });
   });
 
@@ -309,15 +311,16 @@ describe('TauriWorkerService', () => {
 
     it('should clear stale mocks at session start for embedded driver provider', async () => {
       const mockBrowser = createMockBrowser();
-      // Capture before patchBrowserExecute replaces browser.execute; patchBrowserExecute converts
-      // functions to strings before delegating to originalExecute, so we match on script content.
+      // Capture before patchBrowserExecute replaces browser.execute. For embedded, the patch
+      // passes function scripts directly to originalExecute (not as a string), so we match on
+      // the function's name which contains the intent.
       const originalExecute = mockBrowser.execute as ReturnType<typeof vi.fn>;
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
 
       await service.before({} as any, [], mockBrowser);
 
       const clearCall = originalExecute.mock.calls.find(
-        ([script]) => typeof script === 'string' && script.includes('__wdio_mocks__'),
+        ([script]) => typeof script === 'function' && script.name === 'clearStaleMocks',
       );
       expect(clearCall).toBeDefined();
     });

@@ -381,9 +381,10 @@ export default class TauriWorkerService {
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
-        // For embedded WebDriver: pass the script through untouched so WDIO
-        // can invoke function scripts correctly.
-        return originalExecute(scriptString, ...args) as Promise<ReturnValue>;
+        return (originalExecute as unknown as (s: typeof script, ...a: typeof args) => Promise<ReturnValue>)(
+          script,
+          ...args,
+        );
       }
 
       // For functions: use .toString() - produces valid JS function source
