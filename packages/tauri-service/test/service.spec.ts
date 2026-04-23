@@ -123,6 +123,33 @@ describe('TauriWorkerService', () => {
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
+    it('should prepend return for expression-style string scripts on non-embedded providers', () => {
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ executeAsync: mockExecuteAsync });
+      const service = new TauriWorkerService({ driverProvider: 'official' }, { 'wdio:tauriServiceOptions': {} });
+
+      (service as any).patchBrowserExecute(mockBrowser);
+      mockBrowser.execute('1 + 2 + 3');
+
+      expect(mockExecuteAsync).toHaveBeenCalled();
+      expect(mockExecuteAsync.mock.calls[0][0]).toContain('return 1 + 2 + 3;');
+    });
+
+    it('should not prepend return for statement-style string scripts on non-embedded providers', () => {
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ executeAsync: mockExecuteAsync });
+      const service = new TauriWorkerService({ driverProvider: 'official' }, { 'wdio:tauriServiceOptions': {} });
+
+      (service as any).patchBrowserExecute(mockBrowser);
+      mockBrowser.execute('const x = 1; return x');
+
+      expect(mockExecuteAsync).toHaveBeenCalled();
+      const wrappedScript = mockExecuteAsync.mock.calls[0][0] as string;
+      // The body should NOT have an extra "return" prepended
+      expect(wrappedScript).toContain('const x = 1; return x');
+      expect(wrappedScript).not.toMatch(/return const/);
+    });
+
     it('should pass function scripts as-is for non-embedded providers using executeAsync', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
       const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
