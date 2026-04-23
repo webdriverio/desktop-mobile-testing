@@ -197,6 +197,7 @@ export async function waitTestRunnerBackendReady(
   host: string = '127.0.0.1',
   port: number = 3000,
   timeoutMs: number = 30000,
+  settleMs: number = 0,
 ): Promise<void> {
   const net = await import('node:net');
   const started = Date.now();
@@ -217,7 +218,12 @@ export async function waitTestRunnerBackendReady(
         clearTimeout(timeout);
         socket.destroy();
         log.info(`test-runner-backend ready on ${host}:${port}`);
-        resolve();
+        if (settleMs > 0) {
+          log.debug(`Waiting ${settleMs}ms for WebSocket handler to initialize...`);
+          setTimeout(resolve, settleMs);
+        } else {
+          resolve();
+        }
       });
 
       socket.on('error', (err) => {
