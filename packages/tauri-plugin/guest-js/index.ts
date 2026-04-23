@@ -141,6 +141,39 @@ interface ExecuteOptions {
  * @param argsJson - Serialized user arguments as JSON string (optional)
  * @returns Result of the script execution
  */
+// Returns true if s contains '=>' at bracket depth 0 (not nested inside parens/brackets).
+// Prevents false positives on expressions like (arr.find(x => x)) where => is nested.
+function hasTopLevelArrow(s: string): boolean {
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inTemplate = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '\\' && (inSingle || inDouble || inTemplate)) {
+      i++;
+      continue;
+    }
+    if (c === "'" && !inDouble && !inTemplate) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (c === '"' && !inSingle && !inTemplate) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (c === '`' && !inSingle && !inDouble) {
+      inTemplate = !inTemplate;
+      continue;
+    }
+    if (inSingle || inDouble || inTemplate) continue;
+    if (c === '(' || c === '[') depth++;
+    else if (c === ')' || c === ']') depth--;
+    else if (c === '=' && depth === 0 && i + 1 < s.length && s[i + 1] === '>') return true;
+  }
+  return false;
+}
+
 export async function execute(script: string, options?: ExecuteOptions, argsJson?: string): Promise<unknown> {
   if (!window.__TAURI__) {
     throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
@@ -148,7 +181,7 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
 
   const trimmed = script.trim();
   const isFunctionLike =
-    (trimmed.startsWith('(') && trimmed.includes('=>')) ||
+    (trimmed.startsWith('(') && hasTopLevelArrow(trimmed)) ||
     /^function[\s(]/.test(trimmed) ||
     /^async[\s(]/.test(trimmed) ||
     /^(\w+)\s*=>/.test(trimmed);

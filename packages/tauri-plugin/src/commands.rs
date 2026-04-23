@@ -96,56 +96,90 @@ pub(crate) async fn execute<R: Runtime>(
     };
 
     // Check if => appears outside of string literals (to avoid false positives like "foo"=>"bar")
-    fn contains_arrow_outside_quotes(s: &str) -> bool {
-        let mut in_single_quote = false;
-        let mut in_double_quote = false;
-        let mut in_backtick = false;
-
-        for (i, c) in s.char_indices() {
-            // Check for escape sequences - count consecutive backslashes before this position
-            // Odd number of backslashes means the character is escaped
-            if c != '=' {
-                let mut backslash_count = 0;
-                let mut j = i;
-                while j > 0 {
-                    let prev_char = s.chars().nth(j - 1);
-                    if prev_char == Some('\\') {
-                        backslash_count += 1;
-                        j -= 1;
-                    } else {
-                        break;
-                    }
-                }
-                // Skip this character if it's preceded by an odd number of backslashes
-                if backslash_count % 2 == 1 {
+    // All characters of interest ('\'', '"', '`', '\\', '=', '>') are ASCII (< 0x80)
+        // and cannot be continuation bytes in multi-byte UTF-8 sequences, so byte-level
+        // scanning is correct and avoids the char_indices/chars().nth() index mismatch.
+        fn contains_arrow_outside_quotes(s: &str) -> bool {
+            let bytes = s.as_bytes();
+            let mut in_single_quote = false;
+            let mut in_double_quote = false;
+            let mut in_backtick = false;
+            let mut backslash_count: usize = 0;
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                if b == b'\\' {
+                    backslash_count += 1;
+                    i += 1;
                     continue;
                 }
-            }
-
-            // Track quote state
-            if c == '\'' && !in_double_quote && !in_backtick {
-                in_single_quote = !in_single_quote;
-            } else if c == '"' && !in_single_quote && !in_backtick {
-                in_double_quote = !in_double_quote;
-            } else if c == '`' && !in_single_quote && !in_double_quote {
-                in_backtick = !in_backtick;
-            }
-
-            // Check for => outside of quotes
-            if c == '=' && !in_single_quote && !in_double_quote && !in_backtick {
-                if s.len() > i + 1 && s.chars().nth(i + 1) == Some('>') {
-                    return true;
+                let escaped = backslash_count % 2 == 1;
+                backslash_count = 0;
+                if !escaped {
+                    match b {
+                        b'\'' if !in_double_quote && !in_backtick => in_single_quote = !in_single_quote,
+                        b'"' if !in_single_quote && !in_backtick => in_double_quote = !in_double_quote,
+                        b'`' if !in_single_quote && !in_double_quote => in_backtick = !in_backtick,
+                        b'=' if !in_single_quote && !in_double_quote && !in_backtick => {
+                            if i + 1 < bytes.len() && bytes[i + 1] == b'>' {
+                                return true;
+                            }
+                        }
+                        _ => {}
+                    }
                 }
+                i += 1;
             }
+            false
         }
-        false
-    }
+
+        // Like contains_arrow_outside_quotes but also tracks bracket depth.
+        // Returns true only if => appears at depth 0 (outside all parens/brackets).
+        // Prevents false positives on (arr.find(x => x)) where => is nested inside
+        // the outer parentheses.
+        fn has_arrow_outside_parens(s: &str) -> bool {
+            let bytes = s.as_bytes();
+            let mut in_single_quote = false;
+            let mut in_double_quote = false;
+            let mut in_backtick = false;
+            let mut depth: i32 = 0;
+            let mut backslash_count: usize = 0;
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                if b == b'\\' {
+                    backslash_count += 1;
+                    i += 1;
+                    continue;
+                }
+                let escaped = backslash_count % 2 == 1;
+                backslash_count = 0;
+                if !escaped {
+                    match b {
+                        b'\'' if !in_double_quote && !in_backtick => in_single_quote = !in_single_quote,
+                        b'"' if !in_single_quote && !in_backtick => in_double_quote = !in_double_quote,
+                        b'`' if !in_single_quote && !in_double_quote => in_backtick = !in_backtick,
+                        _ if !in_single_quote && !in_double_quote && !in_backtick => match b {
+                            b'(' | b'[' => depth += 1,
+                            b')' | b']' => depth -= 1,
+                            b'=' if depth == 0 && i + 1 < bytes.len() && bytes[i + 1] == b'>' => {
+                                return true;
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                }
+                i += 1;
+            }
+            false
+        }
 
     // Check for arrow functions at START of script:
     // - "(args) => ..." (parenthesized params)
     // - "param => ..." (single param, alphanumeric start)
     // Only detect arrows that are NOT inside string literals
-    let starts_with_paren_arrow = trimmed.starts_with('(') && contains_arrow_outside_quotes(trimmed);
+    let starts_with_paren_arrow = trimmed.starts_with('(') && has_arrow_outside_parens(trimmed);
     let single_param_arrow = trimmed.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
         && contains_arrow_outside_quotes(trimmed)
         && trimmed.find("=>").map(|pos| {
@@ -210,13 +244,7 @@ pub(crate) async fn execute<R: Runtime>(
             request.script.clone()
         };
 
-        if !request.args.is_empty() {
-            let args_json = serde_json::to_string(&request.args)
-                .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
-            format!("(async () => {{ const __wdio_args = {}; {body} }})()", args_json)
-        } else {
-            format!("(async () => {{ {body} }})()")
-        }
+        format!("(async () => {{ {body} }})()")
     };
 
     // Generate unique event ID for this execution
