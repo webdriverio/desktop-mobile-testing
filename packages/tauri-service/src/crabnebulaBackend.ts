@@ -156,10 +156,11 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
     if (proc.stdout) {
       stdoutRl = createInterface({ input: proc.stdout });
       stdoutRl.on('line', (line: string) => {
-        log.debug(`[test-runner-backend] ${line}`);
+        log.info(`[test-runner-backend stdout] ${line}`);
 
-        // Detect ready state - adjust based on actual backend output
-        if (line.includes('listening') || line.includes('ready') || line.includes('started')) {
+        // Detect ready state — case-insensitive to handle "Listening", "listening", etc.
+        const lowered = line.toLowerCase();
+        if (lowered.includes('listening') || lowered.includes('ready') || lowered.includes('started')) {
           if (!isReady) {
             isReady = true;
             cleanup();
@@ -174,18 +175,6 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
       stderrRl = createInterface({ input: proc.stderr });
       stderrRl.on('line', (line: string) => {
         log.error(`[test-runner-backend stderr] ${line}`);
-      });
-    }
-
-    // Also log stdout at info level for debugging
-    if (proc.stdout) {
-      proc.stdout.on('data', (data: Buffer) => {
-        log.info(`[test-runner-backend stdout] ${data.toString().trim()}`);
-      });
-    }
-    if (proc.stderr) {
-      proc.stderr.on('data', (data: Buffer) => {
-        log.error(`[test-runner-backend stderr] ${data.toString().trim()}`);
       });
     }
 
