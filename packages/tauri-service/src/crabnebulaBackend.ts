@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execSync, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
 import { findTestRunnerBackend } from './driverManager.js';
@@ -60,6 +60,26 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
   log.info(`CN_API_KEY detected: ${redactedKey} (${apiKey.length} chars)`);
 
   log.info(`Starting test-runner-backend on port ${port}`);
+
+  // Kill any orphaned process still holding the port (e.g. from a previous WDIO run killed by SIGKILL)
+  try {
+    if (process.platform === 'win32') {
+      execSync(
+        `powershell -NoProfile -NonInteractive -Command "Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"`,
+        { stdio: 'ignore' },
+      );
+    } else {
+      const pidsOutput = execSync(`lsof -ti :${port}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim();
+      if (pidsOutput) {
+        execSync(`kill -9 ${pidsOutput.split('\n').join(' ')}`, { stdio: 'ignore' });
+        log.info(`Killed orphaned process(es) on port ${port}: ${pidsOutput.replace(/\n/g, ', ')}`);
+      }
+    }
+  } catch {
+    // No process on port, or kill failed — port is already free
+  }
 
   return new Promise((resolve, reject) => {
     // Use --port flag with fallback to PORT env var
@@ -197,7 +217,6 @@ export async function waitTestRunnerBackendReady(
   host: string = '127.0.0.1',
   port: number = 3000,
   timeoutMs: number = 30000,
-  settleMs: number = 0,
 ): Promise<void> {
   const net = await import('node:net');
   const started = Date.now();
@@ -218,12 +237,7 @@ export async function waitTestRunnerBackendReady(
         clearTimeout(timeout);
         socket.destroy();
         log.info(`test-runner-backend ready on ${host}:${port}`);
-        if (settleMs > 0) {
-          log.debug(`Waiting ${settleMs}ms for WebSocket handler to initialize...`);
-          setTimeout(resolve, settleMs);
-        } else {
-          resolve();
-        }
+        resolve();
       });
 
       socket.on('error', (err) => {

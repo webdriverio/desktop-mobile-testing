@@ -265,7 +265,7 @@ export default class TauriLaunchService {
         // Allocate port to prevent collision with worker backends
         await this.backendPortManager.allocatePortPair(backendPort, backendPort + 1);
         const { proc } = await startTestRunnerBackend({ port: backendPort, serviceOptions: mergedOptions });
-        await waitTestRunnerBackendReady('127.0.0.1', backendPort, 30000, 2000);
+        await waitTestRunnerBackendReady('127.0.0.1', backendPort, 30000);
 
         this.testRunnerBackend = proc;
 
@@ -370,7 +370,7 @@ export default class TauriLaunchService {
               serviceOptions: instanceOptions,
               instanceId,
             });
-            await waitTestRunnerBackendReady(hostname, backendPort, 30000, 2000);
+            await waitTestRunnerBackendReady(hostname, backendPort, 30000);
 
             this.workerBackends.set(instanceId, { proc, port: backendPort });
             env.REMOTE_WEBDRIVER_URL = `http://${hostname}:${backendPort}`;
@@ -537,6 +537,20 @@ export default class TauriLaunchService {
           throw new SevereServiceError(`Failed to start tauri-driver: ${(error as Error).message}`);
         }
 
+        // On macOS with CrabNebula, probe /status to detect a dead backend WebSocket before WDIO connects.
+        // The backend can drop its WebSocket to tauri-driver ~68ms after connect; without this check WDIO
+        // would hang for ~4.7 minutes before discovering the session is broken.
+        if (process.platform === 'darwin' && isCrabNebula) {
+          await new Promise<void>((r) => setTimeout(r, 200));
+          const statusOk = await this.probeTauriDriverStatus(port);
+          if (!statusOk) {
+            throw new SevereServiceError(
+              'tauri-driver /status probe failed — CrabNebula backend WebSocket may be broken. ' +
+                'Check CN_API_KEY validity and cloud relay connectivity.',
+            );
+          }
+        }
+
         // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
         for (const cap of capsList) {
           (cap as { port?: number; hostname?: string }).port = port;
@@ -695,7 +709,7 @@ export default class TauriLaunchService {
               serviceOptions: workerOptions,
               instanceId: cid,
             });
-            await waitTestRunnerBackendReady('127.0.0.1', backendPort, 30000, 2000);
+            await waitTestRunnerBackendReady('127.0.0.1', backendPort, 30000);
             this.workerBackends.set(cid, { proc, port: backendPort });
             workerEnv.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
             log.info(`Worker ${cid} backend ready on port ${backendPort}`);
@@ -912,7 +926,7 @@ export default class TauriLaunchService {
         serviceOptions: config.options,
         instanceId: config.instanceId,
       });
-      await waitTestRunnerBackendReady(hostname, config.backendPort, 30000, 2000);
+      await waitTestRunnerBackendReady(hostname, config.backendPort, 30000);
 
       // Store in the same location it was originally stored
       if (configs.length === 1 && config.instanceId === 'tauri-driver') {
@@ -989,6 +1003,21 @@ export default class TauriLaunchService {
     this.backendPortManager.clear();
 
     log.debug('Tauri service completed');
+  }
+
+  private async probeTauriDriverStatus(port: number): Promise<boolean> {
+    const http = await import('node:http');
+    return new Promise((resolve) => {
+      const req = http.get(`http://127.0.0.1:${port}/status`, { timeout: 5000 }, (res) => {
+        res.resume();
+        resolve(res.statusCode === 200);
+      });
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(false);
+      });
+    });
   }
 
   /**
