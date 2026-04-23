@@ -44,10 +44,12 @@ function wrapStringScript(script: string): string {
 
   const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
   const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
+  const needsAsync = /\bawait\b/.test(trimmed);
+  const wrap = needsAsync ? 'async ' : '';
 
   if (hasRealSemicolon || hasStatementKeyword) {
-    return `(async () => { ${script} })()`;
+    return `(${wrap}() => { ${script} })()`;
   } else {
-    return `(async () => { return ${script}; })()`;
+    return `(${wrap}() => { return ${script}; })()`;
   }
 }

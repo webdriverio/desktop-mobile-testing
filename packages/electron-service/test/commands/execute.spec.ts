@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { execute } from '../../src/commands/execute.js';
 
 describe('execute Command', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     globalThis.browser = {
       electron: {},
       execute: vi.fn((fn: (script: string, ...args: unknown[]) => unknown, script: string, ...args: unknown[]) =>
@@ -82,7 +82,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '1 + 2 + 3');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return 1 + 2 + 3; })()'),
+      expect.stringContaining('(() => { return 1 + 2 + 3; })()'),
     );
   });
 
@@ -90,23 +90,20 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'return 42');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return 42 })()'),
+      expect.stringContaining('(() => { return 42 })()'),
     );
   });
 
   it('should wrap multi-statement string scripts in IIFE', async () => {
     await execute(globalThis.browser, 'const x = 10; const y = 20; return x + y;');
-    expect(globalThis.browser.execute).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.stringContaining('(async () => {'),
-    );
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), expect.stringContaining('(() => {'));
   });
 
   it('should handle return(expr) pattern without adding extra return', async () => {
     await execute(globalThis.browser, 'return(document.title)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return(document.title) })()'),
+      expect.stringContaining('(() => { return(document.title) })()'),
     );
   });
 
@@ -114,7 +111,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '"foo;bar"');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return "foo;bar"; })()'),
+      expect.stringContaining('(() => { return "foo;bar"; })()'),
     );
   });
 
@@ -122,7 +119,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'document.title');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return document.title; })()'),
+      expect.stringContaining('(() => { return document.title; })()'),
     );
   });
 
@@ -135,7 +132,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'trySomething()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return trySomething(); })()'),
+      expect.stringContaining('(() => { return trySomething(); })()'),
     );
   });
 
@@ -143,7 +140,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'asyncData.fetchAll()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return asyncData.fetchAll(); })()'),
+      expect.stringContaining('(() => { return asyncData.fetchAll(); })()'),
     );
   });
 
@@ -151,7 +148,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'functionResult.call()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return functionResult.call(); })()'),
+      expect.stringContaining('(() => { return functionResult.call(); })()'),
     );
   });
 
@@ -159,7 +156,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '(document.title)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return (document.title); })()'),
+      expect.stringContaining('(() => { return (document.title); })()'),
     );
   });
 
@@ -167,12 +164,28 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '(a + b)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return (a + b); })()'),
+      expect.stringContaining('(() => { return (a + b); })()'),
     );
   });
 
   it('should treat (x, y) => x + y as function-like (paren arrow)', async () => {
     await execute(globalThis.browser, '(x, y) => x + y');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), '(x, y) => x + y');
+  });
+
+  it('should use async IIFE when script contains await', async () => {
+    await execute(globalThis.browser, 'return await someAsyncFn()');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => { return await someAsyncFn() })()'),
+    );
+  });
+
+  it('should use sync IIFE when script has no await', async () => {
+    await execute(globalThis.browser, 'return syncFn()');
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(() => { return syncFn() })()'),
+    );
   });
 });
