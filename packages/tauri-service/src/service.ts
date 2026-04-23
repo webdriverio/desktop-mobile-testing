@@ -381,11 +381,14 @@ export default class TauriWorkerService {
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
-        // Tauri embedded WebDriver's execute/sync wraps the script as a function expression
-        // and calls it via .apply(null, args) (see tauri-plugin-webdriver executor.rs). Passing
-        // scriptString (a string, not a function object) avoids WebdriverIO's webdriverioPolyfill
-        // wrapper, which WebKit cannot parse.
-        return originalExecute(scriptString, ...args) as Promise<ReturnValue>;
+        // Tauri embedded WebDriver's execute/sync is W3C-compliant (wraps the script as a
+        // function body) and awaits the result internally, so async functions work over the
+        // sync endpoint. Pass the script through untouched — WebdriverIO will handle function
+        // serialization via its standard polyfill wrapper.
+        return (originalExecute as unknown as (s: typeof script, ...a: typeof args) => Promise<ReturnValue>)(
+          script,
+          ...args,
+        );
       }
 
       // Non-embedded (tauri-driver/official): use executeAsync for both functions and strings.

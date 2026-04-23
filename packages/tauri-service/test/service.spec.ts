@@ -199,7 +199,7 @@ describe('TauriWorkerService', () => {
       expect(mockExecute).toHaveBeenCalledWith('return document.title');
     });
 
-    it('should pass function scripts as a string to sync execute for embedded provider', () => {
+    it('should pass function scripts unchanged to sync execute for embedded provider', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
       const mockBrowser = createMockBrowser({ execute: mockExecute });
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
@@ -208,10 +208,10 @@ describe('TauriWorkerService', () => {
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      // For embedded, the function is converted to its source string so WebdriverIO skips
-      // its function-object polyfill wrapper. The embedded WebDriver's execute/sync then
-      // evaluates the string as a function expression and applies the args.
-      expect(mockExecute).toHaveBeenCalledWith(testFn.toString(), 1, 2);
+      // For embedded, pass the script through untouched — WebdriverIO wraps the function with
+      // its polyfill and returns via `return (fn).apply(null, arguments)`, which is a valid
+      // function body for the W3C-compliant embedded WebDriver.
+      expect(mockExecute).toHaveBeenCalledWith(testFn, 1, 2);
     });
   });
 
@@ -316,11 +316,10 @@ describe('TauriWorkerService', () => {
 
       await service.before({} as any, [], mockBrowser);
 
-      // For embedded, patchedExecute converts function scripts to their source string before
-      // calling the original (sync) execute. clearStaleMocks appears as the function name in
-      // the stringified source.
+      // For embedded, patchedExecute passes function scripts through untouched, so
+      // clearStaleMocks reaches originalExecute as a function with its name preserved.
       const clearCall = originalExecute.mock.calls.find(
-        ([script]) => typeof script === 'string' && script.includes('clearStaleMocks'),
+        ([script]) => typeof script === 'function' && script.name === 'clearStaleMocks',
       );
       expect(clearCall).toBeDefined();
     });
