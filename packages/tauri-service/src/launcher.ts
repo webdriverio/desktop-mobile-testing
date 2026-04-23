@@ -537,12 +537,24 @@ export default class TauriLaunchService {
           throw new SevereServiceError(`Failed to start tauri-driver: ${(error as Error).message}`);
         }
 
-        // On macOS with CrabNebula, probe /status to detect a dead backend WebSocket before WDIO connects.
-        // The backend can drop its WebSocket to tauri-driver ~68ms after connect; without this check WDIO
-        // would hang for ~4.7 minutes before discovering the session is broken.
+        // On macOS with CrabNebula, poll /status until the cloud relay WebSocket is established.
+        // The relay is set up asynchronously after the backend starts listening, and tauri-driver's
+        // own startup probe can reach it before it's ready. Without this check, WDIO would hang
+        // for ~4.7 minutes before discovering the session is broken.
         if (process.platform === 'darwin' && isCrabNebula) {
-          await new Promise<void>((r) => setTimeout(r, 200));
-          const statusOk = await this.probeTauriDriverStatus(port);
+          const probeDeadline = Date.now() + 30000;
+          let statusOk = false;
+          let delay = 200;
+          while (Date.now() < probeDeadline) {
+            await new Promise<void>((r) => setTimeout(r, delay));
+            delay = 1000;
+            statusOk = await this.probeTauriDriverStatus(port);
+            if (statusOk) {
+              log.info('tauri-driver /status relay check passed');
+              break;
+            }
+            log.debug('tauri-driver /status relay not yet ready, retrying...');
+          }
           if (!statusOk) {
             throw new SevereServiceError(
               'tauri-driver /status probe failed — CrabNebula backend WebSocket may be broken. ' +
