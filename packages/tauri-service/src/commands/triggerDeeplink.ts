@@ -240,12 +240,13 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
     }
 
     try {
-      // Build URL using char codes to avoid WebKit parsing the URL string literally
+      // Build URL using char codes to avoid WebKit parsing the URL string literally.
+      // Use plain statements (not an arrow function) so the script works correctly when
+      // the embedded WebDriver wraps it as a function body: (function() { SCRIPT })().
       const charCodes = Array.from(validatedUrl)
         .map((c) => c.charCodeAt(0))
         .join(',');
-      // Use arrow function format - same as working checks in the test
-      const script = `() => {
+      const script = `
         try {
           var charCodes = [${charCodes}];
           var url = String.fromCharCode.apply(null, charCodes);
@@ -260,7 +261,7 @@ export async function triggerDeeplink(this: TauriServiceContext, url: string): P
         } catch (e) {
           console.error('[WDIO Deeplink] Error:', e.message);
         }
-      }`;
+      `;
       await this.browser.execute(script);
 
       log.info(`Deeplink injected successfully: ${validatedUrl}`);
