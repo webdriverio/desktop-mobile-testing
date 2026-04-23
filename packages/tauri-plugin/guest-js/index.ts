@@ -141,6 +141,42 @@ interface ExecuteOptions {
  * @param argsJson - Serialized user arguments as JSON string (optional)
  * @returns Result of the script execution
  */
+// These helpers are duplicated from electron-service/src/utils.ts. guest-js compiles to browser
+// JavaScript and cannot import from @wdio/native-utils or any Node.js package.
+
+// Returns true if s contains ';' outside string literals at bracket depth 0.
+// Detects multi-statement scripts like "someFn(); anotherFn()" that don't start with a keyword.
+function hasSemicolonOutsideQuotes(s: string): boolean {
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inTemplate = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '\\' && (inSingle || inDouble || inTemplate)) {
+      i++;
+      continue;
+    }
+    if (c === "'" && !inDouble && !inTemplate) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (c === '"' && !inSingle && !inTemplate) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (c === '`' && !inSingle && !inDouble) {
+      inTemplate = !inTemplate;
+      continue;
+    }
+    if (inSingle || inDouble || inTemplate) continue;
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') depth--;
+    else if (c === ';' && depth === 0) return true;
+  }
+  return false;
+}
+
 // Returns true if s contains '=>' at bracket depth 0 (not nested inside parens/brackets).
 // Prevents false positives on expressions like (arr.find(x => x)) where => is nested.
 function hasTopLevelArrow(s: string): boolean {
@@ -232,7 +268,8 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     // Statement keywords (return, const, etc.) are passed through as-is;
     // pure expressions get an explicit return so callers receive the value.
     const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
-    scriptToSend = hasStatementKeyword ? `(async () => { ${script} })()` : `(async () => { return ${script}; })()`;
+    const hasStatement = hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed);
+    scriptToSend = hasStatement ? `(async () => { ${script} })()` : `(async () => { return ${script}; })()`;
   }
 
   const invoke = await getInvoke();

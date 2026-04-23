@@ -175,6 +175,43 @@ pub(crate) async fn execute<R: Runtime>(
             false
         }
 
+        // Returns true if s contains ';' outside string literals at bracket depth 0.
+        fn has_semicolon_outside_quotes(s: &str) -> bool {
+            let bytes = s.as_bytes();
+            let mut in_single_quote = false;
+            let mut in_double_quote = false;
+            let mut in_backtick = false;
+            let mut depth: i32 = 0;
+            let mut backslash_count: usize = 0;
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                if b == b'\\' {
+                    backslash_count += 1;
+                    i += 1;
+                    continue;
+                }
+                let escaped = backslash_count % 2 == 1;
+                backslash_count = 0;
+                if !escaped {
+                    match b {
+                        b'\'' if !in_double_quote && !in_backtick => in_single_quote = !in_single_quote,
+                        b'"' if !in_single_quote && !in_backtick => in_double_quote = !in_double_quote,
+                        b'`' if !in_single_quote && !in_double_quote => in_backtick = !in_backtick,
+                        _ if !in_single_quote && !in_double_quote && !in_backtick => match b {
+                            b'(' | b'[' | b'{' => depth += 1,
+                            b')' | b']' | b'}' => depth -= 1,
+                            b';' if depth == 0 => return true,
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                }
+                i += 1;
+            }
+            false
+        }
+
     // Check for arrow functions at START of script:
     // - "(args) => ..." (parenthesized params)
     // - "param => ..." (single param, alphanumeric start)
@@ -212,24 +249,25 @@ pub(crate) async fn execute<R: Runtime>(
         ));
     } else {
         // Statement/expression-style script - wrap in block-body IIFE
-        let has_statement = request.script.trim_start().starts_with("const ")
-        || request.script.trim_start().starts_with("let ")
-        || request.script.trim_start().starts_with("var ")
-        || request.script.trim_start().starts_with("if ")
-        || request.script.trim_start().starts_with("if(")
-        || request.script.trim_start().starts_with("for ")
-        || request.script.trim_start().starts_with("for(")
-        || request.script.trim_start().starts_with("while ")
-        || request.script.trim_start().starts_with("while(")
-        || request.script.trim_start().starts_with("switch ")
-        || request.script.trim_start().starts_with("switch(")
-        || request.script.trim_start().starts_with("throw ")
-        || request.script.trim_start().starts_with("try ")
-        || request.script.trim_start().starts_with("try{")
-        || request.script.trim_start().starts_with("do ")
-        || request.script.trim_start().starts_with("do{");
+        let t = request.script.trim_start();
+        let has_statement = t.starts_with("const ")
+        || t.starts_with("let ")
+        || t.starts_with("var ")
+        || t.starts_with("if ")
+        || t.starts_with("if(")
+        || t.starts_with("for ")
+        || t.starts_with("for(")
+        || t.starts_with("while ")
+        || t.starts_with("while(")
+        || t.starts_with("switch ")
+        || t.starts_with("switch(")
+        || t.starts_with("throw ")
+        || t.starts_with("try ")
+        || t.starts_with("try{")
+        || t.starts_with("do ")
+        || t.starts_with("do{")
+        || has_semicolon_outside_quotes(t);
         let has_return = {
-            let t = request.script.trim_start();
             if let Some(rest) = t.strip_prefix("return") {
                 rest.is_empty() || rest.starts_with(char::is_whitespace) || rest.starts_with(';') || rest.starts_with('(')
             } else {
