@@ -139,6 +139,28 @@ describe('TauriWorkerService', () => {
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
+    it('should route executeWithinTauri through executeAsync on non-embedded providers', () => {
+      const mockExecute = vi.fn().mockResolvedValue(undefined);
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
+      const service = new TauriWorkerService({ driverProvider: 'official' }, { 'wdio:tauriServiceOptions': {} });
+
+      (service as any).patchBrowserExecute(mockBrowser);
+
+      // Simulate the internal call that commands/execute.ts makes
+      const executeWithinTauri = async function executeWithinTauri(
+        _script: string,
+        _execOptions: object,
+        _argsJson: string,
+      ) {};
+      mockBrowser.execute(executeWithinTauri as any, 'fn string', {}, '[]');
+
+      // Must use executeAsync — the async function returns a Promise that the sync
+      // WebDriver endpoint on WebKit (WKWebView/macOS) cannot await.
+      expect(mockExecuteAsync).toHaveBeenCalled();
+      expect(mockExecute).not.toHaveBeenCalled();
+    });
+
     it('should pass string scripts as-is for embedded provider', () => {
       const mockExecute = vi.fn().mockResolvedValue(undefined);
       const mockBrowser = createMockBrowser({ execute: mockExecute });

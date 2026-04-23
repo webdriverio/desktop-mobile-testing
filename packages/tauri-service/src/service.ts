@@ -378,16 +378,6 @@ export default class TauriWorkerService {
       script: string | ((...args: InnerArguments) => ReturnValue),
       ...args: InnerArguments
     ): Promise<ReturnValue> {
-      // Skip patching for service's internal executeWithinTauri calls for official drivers
-      // to avoid architecture conflicts, but allow patching for embedded drivers
-      if (typeof script === 'function' && script.name === 'executeWithinTauri' && isEmbedded === false) {
-        log.debug('Skipping execute patch for service internal call');
-        return originalExecute(
-          script as string | ((...args: unknown[]) => unknown),
-          ...(args as unknown[]),
-        ) as Promise<ReturnValue>;
-      }
-
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
