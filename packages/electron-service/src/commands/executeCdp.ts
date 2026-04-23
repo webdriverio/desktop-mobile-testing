@@ -3,11 +3,11 @@ import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'service');
 
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils';
 import { parse, print } from 'recast';
 import type { ElectronCdpBridge } from '../bridge';
-
 import mockStore from '../mockStore.js';
-import { hasSemicolonOutsideQuotes, hasTopLevelArrow, isInternalCommand } from '../utils.js';
+import { isInternalCommand } from '../utils.js';
 
 const CACHE_MAX_SIZE = 100;
 const cache = new Map<string, string>();

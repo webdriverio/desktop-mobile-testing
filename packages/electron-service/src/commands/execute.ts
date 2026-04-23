@@ -1,4 +1,4 @@
-import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '../utils.js';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils';
 
 export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   browser: WebdriverIO.Browser,

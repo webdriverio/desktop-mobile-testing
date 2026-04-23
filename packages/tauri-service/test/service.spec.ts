@@ -2,15 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseLogLines } from '../src/logParser.js';
 import { closeLogWriter, getLogWriter, isLogWriterInitialized } from '../src/logWriter.js';
 
-vi.mock('@wdio/native-utils', () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
-  waitUntilWindowAvailable: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('@wdio/native-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@wdio/native-utils')>();
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }),
+    waitUntilWindowAvailable: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 vi.mock('../src/commands/mock.js', () => ({
   clearAllMocks: vi.fn().mockResolvedValue(undefined),

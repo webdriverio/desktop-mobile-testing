@@ -25,6 +25,7 @@ export {
   unwrapOr,
   wrapAsync,
 } from './result.js';
+export { hasSemicolonOutsideQuotes, hasTopLevelArrow } from './scriptDetect.js';
 export { selectExecutable, validateBinaryPaths } from './selectExecutable.js';
 export { waitUntilWindowAvailable } from './window.js';
 export { createLogger };

@@ -1,5 +1,5 @@
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
-import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
+import { createLogger, hasSemicolonOutsideQuotes, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import { triggerDeeplink } from './commands/triggerDeeplink.js';
@@ -418,7 +418,8 @@ export default class TauriWorkerService {
         const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(
           trimmed,
         );
-        const wrappedBody = hasStatementKeyword ? scriptString : `return ${scriptString};`;
+        const wrappedBody =
+          hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed) ? scriptString : `return ${scriptString};`;
         const wrappedScript = `
             ${CONSOLE_WRAPPER_SCRIPT}
             (async function() { ${wrappedBody} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
