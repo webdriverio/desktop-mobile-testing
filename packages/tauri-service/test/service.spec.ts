@@ -188,30 +188,31 @@ describe('TauriWorkerService', () => {
       expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should pass string scripts as-is for embedded provider', () => {
+    it('should use executeAsync for string scripts on embedded provider', () => {
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
 
       (service as any).patchBrowserExecute(mockBrowser);
       mockBrowser.execute('return document.title');
 
-      expect(mockExecute).toHaveBeenCalledWith('return document.title');
+      expect(mockExecuteAsync).toHaveBeenCalled();
+      expect(mockExecute).not.toHaveBeenCalled();
     });
 
-    it('should pass function scripts as-is for embedded provider', () => {
+    it('should use executeAsync for function scripts on embedded provider', () => {
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
       const mockExecute = vi.fn().mockResolvedValue(undefined);
-      const mockBrowser = createMockBrowser({ execute: mockExecute });
+      const mockBrowser = createMockBrowser({ execute: mockExecute, executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
 
       (service as any).patchBrowserExecute(mockBrowser);
       const testFn = (a: number, b: number) => a + b;
       mockBrowser.execute(testFn as any, 1, 2);
 
-      // For embedded, the original function is passed directly so WDIO can invoke it with args.
-      // Converting to string would lose the invocation — the WebDriver would get a function
-      // expression as the script body and return the function object instead of its result.
-      expect(mockExecute).toHaveBeenCalledWith(testFn, 1, 2);
+      expect(mockExecuteAsync).toHaveBeenCalledWith(expect.stringContaining('(a, b) => a + b'), 1, 2);
+      expect(mockExecute).not.toHaveBeenCalled();
     });
   });
 
@@ -310,17 +311,15 @@ describe('TauriWorkerService', () => {
     });
 
     it('should clear stale mocks at session start for embedded driver provider', async () => {
-      const mockBrowser = createMockBrowser();
-      // Capture before patchBrowserExecute replaces browser.execute. For embedded, the patch
-      // passes function scripts directly to originalExecute (not as a string), so we match on
-      // the function's name which contains the intent.
-      const originalExecute = mockBrowser.execute as ReturnType<typeof vi.fn>;
+      const mockExecuteAsync = vi.fn().mockResolvedValue(undefined);
+      const mockBrowser = createMockBrowser({ executeAsync: mockExecuteAsync });
       const service = new TauriWorkerService({ driverProvider: 'embedded' }, { 'wdio:tauriServiceOptions': {} });
 
       await service.before({} as any, [], mockBrowser);
 
-      const clearCall = originalExecute.mock.calls.find(
-        ([script]) => typeof script === 'function' && script.name === 'clearStaleMocks',
+      // clearStaleMocks is a function script; patchedExecute routes it through executeAsync
+      const clearCall = mockExecuteAsync.mock.calls.find(
+        ([script]) => typeof script === 'string' && script.includes('clearStaleMocks'),
       );
       expect(clearCall).toBeDefined();
     });

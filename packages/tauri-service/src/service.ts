@@ -370,9 +370,7 @@ export default class TauriWorkerService {
       return;
     }
 
-    const originalExecute = browser.execute.bind(browser);
     const originalExecuteAsync = (browser.executeAsync as typeof browser.execute).bind(browser);
-    const isEmbedded = this.driverProvider === 'embedded';
 
     const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
       script: string | ((...args: InnerArguments) => ReturnValue),
@@ -380,18 +378,8 @@ export default class TauriWorkerService {
     ): Promise<ReturnValue> {
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
-      if (isEmbedded) {
-        return (originalExecute as unknown as (s: typeof script, ...a: typeof args) => Promise<ReturnValue>)(
-          script,
-          ...args,
-        );
-      }
-
-      // For functions: use .toString() - produces valid JS function source
-      // For strings: pass as-is (let the WebDriver handle it, or use executeAsync for async results)
-
-      // For non-embedded (tauri-driver/official): use executeAsync for both functions and strings
-      // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute
+      // Both embedded and non-embedded Tauri WebDrivers use WebKit, which does not auto-await
+      // Promises returned from execute/sync. Always use executeAsync with an explicit callback.
       if (typeof script === 'function') {
         // Function scripts: use executeAsync with .then() callbacks to handle async results
         // Wrap in Promise.resolve to handle both sync and async function return values
