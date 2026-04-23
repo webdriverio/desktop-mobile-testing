@@ -947,7 +947,7 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                     try {{
                         var args = {args_json}.map(deserializeArg);
                         // W3C-compliant: wrap as function body, apply with args
-                        var raw_result = await (function() {{ {script} }}).apply(null, args);
+                        var raw_result = await (async function() {{ {script} }}).apply(null, args);
                         var serialized = serializeValue(raw_result);
                         window['{result_var}'] = {{ __wd_success: true, __wd_value: serialized }};
                     }} catch (e) {{
