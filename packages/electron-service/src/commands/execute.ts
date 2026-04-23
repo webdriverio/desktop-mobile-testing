@@ -1,3 +1,5 @@
+import { hasTopLevelArrow } from '../utils.js';
+
 export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   browser: WebdriverIO.Browser,
   script: string | ((...innerArgs: InnerArguments) => ReturnValue),
@@ -33,23 +35,14 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   return (returnValue as ReturnValue) ?? undefined;
 }
 
-/**
- * Wrap string scripts in async IIFE for proper execution in Electron
- * - Function-like strings (() => ..., function() {}, async () =>): pass through as-is
- * - Pure expressions (e.g., "1 + 2 + 3"): add return and wrap in IIFE
- * - Statement scripts (e.g., "return 42", "const x = 1"): wrap in IIFE without adding return
- */
 function wrapStringScript(script: string): string {
   const trimmed = script.trim();
 
-  // Check if it's a function-like string (should be passed through as-is)
-  // Only match single-param arrow at START of script (e.g., "x => x + 1")
-  // Don't match arrows inside expressions like "return items.filter(x => x > 0)"
   const isFunctionLike =
-    (trimmed.startsWith('(') && trimmed.includes('=>')) ||
+    (trimmed.startsWith('(') && hasTopLevelArrow(trimmed)) ||
     /^function[\s(]/.test(trimmed) ||
     /^async[\s(]/.test(trimmed) ||
-    /^(\w+)\s*=>/.test(trimmed); // single-param arrow at START like "x => x + 1"
+    /^(\w+)\s*=>/.test(trimmed);
 
   if (isFunctionLike) {
     // Function-like string - pass through as-is (CDP can handle it)

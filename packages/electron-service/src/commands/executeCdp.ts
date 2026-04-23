@@ -7,7 +7,7 @@ import { parse, print } from 'recast';
 import type { ElectronCdpBridge } from '../bridge';
 
 import mockStore from '../mockStore.js';
-import { isInternalCommand } from '../utils.js';
+import { hasTopLevelArrow, isInternalCommand } from '../utils.js';
 
 const CACHE_MAX_SIZE = 100;
 const cache = new Map<string, string>();
@@ -55,7 +55,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     const trimmed = script.trim();
     // Only let recast handle arrow functions starting with ( and containing =>
     // These get transformed to add electron parameter
-    const isArrowFunction = trimmed.startsWith('(') && trimmed.includes('=>') && !trimmed.includes('function');
+    const isArrowFunction = trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.includes('function');
 
     if (isArrowFunction) {
       // Arrow function - recast handles electron param injection
@@ -105,7 +105,7 @@ function wrapStringScriptForCdp(script: string): string {
 
   // Check if it's a simple arrow function that can be transformed by recast
   // These patterns can be safely passed to recast which adds the electron parameter
-  const canRecastHandle = trimmed.startsWith('(') && trimmed.includes('=>') && !trimmed.includes('function');
+  const canRecastHandle = trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.includes('function');
 
   if (canRecastHandle) {
     // Simple arrow function - pass to recast for transformation
