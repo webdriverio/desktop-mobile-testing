@@ -146,12 +146,22 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
   }
 
-  // Build a minimal tauri object with a mock-routing invoke. We deliberately avoid
-  // spreading/Object.assign on window.__TAURI__ or window.__TAURI__.core because on
-  // macOS/WKWebView those objects (or their Proxy wrappers installed by
-  // setupInvokeInterception) can have non-configurable/non-writable own data properties that
-  // trigger Proxy invariant violations when iterated. Only core.invoke is needed by scripts.
-  const wrappedScript = `
+  const trimmed = script.trim();
+  const isFunctionLike =
+    (trimmed.startsWith('(') && trimmed.includes('=>')) ||
+    /^function[\s(]/.test(trimmed) ||
+    /^async[\s(]/.test(trimmed) ||
+    /^(\w+)\s*=>/.test(trimmed);
+
+  let scriptToSend: string;
+
+  if (isFunctionLike) {
+    // Build a minimal tauri object with a mock-routing invoke. We deliberately avoid
+    // spreading/Object.assign on window.__TAURI__ or window.__TAURI__.core because on
+    // macOS/WKWebView those objects (or their Proxy wrappers installed by
+    // setupInvokeInterception) can have non-configurable/non-writable own data properties that
+    // trigger Proxy invariant violations when iterated. Only core.invoke is needed by scripts.
+    scriptToSend = `
     (async () => {
       const __wdio_args = ${argsJson ?? '[]'};
 
@@ -184,12 +194,19 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
       return await (${script})(__wdio_tauri, ...__wdio_args);
     })()
   `.trim();
+  } else {
+    // Plain string script — not callable. Wrap as an async IIFE body.
+    // Statement keywords (return, const, etc.) are passed through as-is;
+    // pure expressions get an explicit return so callers receive the value.
+    const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
+    scriptToSend = hasStatementKeyword ? `(async () => { ${script} })()` : `(async () => { return ${script}; })()`;
+  }
 
   const invoke = await getInvoke();
   try {
     const result = await invoke('plugin:wdio|execute', {
       request: {
-        script: wrappedScript,
+        script: scriptToSend,
         args: [],
         window_label: options?.windowLabel,
       },

@@ -52,6 +52,10 @@ pub(crate) async fn execute<R: Runtime>(
     log::debug!("Execute command called");
     log::trace!("Script length: {} chars", request.script.len());
 
+    // Retain a reference to the invoking window for listener registration.
+    // We clone before the conditional because the else branch moves `window` into target_window.
+    let invoking_window = window.clone();
+
     // Determine which window to use for execution
     let target_window = if let Some(ref label) = request.window_label {
         log::debug!("Target window label specified: {}", label);
@@ -146,8 +150,10 @@ pub(crate) async fn execute<R: Runtime>(
         && contains_arrow_outside_quotes(trimmed)
         && trimmed.find("=>").map(|pos| {
             let before = trimmed[..pos].trim();
-            // Single param: alphanumeric chars only, no spaces (except for the param name)
-            !before.is_empty() && !before.contains(' ')
+            // Single param: no spaces and no parens before =>
+            // Parens before => mean the arrow is inside a nested expression, not a top-level arrow
+            // e.g. "x => x + 1" is a param arrow; "obj.fn(x => x)" is not
+            !before.is_empty() && !before.contains(' ') && !before.contains('(')
         }).unwrap_or(false);
     // Only detect function-like patterns: function, async, arrow functions
     // Don't use starts_with('(') as it catches any parenthesized expression like (document.title)
@@ -261,7 +267,7 @@ pub(crate) async fn execute<R: Runtime>(
         handle_event(event, tx_clone_app.clone());
     });
 
-    let listener_id_window = window.listen(&event_id, move |event| {
+    let listener_id_window = invoking_window.listen(&event_id, move |event| {
         log::trace!("Received result event on window target: {}", event.payload());
         handle_event(event, tx_clone_window.clone());
     });
@@ -329,7 +335,7 @@ pub(crate) async fn execute<R: Runtime>(
     if let Err(e) = target_window.eval(&script_with_result) {
         log::error!("Failed to eval script: {}", e);
         app.unlisten(listener_id_app);
-        window.unlisten(listener_id_window);
+        invoking_window.unlisten(listener_id_window);
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
     }
 
@@ -346,20 +352,20 @@ pub(crate) async fn execute<R: Runtime>(
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
             app.unlisten(listener_id_app);
-            window.unlisten(listener_id_window);
+            invoking_window.unlisten(listener_id_window);
             Ok(result)
         }
         Ok(Ok(Err(e))) => {
             log::error!("JS error during execution: {}", e);
             app.unlisten(listener_id_app);
-            window.unlisten(listener_id_window);
+            invoking_window.unlisten(listener_id_window);
             Err(e)
         }
         Ok(Err(_)) => {
             // Channel closed without sending (shouldn't happen)
             log::error!("Channel closed unexpectedly. Event ID: {}. Window: {}", event_id, window_label);
             app.unlisten(listener_id_app);
-            window.unlisten(listener_id_window);
+            invoking_window.unlisten(listener_id_window);
             Err(crate::Error::ExecuteError(format!(
                 "Channel closed unexpectedly. Event ID: {}. Window: {}",
                 event_id, window_label
@@ -369,7 +375,7 @@ pub(crate) async fn execute<R: Runtime>(
             log::error!("Timeout waiting for execute result after 30s. Event ID: {}. Window: {}",
                 event_id, window_label);
             app.unlisten(listener_id_app);
-            window.unlisten(listener_id_window);
+            invoking_window.unlisten(listener_id_window);
             Err(crate::Error::ExecuteError(format!(
                 "Script execution timed out after 30s. Event ID: {}. Window: {}",
                 event_id, window_label
