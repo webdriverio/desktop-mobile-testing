@@ -537,32 +537,6 @@ export default class TauriLaunchService {
           throw new SevereServiceError(`Failed to start tauri-driver: ${(error as Error).message}`);
         }
 
-        // On macOS with CrabNebula, poll /status until the cloud relay WebSocket is established.
-        // The relay is set up asynchronously after the backend starts listening, and tauri-driver's
-        // own startup probe can reach it before it's ready. Without this check, WDIO would hang
-        // for ~4.7 minutes before discovering the session is broken.
-        if (process.platform === 'darwin' && isCrabNebula) {
-          const probeDeadline = Date.now() + 30000;
-          let statusOk = false;
-          let delay = 200;
-          while (Date.now() < probeDeadline) {
-            await new Promise<void>((r) => setTimeout(r, delay));
-            delay = 1000;
-            statusOk = await this.probeTauriDriverStatus(port);
-            if (statusOk) {
-              log.info('tauri-driver /status relay check passed');
-              break;
-            }
-            log.debug('tauri-driver /status relay not yet ready, retrying...');
-          }
-          if (!statusOk) {
-            throw new SevereServiceError(
-              'tauri-driver /status probe failed — CrabNebula backend WebSocket may be broken. ' +
-                'Check CN_API_KEY validity and cloud relay connectivity.',
-            );
-          }
-        }
-
         // Update the capabilities object with hostname and port so WDIO connects to tauri-driver
         for (const cap of capsList) {
           (cap as { port?: number; hostname?: string }).port = port;
@@ -1015,21 +989,6 @@ export default class TauriLaunchService {
     this.backendPortManager.clear();
 
     log.debug('Tauri service completed');
-  }
-
-  private async probeTauriDriverStatus(port: number): Promise<boolean> {
-    const http = await import('node:http');
-    return new Promise((resolve) => {
-      const req = http.get(`http://127.0.0.1:${port}/status`, { timeout: 5000 }, (res) => {
-        res.resume();
-        resolve(res.statusCode === 200);
-      });
-      req.on('error', () => resolve(false));
-      req.on('timeout', () => {
-        req.destroy();
-        resolve(false);
-      });
-    });
   }
 
   /**
