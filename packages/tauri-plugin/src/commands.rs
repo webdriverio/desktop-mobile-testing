@@ -231,7 +231,7 @@ pub(crate) async fn execute<R: Runtime>(
         let has_return = {
             let t = request.script.trim_start();
             if let Some(rest) = t.strip_prefix("return") {
-                rest.is_empty() || rest.starts_with(char::is_whitespace) || rest.starts_with(';')
+                rest.is_empty() || rest.starts_with(char::is_whitespace) || rest.starts_with(';') || rest.starts_with('(')
             } else {
                 false
             }
