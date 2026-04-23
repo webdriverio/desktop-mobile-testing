@@ -7,7 +7,7 @@ import { parse, print } from 'recast';
 import type { ElectronCdpBridge } from '../bridge';
 
 import mockStore from '../mockStore.js';
-import { hasTopLevelArrow, isInternalCommand } from '../utils.js';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow, isInternalCommand } from '../utils.js';
 
 const CACHE_MAX_SIZE = 100;
 const cache = new Map<string, string>();
@@ -127,48 +127,6 @@ function wrapStringScriptForCdp(script: string): string {
   } else {
     return `async () => (${script})`;
   }
-}
-
-function hasSemicolonOutsideQuotes(str: string): boolean {
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-  let inTemplateLiteral = false;
-  let bracketDepth = 0;
-
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-
-    if (char !== '\\') {
-      let backslashCount = 0;
-      let j = i - 1;
-      while (j >= 0 && str[j] === '\\') {
-        backslashCount++;
-        j--;
-      }
-      if (backslashCount % 2 === 1) {
-        continue;
-      }
-    }
-
-    if (char === "'" && !inDoubleQuote && !inTemplateLiteral) {
-      inSingleQuote = !inSingleQuote;
-    } else if (char === '"' && !inSingleQuote && !inTemplateLiteral) {
-      inDoubleQuote = !inDoubleQuote;
-    } else if (char === '`' && !inSingleQuote && !inDoubleQuote) {
-      inTemplateLiteral = !inTemplateLiteral;
-    }
-
-    if (!inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
-      if (char === '{' || char === '[' || char === '(') bracketDepth++;
-      if (char === '}' || char === ']' || char === ')') bracketDepth--;
-    }
-
-    if (char === ';' && bracketDepth === 0 && !inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 async function syncMockStatus(args: unknown[]) {

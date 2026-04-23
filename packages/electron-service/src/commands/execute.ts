@@ -1,4 +1,4 @@
-import { hasTopLevelArrow } from '../utils.js';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '../utils.js';
 
 export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   browser: WebdriverIO.Browser,
@@ -63,55 +63,4 @@ function wrapStringScript(script: string): string {
     // Pure expression - add return and wrap in async IIFE
     return `(() => { return ${script}; })()`;
   }
-}
-
-/**
- * Check for semicolons outside of string literals and template literals
- */
-function hasSemicolonOutsideQuotes(str: string): boolean {
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-  let inTemplateLiteral = false;
-  let bracketDepth = 0;
-
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-
-    // Handle escape sequences - count consecutive backslashes before this char
-    // Odd number of backslashes means the character is escaped
-    if (char !== '\\') {
-      let backslashCount = 0;
-      let j = i - 1;
-      while (j >= 0 && str[j] === '\\') {
-        backslashCount++;
-        j--;
-      }
-      if (backslashCount % 2 === 1) {
-        // Odd backslashes = escaped character, skip
-        continue;
-      }
-    }
-
-    // Track quote states
-    if (char === "'" && !inDoubleQuote && !inTemplateLiteral) {
-      inSingleQuote = !inSingleQuote;
-    } else if (char === '"' && !inSingleQuote && !inTemplateLiteral) {
-      inDoubleQuote = !inDoubleQuote;
-    } else if (char === '`' && !inSingleQuote && !inDoubleQuote) {
-      inTemplateLiteral = !inTemplateLiteral;
-    }
-
-    // Track bracket depth (for handling object/array literals inside quotes)
-    if (!inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
-      if (char === '{' || char === '[' || char === '(') bracketDepth++;
-      if (char === '}' || char === ']' || char === ')') bracketDepth--;
-    }
-
-    // Check for semicolon outside of quotes/brackets
-    if (char === ';' && bracketDepth === 0 && !inSingleQuote && !inDoubleQuote && !inTemplateLiteral) {
-      return true;
-    }
-  }
-
-  return false;
 }
