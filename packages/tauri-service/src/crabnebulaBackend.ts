@@ -1,4 +1,4 @@
-import { type ChildProcess, execSync, spawn } from 'node:child_process';
+import { type ChildProcess, execFileSync, execSync, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
 import { findTestRunnerBackend } from './driverManager.js';
@@ -62,6 +62,9 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
   log.info(`Starting test-runner-backend on port ${port}`);
 
   // Kill any orphaned process still holding the port (e.g. from a previous WDIO run killed by SIGKILL)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid port: ${port}`);
+  }
   try {
     if (process.platform === 'win32') {
       execSync(
@@ -69,12 +72,18 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
         { stdio: 'ignore' },
       );
     } else {
-      const pidsOutput = execSync(`lsof -ti :${port}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+      const pidsOutput = execFileSync('lsof', ['-ti', `:${port}`], { stdio: ['ignore', 'pipe', 'ignore'] })
         .toString()
         .trim();
       if (pidsOutput) {
-        execSync(`kill -9 ${pidsOutput.split('\n').join(' ')}`, { stdio: 'ignore' });
-        log.info(`Killed orphaned process(es) on port ${port}: ${pidsOutput.replace(/\n/g, ', ')}`);
+        const pids = pidsOutput
+          .split('\n')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => Number.isInteger(n) && n > 0);
+        for (const pid of pids) {
+          process.kill(pid, 'SIGKILL');
+        }
+        log.info(`Killed orphaned process(es) on port ${port}: ${pids.join(', ')}`);
       }
     }
   } catch {
