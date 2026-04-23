@@ -78,69 +78,61 @@ describe('execute Command', () => {
     expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), script);
   });
 
-  it('should wrap expression-style string scripts in async IIFE with return', async () => {
+  it('should wrap expression-style string scripts in IIFE with return', async () => {
     await execute(globalThis.browser, '1 + 2 + 3');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return 1 + 2 + 3; })()'),
+      expect.stringContaining('(() => { return 1 + 2 + 3; })()'),
     );
   });
 
-  it('should wrap statement-style string scripts in async IIFE without adding return', async () => {
+  it('should wrap statement-style string scripts in IIFE without adding return', async () => {
     await execute(globalThis.browser, 'return 42');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return 42 })()'),
+      expect.stringContaining('(() => { return 42 })()'),
     );
   });
 
-  it('should wrap multi-statement string scripts in async IIFE', async () => {
+  it('should wrap multi-statement string scripts in IIFE', async () => {
     await execute(globalThis.browser, 'const x = 10; const y = 20; return x + y;');
-    expect(globalThis.browser.execute).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.stringContaining('(async () => {'),
-    );
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), expect.stringContaining('(() => {'));
   });
 
   it('should handle return(expr) pattern without adding extra return', async () => {
-    // return() pattern should be treated as statement, not expression
     await execute(globalThis.browser, 'return(document.title)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return(document.title) })()'),
+      expect.stringContaining('(() => { return(document.title) })()'),
     );
   });
 
   it('should not false-positive on semicolons inside string literals', async () => {
-    // Semicolons inside string literals should not trigger statement detection
     await execute(globalThis.browser, '"foo;bar"');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return "foo;bar"; })()'),
+      expect.stringContaining('(() => { return "foo;bar"; })()'),
     );
   });
 
   it('should treat document.title as expression (do prefix false positive)', async () => {
-    // "document.title" starts with "do" but is NOT a statement - should add return
     await execute(globalThis.browser, 'document.title');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return document.title; })()'),
+      expect.stringContaining('(() => { return document.title; })()'),
     );
   });
 
   it('should treat forEach() as expression (for prefix false positive)', async () => {
-    // "[1,2,3].forEach()" starts with "for" but is NOT a statement - should add return
     await execute(globalThis.browser, '[1,2,3].forEach(x => x)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), expect.stringContaining('return'));
   });
 
   it('should treat trySomething() as expression (try prefix false positive)', async () => {
-    // "trySomething()" starts with "try" but is NOT a statement - should add return
     await execute(globalThis.browser, 'trySomething()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return trySomething(); })()'),
+      expect.stringContaining('(() => { return trySomething(); })()'),
     );
   });
 
@@ -148,7 +140,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'asyncData.fetchAll()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return asyncData.fetchAll(); })()'),
+      expect.stringContaining('(() => { return asyncData.fetchAll(); })()'),
     );
   });
 
@@ -156,7 +148,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'functionResult.call()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return functionResult.call(); })()'),
+      expect.stringContaining('(() => { return functionResult.call(); })()'),
     );
   });
 
@@ -164,7 +156,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '(document.title)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return (document.title); })()'),
+      expect.stringContaining('(() => { return (document.title); })()'),
     );
   });
 
@@ -172,7 +164,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '(a + b)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(async () => { return (a + b); })()'),
+      expect.stringContaining('(() => { return (a + b); })()'),
     );
   });
 

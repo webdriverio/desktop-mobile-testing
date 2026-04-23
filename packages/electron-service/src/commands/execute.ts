@@ -57,11 +57,11 @@ function wrapStringScript(script: string): string {
   const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
 
   if (hasRealSemicolon || hasStatementKeyword) {
-    // Multi-statement or statement-style script - wrap in async IIFE
-    return `(async () => { ${script} })()`;
+    // Multi-statement or statement-style script
+    return `(() => { ${script} })()`;
   } else {
     // Pure expression - add return and wrap in async IIFE
-    return `(async () => { return ${script}; })()`;
+    return `(() => { return ${script}; })()`;
   }
 }
 
