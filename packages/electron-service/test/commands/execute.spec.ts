@@ -82,7 +82,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '1 + 2 + 3');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return 1 + 2 + 3; })()'),
+      expect.stringContaining('(async () => { return 1 + 2 + 3; })()'),
     );
   });
 
@@ -90,20 +90,23 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'return 42');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return 42 })()'),
+      expect.stringContaining('(async () => { return 42 })()'),
     );
   });
 
   it('should wrap multi-statement string scripts in IIFE', async () => {
     await execute(globalThis.browser, 'const x = 10; const y = 20; return x + y;');
-    expect(globalThis.browser.execute).toHaveBeenCalledWith(expect.any(Function), expect.stringContaining('(() => {'));
+    expect(globalThis.browser.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.stringContaining('(async () => {'),
+    );
   });
 
   it('should handle return(expr) pattern without adding extra return', async () => {
     await execute(globalThis.browser, 'return(document.title)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return(document.title) })()'),
+      expect.stringContaining('(async () => { return(document.title) })()'),
     );
   });
 
@@ -111,7 +114,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '"foo;bar"');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return "foo;bar"; })()'),
+      expect.stringContaining('(async () => { return "foo;bar"; })()'),
     );
   });
 
@@ -119,7 +122,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'document.title');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return document.title; })()'),
+      expect.stringContaining('(async () => { return document.title; })()'),
     );
   });
 
@@ -132,7 +135,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'trySomething()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return trySomething(); })()'),
+      expect.stringContaining('(async () => { return trySomething(); })()'),
     );
   });
 
@@ -140,7 +143,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'asyncData.fetchAll()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return asyncData.fetchAll(); })()'),
+      expect.stringContaining('(async () => { return asyncData.fetchAll(); })()'),
     );
   });
 
@@ -148,7 +151,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, 'functionResult.call()');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return functionResult.call(); })()'),
+      expect.stringContaining('(async () => { return functionResult.call(); })()'),
     );
   });
 
@@ -156,7 +159,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '(document.title)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return (document.title); })()'),
+      expect.stringContaining('(async () => { return (document.title); })()'),
     );
   });
 
@@ -164,7 +167,7 @@ describe('execute Command', () => {
     await execute(globalThis.browser, '(a + b)');
     expect(globalThis.browser.execute).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.stringContaining('(() => { return (a + b); })()'),
+      expect.stringContaining('(async () => { return (a + b); })()'),
     );
   });
 
