@@ -132,6 +132,43 @@ describe('execute Command', () => {
     );
   });
 
+  it('should handle arrow functions calling methods with "function" in the name', async () => {
+    // Arrow function that calls a helper method — should pass through to recast
+    // (not be falsely excluded by old guard that checked !includes('function'))
+    await execute(globalThis.browser, client, '(electron) => electron.getFunction().call()');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: '() => electron.getFunction().call()',
+      }),
+    );
+  });
+
+  it('should handle arrow functions with "function" in property/method names', async () => {
+    // Arrow function with methods named containing 'function' — should NOT be wrapped
+    await execute(globalThis.browser, client, '(electron) => helpers.functionHelper(electron)');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        // Should pass through recast (parenthesized arrow with =>), electron param injected
+        functionDeclaration: expect.stringMatching(/^\(.*\)\s*=>/),
+      }),
+    );
+  });
+
+  it('should exclude actual function keyword declarations', async () => {
+    // Real function declaration (not arrow) should be wrapped
+    // The guard checks !match(/^\s*(async\s+)?function\b/) to exclude function declarations
+    await execute(globalThis.browser, client, 'async function test(electron) { return 42; }');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        // Should be wrapped (since it starts with function keyword)
+        functionDeclaration: expect.stringContaining('async () =>'),
+      }),
+    );
+  });
+
   it('should call `mock.update()` when mockStore has some mocks', async () => {
     const updateMock = vi.fn();
     vi.mocked(mockStore.getMocks).mockReturnValue([['dummy', { update: updateMock } as unknown as ElectronMock]]);

@@ -55,7 +55,8 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     const trimmed = script.trim();
     // Only let recast handle arrow functions starting with ( and containing =>
     // These get transformed to add electron parameter
-    const isArrowFunction = trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.includes('function');
+    const isArrowFunction =
+      trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.match(/^\s*(async\s+)?function\b/); // exclude function declarations
 
     if (isArrowFunction) {
       // Arrow function - recast handles electron param injection
@@ -105,7 +106,8 @@ function wrapStringScriptForCdp(script: string): string {
 
   // Check if it's a simple arrow function that can be transformed by recast
   // These patterns can be safely passed to recast which adds the electron parameter
-  const canRecastHandle = trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.includes('function');
+  const canRecastHandle =
+    trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.match(/^\s*(async\s+)?function\b/);
 
   if (canRecastHandle) {
     // Simple arrow function - pass to recast for transformation
