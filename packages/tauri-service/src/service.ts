@@ -415,7 +415,7 @@ export default class TauriWorkerService {
         // For strings: use executeAsync with explicit done callback
         // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
         const trimmed = scriptString.trim();
-        const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(
+        const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[({]|$)/.test(
           trimmed,
         );
         const wrappedBody =
