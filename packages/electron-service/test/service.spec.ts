@@ -39,12 +39,6 @@ vi.mock('../src/commands/clearAllMocks.js', () => ({ clearAllMocks: vi.fn() }));
 vi.mock('../src/commands/resetAllMocks.js', () => ({ resetAllMocks: vi.fn() }));
 vi.mock('../src/commands/restoreAllMocks.js', () => ({ restoreAllMocks: vi.fn() }));
 
-vi.mock('../src/commands/execute', () => {
-  return {
-    execute: vi.fn(),
-  };
-});
-
 vi.mock('../src/commands/executeCdp', () => {
   return {
     execute: vi.fn(),
