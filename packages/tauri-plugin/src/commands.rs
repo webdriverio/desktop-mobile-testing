@@ -227,8 +227,8 @@ pub(crate) async fn execute<R: Runtime>(
         }).unwrap_or(false);
     // Only detect function-like patterns: function, async, arrow functions
     // Don't use starts_with('(') as it catches any parenthesized expression like (document.title)
-    let is_function = has_keyword_prefix(trimmed, "function") 
-        || has_keyword_prefix(trimmed, "function*") 
+    let is_function = has_keyword_prefix(trimmed, "function")
+        || has_keyword_prefix(trimmed, "function*")
         || has_keyword_prefix(trimmed, "async")
         || starts_with_paren_arrow
         || single_param_arrow;
@@ -261,6 +261,7 @@ pub(crate) async fn execute<R: Runtime>(
         || t.starts_with("switch ")
         || t.starts_with("switch(")
         || t.starts_with("throw ")
+        || t.starts_with("throw(")
         || t.starts_with("try ")
         || t.starts_with("try{")
         || t.starts_with("do ")
