@@ -110,7 +110,7 @@ function wrapStringScriptForCdp(script: string): string {
   // - "return 42" (statement - parsing error)
   // - "const x = 1" (statement - parsing error)
 
-  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
+  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[({]|$)/.test(trimmed);
   const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
 
   if (hasRealSemicolon || hasStatementKeyword) {
