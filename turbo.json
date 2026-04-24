@@ -143,7 +143,8 @@
       "outputs": ["dist/**"]
     },
     "@wdio/tauri-plugin#build:js": {
-      "dependsOn": ["@wdio/native-spy#build"],
+      "dependsOn": ["@wdio/native-spy#build", "@wdio/native-utils#build"],
+      "inputs": ["guest-js/**", "scripts/build-guest-js.ts"],
       "outputs": ["dist-js/**"]
     },
     "@wdio/tauri-service#build:console-wrapper": {
