@@ -166,15 +166,23 @@ describe('execute Command', () => {
     );
   });
 
-  it('should exclude actual function keyword declarations', async () => {
-    // Real function declaration (not arrow) should be wrapped
-    // The guard checks !match(/^\s*(async\s+)?function\b/) to exclude function declarations
+  it('should route named function declaration strings through recast and strip the electron param', async () => {
     await execute(globalThis.browser, client, 'async function test(electron) { return 42; }');
     expect(client.send).toHaveBeenCalledWith(
       'Runtime.callFunctionOn',
       expect.objectContaining({
-        // Should be wrapped (since it starts with function keyword)
-        functionDeclaration: expect.stringContaining('async function()'),
+        functionDeclaration: expect.stringContaining('async function test()'),
+      }),
+    );
+  });
+
+  it('should route anonymous function expression strings through recast and strip the electron param', async () => {
+    await execute(globalThis.browser, client, 'function(electron) { return 42; }');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        // Wrapped in parens for expression-context parsing; electron param stripped
+        functionDeclaration: expect.stringContaining('(function() {'),
       }),
     );
   });

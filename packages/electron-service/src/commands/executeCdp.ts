@@ -53,18 +53,19 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   let functionDeclaration: string;
   if (typeof script === 'string') {
     const trimmed = script.trim();
-    // Route arrow functions through recast so the electron param is stripped.
-    // Covers: (electron, ...args) => ... and async (electron, ...args) => ...
-    const isArrowFunction =
-      (trimmed.startsWith('(') || /^async\s*\(/.test(trimmed)) &&
-      hasTopLevelArrow(trimmed) &&
-      !/^(async\s+)?function\b/.test(trimmed);
+    // Route function-like strings through recast so the electron param is stripped.
+    // Covers: (e, ...args) => ..., async (e, ...args) => ..., function(e) {...}, async function(e) {...}
+    const isFunctionLike =
+      /^(async\s+)?function\b/.test(trimmed) ||
+      ((trimmed.startsWith('(') || /^async\s*\(/.test(trimmed)) && hasTopLevelArrow(trimmed));
 
-    if (isArrowFunction) {
-      // Arrow function - recast handles electron param injection
-      functionDeclaration = getCachedOrParse(script);
+    if (isFunctionLike) {
+      // Anonymous function expressions (function(...){}) are only valid in expression context.
+      // Babel rejects them at statement level ("Unexpected token"), so wrap in parens first.
+      // Named declarations (function foo(...){}) and arrow functions parse fine as-is.
+      const needsParens = /^(async\s+)?function\s*\(/.test(trimmed);
+      functionDeclaration = getCachedOrParse(needsParens ? `(${script.trim()})` : script);
     } else {
-      // Not a simple arrow function - wrap it ourselves
       functionDeclaration = wrapStringScriptForCdp(script);
     }
   } else {
