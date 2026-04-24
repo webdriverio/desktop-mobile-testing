@@ -151,7 +151,7 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
   const isFunctionLike =
     (trimmed.startsWith('(') && hasTopLevelArrow(trimmed)) ||
     /^function[\s(]/.test(trimmed) ||
-    /^async[\s(]/.test(trimmed) ||
+    (/^async[\s(]/.test(trimmed) && (/^async\s+function\b/.test(trimmed) || hasTopLevelArrow(trimmed))) ||
     /^(\w+)\s*=>/.test(trimmed);
 
   let scriptToSend: string;

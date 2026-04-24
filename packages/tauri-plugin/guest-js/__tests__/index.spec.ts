@@ -321,6 +321,15 @@ describe('execute', () => {
     expect(sent).toContain('do{x++}while(x<3)');
     expect(sent).not.toContain('return do{');
   });
+
+  it('should treat async(42) as an expression, not a function-like script', async () => {
+    await execute('async(42)');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    const sent = pluginCalls[0][1].request.script as string;
+    expect(sent).not.toContain('__wdio_tauri');
+    expect(sent).toContain('async(42)');
+  });
 });
 
 describe('setupConsoleForwarding', () => {
