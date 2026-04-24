@@ -70,6 +70,18 @@ describe('hasSemicolonOutsideQuotes', () => {
   it('should return false for a semicolon inside a template literal with expression', () => {
     expect(hasSemicolonOutsideQuotes('`${a}; ${b}`')).toBe(false);
   });
+
+  it('should return false for a semicolon inside a nested template literal', () => {
+    expect(hasSemicolonOutsideQuotes('`${`inner; value`}`')).toBe(false);
+  });
+
+  it('should return false for a semicolon in a doubly-nested template literal', () => {
+    expect(hasSemicolonOutsideQuotes('`${`${`deep; value`}`}`')).toBe(false);
+  });
+
+  it('should return true for a semicolon after a nested template literal closes', () => {
+    expect(hasSemicolonOutsideQuotes('`${`inner`}`; done()')).toBe(true);
+  });
 });
 
 describe('hasTopLevelArrow', () => {
@@ -135,5 +147,17 @@ describe('hasTopLevelArrow', () => {
 
   it('should handle escaped quotes in strings correctly', () => {
     expect(hasTopLevelArrow("'it\\'s => not'")).toBe(false);
+  });
+
+  it('should return false for an arrow inside a nested template expression', () => {
+    expect(hasTopLevelArrow('`${(x) => x}`')).toBe(false);
+  });
+
+  it('should return false for a nested template expression not containing an arrow at top level', () => {
+    expect(hasTopLevelArrow('`${`inner`}`')).toBe(false);
+  });
+
+  it('should return true for a top-level arrow after a template literal', () => {
+    expect(hasTopLevelArrow('(`template`) => 1')).toBe(true);
   });
 });
