@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '../src/scriptDetect.js';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '../src/script-detect.js';
 
 describe('hasSemicolonOutsideQuotes', () => {
   it('should return false for an empty string', () => {

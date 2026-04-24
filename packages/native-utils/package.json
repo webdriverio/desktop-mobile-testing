@@ -21,7 +21,17 @@
         }
       },
       "./dist/cjs/index.js"
-    ]
+    ],
+    "./script-detect": {
+      "import": {
+        "types": "./dist/esm/script-detect.d.ts",
+        "default": "./dist/esm/script-detect.js"
+      },
+      "require": {
+        "types": "./dist/cjs/script-detect.d.ts",
+        "default": "./dist/cjs/script-detect.js"
+      }
+    }
   },
   "engines": {
     "node": "^18.12.0 || ^20.9.0 || >=22.11.0"
