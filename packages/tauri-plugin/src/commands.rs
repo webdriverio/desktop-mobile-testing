@@ -305,7 +305,7 @@ pub(crate) async fn execute<R: Runtime>(
         || has_semicolon_outside_quotes(t);
         let has_return = {
             if let Some(rest) = t.strip_prefix("return") {
-                rest.is_empty() || rest.starts_with(char::is_whitespace) || rest.starts_with(';') || rest.starts_with('(')
+                rest.is_empty() || !rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '$')
             } else {
                 false
             }

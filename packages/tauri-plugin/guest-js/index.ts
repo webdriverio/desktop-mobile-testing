@@ -200,7 +200,7 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     // user args so they are accessible via arguments[0], arguments[1], etc. (W3C §13.2.2).
     // Using a named function (not an arrow) is required: arrow functions have no arguments object.
     // No conditional async needed — the Tauri IPC always awaits the result.
-    const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[({]|$)/.test(trimmed);
+    const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(trimmed);
     const hasStatement = hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed);
     const argsArray = argsJson ?? '[]';
     scriptToSend = hasStatement
