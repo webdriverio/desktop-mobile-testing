@@ -303,6 +303,24 @@ describe('execute', () => {
     expect(pluginCalls[0][1].request.script).toContain('return 1 + 2 + 3');
     expect(result).toBe(6);
   });
+
+  it('should treat try{ (no space) as a statement, not an expression', async () => {
+    await execute('try{x=1}catch(e){e}');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    const sent = pluginCalls[0][1].request.script as string;
+    expect(sent).toContain('try{x=1}catch(e){e}');
+    expect(sent).not.toContain('return try{');
+  });
+
+  it('should treat do{ (no space) as a statement, not an expression', async () => {
+    await execute('do{x++}while(x<3)');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    const sent = pluginCalls[0][1].request.script as string;
+    expect(sent).toContain('do{x++}while(x<3)');
+    expect(sent).not.toContain('return do{');
+  });
 });
 
 describe('setupConsoleForwarding', () => {
