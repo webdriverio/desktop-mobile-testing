@@ -5,6 +5,7 @@
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import * as nativeSpy from '@wdio/native-spy';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils/script-detect';
 
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
@@ -141,8 +142,6 @@ interface ExecuteOptions {
  * @param argsJson - Serialized user arguments as JSON string (optional)
  * @returns Result of the script execution
  */
-import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils/script-detect';
-
 export async function execute(script: string, options?: ExecuteOptions, argsJson?: string): Promise<unknown> {
   if (!window.__TAURI__) {
     throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
