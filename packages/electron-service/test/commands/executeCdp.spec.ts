@@ -156,6 +156,16 @@ describe('execute Command', () => {
     );
   });
 
+  it('should route async arrow function strings through recast and strip the electron param', async () => {
+    await execute(globalThis.browser, client, 'async (electron, x) => x * 2');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringMatching(/^async\s+\(?x\)?\s*=>/),
+      }),
+    );
+  });
+
   it('should exclude actual function keyword declarations', async () => {
     // Real function declaration (not arrow) should be wrapped
     // The guard checks !match(/^\s*(async\s+)?function\b/) to exclude function declarations

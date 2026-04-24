@@ -53,10 +53,12 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   let functionDeclaration: string;
   if (typeof script === 'string') {
     const trimmed = script.trim();
-    // Only let recast handle arrow functions starting with ( and containing =>
-    // These get transformed to add electron parameter
+    // Route arrow functions through recast so the electron param is stripped.
+    // Covers: (electron, ...args) => ... and async (electron, ...args) => ...
     const isArrowFunction =
-      trimmed.startsWith('(') && hasTopLevelArrow(trimmed) && !trimmed.match(/^\s*(async\s+)?function\b/); // exclude function declarations
+      (trimmed.startsWith('(') || /^async\s*\(/.test(trimmed)) &&
+      hasTopLevelArrow(trimmed) &&
+      !/^(async\s+)?function\b/.test(trimmed);
 
     if (isArrowFunction) {
       // Arrow function - recast handles electron param injection
