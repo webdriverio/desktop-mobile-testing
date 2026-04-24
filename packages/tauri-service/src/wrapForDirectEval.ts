@@ -1,4 +1,4 @@
-import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils/script-detect';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils';
 
 /**
  * Wrap a user script for execution via the direct eval channel.
