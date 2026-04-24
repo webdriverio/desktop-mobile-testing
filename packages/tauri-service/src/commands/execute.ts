@@ -1,15 +1,37 @@
 import type { TauriAPIs, TauriExecuteOptions } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
+import { DirectEvalClient } from '../directEvalClient.js';
 import { isPluginAvailabilityCached, setPluginAvailabilityCached } from '../pluginCache.js';
 import type { TauriCommandContext, TauriResult } from '../types.js';
-import { getCurrentWindowLabel, getDefaultWindowLabel } from '../window.js';
+import { getCurrentWindowLabel, getDefaultWindowLabel, getSessionProvider } from '../window.js';
+import { wrapScriptForDirectEval } from '../wrapForDirectEval.js';
 
 export { clearPluginAvailabilityCache } from '../pluginCache.js';
 
 const log = createLogger('tauri-service', 'service');
 
+const directEvalClientCache = new WeakMap<WebdriverIO.Browser, DirectEvalClient>();
+
 function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
   return typeof arg === 'object' && arg !== null && '__wdioOptions__' in arg;
+}
+
+function getDirectEvalPort(): number {
+  const envPort = process.env.TAURI_WEBDRIVER_PORT;
+  if (envPort) {
+    const port = parseInt(envPort, 10);
+    if (!Number.isNaN(port)) return port;
+  }
+  return 4445;
+}
+
+function getOrCreateDirectEvalClient(browser: WebdriverIO.Browser, port: number): DirectEvalClient {
+  let client = directEvalClientCache.get(browser);
+  if (!client) {
+    client = new DirectEvalClient(port);
+    directEvalClientCache.set(browser, client);
+  }
+  return client;
 }
 
 /**
@@ -66,6 +88,20 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
     throw new Error('Expecting script to be type of "string" or "function"');
   }
 
+  const provider = getSessionProvider(browser);
+
+  if (provider === 'embedded') {
+    const scriptString = typeof script === 'function' ? script.toString() : script;
+    const port = getDirectEvalPort();
+    const client = getOrCreateDirectEvalClient(browser, port);
+    const wrapped = wrapScriptForDirectEval(scriptString, JSON.stringify(userArgs));
+    return (await client.eval(wrapped, {
+      args: userArgs,
+      windowLabel: executeOptions.windowLabel,
+    })) as ReturnValue;
+  }
+
+  // Non-embedded path: use IPC via browser.execute (official/crabnebula providers)
   if (!isPluginAvailabilityCached(browser)) {
     const maxAttempts = 100;
     const retryInterval = 50;

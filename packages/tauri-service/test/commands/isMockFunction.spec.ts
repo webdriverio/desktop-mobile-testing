@@ -2,19 +2,31 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isMockFunction } from '../../src/commands/mock.js';
 import { createMock } from '../../src/mock.js';
+import { clearWindowState } from '../../src/window.js';
 
 describe('isMockFunction Command', () => {
   beforeEach(async () => {
+    clearWindowState();
     globalThis.browser = {
       tauri: {
         execute: vi.fn(),
       },
       execute: vi.fn().mockResolvedValue(true),
     } as unknown as WebdriverIO.Browser;
+    // createMock calls execute() which uses the embedded path (fetch) by default
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: null }),
+      }),
+    );
   });
 
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should return true for a Tauri mock', async () => {

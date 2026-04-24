@@ -39,7 +39,7 @@ export function setSessionProvider(browser: WebdriverIO.Browser, provider: Drive
   log.debug(`Session provider set to: ${provider}`);
 }
 
-function getSessionProvider(browser: WebdriverIO.Browser): DriverProvider {
+export function getSessionProvider(browser: WebdriverIO.Browser): DriverProvider {
   return sessionProviderCache.get(browser.sessionId || 'default') ?? 'embedded';
 }
 
