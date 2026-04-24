@@ -13,14 +13,18 @@ import {
 } from '../../src/commands/execute.js';
 import { clearWindowState, setSessionProvider } from '../../src/window.js';
 
-vi.mock('@wdio/native-utils', () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
-}));
+vi.mock('@wdio/native-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@wdio/native-utils')>();
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }),
+  };
+});
 
 function createMockBrowser(executeFn?: (...args: unknown[]) => unknown) {
   return {
