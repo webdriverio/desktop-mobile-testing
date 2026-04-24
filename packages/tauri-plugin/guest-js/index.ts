@@ -264,12 +264,16 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     })()
   `.trim();
   } else {
-    // Plain string script — not callable. Wrap as an async IIFE body.
-    // Statement keywords (return, const, etc.) are passed through as-is;
-    // pure expressions get an explicit return so callers receive the value.
+    // Plain string script — not callable. Wrap as an async function body and apply the
+    // user args so they are accessible via arguments[0], arguments[1], etc. (W3C §13.2.2).
+    // Using a named function (not an arrow) is required: arrow functions have no arguments object.
+    // No conditional async needed — the Tauri IPC always awaits the result.
     const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=\s|[(]|$)/.test(trimmed);
     const hasStatement = hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed);
-    scriptToSend = hasStatement ? `(async () => { ${script} })()` : `(async () => { return ${script}; })()`;
+    const argsArray = argsJson ?? '[]';
+    scriptToSend = hasStatement
+      ? `(async function() { ${script} }).apply(null, ${argsArray})`
+      : `(async function() { return ${script}; }).apply(null, ${argsArray})`;
   }
 
   const invoke = await getInvoke();

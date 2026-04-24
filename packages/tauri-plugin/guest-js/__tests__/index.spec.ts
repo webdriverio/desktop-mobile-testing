@@ -221,7 +221,7 @@ describe('execute', () => {
   });
 
   it('should serialize additional arguments into the wrapped script', async () => {
-    await execute('(tauri, a, b) => a + b', 'hello', 42);
+    await execute('(tauri, a, b) => a + b', {}, '["hello",42]');
 
     const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
     expect(pluginCalls[0][1].request.script).toContain('["hello",42]');
@@ -266,19 +266,22 @@ describe('execute', () => {
   it('should route statement-style string scripts to statement path', async () => {
     await execute('return 42');
 
-    // Should be routed to statement path (wrapped with async IIFE, not function wrapper)
     const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
-    // Statement path wraps as: `(async () => { return 42 })()` - not the function-like wrapper
-    expect(pluginCalls[0][1].request.script).toContain('(async () => { return 42 })()');
+    expect(pluginCalls[0][1].request.script).toContain('(async function() { return 42 }).apply(null, [])');
   });
 
   it('should route expression-style string scripts to expression path', async () => {
     await execute('1 + 2 + 3');
 
-    // Should be routed to expression path (wrapped with return - includes semicolon inside braces)
     const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
-    // Expression path wraps as: `(async () => { return 1 + 2 + 3; })()` (semicolon inside)
-    expect(pluginCalls[0][1].request.script).toContain('(async () => { return 1 + 2 + 3; })()');
+    expect(pluginCalls[0][1].request.script).toContain('(async function() { return 1 + 2 + 3; }).apply(null, [])');
+  });
+
+  it('should embed args into string script body so arguments[0] etc. are accessible', async () => {
+    await execute('return arguments[0] + arguments[1]', {}, '[10,32]');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('.apply(null, [10,32])');
   });
 
   it('should handle statement-style string scripts', async () => {
