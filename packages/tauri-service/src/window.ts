@@ -1,5 +1,5 @@
 import { createLogger } from '@wdio/native-utils';
-import { clearPluginAvailabilityCache } from './commands/execute.js';
+import { clearPluginAvailabilityCache } from './pluginCache.js';
 import type { DriverProvider } from './types.js';
 
 const log = createLogger('tauri-service', 'window');

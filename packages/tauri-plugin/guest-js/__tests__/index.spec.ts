@@ -186,8 +186,9 @@ describe('execute', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    originalInvoke = vi.fn().mockResolvedValue('executed');
-    (window as any).__TAURI__ = createTauriMock(originalInvoke);
+    originalInvoke = vi.fn() as ReturnType<typeof vi.fn>;
+    originalInvoke.mockResolvedValue('executed');
+    (window as any).__TAURI__ = createTauriMock(originalInvoke as (...args: unknown[]) => unknown);
 
     const mod = await import('../index.js');
     await mod.init();
@@ -220,7 +221,7 @@ describe('execute', () => {
   });
 
   it('should serialize additional arguments into the wrapped script', async () => {
-    await execute('(tauri, a, b) => a + b', 'hello', 42);
+    await execute('(tauri, a, b) => a + b', {}, '["hello",42]');
 
     const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
     expect(pluginCalls[0][1].request.script).toContain('["hello",42]');
@@ -245,6 +246,89 @@ describe('execute', () => {
     await expect(execute('(tauri) => tauri.core.invoke("bad")')).rejects.toThrow(
       'Failed to execute script: string error',
     );
+  });
+
+  it('should wrap async arrow functions with Tauri API injection', async () => {
+    // Test that async arrow function is routed to function-like path
+    await execute('async (tauri, value) => ({ received: value, hasTauri: !!tauri?.core })', 'test-value');
+
+    // Should be routed to function-like path (has Tauri API injected)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1]).toEqual(
+      expect.objectContaining({
+        request: expect.objectContaining({
+          script: expect.stringContaining('__wdio_tauri'),
+        }),
+      }),
+    );
+  });
+
+  it('should route statement-style string scripts to statement path', async () => {
+    await execute('return 42');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('(async function() { return 42 }).apply(null, [])');
+  });
+
+  it('should route expression-style string scripts to expression path', async () => {
+    await execute('1 + 2 + 3');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('(async function() { return 1 + 2 + 3; }).apply(null, [])');
+  });
+
+  it('should embed args into string script body so arguments[0] etc. are accessible', async () => {
+    await execute('return arguments[0] + arguments[1]', {}, '[10,32]');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('.apply(null, [10,32])');
+  });
+
+  it('should handle statement-style string scripts', async () => {
+    originalInvoke.mockResolvedValue(42);
+    const result = await execute('return 42');
+
+    // Should be routed to statement path (no Tauri injection needed)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('return 42');
+    expect(result).toBe(42);
+  });
+
+  it('should handle expression-style string scripts', async () => {
+    originalInvoke.mockResolvedValue(6);
+    const result = await execute('1 + 2 + 3');
+
+    // Should be routed to expression path (wrapped with return)
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    expect(pluginCalls[0][1].request.script).toContain('return 1 + 2 + 3');
+    expect(result).toBe(6);
+  });
+
+  it('should treat try{ (no space) as a statement, not an expression', async () => {
+    await execute('try{x=1}catch(e){e}');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    const sent = pluginCalls[0][1].request.script as string;
+    expect(sent).toContain('try{x=1}catch(e){e}');
+    expect(sent).not.toContain('return try{');
+  });
+
+  it('should treat do{ (no space) as a statement, not an expression', async () => {
+    await execute('do{x++}while(x<3)');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    const sent = pluginCalls[0][1].request.script as string;
+    expect(sent).toContain('do{x++}while(x<3)');
+    expect(sent).not.toContain('return do{');
+  });
+
+  it('should treat async(42) as an expression, not a function-like script', async () => {
+    await execute('async(42)');
+
+    const pluginCalls = originalInvoke.mock.calls.filter((call: unknown[]) => call[0] === 'plugin:wdio|execute');
+    const sent = pluginCalls[0][1].request.script as string;
+    expect(sent).not.toContain('__wdio_tauri');
+    expect(sent).toContain('async(42)');
   });
 });
 

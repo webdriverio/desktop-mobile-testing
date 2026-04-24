@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { createLogger } from '@wdio/native-utils';
 import { findTestRunnerBackend } from './driverManager.js';
@@ -61,6 +61,41 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
 
   log.info(`Starting test-runner-backend on port ${port}`);
 
+  // Kill any orphaned process still holding the port (e.g. from a previous WDIO run killed by SIGKILL)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid port: ${port}`);
+  }
+  try {
+    if (process.platform === 'win32') {
+      execFileSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }`,
+        ],
+        { stdio: 'ignore' },
+      );
+    } else {
+      const pidsOutput = execFileSync('lsof', ['-ti', `:${port}`], { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim();
+      if (pidsOutput) {
+        const pids = pidsOutput
+          .split('\n')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => Number.isInteger(n) && n > 0);
+        for (const pid of pids) {
+          process.kill(pid, 'SIGKILL');
+        }
+        log.info(`Killed orphaned process(es) on port ${port}: ${pids.join(', ')}`);
+      }
+    }
+  } catch {
+    // No process on port, or kill failed — port is already free
+  }
+
   return new Promise((resolve, reject) => {
     // Use --port flag with fallback to PORT env var
     const args = ['--port', port.toString()];
@@ -121,10 +156,11 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
     if (proc.stdout) {
       stdoutRl = createInterface({ input: proc.stdout });
       stdoutRl.on('line', (line: string) => {
-        log.debug(`[test-runner-backend] ${line}`);
+        log.info(`[test-runner-backend stdout] ${line}`);
 
-        // Detect ready state - adjust based on actual backend output
-        if (line.includes('listening') || line.includes('ready') || line.includes('started')) {
+        // Detect ready state — case-insensitive to handle "Listening", "listening", etc.
+        const lowered = line.toLowerCase();
+        if (lowered.includes('listening') || lowered.includes('ready') || lowered.includes('started')) {
           if (!isReady) {
             isReady = true;
             cleanup();
@@ -139,18 +175,6 @@ export async function startTestRunnerBackend(options: StartBackendOptions): Prom
       stderrRl = createInterface({ input: proc.stderr });
       stderrRl.on('line', (line: string) => {
         log.error(`[test-runner-backend stderr] ${line}`);
-      });
-    }
-
-    // Also log stdout at info level for debugging
-    if (proc.stdout) {
-      proc.stdout.on('data', (data: Buffer) => {
-        log.info(`[test-runner-backend stdout] ${data.toString().trim()}`);
-      });
-    }
-    if (proc.stderr) {
-      proc.stderr.on('data', (data: Buffer) => {
-        log.error(`[test-runner-backend stderr] ${data.toString().trim()}`);
       });
     }
 

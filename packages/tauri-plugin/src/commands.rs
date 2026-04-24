@@ -1,10 +1,10 @@
 use tauri::{command, Manager, Runtime, WebviewWindow, Listener};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
+use tokio::sync::oneshot;
 
 use crate::models::ExecuteRequest;
 use crate::Result;
-use crate::Error;
 
 /// Window state information for generic window management
 /// Mirrors Electron's window tracking - discover active window without app-specific knowledge
@@ -75,31 +75,262 @@ pub(crate) async fn execute<R: Runtime>(
 
     // Use tokio's async oneshot channel for async waiting
     // Wrap sender in Arc<Mutex<Option>> so the Fn closure can take it once
-    let (tx, rx) = tokio::sync::oneshot::channel();
+    let (tx, rx) = tokio::sync::oneshot::channel::<crate::Result<JsonValue>>();
     let tx = Arc::new(Mutex::new(Some(tx)));
 
-    // Build the script with args if offered
-    let script = if !request.args.is_empty() {
-        let args_json = serde_json::to_string(&request.args)
-            .map_err(|e| crate::Error::SerializationError(format!("Failed to serialize args: {}", e)))?;
-        format!("(function() {{ const __wdio_args = {}; return ({}); }})()", args_json, request.script)
-    } else {
+    // Build the script with args if offered.
+    // Callable scripts receive Tauri APIs + user args.
+    // Statement/expression scripts run as body code (with args exposed as __wdio_args).
+    let trimmed = request.script.trim();
+    let has_keyword_prefix = |source: &str, keyword: &str| {
+        source
+            .strip_prefix(keyword)
+            .and_then(|rest| rest.chars().next())
+            .map(|ch| ch.is_whitespace() || ch == '(')
+            .unwrap_or(false)
+    };
+
+    // Check if => appears outside of string literals (to avoid false positives like "foo"=>"bar")
+    // All characters of interest ('\'', '"', '`', '\\', '=', '>') are ASCII (< 0x80)
+        // and cannot be continuation bytes in multi-byte UTF-8 sequences, so byte-level
+        // scanning is correct and avoids the char_indices/chars().nth() index mismatch.
+        fn contains_arrow_outside_quotes(s: &str) -> bool {
+            let bytes = s.as_bytes();
+            let mut in_single_quote = false;
+            let mut in_double_quote = false;
+            let mut in_backtick = false;
+            let mut backslash_count: usize = 0;
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                if b == b'\\' {
+                    backslash_count += 1;
+                    i += 1;
+                    continue;
+                }
+                let escaped = backslash_count % 2 == 1;
+                backslash_count = 0;
+                if !escaped {
+                    match b {
+                        b'\'' if !in_double_quote && !in_backtick => in_single_quote = !in_single_quote,
+                        b'"' if !in_single_quote && !in_backtick => in_double_quote = !in_double_quote,
+                        b'`' if !in_single_quote && !in_double_quote => in_backtick = !in_backtick,
+                        b'=' if !in_single_quote && !in_double_quote && !in_backtick => {
+                            if i + 1 < bytes.len() && bytes[i + 1] == b'>' {
+                                return true;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                i += 1;
+            }
+            false
+        }
+
+        // Like contains_arrow_outside_quotes but also tracks bracket depth.
+        // Returns true only if => appears at depth 0 (outside all parens/brackets).
+        // Prevents false positives on (arr.find(x => x)) where => is nested inside
+        // the outer parentheses.
+        fn has_arrow_outside_parens(s: &str) -> bool {
+            let bytes = s.as_bytes();
+            let mut in_single_quote = false;
+            let mut in_double_quote = false;
+            let mut in_backtick = false;
+            let mut depth: i32 = 0;
+            let mut backslash_count: usize = 0;
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                if b == b'\\' {
+                    backslash_count += 1;
+                    i += 1;
+                    continue;
+                }
+                let escaped = backslash_count % 2 == 1;
+                backslash_count = 0;
+                if !escaped {
+                    match b {
+                        b'\'' if !in_double_quote && !in_backtick => in_single_quote = !in_single_quote,
+                        b'"' if !in_single_quote && !in_backtick => in_double_quote = !in_double_quote,
+                        b'`' if !in_single_quote && !in_double_quote => in_backtick = !in_backtick,
+                        _ if !in_single_quote && !in_double_quote && !in_backtick => match b {
+                            b'(' | b'[' => depth += 1,
+                            b')' | b']' => depth -= 1,
+                            b'=' if depth == 0 && i + 1 < bytes.len() && bytes[i + 1] == b'>' => {
+                                return true;
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                }
+                i += 1;
+            }
+            false
+        }
+
+        // Returns true if s contains ';' outside string literals at bracket depth 0.
+        // Uses a stack-based tracker for template literals so that nested template
+        // expressions like `${`inner; value`}` do not produce false positives.
+        fn has_semicolon_outside_quotes(s: &str) -> bool {
+            struct TmplFrame { in_str: bool, expr_depth: i32 }
+            let bytes = s.as_bytes();
+            let mut depth: i32 = 0;
+            let mut in_single_quote = false;
+            let mut in_double_quote = false;
+            let mut tmpl: Vec<TmplFrame> = Vec::new();
+            let mut i = 0;
+            while i < bytes.len() {
+                let b = bytes[i];
+                let top_in_str = tmpl.last().map_or(false, |f| f.in_str);
+
+                // Escape: skip next byte when inside a string or template string chars.
+                if b == b'\\' && (in_single_quote || in_double_quote || top_in_str) {
+                    i += 2;
+                    continue;
+                }
+
+                // Inside template string chars: only backtick and ${ are significant.
+                if top_in_str {
+                    if b == b'`' {
+                        tmpl.pop();
+                    } else if b == b'$' && i + 1 < bytes.len() && bytes[i + 1] == b'{' {
+                        i += 1; // consume the {
+                        depth += 1;
+                        if let Some(frame) = tmpl.last_mut() {
+                            frame.in_str = false;
+                            frame.expr_depth = depth;
+                        }
+                    }
+                    i += 1;
+                    continue;
+                }
+
+                if b == b'\'' && !in_double_quote {
+                    in_single_quote = !in_single_quote;
+                    i += 1;
+                    continue;
+                }
+                if b == b'"' && !in_single_quote {
+                    in_double_quote = !in_double_quote;
+                    i += 1;
+                    continue;
+                }
+                if in_single_quote || in_double_quote {
+                    i += 1;
+                    continue;
+                }
+
+                // Start a new template literal.
+                if b == b'`' {
+                    tmpl.push(TmplFrame { in_str: true, expr_depth: 0 });
+                    i += 1;
+                    continue;
+                }
+
+                match b {
+                    b'(' | b'[' | b'{' => depth += 1,
+                    b')' | b']' | b'}' => {
+                        depth -= 1;
+                        // Check if this } closes a template expression.
+                        if let Some(frame) = tmpl.last_mut() {
+                            if !frame.in_str && depth == frame.expr_depth - 1 {
+                                frame.in_str = true;
+                            }
+                        }
+                    }
+                    b';' if depth == 0 => return true,
+                    _ => {}
+                }
+                i += 1;
+            }
+            false
+        }
+
+    // Check for arrow functions at START of script:
+    // - "(args) => ..." (parenthesized params)
+    // - "param => ..." (single param, alphanumeric start)
+    // Only detect arrows that are NOT inside string literals
+    let starts_with_paren_arrow = trimmed.starts_with('(') && has_arrow_outside_parens(trimmed);
+    let single_param_arrow = trimmed.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+        && contains_arrow_outside_quotes(trimmed)
+        && trimmed.find("=>").map(|pos| {
+            let before = trimmed[..pos].trim();
+            // Single param: no spaces and no parens before =>
+            // Parens before => mean the arrow is inside a nested expression, not a top-level arrow
+            // e.g. "x => x + 1" is a param arrow; "obj.fn(x => x)" is not
+            !before.is_empty() && !before.contains(' ') && !before.contains('(')
+        }).unwrap_or(false);
+    // Only detect function-like patterns: function, async, arrow functions, or pre-packaged
+    // async IIFEs emitted by guest-js (both branches produce "(async ...)" patterns).
+    // Don't use starts_with('(') alone as it catches any parenthesized expression like (document.title).
+    let is_function = has_keyword_prefix(trimmed, "function")
+        || has_keyword_prefix(trimmed, "function*")
+        || has_keyword_prefix(trimmed, "async")
+        || starts_with_paren_arrow
+        || single_param_arrow
+        || trimmed.starts_with("(async");
+
+    let script = if is_function {
+        // Callable/pre-packaged script — pass through as-is.
+        // guest-js wraps both function-like and plain-string cases into async IIFEs before
+        // invoking this command, so no further wrapping is needed here.
         request.script.clone()
+    } else if !request.args.is_empty() {
+        // String script with args (not a callable function) - return error
+        return Err(crate::Error::ExecuteError(
+            "browser.execute(string, args) is not supported. Use browser.execute(function, ...args) instead.".to_string(),
+        ));
+    } else {
+        // Statement/expression-style script - wrap in block-body IIFE
+        let t = request.script.trim_start();
+        let has_statement = t.starts_with("const ")
+        || t.starts_with("let ")
+        || t.starts_with("var ")
+        || t.starts_with("if ")
+        || t.starts_with("if(")
+        || t.starts_with("for ")
+        || t.starts_with("for(")
+        || t.starts_with("while ")
+        || t.starts_with("while(")
+        || t.starts_with("switch ")
+        || t.starts_with("switch(")
+        || t.starts_with("throw ")
+        || t.starts_with("throw(")
+        || t.starts_with("try ")
+        || t.starts_with("try{")
+        || t.starts_with("do ")
+        || t.starts_with("do{")
+        || has_semicolon_outside_quotes(t);
+        let has_return = {
+            if let Some(rest) = t.strip_prefix("return") {
+                rest.is_empty() || !rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+            } else {
+                false
+            }
+        };
+        let body = if !has_statement && !has_return {
+            // Pure expression - add return so it evaluates and returns
+            format!("return {};", request.script)
+        } else {
+            // Has statements or already has return - pass through as-is
+            request.script.clone()
+        };
+
+        format!("(async () => {{ {body} }})()")
     };
 
     // Generate unique event ID for this execution
     let event_id = format!("wdio-result-{}", Uuid::new_v4());
     log::trace!("Generated event_id for result: {}", event_id);
 
-    // Listen for the result event using the app's event listener
-    // The JavaScript uses window.__TAURI__.event.emit() which emits to the APP target
-    // So we need to listen on the app target, not the window target
-    let tx_clone = Arc::clone(&tx);
-    let listener_id = app.listen(&event_id, move |event| {
+    // Helper function to handle events
+    fn handle_event(event: tauri::Event, tx: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>>) {
         log::trace!("Received result event payload: {}", event.payload());
 
         // Take the sender from the Option (only the first call will succeed)
-        let tx = match tx_clone.lock().ok().and_then(|mut guard| guard.take()) {
+        let tx = match tx.lock().ok().and_then(|mut guard| guard.take()) {
             Some(tx) => tx,
             None => {
                 log::warn!("Event received but sender already taken, ignoring");
@@ -126,6 +357,15 @@ pub(crate) async fn execute<R: Runtime>(
                 }
             }
         }
+    }
+
+    // Listen for the result event on the app target.
+    // guest-js uses emit() from @tauri-apps/api/event which targets the app scope.
+    let tx_clone: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>> = Arc::clone(&tx);
+
+    let listener_id = app.listen(&event_id, move |event| {
+        log::trace!("Received result event: {}", event.payload());
+        handle_event(event, tx_clone.clone());
     });
 
     // Wrap the script to:
@@ -163,8 +403,10 @@ pub(crate) async fn execute<R: Runtime>(
                     throw new Error('Tauri core.invoke not available after timeout');
                 }}
 
-                // Execute the user's script
-                const result = await ({});
+                // Execute the user's script (already wrapped in both branches)
+                // Both with-args and no-args paths return a complete async IIFE
+                const __wdio_script = ({});
+                const result = await __wdio_script;
 
                 if (result === undefined) {{
                     await __wdio_emit('{}', {{ success: true, __wdio_undefined__: true }});
@@ -199,7 +441,7 @@ pub(crate) async fn execute<R: Runtime>(
     // This matches the WebDriver default script timeout
     let window_label = target_window.label().to_owned();
     let timeout_duration = Duration::from_secs(30);
-    
+
     match tokio::time::timeout(timeout_duration, rx).await {
         Ok(Ok(Ok(result))) => {
             log::debug!("Execute completed successfully");
@@ -255,7 +497,7 @@ pub(crate) async fn get_window_states<R: Runtime>(
   app: tauri::AppHandle<R>,
 ) -> Result<Vec<WindowState>> {
   let mut states = Vec::new();
-  
+
   for (label, window) in app.webview_windows() {
     let state = WindowState {
       label: label.clone(),
@@ -263,10 +505,10 @@ pub(crate) async fn get_window_states<R: Runtime>(
       is_visible: window.is_visible().unwrap_or(false),
       is_focused: window.is_focused().unwrap_or(false),
     };
-    log::debug!("[get_window_states] {}: title='{}', visible={}, focused={}", 
+    log::debug!("[get_window_states] {}: title='{}', visible={}, focused={}",
       label, state.title, state.is_visible, state.is_focused);
     states.push(state);
   }
-  
+
   Ok(states)
 }

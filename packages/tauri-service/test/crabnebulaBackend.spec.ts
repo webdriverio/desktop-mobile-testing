@@ -129,6 +129,63 @@ describe('CrabNebula Backend', () => {
       expect(result.port).toBe(3000);
     }, 10000);
 
+    it('should resolve when backend emits capitalised "Listening" (real backend message format)', async () => {
+      vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue('/mock/backend');
+      process.env.CN_API_KEY = 'test-api-key-long-enough';
+      vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
+
+      const promise = startTestRunnerBackend({ port: 3000 });
+
+      setImmediate(() => {
+        mockProc.stdout?.emit(
+          'data',
+          Buffer.from('2026-04-23T15:10:08.434112Z  INFO test_runner_backend: Listening on 127.0.0.1:3000\n'),
+        );
+      });
+
+      const result = await promise;
+      expect(result.port).toBe(3000);
+    }, 10000);
+
+    it('should resolve when backend emits capitalised "Ready"', async () => {
+      vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue('/mock/backend');
+      process.env.CN_API_KEY = 'test-api-key-long-enough';
+      vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
+
+      const promise = startTestRunnerBackend({ port: 3000 });
+
+      setImmediate(() => {
+        mockProc.stdout?.emit('data', Buffer.from('Server Ready\n'));
+      });
+
+      const result = await promise;
+      expect(result.port).toBe(3000);
+    }, 10000);
+
+    it('should not resolve early on an unrelated stdout line', async () => {
+      vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue('/mock/backend');
+      process.env.CN_API_KEY = 'test-api-key-long-enough';
+      vi.mocked(spawn).mockReturnValue(mockProc as ChildProcess);
+
+      vi.useFakeTimers();
+
+      const promise = startTestRunnerBackend({ port: 3000 });
+      let resolved = false;
+      promise.then(() => {
+        resolved = true;
+      });
+
+      mockProc.stdout?.emit('data', Buffer.from('Initializing...\n'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(resolved).toBe(false);
+
+      vi.advanceTimersByTime(15000);
+      await promise;
+      expect(resolved).toBe(true);
+
+      vi.useRealTimers();
+    });
+
     it('should resolve on timeout even without ready message', async () => {
       vi.mocked(driverManager.findTestRunnerBackend).mockReturnValue('/mock/backend');
       process.env.CN_API_KEY = 'test-api-key-long-enough';

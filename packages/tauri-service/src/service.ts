@@ -1,10 +1,11 @@
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
-import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
+import { createLogger, hasSemicolonOutsideQuotes, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, resetAllMocks, restoreAllMocks } from './commands/mock.js';
 import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import mockStore from './mockStore.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
+
 import type { TauriCapabilities, TauriServiceGlobalOptions, TauriServiceOptions } from './types.js';
 import {
   clearWindowState,
@@ -370,6 +371,7 @@ export default class TauriWorkerService {
     }
 
     const originalExecute = browser.execute.bind(browser);
+    const originalExecuteAsync = (browser.executeAsync as typeof browser.execute).bind(browser);
     const isEmbedded = this.driverProvider === 'embedded';
 
     const patchedExecute = async function patchedExecute<ReturnValue, InnerArguments extends unknown[]>(
@@ -379,18 +381,61 @@ export default class TauriWorkerService {
       const scriptString = typeof script === 'function' ? script.toString() : script;
 
       if (isEmbedded) {
-        // For embedded WebDriver: skip console wrapper as console forwarding
-        // is handled by tauri-plugin-webdriver.
-        return originalExecute(scriptString, ...args) as Promise<ReturnValue>;
+        // Tauri embedded WebDriver's execute/sync is W3C-compliant (wraps the script as a
+        // function body) and awaits the result internally, so async functions work over the
+        // sync endpoint. Pass the script through untouched — WebdriverIO will handle function
+        // serialization via its standard polyfill wrapper.
+        return (originalExecute as unknown as (s: typeof script, ...a: typeof args) => Promise<ReturnValue>)(
+          script,
+          ...args,
+        );
       }
 
-      // For tauri-driver: use sync execute with console wrapper
-      const wrappedScript = `
+      // Non-embedded (tauri-driver/official): use executeAsync for both functions and strings.
+      // WebKit (macOS/iOS Tauri) doesn't auto-await Promises from sync execute.
+      if (typeof script === 'function') {
+        // Function scripts: use executeAsync with .then() callbacks to handle async results
+        // Wrap in Promise.resolve to handle both sync and async function return values
+        const wrappedScript = `
             ${CONSOLE_WRAPPER_SCRIPT}
-            return (${scriptString}).apply(null, arguments);
-          `;
-
-      return originalExecute(wrappedScript, ...args) as Promise<ReturnValue>;
+            Promise.resolve((${scriptString}).apply(null, Array.from(arguments).slice(0, arguments.length - 1))).then(
+                (r) => arguments[arguments.length-1](r),
+                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+            );
+        `;
+        const asyncResult = await (originalExecuteAsync as (script: string, ...a: unknown[]) => Promise<unknown>)(
+          wrappedScript,
+          ...args,
+        );
+        if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+          throw new Error((asyncResult as { __wdio_error__: string }).__wdio_error__);
+        }
+        return asyncResult as ReturnValue;
+      } else {
+        // For strings: use executeAsync with explicit done callback
+        // WebKit (macOS/iOS Tauri) doesn't auto-await returned Promises - must call callback explicitly
+        const trimmed = scriptString.trim();
+        const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(
+          trimmed,
+        );
+        const wrappedBody =
+          hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed) ? scriptString : `return ${scriptString};`;
+        const wrappedScript = `
+            ${CONSOLE_WRAPPER_SCRIPT}
+            (async function() { ${wrappedBody} }).apply(null, Array.from(arguments).slice(0, arguments.length - 1)).then(
+                (r) => arguments[arguments.length-1](r),
+                (e) => arguments[arguments.length-1]({ __wdio_error__: e instanceof Error ? e.message : String(e) })
+            );
+        `;
+        const asyncResult = await (originalExecuteAsync as (script: string, ...a: unknown[]) => Promise<unknown>)(
+          wrappedScript,
+          ...args,
+        );
+        if (asyncResult && typeof asyncResult === 'object' && '__wdio_error__' in asyncResult) {
+          throw new Error((asyncResult as { __wdio_error__: string }).__wdio_error__);
+        }
+        return asyncResult as ReturnValue;
+      }
     };
 
     Object.defineProperty(browser, 'execute', {

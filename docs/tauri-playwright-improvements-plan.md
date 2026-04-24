@@ -13,7 +13,7 @@
 | 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High | Pending |
 | 3 | Multi-window label configuration | Tauri | Small | Medium | **Completed** |
 | 4 | Native screenshot capture | Tauri + Electron | Medium | Low | Pending |
-| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | Pending |
+| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | **Done** |
 | 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium | Pending |
 
 ---

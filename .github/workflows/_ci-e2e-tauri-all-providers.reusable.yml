@@ -428,8 +428,12 @@ jobs:
           echo "Cleaning up before CrabNebula provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
             powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
+            powershell -Command "Get-Process -Name 'test-runner-backend' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
+            powershell -Command "Get-Process -Name 'tauri-driver' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-e2e-app || true
+            pkill -9 -f test-runner-backend || true
+            pkill -9 -f tauri-driver || true
           fi
 
       - name: 🧪 E2E Tests [CrabNebula]
@@ -457,8 +461,12 @@ jobs:
           echo "Cleaning up after CrabNebula provider tests..."
           if [ "${{ runner.os }}" == "Windows" ]; then
             powershell -Command "Get-Process -Name 'tauri-e2e-app' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
+            powershell -Command "Get-Process -Name 'test-runner-backend' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
+            powershell -Command "Get-Process -Name 'tauri-driver' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue" || true
           else
             pkill -9 -f tauri-e2e-app || true
+            pkill -9 -f test-runner-backend || true
+            pkill -9 -f tauri-driver || true
           fi
 
       - name: 🐛 Debug Information [CrabNebula]

@@ -20,11 +20,6 @@ vi.doMock('@wdio/native-spy', () => ({
     return mockFn;
   },
 }));
-vi.mock('../src/commands/execute', () => {
-  return {
-    execute: vi.fn(),
-  };
-});
 
 type ElectronMockExecuteFn = (
   electron: Partial<ElectronType>,

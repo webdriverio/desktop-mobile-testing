@@ -109,8 +109,82 @@ describe('execute Command', () => {
     });
   });
 
-  it('should throw error when pass not function definition', async () => {
-    await expect(() => execute(globalThis.browser, client, 'const a = 1')).rejects.toThrowError();
+  it('should wrap statement-style string scripts in async IIFE', async () => {
+    // Statements like 'const a = 1' are now wrapped and executed properly (no longer throw)
+    await execute(globalThis.browser, client, 'const a = 1');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringContaining('async function() { const a = 1 }'),
+      }),
+    );
+  });
+
+  it('should treat semicolon after escaped backslash as real (not skip it)', async () => {
+    // "foo\\";bar" — the backslash is itself escaped, so the " closes the string
+    // and the ; is outside quotes. Single-char prevChar check wrongly skips the ;.
+    await execute(globalThis.browser, client, '"foo\\\\";bar');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringContaining('async function() {'),
+      }),
+    );
+  });
+
+  it('should handle arrow functions calling methods with "function" in the name', async () => {
+    // Arrow function that calls a helper method — should pass through to recast
+    // (not be falsely excluded by old guard that checked !includes('function'))
+    await execute(globalThis.browser, client, '(electron) => electron.getFunction().call()');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: '() => electron.getFunction().call()',
+      }),
+    );
+  });
+
+  it('should handle arrow functions with "function" in property/method names', async () => {
+    // Arrow function with methods named containing 'function' — should NOT be wrapped
+    await execute(globalThis.browser, client, '(electron) => helpers.functionHelper(electron)');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        // Should pass through recast (parenthesized arrow with =>), electron param injected
+        functionDeclaration: expect.stringMatching(/^\(.*\)\s*=>/),
+      }),
+    );
+  });
+
+  it('should route async arrow function strings through recast and strip the electron param', async () => {
+    await execute(globalThis.browser, client, 'async (electron, x) => x * 2');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringMatching(/^async\s+\(?x\)?\s*=>/),
+      }),
+    );
+  });
+
+  it('should route named function declaration strings through recast and strip the electron param', async () => {
+    await execute(globalThis.browser, client, 'async function test(electron) { return 42; }');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        functionDeclaration: expect.stringContaining('async function test()'),
+      }),
+    );
+  });
+
+  it('should route anonymous function expression strings through recast and strip the electron param', async () => {
+    await execute(globalThis.browser, client, 'function(electron) { return 42; }');
+    expect(client.send).toHaveBeenCalledWith(
+      'Runtime.callFunctionOn',
+      expect.objectContaining({
+        // Wrapped in parens for expression-context parsing; electron param stripped
+        functionDeclaration: expect.stringContaining('(function() {'),
+      }),
+    );
   });
 
   it('should call `mock.update()` when mockStore has some mocks', async () => {

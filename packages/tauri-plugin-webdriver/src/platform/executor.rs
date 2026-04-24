@@ -884,13 +884,14 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
         let result_var = format!("__wdio_exec_{}", uuid::Uuid::new_v4());
 
         // Wrapper script that:
-        // 1. Executes the user's script (handles both function expressions and function bodies)
+        // 1. Executes the user's script as a function body (per W3C WebDriver spec §13.2.2)
         // 2. Stores result in a global variable for polling
         // Note: We use an IIFE that returns `undefined` to avoid Promise serialization issues
         //
-        // WDIO sends scripts as function expressions like: "() => { return x; }"
-        // WebDriver spec expects function bodies like: "return x;"
-        // We handle both by wrapping the script in a way that works for both cases
+        // The script is treated as a function body. Clients that want to return a value must
+        // include an explicit `return` statement — this matches WebdriverIO's function-object
+        // wrapping (`return (fn).apply(null, arguments)`) and raw string scripts like
+        // `"return document.title"`.
         let wrapper = format!(
             r"(function() {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
@@ -945,8 +946,8 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
                 (async function() {{
                     try {{
                         var args = {args_json}.map(deserializeArg);
-                        // The script from WDIO is a function expression which we call directly
-                        var raw_result = await ({script}).apply(null, args);
+                        // W3C-compliant: wrap as function body, apply with args
+                        var raw_result = await (async function() {{ {script} }}).apply(null, args);
                         var serialized = serializeValue(raw_result);
                         window['{result_var}'] = {{ __wd_success: true, __wd_value: serialized }};
                     }} catch (e) {{

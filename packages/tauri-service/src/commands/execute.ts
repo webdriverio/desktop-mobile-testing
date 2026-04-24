@@ -1,15 +1,12 @@
 import type { TauriAPIs, TauriExecuteOptions } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
+import { isPluginAvailabilityCached, setPluginAvailabilityCached } from '../pluginCache.js';
 import type { TauriCommandContext, TauriResult } from '../types.js';
 import { getCurrentWindowLabel, getDefaultWindowLabel } from '../window.js';
 
+export { clearPluginAvailabilityCache } from '../pluginCache.js';
+
 const log = createLogger('tauri-service', 'service');
-
-const pluginAvailabilityCache = new WeakMap<WebdriverIO.Browser, boolean>();
-
-export function clearPluginAvailabilityCache(browser: WebdriverIO.Browser): void {
-  pluginAvailabilityCache.delete(browser);
-}
 
 function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
   return typeof arg === 'object' && arg !== null && '__wdioOptions__' in arg;
@@ -69,7 +66,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
     throw new Error('Expecting script to be type of "string" or "function"');
   }
 
-  if (!pluginAvailabilityCache.get(browser)) {
+  if (!isPluginAvailabilityCached(browser)) {
     const maxAttempts = 100;
     const retryInterval = 50;
     let pluginAvailable = false;
@@ -95,7 +92,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
       );
     }
 
-    pluginAvailabilityCache.set(browser, true);
+    setPluginAvailabilityCached(browser);
     log.debug('Plugin availability cached for browser session');
   } else {
     log.debug('Plugin availability cached, skipping check');
@@ -119,6 +116,7 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
         // @ts-expect-error - Running in browser context
         return JSON.stringify({ __wdio_error__: `window.wdioTauri.execute is ${typeof window.wdioTauri.execute}` });
       }
+
       try {
         // @ts-expect-error - Running in browser context
         const execResult = window.wdioTauri.execute(script, execOptions, argsJson);
@@ -199,7 +197,12 @@ export async function executeTauriCommand<T = unknown>(
   log.debug(`Executing Tauri command: ${command} with args:`, args);
 
   try {
-    const result = await execute(browser, ({ core }) => core.invoke(command, ...args));
+    const result = await execute(
+      browser,
+      ({ core }, invokeCommand: string, invokeArgs: unknown[]) => core.invoke(invokeCommand, ...invokeArgs),
+      command,
+      args,
+    );
 
     return {
       ok: true,

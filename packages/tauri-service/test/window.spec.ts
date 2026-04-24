@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as executeModule from '../src/commands/execute.js';
+import * as pluginCacheModule from '../src/pluginCache.js';
 import {
   clearWindowState,
   ensureActiveWindowFocus,
@@ -312,7 +312,7 @@ describe('window management', () => {
       });
 
       it('should clear pluginAvailabilityCache after a successful switch', async () => {
-        const spy = vi.spyOn(executeModule, 'clearPluginAvailabilityCache');
+        const spy = vi.spyOn(pluginCacheModule, 'clearPluginAvailabilityCache');
         const mockBrowser = {
           sessionId: 'cache-clear-session',
           tauri: {

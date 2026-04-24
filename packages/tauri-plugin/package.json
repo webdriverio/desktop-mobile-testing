@@ -29,12 +29,16 @@
   "dependencies": {
     "@tauri-apps/api": "2.10.1",
     "@tauri-apps/plugin-log": "2.8.0",
-    "@wdio/native-spy": "workspace:*"
+    "@wdio/native-spy": "workspace:*",
+    "@wdio/native-utils": "workspace:*"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "4.1.4",
     "esbuild": "^0.27.4",
+    "jsdom": "^28.1.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "4.1.4"
   },
   "repository": {
     "type": "git",

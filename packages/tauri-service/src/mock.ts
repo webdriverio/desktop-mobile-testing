@@ -173,7 +173,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     const implStr = implFn.toString();
     await tauriExecute<void, [string]>(
       browserToUse,
-      `((_tauri, cmd) => { const mockObj = window.__wdio_mocks__?.[cmd]; if (mockObj) { mockObj.mockImplementation?.(${implStr}); } })`,
+      `(_tauri, cmd) => { const mockObj = window.__wdio_mocks__?.[cmd]; if (mockObj) { mockObj.mockImplementation?.(${implStr}); } }`,
       command,
     );
 
@@ -186,7 +186,7 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
     const implStr = implFn.toString();
     await tauriExecute<void, [string]>(
       browserToUse,
-      `((_tauri, cmd) => { const mockObj = window.__wdio_mocks__?.[cmd]; if (mockObj) { mockObj.mockImplementationOnce?.(${implStr}); } })`,
+      `(_tauri, cmd) => { const mockObj = window.__wdio_mocks__?.[cmd]; if (mockObj) { mockObj.mockImplementationOnce?.(${implStr}); } }`,
       command,
     );
 

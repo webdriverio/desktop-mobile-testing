@@ -5,6 +5,7 @@
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import * as nativeSpy from '@wdio/native-spy';
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils/script-detect';
 
 // Lazy-load invoke function to support both global Tauri API and dynamic imports
 // This allows the plugin to work both with bundlers (Vite) and without (plain ES modules)
@@ -146,12 +147,22 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
     throw new Error('window.__TAURI__ is not available. Make sure withGlobalTauri is enabled in tauri.conf.json');
   }
 
-  // Build a minimal tauri object with a mock-routing invoke. We deliberately avoid
-  // spreading/Object.assign on window.__TAURI__ or window.__TAURI__.core because on
-  // macOS/WKWebView those objects (or their Proxy wrappers installed by
-  // setupInvokeInterception) can have non-configurable/non-writable own data properties that
-  // trigger Proxy invariant violations when iterated. Only core.invoke is needed by scripts.
-  const wrappedScript = `
+  const trimmed = script.trim();
+  const isFunctionLike =
+    (trimmed.startsWith('(') && hasTopLevelArrow(trimmed)) ||
+    /^function[\s(]/.test(trimmed) ||
+    (/^async[\s(]/.test(trimmed) && (/^async\s+function\b/.test(trimmed) || hasTopLevelArrow(trimmed))) ||
+    /^(\w+)\s*=>/.test(trimmed);
+
+  let scriptToSend: string;
+
+  if (isFunctionLike) {
+    // Build a minimal tauri object with a mock-routing invoke. We deliberately avoid
+    // spreading/Object.assign on window.__TAURI__ or window.__TAURI__.core because on
+    // macOS/WKWebView those objects (or their Proxy wrappers installed by
+    // setupInvokeInterception) can have non-configurable/non-writable own data properties that
+    // trigger Proxy invariant violations when iterated. Only core.invoke is needed by scripts.
+    scriptToSend = `
     (async () => {
       const __wdio_args = ${argsJson ?? '[]'};
 
@@ -184,12 +195,24 @@ export async function execute(script: string, options?: ExecuteOptions, argsJson
       return await (${script})(__wdio_tauri, ...__wdio_args);
     })()
   `.trim();
+  } else {
+    // Plain string script — not callable. Wrap as an async function body and apply the
+    // user args so they are accessible via arguments[0], arguments[1], etc. (W3C §13.2.2).
+    // Using a named function (not an arrow) is required: arrow functions have no arguments object.
+    // No conditional async needed — the Tauri IPC always awaits the result.
+    const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(trimmed);
+    const hasStatement = hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed);
+    const argsArray = argsJson ?? '[]';
+    scriptToSend = hasStatement
+      ? `(async function() { ${script} }).apply(null, ${argsArray})`
+      : `(async function() { return ${script}; }).apply(null, ${argsArray})`;
+  }
 
   const invoke = await getInvoke();
   try {
     const result = await invoke('plugin:wdio|execute', {
       request: {
-        script: wrappedScript,
+        script: scriptToSend,
         args: [],
         window_label: options?.windowLabel,
       },

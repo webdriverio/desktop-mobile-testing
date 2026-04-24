@@ -265,7 +265,7 @@ export default class TauriLaunchService {
         // Allocate port to prevent collision with worker backends
         await this.backendPortManager.allocatePortPair(backendPort, backendPort + 1);
         const { proc } = await startTestRunnerBackend({ port: backendPort, serviceOptions: mergedOptions });
-        await waitTestRunnerBackendReady('127.0.0.1', backendPort);
+        await waitTestRunnerBackendReady('127.0.0.1', backendPort, 30000);
 
         this.testRunnerBackend = proc;
 
@@ -370,7 +370,7 @@ export default class TauriLaunchService {
               serviceOptions: instanceOptions,
               instanceId,
             });
-            await waitTestRunnerBackendReady(hostname, backendPort);
+            await waitTestRunnerBackendReady(hostname, backendPort, 30000);
 
             this.workerBackends.set(instanceId, { proc, port: backendPort });
             env.REMOTE_WEBDRIVER_URL = `http://${hostname}:${backendPort}`;
@@ -695,7 +695,7 @@ export default class TauriLaunchService {
               serviceOptions: workerOptions,
               instanceId: cid,
             });
-            await waitTestRunnerBackendReady('127.0.0.1', backendPort);
+            await waitTestRunnerBackendReady('127.0.0.1', backendPort, 30000);
             this.workerBackends.set(cid, { proc, port: backendPort });
             workerEnv.REMOTE_WEBDRIVER_URL = `http://127.0.0.1:${backendPort}`;
             log.info(`Worker ${cid} backend ready on port ${backendPort}`);
@@ -912,7 +912,7 @@ export default class TauriLaunchService {
         serviceOptions: config.options,
         instanceId: config.instanceId,
       });
-      await waitTestRunnerBackendReady(hostname, config.backendPort);
+      await waitTestRunnerBackendReady(hostname, config.backendPort, 30000);
 
       // Store in the same location it was originally stored
       if (configs.length === 1 && config.instanceId === 'tauri-driver') {

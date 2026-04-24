@@ -3,9 +3,9 @@ import { createLogger } from '@wdio/native-utils';
 
 const log = createLogger('electron-service', 'service');
 
+import { hasSemicolonOutsideQuotes, hasTopLevelArrow } from '@wdio/native-utils';
 import { parse, print } from 'recast';
 import type { ElectronCdpBridge } from '../bridge';
-
 import mockStore from '../mockStore.js';
 import { isInternalCommand } from '../utils.js';
 
@@ -47,7 +47,31 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
     return undefined;
   }
 
-  const functionDeclaration = getCachedOrParse(script.toString());
+  // Handle string scripts - wrap them in async IIFE before parsing
+  // This prevents recast from trying to parse them as function definitions
+  // Only pass through to recast if it's clearly a function-like string that needs transformation
+  let functionDeclaration: string;
+  if (typeof script === 'string') {
+    const trimmed = script.trim();
+    // Route function-like strings through recast so the electron param is stripped.
+    // Covers: (e, ...args) => ..., async (e, ...args) => ..., function(e) {...}, async function(e) {...}
+    const isFunctionLike =
+      /^(async\s+)?function\b/.test(trimmed) ||
+      ((trimmed.startsWith('(') || /^async\s*\(/.test(trimmed)) && hasTopLevelArrow(trimmed));
+
+    if (isFunctionLike) {
+      // Anonymous function expressions (function(...){}) are only valid in expression context.
+      // Babel rejects them at statement level ("Unexpected token"), so wrap in parens first.
+      // Named declarations (function foo(...){}) and arrow functions parse fine as-is.
+      const needsParens = /^(async\s+)?function\s*\(/.test(trimmed);
+      functionDeclaration = getCachedOrParse(needsParens ? `(${script.trim()})` : script);
+    } else {
+      functionDeclaration = wrapStringScriptForCdp(script);
+    }
+  } else {
+    functionDeclaration = getCachedOrParse(script.toString());
+  }
+
   const argsArray = args.map((arg) => ({ value: arg }));
 
   log.debug('Executing script length:', Buffer.byteLength(functionDeclaration, 'utf-8'));
@@ -74,6 +98,29 @@ export async function execute<ReturnValue, InnerArguments extends unknown[]>(
   }
 
   return result.result.value as ReturnValue;
+}
+
+/**
+ * Wrap string scripts in async IIFE for proper CDP execution
+ * Handles statement and expression scripts that would otherwise fail parsing
+ */
+function wrapStringScriptForCdp(script: string): string {
+  const trimmed = script.trim();
+
+  // For string scripts, wrap them to avoid parsing errors:
+  // - "function() {}" (recast handles these differently)
+  // - "1 + 2 + 3" (expression - would be called as function)
+  // - "return 42" (statement - parsing error)
+  // - "const x = 1" (statement - parsing error)
+
+  const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(trimmed);
+  const hasRealSemicolon = hasSemicolonOutsideQuotes(trimmed);
+
+  if (hasRealSemicolon || hasStatementKeyword) {
+    return `async function() { ${script} }`;
+  } else {
+    return `async function() { return (${script}) }`;
+  }
 }
 
 async function syncMockStatus(args: unknown[]) {
