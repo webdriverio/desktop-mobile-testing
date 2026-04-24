@@ -48,8 +48,8 @@ function wrapStringScript(script: string): string {
   const wrap = needsAsync ? 'async ' : '';
 
   if (hasRealSemicolon || hasStatementKeyword) {
-    return `(${wrap}() => { ${script} })()`;
+    return `(${wrap}function() { ${script} })()`;
   } else {
-    return `(${wrap}() => { return ${script}; })()`;
+    return `(${wrap}function() { return ${script}; })()`;
   }
 }
