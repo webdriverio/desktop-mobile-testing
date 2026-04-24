@@ -51,10 +51,6 @@ pub(crate) async fn execute<R: Runtime>(
     log::debug!("Execute command called");
     log::trace!("Script length: {} chars", request.script.len());
 
-    // Retain a reference to the invoking window for listener registration.
-    // We clone before the conditional because the else branch moves `window` into target_window.
-    let invoking_window = window.clone();
-
     // Determine which window to use for execution
     let target_window = if let Some(ref label) = request.window_label {
         log::debug!("Target window label specified: {}", label);
@@ -225,21 +221,20 @@ pub(crate) async fn execute<R: Runtime>(
             // e.g. "x => x + 1" is a param arrow; "obj.fn(x => x)" is not
             !before.is_empty() && !before.contains(' ') && !before.contains('(')
         }).unwrap_or(false);
-    // Only detect function-like patterns: function, async, arrow functions
-    // Don't use starts_with('(') as it catches any parenthesized expression like (document.title)
+    // Only detect function-like patterns: function, async, arrow functions, or pre-packaged
+    // async IIFEs emitted by guest-js (both branches produce "(async ...)" patterns).
+    // Don't use starts_with('(') alone as it catches any parenthesized expression like (document.title).
     let is_function = has_keyword_prefix(trimmed, "function")
         || has_keyword_prefix(trimmed, "function*")
         || has_keyword_prefix(trimmed, "async")
         || starts_with_paren_arrow
-        || single_param_arrow;
+        || single_param_arrow
+        || trimmed.starts_with("(async");
 
-    let script = if !request.args.is_empty() && is_function {
-        // With args + callable function - pass through as-is
-        // Guest-js already handles wrapping with Tauri API injection
-        request.script.clone()
-    } else if is_function {
-        // Function script with no args - pass through as-is
-        // Guest-js already wraps it with proper Tauri API injection
+    let script = if is_function {
+        // Callable/pre-packaged script — pass through as-is.
+        // guest-js wraps both function-like and plain-string cases into async IIFEs before
+        // invoking this command, so no further wrapping is needed here.
         request.script.clone()
     } else if !request.args.is_empty() {
         // String script with args (not a callable function) - return error
@@ -323,19 +318,13 @@ pub(crate) async fn execute<R: Runtime>(
         }
     }
 
-    // Listen for the result event on both app and window targets for compatibility
-    // Different Tauri providers may emit to different targets
-    let tx_clone_app: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>> = Arc::clone(&tx);
-    let tx_clone_window: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>> = Arc::clone(&tx);
+    // Listen for the result event on the app target.
+    // guest-js uses emit() from @tauri-apps/api/event which targets the app scope.
+    let tx_clone: Arc<Mutex<Option<oneshot::Sender<crate::Result<JsonValue>>>>> = Arc::clone(&tx);
 
-    let listener_id_app = app.listen(&event_id.clone(), move |event| {
-        log::trace!("Received result event on app target: {}", event.payload());
-        handle_event(event, tx_clone_app.clone());
-    });
-
-    let listener_id_window = invoking_window.listen(&event_id, move |event| {
-        log::trace!("Received result event on window target: {}", event.payload());
-        handle_event(event, tx_clone_window.clone());
+    let listener_id = app.listen(&event_id, move |event| {
+        log::trace!("Received result event: {}", event.payload());
+        handle_event(event, tx_clone.clone());
     });
 
     // Wrap the script to:
@@ -400,8 +389,7 @@ pub(crate) async fn execute<R: Runtime>(
     // Evaluate the script in the target window
     if let Err(e) = target_window.eval(&script_with_result) {
         log::error!("Failed to eval script: {}", e);
-        app.unlisten(listener_id_app);
-        invoking_window.unlisten(listener_id_window);
+        app.unlisten(listener_id);
         return Err(crate::Error::ExecuteError(format!("Failed to eval script: {}", e)));
     }
 
@@ -417,21 +405,18 @@ pub(crate) async fn execute<R: Runtime>(
         Ok(Ok(Ok(result))) => {
             log::debug!("Execute completed successfully");
             log::trace!("Result: {:?}", result);
-            app.unlisten(listener_id_app);
-            invoking_window.unlisten(listener_id_window);
+            app.unlisten(listener_id);
             Ok(result)
         }
         Ok(Ok(Err(e))) => {
             log::error!("JS error during execution: {}", e);
-            app.unlisten(listener_id_app);
-            invoking_window.unlisten(listener_id_window);
+            app.unlisten(listener_id);
             Err(e)
         }
         Ok(Err(_)) => {
             // Channel closed without sending (shouldn't happen)
             log::error!("Channel closed unexpectedly. Event ID: {}. Window: {}", event_id, window_label);
-            app.unlisten(listener_id_app);
-            invoking_window.unlisten(listener_id_window);
+            app.unlisten(listener_id);
             Err(crate::Error::ExecuteError(format!(
                 "Channel closed unexpectedly. Event ID: {}. Window: {}",
                 event_id, window_label
@@ -440,8 +425,7 @@ pub(crate) async fn execute<R: Runtime>(
         Err(_) => {
             log::error!("Timeout waiting for execute result after 30s. Event ID: {}. Window: {}",
                 event_id, window_label);
-            app.unlisten(listener_id_app);
-            invoking_window.unlisten(listener_id_window);
+            app.unlisten(listener_id);
             Err(crate::Error::ExecuteError(format!(
                 "Script execution timed out after 30s. Event ID: {}. Window: {}",
                 event_id, window_label
