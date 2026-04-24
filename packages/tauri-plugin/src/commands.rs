@@ -171,36 +171,77 @@ pub(crate) async fn execute<R: Runtime>(
         }
 
         // Returns true if s contains ';' outside string literals at bracket depth 0.
+        // Uses a stack-based tracker for template literals so that nested template
+        // expressions like `${`inner; value`}` do not produce false positives.
         fn has_semicolon_outside_quotes(s: &str) -> bool {
+            struct TmplFrame { in_str: bool, expr_depth: i32 }
             let bytes = s.as_bytes();
+            let mut depth: i32 = 0;
             let mut in_single_quote = false;
             let mut in_double_quote = false;
-            let mut in_backtick = false;
-            let mut depth: i32 = 0;
-            let mut backslash_count: usize = 0;
+            let mut tmpl: Vec<TmplFrame> = Vec::new();
             let mut i = 0;
             while i < bytes.len() {
                 let b = bytes[i];
-                if b == b'\\' {
-                    backslash_count += 1;
+                let top_in_str = tmpl.last().map_or(false, |f| f.in_str);
+
+                // Escape: skip next byte when inside a string or template string chars.
+                if b == b'\\' && (in_single_quote || in_double_quote || top_in_str) {
+                    i += 2;
+                    continue;
+                }
+
+                // Inside template string chars: only backtick and ${ are significant.
+                if top_in_str {
+                    if b == b'`' {
+                        tmpl.pop();
+                    } else if b == b'$' && i + 1 < bytes.len() && bytes[i + 1] == b'{' {
+                        i += 1; // consume the {
+                        depth += 1;
+                        if let Some(frame) = tmpl.last_mut() {
+                            frame.in_str = false;
+                            frame.expr_depth = depth;
+                        }
+                    }
                     i += 1;
                     continue;
                 }
-                let escaped = backslash_count % 2 == 1;
-                backslash_count = 0;
-                if !escaped {
-                    match b {
-                        b'\'' if !in_double_quote && !in_backtick => in_single_quote = !in_single_quote,
-                        b'"' if !in_single_quote && !in_backtick => in_double_quote = !in_double_quote,
-                        b'`' if !in_single_quote && !in_double_quote => in_backtick = !in_backtick,
-                        _ if !in_single_quote && !in_double_quote && !in_backtick => match b {
-                            b'(' | b'[' | b'{' => depth += 1,
-                            b')' | b']' | b'}' => depth -= 1,
-                            b';' if depth == 0 => return true,
-                            _ => {}
-                        },
-                        _ => {}
+
+                if b == b'\'' && !in_double_quote {
+                    in_single_quote = !in_single_quote;
+                    i += 1;
+                    continue;
+                }
+                if b == b'"' && !in_single_quote {
+                    in_double_quote = !in_double_quote;
+                    i += 1;
+                    continue;
+                }
+                if in_single_quote || in_double_quote {
+                    i += 1;
+                    continue;
+                }
+
+                // Start a new template literal.
+                if b == b'`' {
+                    tmpl.push(TmplFrame { in_str: true, expr_depth: 0 });
+                    i += 1;
+                    continue;
+                }
+
+                match b {
+                    b'(' | b'[' | b'{' => depth += 1,
+                    b')' | b']' | b'}' => {
+                        depth -= 1;
+                        // Check if this } closes a template expression.
+                        if let Some(frame) = tmpl.last_mut() {
+                            if !frame.in_str && depth == frame.expr_depth - 1 {
+                                frame.in_str = true;
+                            }
+                        }
                     }
+                    b';' if depth == 0 => return true,
+                    _ => {}
                 }
                 i += 1;
             }
