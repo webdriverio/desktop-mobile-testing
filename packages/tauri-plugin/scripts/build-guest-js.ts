@@ -52,11 +52,8 @@ async function main() {
 
     console.log('✅ JavaScript bundle created');
 
-    // Generate TypeScript declarations with tsc
-    execSync(
-      'tsc guest-js/index.ts --outDir dist-js --declaration --emitDeclarationOnly --esModuleInterop --skipLibCheck',
-      { cwd: packageRoot, stdio: 'inherit' },
-    );
+    // Generate TypeScript declarations with tsc, using tsconfig.json for moduleResolution
+    execSync('tsc --project tsconfig.json --emitDeclarationOnly', { cwd: packageRoot, stdio: 'inherit' });
 
     console.log('✅ Type declarations generated');
     console.log('🎉 Build complete!');

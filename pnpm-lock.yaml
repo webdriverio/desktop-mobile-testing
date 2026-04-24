@@ -942,6 +942,9 @@ importers:
       '@wdio/native-spy':
         specifier: workspace:*
         version: link:../native-spy
+      '@wdio/native-utils':
+        specifier: workspace:*
+        version: link:../native-utils
     devDependencies:
       '@vitest/coverage-v8':
         specifier: 4.1.4

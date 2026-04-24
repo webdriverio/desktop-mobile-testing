@@ -29,7 +29,8 @@
   "dependencies": {
     "@tauri-apps/api": "2.10.1",
     "@tauri-apps/plugin-log": "2.8.0",
-    "@wdio/native-spy": "workspace:*"
+    "@wdio/native-spy": "workspace:*",
+    "@wdio/native-utils": "workspace:*"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.1.4",
