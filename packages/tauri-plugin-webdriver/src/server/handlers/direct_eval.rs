@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -37,7 +38,7 @@ pub struct DirectEvalResponse {
 pub async fn eval<R: Runtime + 'static>(
     State(state): State<Arc<AppState<R>>>,
     Json(req): Json<DirectEvalRequest>,
-) -> Json<DirectEvalResponse> {
+) -> (StatusCode, Json<DirectEvalResponse>) {
     let label = req.window_label.as_deref().unwrap_or("main");
     let timeouts = Timeouts {
         script_ms: req.timeout_ms.unwrap_or(30_000),
@@ -46,15 +47,19 @@ pub async fn eval<R: Runtime + 'static>(
 
     let executor = match state.get_executor_for_window(label, timeouts, vec![]) {
         Ok(e) => e,
-        Err(_) => {
+        Err(e) => {
             let available = state.get_window_labels().join(", ");
-            return Json(DirectEvalResponse {
-                value: None,
-                error: Some(format!(
-                    "Window '{label}' not found. Available: [{available}]"
-                )),
-                undef: None,
-            });
+            tracing::warn!("Direct eval: window '{label}' not found: {}", e.message);
+            return (
+                StatusCode::NOT_FOUND,
+                Json(DirectEvalResponse {
+                    value: None,
+                    error: Some(format!(
+                        "Window '{label}' not found. Available: [{available}]"
+                    )),
+                    undef: None,
+                }),
+            );
         }
     };
 
@@ -63,11 +68,14 @@ pub async fn eval<R: Runtime + 'static>(
             match result.get("ok").and_then(|v| v.as_bool()) {
                 Some(true) => {
                     let undef = result.get("undef").and_then(|v| v.as_bool()).unwrap_or(false);
-                    Json(DirectEvalResponse {
-                        value: result.get("value").cloned(),
-                        error: None,
-                        undef: if undef { Some(true) } else { None },
-                    })
+                    (
+                        StatusCode::OK,
+                        Json(DirectEvalResponse {
+                            value: result.get("value").cloned(),
+                            error: None,
+                            undef: if undef { Some(true) } else { None },
+                        }),
+                    )
                 }
                 Some(false) => {
                     let error = result
@@ -75,23 +83,32 @@ pub async fn eval<R: Runtime + 'static>(
                         .and_then(|v| v.as_str())
                         .unwrap_or("Script execution failed")
                         .to_string();
-                    Json(DirectEvalResponse {
-                        value: None,
-                        error: Some(error),
-                        undef: None,
-                    })
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(DirectEvalResponse {
+                            value: None,
+                            error: Some(error),
+                            undef: None,
+                        }),
+                    )
                 }
-                None => Json(DirectEvalResponse {
-                    value: Some(result),
-                    error: None,
-                    undef: None,
-                }),
+                None => (
+                    StatusCode::OK,
+                    Json(DirectEvalResponse {
+                        value: Some(result),
+                        error: None,
+                        undef: None,
+                    }),
+                ),
             }
         }
-        Err(err) => Json(DirectEvalResponse {
-            value: None,
-            error: Some(err.message),
-            undef: None,
-        }),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(DirectEvalResponse {
+                value: None,
+                error: Some(err.message),
+                undef: None,
+            }),
+        ),
     }
 }
