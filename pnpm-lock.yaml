@@ -48,8 +48,8 @@ importers:
         specifier: ^8.3.0
         version: 8.4.1(@types/node@25.6.0)
       '@releasekit/release':
-        specifier: ^0.17.1
-        version: 0.17.1(conventional-commits-parser@6.4.0)(ws@8.20.0)
+        specifier: ^0.18.0
+        version: 0.18.0(conventional-commits-parser@6.4.0)(ws@8.20.0)
       '@types/node':
         specifier: ^25.5.0
         version: 25.6.0
@@ -2365,23 +2365,23 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@releasekit/notes@0.17.1':
-    resolution: {integrity: sha512-j6ZGJBwNxSO7l57saYmGMnfV8ZKaX3DmfToi9sa2x27x7xLyVCoT0XjdWuwcSywFqYp3XJw6xwhun3Jezm1OEQ==}
+  '@releasekit/notes@0.18.0':
+    resolution: {integrity: sha512-3jc0MFS+y4xEPwsWqbo0CC+QpgHpLdp4s9ml8lJdiPhizIscCdj3fV+2PuwF7hZHr2brDk5I3O/aJkGpOcR7Hg==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/publish@0.17.1':
-    resolution: {integrity: sha512-8/97im0QvXXV1PSPB5N0mNCDRFz6hkS5liDOcUYr+ikOnp7AH1uwuRflFwnkRicJ03x102G3LvT+HNclzeyDSg==}
+  '@releasekit/publish@0.18.0':
+    resolution: {integrity: sha512-toKmkd9bGEUjxhvpG7aNtJI4UIhx1kmE18/iC36EOm0EVqhVki0biLafi38T4GzZwzQKwdLpBjLjleFfjmJoWw==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/release@0.17.1':
-    resolution: {integrity: sha512-/8dbfoupJSpJ2+IDmuNtSROKaY5+T8vX5suGTrNxbgWG7zD4gbA4DHIwd5FV1jfzeW2KW2+TIDtvYzm/wrc6dA==}
+  '@releasekit/release@0.18.0':
+    resolution: {integrity: sha512-BbLuTAKulKbc7j7A72XyEeiOFRNlPOR4WgKv7IW/I9RNXAkthHUEYiKuvF8SDnZMegujNI8H8BNfs0Ee1fuMxA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  '@releasekit/version@0.17.1':
-    resolution: {integrity: sha512-v0WTfqcdUYavwGZr3FpKcPZPRYnGW0YifZjIIeE+7Yck+A+bRwCaDe6qOFhKU1r2pyO7tn6XiHLL1AKyIeeMZA==}
+  '@releasekit/version@0.18.0':
+    resolution: {integrity: sha512-byq8FctyiqjexlmlwuRGmVBNDVq6/zo5QJ8PU1vMdh1wuaypJD26NzvZ5e9KG6QqRrj1PpXgVWQnn512rm4Vqw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -4899,8 +4899,8 @@ packages:
     engines: {node: '>=20.17'}
     hasBin: true
 
-  liquidjs@10.25.5:
-    resolution: {integrity: sha512-GKiKeZjJDdVoQAu+S9rzkYsYnYhcep5W3WwZXgb5f+yq484P/k9JqamBbGYu+LBEixcUAXZr2jogdAIjB3ki1w==}
+  liquidjs@10.25.7:
+    resolution: {integrity: sha512-rPCjJLiD4eDhQjvv964AeXFC+HbeYBbZrd7Z82Q6hqv1lX7G+5w4SJcKLn9CAAAwHI4aS3dTdo083UB79K3pDA==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -8197,7 +8197,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@releasekit/notes@0.17.1(ws@8.20.0)':
+  '@releasekit/notes@0.18.0(ws@8.20.0)':
     dependencies:
       '@anthropic-ai/sdk': 0.86.1(zod@4.3.6)
       '@octokit/rest': 22.0.1
@@ -8205,7 +8205,7 @@ snapshots:
       commander: 14.0.3
       ejs: 4.0.1
       handlebars: 4.7.9
-      liquidjs: 10.25.5
+      liquidjs: 10.25.7
       minimatch: 10.2.5
       openai: 6.34.0(ws@8.20.0)(zod@4.3.6)
       smol-toml: 1.6.1
@@ -8213,7 +8213,7 @@ snapshots:
     transitivePeerDependencies:
       - ws
 
-  '@releasekit/publish@0.17.1':
+  '@releasekit/publish@0.18.0':
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -8222,13 +8222,13 @@ snapshots:
       smol-toml: 1.6.1
       zod: 4.3.6
 
-  '@releasekit/release@0.17.1(conventional-commits-parser@6.4.0)(ws@8.20.0)':
+  '@releasekit/release@0.18.0(conventional-commits-parser@6.4.0)(ws@8.20.0)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@octokit/rest': 22.0.1
-      '@releasekit/notes': 0.17.1(ws@8.20.0)
-      '@releasekit/publish': 0.17.1
-      '@releasekit/version': 0.17.1(conventional-commits-parser@6.4.0)
+      '@releasekit/notes': 0.18.0(ws@8.20.0)
+      '@releasekit/publish': 0.18.0
+      '@releasekit/version': 0.18.0(conventional-commits-parser@6.4.0)
       chalk: 5.6.2
       commander: 14.0.3
       conventional-changelog-angular: 8.3.1
@@ -8240,7 +8240,7 @@ snapshots:
       - conventional-commits-parser
       - ws
 
-  '@releasekit/version@0.17.1(conventional-commits-parser@6.4.0)':
+  '@releasekit/version@0.18.0(conventional-commits-parser@6.4.0)':
     dependencies:
       '@manypkg/get-packages': 3.1.0
       '@types/minimatch': 5.1.2
@@ -11110,7 +11110,7 @@ snapshots:
       tinyexec: 1.1.1
       yaml: 2.8.3
 
-  liquidjs@10.25.5:
+  liquidjs@10.25.7:
     dependencies:
       commander: 10.0.1
 
