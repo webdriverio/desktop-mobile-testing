@@ -13,8 +13,6 @@ use crate::webdriver::Timeouts;
 #[derive(Deserialize)]
 pub struct DirectEvalRequest {
     pub script: String,
-    #[serde(default)]
-    pub args: Vec<Value>,
     pub window_label: Option<String>,
     pub timeout_ms: Option<u64>,
 }
@@ -45,7 +43,7 @@ pub async fn eval<R: Runtime + 'static>(
         ..Default::default()
     };
 
-    let executor = match state.get_executor_for_window(label, timeouts, vec![]) {
+    let executor = match state.get_executor_for_window(label, timeouts, Vec::new()) {
         Ok(e) => e,
         Err(e) => {
             let available = state.get_window_labels().join(", ");
@@ -63,7 +61,7 @@ pub async fn eval<R: Runtime + 'static>(
         }
     };
 
-    match executor.execute_async_script(&req.script, &req.args).await {
+    match executor.execute_async_script(&req.script, &[]).await {
         Ok(result) => {
             match result.get("ok").and_then(|v| v.as_bool()) {
                 Some(true) => {
