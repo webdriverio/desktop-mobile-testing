@@ -7,7 +7,6 @@ export class DirectEvalClient {
   async eval(
     wrappedScript: string,
     opts: {
-      args?: unknown[];
       windowLabel?: string;
       timeoutMs?: number;
     } = {},
@@ -17,7 +16,6 @@ export class DirectEvalClient {
 
     const body: Record<string, unknown> = {
       script: wrappedScript,
-      args: opts.args ?? [],
       timeout_ms: timeoutMs,
     };
     if (opts.windowLabel !== undefined) {
@@ -31,20 +29,24 @@ export class DirectEvalClient {
       signal: AbortSignal.timeout(timeoutMs + 5_000),
     });
 
+    const data = (await response.json().catch(() => null)) as {
+      value?: unknown;
+      error?: string;
+      undef?: boolean;
+    } | null;
+
     if (!response.ok) {
-      throw new Error(`Direct eval HTTP error: ${response.status} ${response.statusText}`);
+      throw new Error(data?.error ?? `Direct eval HTTP error: ${response.status} ${response.statusText}`);
     }
 
-    const data = (await response.json()) as { value?: unknown; error?: string; undef?: boolean };
-
-    if (data.error) {
+    if (data?.error) {
       throw new Error(data.error);
     }
 
-    if (data.undef === true) {
+    if (data?.undef === true) {
       return undefined;
     }
 
-    return data.value;
+    return data?.value;
   }
 }

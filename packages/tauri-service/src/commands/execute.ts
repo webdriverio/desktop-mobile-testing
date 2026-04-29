@@ -10,7 +10,7 @@ export { clearPluginAvailabilityCache } from '../pluginCache.js';
 
 const log = createLogger('tauri-service', 'service');
 
-const directEvalClientCache = new WeakMap<WebdriverIO.Browser, DirectEvalClient>();
+const directEvalClientCache = new WeakMap<WebdriverIO.Browser, { client: DirectEvalClient; port: number }>();
 
 function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
   return typeof arg === 'object' && arg !== null && '__wdioOptions__' in arg;
@@ -26,11 +26,12 @@ function getDirectEvalPort(): number {
 }
 
 function getOrCreateDirectEvalClient(browser: WebdriverIO.Browser, port: number): DirectEvalClient {
-  let client = directEvalClientCache.get(browser);
-  if (!client) {
-    client = new DirectEvalClient(port);
-    directEvalClientCache.set(browser, client);
+  const cached = directEvalClientCache.get(browser);
+  if (cached && cached.port === port) {
+    return cached.client;
   }
+  const client = new DirectEvalClient(port);
+  directEvalClientCache.set(browser, { client, port });
   return client;
 }
 
@@ -96,7 +97,6 @@ export async function execute<ReturnValue, InnerArguments extends unknown[] = un
     const client = getOrCreateDirectEvalClient(browser, port);
     const wrapped = wrapScriptForDirectEval(scriptString, JSON.stringify(userArgs));
     return (await client.eval(wrapped, {
-      args: userArgs,
       windowLabel: executeOptions.windowLabel,
     })) as ReturnValue;
   }

@@ -55,6 +55,8 @@ export function wrapScriptForDirectEval(script: string, argsJson: string): strin
 })();`;
   }
 
+  // String scripts cannot receive __wdio_tauri as a named parameter; use window.__TAURI__ directly.
+  // Mock routing does not apply here. This matches the IPC path's behaviour for string scripts.
   const hasStatementKeyword = /^(const|let|var|if|for|while|switch|throw|try|do|return)(?=[^\w$]|$)/.test(trimmed);
   const hasStatement = hasStatementKeyword || hasSemicolonOutsideQuotes(trimmed);
   const invocation = hasStatement
