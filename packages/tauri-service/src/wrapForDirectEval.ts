@@ -19,7 +19,7 @@ export function wrapScriptForDirectEval(script: string, argsJson: string): strin
     (trimmed.startsWith('(') && hasTopLevelArrow(trimmed)) ||
     /^function[\s(]/.test(trimmed) ||
     (/^async[\s(]/.test(trimmed) && (/^async\s+function\b/.test(trimmed) || hasTopLevelArrow(trimmed))) ||
-    /^(\w+)\s*=>/.test(trimmed);
+    /^[a-zA-Z_$]\w*\s*=>/.test(trimmed);
 
   if (isFunctionLike) {
     return `var __cb = arguments[arguments.length - 1];
