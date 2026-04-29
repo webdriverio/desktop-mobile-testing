@@ -85,10 +85,19 @@
     "yaml": "^2.8.2"
   },
   "lint-staged": {
-    "**/*.{j,t}s": ["biome check --write", "eslint --fix --cache"],
-    "**/*.{yml,md,json}": ["biome format --write ."]
+    "**/*.{j,t}s": [
+      "biome check --write",
+      "eslint --fix --cache"
+    ],
+    "**/*.{yml,md,json}": [
+      "biome format --write"
+    ]
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "electron", "electron-nightly"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "electron",
+      "electron-nightly"
+    ]
   }
 }

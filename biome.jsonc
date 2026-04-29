@@ -1,6 +1,10 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
-  "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
   "files": {
     "ignoreUnknown": false,
     "includes": [
@@ -35,12 +39,22 @@
     "bracketSpacing": true,
     "expand": "auto",
     "useEditorconfig": true,
-    "includes": ["**", ".github/**/*"]
+    "includes": [
+      "**",
+      ".github/**/*"
+    ]
   },
   "linter": {
     "enabled": true,
-    "includes": ["**"],
-    "rules": { "recommended": true, "style": { "useBlockStatements": "off" } }
+    "includes": [
+      "**"
+    ],
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useBlockStatements": "off"
+      }
+    }
   },
   "javascript": {
     "formatter": {
@@ -55,10 +69,21 @@
       "bracketSpacing": true
     }
   },
-  "html": { "formatter": { "selfCloseVoidElements": "always" } },
+  "json": {
+    "formatter": {
+      "expand": "always"
+    }
+  },
+  "html": {
+    "formatter": {
+      "selfCloseVoidElements": "always"
+    }
+  },
   "overrides": [
     {
-      "includes": ["**/*.{js,mjs,ts}"],
+      "includes": [
+        "**/*.{js,mjs,ts}"
+      ],
       "linter": {
         "rules": {
           "complexity": {
@@ -71,10 +96,14 @@
       }
     },
     {
-      "includes": ["**/*.ts"],
+      "includes": [
+        "**/*.ts"
+      ],
       "linter": {
         "rules": {
-          "complexity": { "noUselessTypeConstraint": "error" },
+          "complexity": {
+            "noUselessTypeConstraint": "error"
+          },
           "correctness": {
             "noUndeclaredVariables": "off",
             "noUnusedVariables": "error"
@@ -94,12 +123,23 @@
       }
     },
     {
-      "includes": ["fixtures/electron-apps/*-cjs/**/*.ts"],
-      "linter": { "rules": { "style": { "noCommonJs": "off" } } }
+      "includes": [
+        "fixtures/electron-apps/*-cjs/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noCommonJs": "off"
+          }
+        }
+      }
     },
     // Unit & Integration tests
     {
-      "includes": ["**/*.spec.ts", "**/mocks/*.ts"],
+      "includes": [
+        "**/*.spec.ts",
+        "**/mocks/*.ts"
+      ],
       "linter": {
         "rules": {
           "complexity": {
@@ -115,6 +155,10 @@
   ],
   "assist": {
     "enabled": true,
-    "actions": { "source": { "organizeImports": "on" } }
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   }
 }
