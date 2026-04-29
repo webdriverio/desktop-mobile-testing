@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [@wdio/native-utils@2.3.0] - 2026-04-29
+
+[Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-utils@v2.3.0-next.0...2.3.0)
+
+### Changed
+- update @releasekit/release to version 0.18.0 in package.json and workflows
+
 ## [@wdio/native-utils@2.3.0-next.0] - 2026-04-24
 
 [Full Changelog](https://github.com/webdriverio/desktop-mobile.git/compare/wdio-native-utils@v2.2.0...2.3.0-next.0)

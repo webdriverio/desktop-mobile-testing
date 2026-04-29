@@ -1,6 +1,6 @@
 {
   "name": "@wdio/native-utils",
-  "version": "2.3.0-next.0",
+  "version": "2.3.0",
   "description": "Utilities for WebdriverIO Native Desktop Services",
   "homepage": "https://github.com/webdriverio/desktop-mobile/tree/main/packages/native-utils",
   "license": "MIT",
@@ -66,7 +66,11 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
-  "files": ["dist", "LICENSE", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public",
     "provenance": true
