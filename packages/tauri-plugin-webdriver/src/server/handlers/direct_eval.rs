@@ -93,10 +93,10 @@ pub async fn eval<R: Runtime + 'static>(
                     )
                 }
                 None => (
-                    StatusCode::OK,
+                    StatusCode::INTERNAL_SERVER_ERROR,
                     Json(DirectEvalResponse {
-                        value: Some(result),
-                        error: None,
+                        value: None,
+                        error: Some("Script result missing required 'ok' field".to_string()),
                         undef: None,
                     }),
                 ),
