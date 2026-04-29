@@ -16,13 +16,16 @@ function isExecuteOptions(arg: unknown): arg is TauriExecuteOptions {
   return typeof arg === 'object' && arg !== null && '__wdioOptions__' in arg;
 }
 
+const DIRECT_EVAL_PORT_ENV_VAR = 'TAURI_WEBDRIVER_PORT';
+const DIRECT_EVAL_DEFAULT_PORT = 4445;
+
 function getDirectEvalPort(): number {
-  const envPort = process.env.TAURI_WEBDRIVER_PORT;
+  const envPort = process.env[DIRECT_EVAL_PORT_ENV_VAR];
   if (envPort) {
     const port = parseInt(envPort, 10);
     if (!Number.isNaN(port)) return port;
   }
-  return 4445;
+  return DIRECT_EVAL_DEFAULT_PORT;
 }
 
 function getOrCreateDirectEvalClient(browser: WebdriverIO.Browser, port: number): DirectEvalClient {

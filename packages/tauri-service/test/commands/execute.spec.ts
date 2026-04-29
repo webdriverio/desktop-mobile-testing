@@ -155,6 +155,22 @@ describe('execute — embedded provider (direct eval)', () => {
       await execute(browser2, '() => 2');
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
+
+    it('creates a new client when TAURI_WEBDRIVER_PORT changes between calls', async () => {
+      const mockFn = mockFetch({ value: 1 });
+      vi.stubGlobal('fetch', mockFn);
+
+      process.env['TAURI_WEBDRIVER_PORT'] = '9000';
+      await execute(browser, '() => 1');
+
+      process.env['TAURI_WEBDRIVER_PORT'] = '9001';
+      await execute(browser, '() => 2');
+
+      delete process.env['TAURI_WEBDRIVER_PORT'];
+
+      expect(mockFn.mock.calls[0][0]).toBe('http://127.0.0.1:9000/wdio/eval');
+      expect(mockFn.mock.calls[1][0]).toBe('http://127.0.0.1:9001/wdio/eval');
+    });
   });
 });
 
@@ -592,6 +608,22 @@ describe('executeTauriCommands', () => {
     expect(results[0].ok).toBe(false);
   });
 
+  it('should use timeout variant when timeout is specified', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'timed-result' }),
+      }),
+    );
+
+    const results = await executeTauriCommands<string>(browser, [{ command: 'cmd1', args: ['a'], timeout: 5000 }]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ ok: true, value: 'timed-result' });
+  });
+
   it('should handle empty commands array', async () => {
     const results = await executeTauriCommands(browser, []);
     expect(results).toEqual([]);
@@ -656,6 +688,22 @@ describe('executeTauriCommandsParallel', () => {
     expect(results).toHaveLength(2);
     expect(results[0]).toEqual({ ok: true, value: 'ok' });
     expect(results[1].ok).toBe(false);
+  });
+
+  it('should use timeout variant when timeout is specified', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'timed-result' }),
+      }),
+    );
+
+    const results = await executeTauriCommandsParallel<string>(browser, [{ command: 'cmd1', args: [], timeout: 5000 }]);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({ ok: true, value: 'timed-result' });
   });
 
   it('should handle empty commands array', async () => {
