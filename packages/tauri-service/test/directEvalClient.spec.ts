@@ -70,6 +70,21 @@ describe('DirectEvalClient', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError')));
       await expect(client.eval('script', {})).rejects.toThrow(/aborted/i);
     });
+
+    it('should throw when 200 response body is not valid JSON', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: vi.fn().mockRejectedValue(new SyntaxError('Unexpected token')),
+        }),
+      );
+      await expect(client.eval('script', {})).rejects.toThrow(
+        'Direct eval: server returned 200 but body was not valid JSON',
+      );
+    });
   });
 
   describe('request body construction', () => {

@@ -39,14 +39,18 @@ export class DirectEvalClient {
       throw new Error(data?.error ?? `Direct eval HTTP error: ${response.status} ${response.statusText}`);
     }
 
-    if (data?.error) {
+    if (data === null) {
+      throw new Error('Direct eval: server returned 200 but body was not valid JSON');
+    }
+
+    if (data.error) {
       throw new Error(data.error);
     }
 
-    if (data?.undef === true) {
+    if (data.undef === true) {
       return undefined;
     }
 
-    return data?.value;
+    return data.value;
   }
 }
