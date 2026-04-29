@@ -3,7 +3,10 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2020", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
     "declaration": true,
     "outDir": "./dist-js",
     "rootDir": "./guest-js",
@@ -11,6 +14,12 @@
     "skipLibCheck": true,
     "strict": true
   },
-  "include": ["guest-js/**/*"],
-  "exclude": ["node_modules", "dist-js", "guest-js/__tests__"]
+  "include": [
+    "guest-js/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist-js",
+    "guest-js/__tests__"
+  ]
 }

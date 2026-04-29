@@ -16,15 +16,34 @@
     "stripInternal": true,
     "newLine": "lf",
     "noEmitOnError": true,
-    "lib": ["DOM", "ESNext"],
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
     "noImplicitAny": true,
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "types": ["node", "@wdio/globals/types", "mocha"],
-    "typeRoots": ["./node_modules/@types"]
+    "types": [
+      "node",
+      "@wdio/globals/types",
+      "mocha"
+    ],
+    "typeRoots": [
+      "./node_modules/@types"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx", "electron.vite.config.ts"],
-  "exclude": ["node_modules", "dist", "dist-electron"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "test/**/*.tsx",
+    "electron.vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-electron"
+  ]
 }

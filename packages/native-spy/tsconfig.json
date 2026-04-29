@@ -8,6 +8,13 @@
     "composite": false,
     "incremental": false
   },
-  "include": ["./src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "*.config.*"]
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "*.config.*"
+  ]
 }

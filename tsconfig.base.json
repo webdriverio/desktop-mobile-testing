@@ -4,7 +4,9 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "esModuleInterop": true,
     "strict": true,
     "declaration": true,
@@ -24,5 +26,11 @@
     "checkJs": false,
     "outDir": "./dist/esm"
   },
-  "exclude": ["node_modules", "dist", "out", "coverage", ".turbo"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out",
+    "coverage",
+    ".turbo"
+  ]
 }

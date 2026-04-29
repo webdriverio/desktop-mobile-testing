@@ -34,11 +34,16 @@
     "directories": {
       "output": "dist-electron"
     },
-    "files": ["dist", "package.json"],
+    "files": [
+      "dist",
+      "package.json"
+    ],
     "protocols": [
       {
         "name": "testapp",
-        "schemes": ["testapp"]
+        "schemes": [
+          "testapp"
+        ]
       }
     ],
     "mac": {

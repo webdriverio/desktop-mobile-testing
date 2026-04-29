@@ -57,11 +57,26 @@
           "categorize": true
         },
         "categories": [
-          { "name": "New", "description": "New features and additions" },
-          { "name": "Fixed", "description": "Bug fixes including security and performance fixes" },
-          { "name": "Changed", "description": "Changes to existing functionality" },
-          { "name": "Removed", "description": "Features that were removed" },
-          { "name": "Documentation", "description": "Documentation updates" },
+          {
+            "name": "New",
+            "description": "New features and additions"
+          },
+          {
+            "name": "Fixed",
+            "description": "Bug fixes including security and performance fixes"
+          },
+          {
+            "name": "Changed",
+            "description": "Changes to existing functionality"
+          },
+          {
+            "name": "Removed",
+            "description": "Features that were removed"
+          },
+          {
+            "name": "Documentation",
+            "description": "Documentation updates"
+          },
           {
             "name": "Developer",
             "description": "Internal changes",
@@ -95,7 +110,9 @@
       "auth": "oidc",
       "provenance": true,
       "access": "public",
-      "copyFiles": ["LICENSE"]
+      "copyFiles": [
+        "LICENSE"
+      ]
     },
     "cargo": {
       "enabled": true,

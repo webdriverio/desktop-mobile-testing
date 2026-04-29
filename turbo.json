@@ -1,33 +1,66 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": ["TURBO_TOKEN", "TURBO_TEAM"],
+  "globalEnv": [
+    "TURBO_TOKEN",
+    "TURBO_TEAM"
+  ],
   "remoteCache": {
     "enabled": true
   },
   "tasks": {
     "//#format:check": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,mj,cj,t}s", "**/*.{yml,md,json}", "package.json", "biome.jsonc", "pnpm-workspace.yaml"],
+      "inputs": [
+        "**/*.{j,mj,cj,t}s",
+        "**/*.{yml,md,json}",
+        "package.json",
+        "biome.jsonc",
+        "pnpm-workspace.yaml"
+      ],
       "cache": false
     },
     "//#format": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,mj,cj,t}s", "**/*.{yml,md,json}", "package.json", "biome.jsonc", "pnpm-workspace.yaml"],
+      "inputs": [
+        "**/*.{j,mj,cj,t}s",
+        "**/*.{yml,md,json}",
+        "package.json",
+        "biome.jsonc",
+        "pnpm-workspace.yaml"
+      ],
       "cache": false
     },
     "//#lint": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.jsonc", "package.json", "pnpm-workspace.yaml"],
-      "outputs": [".eslintcache"]
+      "inputs": [
+        "**/*.{j,mj,cj,t}s",
+        "eslint.config.js",
+        "biome.jsonc",
+        "package.json",
+        "pnpm-workspace.yaml"
+      ],
+      "outputs": [
+        ".eslintcache"
+      ]
     },
     "//#lint:fix": {
       "dependsOn": [],
-      "inputs": ["**/*.{j,mj,cj,t}s", "eslint.config.js", "biome.jsonc", "package.json", "pnpm-workspace.yaml"],
-      "outputs": [".eslintcache"]
+      "inputs": [
+        "**/*.{j,mj,cj,t}s",
+        "eslint.config.js",
+        "biome.jsonc",
+        "package.json",
+        "pnpm-workspace.yaml"
+      ],
+      "outputs": [
+        ".eslintcache"
+      ]
     },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "inputs": [
         "src/**",
         "tsconfig.json",
@@ -36,32 +69,61 @@
         "rollup.config.ts",
         "package.json"
       ],
-      "outputs": ["dist/**"]
+      "outputs": [
+        "dist/**"
+      ]
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
     "test:unit": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
     "test:integration": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
     "test:coverage": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
     "lint": {
       "dependsOn": [],
-      "inputs": ["src/**", "test/**", "*.config.ts", "*.config.js", "tsconfig.json", "package.json"],
-      "outputs": [".eslintcache"],
+      "inputs": [
+        "src/**",
+        "test/**",
+        "*.config.ts",
+        "*.config.js",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "outputs": [
+        ".eslintcache"
+      ],
       "cache": true
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "clean": {
@@ -75,7 +137,10 @@
       "cache": false
     },
     "@repo/e2e#build": {
-      "dependsOn": ["@wdio/electron-service#build", "@wdio/tauri-service#build"]
+      "dependsOn": [
+        "@wdio/electron-service#build",
+        "@wdio/tauri-service#build"
+      ]
     },
     "@repo/e2e#protocol-install:electron-builder": {
       "cache": false
@@ -87,65 +152,123 @@
       "cache": false
     },
     "@repo/e2e#test:e2e:electron-builder": {
-      "dependsOn": ["electron-builder-e2e-app#build", "@repo/e2e#protocol-install:electron-builder"],
+      "dependsOn": [
+        "electron-builder-e2e-app#build",
+        "@repo/e2e#protocol-install:electron-builder"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e:electron-forge": {
-      "dependsOn": ["electron-forge-e2e-app#build", "@repo/e2e#protocol-install:electron-forge"],
+      "dependsOn": [
+        "electron-forge-e2e-app#build",
+        "@repo/e2e#protocol-install:electron-forge"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e:electron-script": {
-      "dependsOn": ["electron-script-e2e-app#build"],
+      "dependsOn": [
+        "electron-script-e2e-app#build"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e-mac-universal:electron-builder": {
-      "dependsOn": ["electron-builder-e2e-app#build:mac-universal"],
+      "dependsOn": [
+        "electron-builder-e2e-app#build:mac-universal"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e-mac-universal:electron-forge": {
-      "dependsOn": ["electron-forge-e2e-app#build:mac-universal"],
+      "dependsOn": [
+        "electron-forge-e2e-app#build:mac-universal"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "dependsOn": [
+        "tauri-e2e-app#build",
+        "@wdio/tauri-service#build",
+        "@repo/e2e#protocol-install:tauri"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic:window": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "dependsOn": [
+        "tauri-e2e-app#build",
+        "@wdio/tauri-service#build",
+        "@repo/e2e#protocol-install:tauri"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic:multiremote": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "dependsOn": [
+        "tauri-e2e-app#build",
+        "@wdio/tauri-service#build",
+        "@repo/e2e#protocol-install:tauri"
+      ],
       "cache": false
     },
     "@repo/e2e#test:e2e:tauri-basic:standalone": {
-      "dependsOn": ["tauri-e2e-app#build", "@wdio/tauri-service#build", "@repo/e2e#protocol-install:tauri"],
+      "dependsOn": [
+        "tauri-e2e-app#build",
+        "@wdio/tauri-service#build",
+        "@repo/e2e#protocol-install:tauri"
+      ],
       "cache": false
     },
     "@wdio/bundler#build": {
-      "dependsOn": ["typecheck"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "typecheck"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "@wdio/native-types#build": {
-      "dependsOn": ["typecheck"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "typecheck"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "@wdio/native-utils#build": {
-      "dependsOn": ["@wdio/native-types#build", "typecheck"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "@wdio/native-types#build",
+        "typecheck"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "@wdio/electron-cdp-bridge#build": {
-      "dependsOn": ["@wdio/native-utils#build", "typecheck"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "@wdio/native-utils#build",
+        "typecheck"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "@wdio/electron-service#build": {
-      "dependsOn": ["@wdio/electron-cdp-bridge#build"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "@wdio/electron-cdp-bridge#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "@wdio/tauri-plugin#build:js": {
-      "dependsOn": ["@wdio/native-spy#build", "@wdio/native-utils#build"],
-      "inputs": ["guest-js/**", "scripts/build-guest-js.ts"],
-      "outputs": ["dist-js/**"]
+      "dependsOn": [
+        "@wdio/native-spy#build",
+        "@wdio/native-utils#build"
+      ],
+      "inputs": [
+        "guest-js/**",
+        "scripts/build-guest-js.ts"
+      ],
+      "outputs": [
+        "dist-js/**"
+      ]
     },
     "@wdio/tauri-service#build:console-wrapper": {
       "inputs": [
@@ -153,7 +276,9 @@
         "src/constants/logging.ts",
         "scripts/minify-console-wrapper.ts"
       ],
-      "outputs": ["src/scripts/console-wrapper.ts"]
+      "outputs": [
+        "src/scripts/console-wrapper.ts"
+      ]
     },
     "@wdio/tauri-service#build": {
       "dependsOn": [
@@ -162,39 +287,79 @@
         "@wdio/tauri-service#build:console-wrapper",
         "typecheck"
       ],
-      "outputs": ["dist/**"]
+      "outputs": [
+        "dist/**"
+      ]
     },
     "@wdio/native-spy#build": {
-      "dependsOn": ["typecheck"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "typecheck"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "electron-builder-e2e-app#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "dist-electron/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "dist-electron/**"
+      ]
     },
     "electron-forge-e2e-app#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "out/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "out/**"
+      ]
     },
     "electron-script-e2e-app#build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "electron-builder-e2e-app#build:mac-universal": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "dist-electron/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "dist-electron/**"
+      ]
     },
     "electron-forge-e2e-app#build:mac-universal": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "out/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "out/**"
+      ]
     },
     "tauri-e2e-app#build": {
-      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
-      "outputs": ["src-tauri/target/**"]
+      "dependsOn": [
+        "@wdio/tauri-plugin#build:js",
+        "^build"
+      ],
+      "outputs": [
+        "src-tauri/target/**"
+      ]
     },
     "tauri-app-example#build": {
-      "dependsOn": ["@wdio/tauri-plugin#build:js", "^build"],
-      "outputs": ["src-tauri/target/**"]
+      "dependsOn": [
+        "@wdio/tauri-plugin#build:js",
+        "^build"
+      ],
+      "outputs": [
+        "src-tauri/target/**"
+      ]
     }
   }
 }

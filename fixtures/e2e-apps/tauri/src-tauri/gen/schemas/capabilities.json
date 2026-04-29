@@ -3,7 +3,10 @@
     "identifier": "default",
     "description": "Default capability - includes core app commands, WDIO plugin, WebDriver, and deep-link permissions",
     "local": true,
-    "windows": ["splash", "main"],
+    "windows": [
+      "splash",
+      "main"
+    ],
     "permissions": [
       "core:default",
       "core:window:default",

@@ -17,12 +17,18 @@
     "stripInternal": true,
     "newLine": "lf",
     "noEmitOnError": true,
-    "lib": ["DOM", "ESNext"],
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
     "noImplicitAny": true,
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": true,
     "noEmit": false
   },
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

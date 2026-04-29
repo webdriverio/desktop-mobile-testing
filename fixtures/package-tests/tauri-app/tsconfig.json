@@ -11,8 +11,18 @@
     "rootDir": "./",
     "composite": true,
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "types": ["node", "@wdio/globals"]
+    "types": [
+      "node",
+      "@wdio/globals"
+    ]
   },
-  "include": ["test/**/*.ts", "wdio.conf.ts"],
-  "exclude": ["node_modules", "dist", "src-tauri"]
+  "include": [
+    "test/**/*.ts",
+    "wdio.conf.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src-tauri"
+  ]
 }

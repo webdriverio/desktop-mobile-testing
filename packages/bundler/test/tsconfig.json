@@ -4,8 +4,13 @@
     "noEmit": true,
     "baseUrl": ".",
     "outDir": "../dist",
-    "types": ["vitest/globals"]
+    "types": [
+      "vitest/globals"
+    ]
   },
-  "include": ["./**/*.ts", "./**/*.spec.ts"],
+  "include": [
+    "./**/*.ts",
+    "./**/*.spec.ts"
+  ],
   "exclude": []
 }

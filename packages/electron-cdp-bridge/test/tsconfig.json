@@ -5,6 +5,9 @@
     "baseUrl": ".",
     "outDir": "../dist"
   },
-  "include": ["./*.ts", "./*.spec.ts"],
+  "include": [
+    "./*.ts",
+    "./*.spec.ts"
+  ],
   "exclude": []
 }

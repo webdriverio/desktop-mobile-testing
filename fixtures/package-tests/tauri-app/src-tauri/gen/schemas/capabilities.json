@@ -3,7 +3,9 @@
     "identifier": "default",
     "description": "Capability for the main window - includes WebDriverIO plugin permissions for testing",
     "local": true,
-    "windows": ["main"],
+    "windows": [
+      "main"
+    ],
     "permissions": [
       "core:default",
       "core:window:default",
@@ -18,7 +20,20 @@
       "fs:write-files",
       "fs:read-dirs",
       "fs:read-meta",
-      { "identifier": "fs:scope", "allow": [{ "path": "$TEMP/**" }, { "path": "/tmp/**" }, { "path": "$HOME/**" }] },
+      {
+        "identifier": "fs:scope",
+        "allow": [
+          {
+            "path": "$TEMP/**"
+          },
+          {
+            "path": "/tmp/**"
+          },
+          {
+            "path": "$HOME/**"
+          }
+        ]
+      },
       "wdio:allow-execute",
       "wdio:allow-set-mock",
       "wdio:allow-get-mock",

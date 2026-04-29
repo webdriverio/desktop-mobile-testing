@@ -1,12 +1,28 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts", "rollup.config.ts"],
-  "exclude": ["src/cjs", "node_modules", "coverage", "dist", "test"],
+  "include": [
+    "src/**/*.ts",
+    "rollup.config.ts"
+  ],
+  "exclude": [
+    "src/cjs",
+    "node_modules",
+    "coverage",
+    "dist",
+    "test"
+  ],
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "bundler",
     "outDir": "dist",
-    "types": ["node", "vitest/globals"],
-    "typeRoots": ["./node_modules", "./node_modules/@types", "../../@types"]
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "typeRoots": [
+      "./node_modules",
+      "./node_modules/@types",
+      "../../@types"
+    ]
   }
 }

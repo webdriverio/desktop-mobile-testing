@@ -29,10 +29,18 @@
     "semver": "^7.7.4",
     "typescript": "^5.9.3"
   },
-  "keywords": ["electron", "electron-vite", "webdriverio", "testing", "example"],
+  "keywords": [
+    "electron",
+    "electron-vite",
+    "webdriverio",
+    "testing",
+    "example"
+  ],
   "author": "WebDriverIO Community",
   "license": "MIT",
   "pnpm": {
-    "onlyBuiltDependencies": ["electron"]
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
   }
 }
