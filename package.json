@@ -60,6 +60,7 @@
     "test:unit": "turbo run test:unit",
     "typecheck": "turbo run typecheck",
     "update:dependencies": "pnpm catalog:update --default && pnpm catalog:update --next && pnpm up -iLr",
+    "update:releasekit": "tsx ./scripts/update-releasekit.ts",
     "update:tauri": "tsx ./scripts/update-tauri-version.ts"
   },
   "devDependencies": {
