@@ -26,7 +26,7 @@ describe('checkEmbeddedServerAlive', () => {
     globalThis.fetch = originalFetch;
   });
 
-  it('returns true when the status endpoint responds ok', async () => {
+  it('should return true when the status endpoint responds ok', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true });
     expect(await checkEmbeddedServerAlive(4445)).toBe(true);
     expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -35,23 +35,23 @@ describe('checkEmbeddedServerAlive', () => {
     );
   });
 
-  it('uses the given port in the URL', async () => {
+  it('should use the given port in the URL', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true });
     await checkEmbeddedServerAlive(9999);
     expect(globalThis.fetch).toHaveBeenCalledWith('http://127.0.0.1:9999/status', expect.anything());
   });
 
-  it('returns false when fetch throws (connection refused)', async () => {
+  it('should return false when fetch throws (connection refused)', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
     expect(await checkEmbeddedServerAlive(4445)).toBe(false);
   });
 
-  it('returns false when response.ok is false', async () => {
+  it('should return false when response.ok is false', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
     expect(await checkEmbeddedServerAlive(4445)).toBe(false);
   });
 
-  it('returns false when fetch times out (AbortError)', async () => {
+  it('should return false when fetch times out (AbortError)', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new DOMException('The operation was aborted', 'AbortError'));
     expect(await checkEmbeddedServerAlive(4445)).toBe(false);
   });
@@ -66,35 +66,35 @@ describe('isEmbeddedProvider', () => {
   });
 
   describe('explicit driverProvider — always takes priority', () => {
-    it('returns true for "embedded"', () => {
+    it('should return true for "embedded"', () => {
       expect(isEmbeddedProvider({ driverProvider: 'embedded' })).toBe(true);
     });
 
-    it('returns false for "official"', () => {
+    it('should return false for "official"', () => {
       expect(isEmbeddedProvider({ driverProvider: 'official' })).toBe(false);
     });
 
-    it('returns false for "crabnebula"', () => {
+    it('should return false for "crabnebula"', () => {
       expect(isEmbeddedProvider({ driverProvider: 'crabnebula' })).toBe(false);
     });
   });
 
   describe('default behavior (no explicit driverProvider)', () => {
-    it('returns true when no driverProvider is set', () => {
+    it('should return true when no driverProvider is set', () => {
       expect(isEmbeddedProvider({})).toBe(true);
     });
 
-    it('returns true on macOS with no driverProvider', () => {
+    it('should return true on macOS with no driverProvider', () => {
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
       expect(isEmbeddedProvider({})).toBe(true);
     });
 
-    it('returns true on Windows with no driverProvider', () => {
+    it('should return true on Windows with no driverProvider', () => {
       Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
       expect(isEmbeddedProvider({})).toBe(true);
     });
 
-    it('returns true on Linux with no driverProvider', () => {
+    it('should return true on Linux with no driverProvider', () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
       expect(isEmbeddedProvider({})).toBe(true);
     });
@@ -116,30 +116,30 @@ describe('getEmbeddedPort', () => {
     process.env = originalEnv;
   });
 
-  it('returns explicit embeddedPort option when set', () => {
+  it('should return explicit embeddedPort option when set', () => {
     expect(getEmbeddedPort({ embeddedPort: 9999 })).toBe(9999);
   });
 
-  it('prefers embeddedPort option over env var', () => {
+  it('should prefer embeddedPort option over env var', () => {
     process.env.TAURI_WEBDRIVER_PORT = '8888';
     expect(getEmbeddedPort({ embeddedPort: 9999 })).toBe(9999);
   });
 
-  it('falls back to TAURI_WEBDRIVER_PORT env var when no option', () => {
+  it('should fall back to TAURI_WEBDRIVER_PORT env var when no option', () => {
     process.env.TAURI_WEBDRIVER_PORT = '7777';
     expect(getEmbeddedPort({})).toBe(7777);
   });
 
-  it('returns default 4445 when neither option nor env var is set', () => {
+  it('should return default 4445 when neither option nor env var is set', () => {
     expect(getEmbeddedPort({})).toBe(4445);
   });
 
-  it('ignores NaN env var and returns default', () => {
+  it('should ignore NaN env var and returns default', () => {
     process.env.TAURI_WEBDRIVER_PORT = 'not-a-number';
     expect(getEmbeddedPort({})).toBe(4445);
   });
 
-  it('parses numeric string env var correctly', () => {
+  it('should parse numeric string env var correctly', () => {
     process.env.TAURI_WEBDRIVER_PORT = '5555';
     expect(getEmbeddedPort({})).toBe(5555);
   });
@@ -183,7 +183,7 @@ describe('startEmbeddedDriver', () => {
     Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
   });
 
-  it('spawns app and resolves when poll succeeds', async () => {
+  it('should spawn app and resolves when poll succeeds', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ value: { ready: true } }),
@@ -208,7 +208,7 @@ describe('startEmbeddedDriver', () => {
     expect(result.logHandlers).toBeDefined();
   });
 
-  it('rejects on spawn error', async () => {
+  it('should reject on spawn error', async () => {
     globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
 
     const promise = startEmbeddedDriver('/path/to/nonexistent', 4445, {});
@@ -220,7 +220,7 @@ describe('startEmbeddedDriver', () => {
     await expect(promise).rejects.toThrow('Failed to spawn Tauri app');
   });
 
-  it('cleans up on poll timeout failure', async () => {
+  it('should clean up on poll timeout failure', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Connection refused'));
 
     const options: TauriServiceOptions = { startTimeout: 500 };
@@ -244,7 +244,7 @@ describe('stopEmbeddedDriver', () => {
     vi.useRealTimers();
   });
 
-  it('sends SIGTERM and resolves when process exits gracefully', async () => {
+  it('should send SIGTERM and resolves when process exits gracefully', async () => {
     const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
     Object.defineProperty(mockChild, 'pid', { value: 111, configurable: true });
     Object.defineProperty(mockChild, 'exitCode', { value: null, writable: true, configurable: true });
@@ -261,7 +261,7 @@ describe('stopEmbeddedDriver', () => {
     expect(handler.close).toHaveBeenCalled();
   });
 
-  it('sends SIGKILL after graceful timeout expires', async () => {
+  it('should send SIGKILL after graceful timeout expires', async () => {
     const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
     Object.defineProperty(mockChild, 'pid', { value: 222, configurable: true });
     Object.defineProperty(mockChild, 'exitCode', { value: null, writable: true, configurable: true });
@@ -284,7 +284,7 @@ describe('stopEmbeddedDriver', () => {
     expect(killCalls).toContain('SIGKILL');
   });
 
-  it('returns early when no PID is available', async () => {
+  it('should return early when no PID is available', async () => {
     const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
     Object.defineProperty(mockChild, 'pid', { value: undefined, configurable: true });
     mockChild.kill = vi.fn();
@@ -296,7 +296,7 @@ describe('stopEmbeddedDriver', () => {
     expect(handler.close).toHaveBeenCalled();
   });
 
-  it('ignores errors when closing log handlers', async () => {
+  it('should ignore errors when closing log handlers', async () => {
     const mockChild = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
     Object.defineProperty(mockChild, 'pid', { value: undefined, configurable: true });
     mockChild.kill = vi.fn();
