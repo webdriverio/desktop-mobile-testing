@@ -89,7 +89,7 @@
       "biome check --write",
       "eslint --fix --cache"
     ],
-    "**/*.{yml,md,json}": [
+    "**/*.json": [
       "biome format --write"
     ]
   },
