@@ -365,7 +365,7 @@ describe('Multiremote Mode - Integration', () => {
   });
 
   describe('provider configuration', () => {
-    it('defaults to embedded provider when no driverProvider is set', async () => {
+    it('should default to embedded provider when no driverProvider is set', async () => {
       launcher = new TauriLaunchService(
         { startTimeout: 5000 },
         { browserName: 'tauri', 'tauri:options': { application: '/app' } },
@@ -384,7 +384,7 @@ describe('Multiremote Mode - Integration', () => {
       await expect((launcher as any).onPrepare({}, capabilities)).rejects.toThrow();
     });
 
-    it('uses official provider when explicitly set', async () => {
+    it('should use official provider when explicitly set', async () => {
       vi.mocked(ensureTauriDriver).mockResolvedValue({
         ok: true,
         value: { path: mockSuccessPath, method: 'found' },

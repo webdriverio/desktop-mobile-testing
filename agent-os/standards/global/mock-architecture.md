@@ -11,6 +11,13 @@ Test Process (WDIO Worker)              App Process (Electron/Tauri)
 │  - .mock.calls (for tests)   │ <── │  - tracks calls internally    │
 └──────────────────────────────┘    └──────────────────────────────┘
           update()                    (one-way sync: inner → outer)
+         ┌──────────────────────────────────────────┐
+         │  Serialization Layer (test-process only) │
+         │  @wdio/native-spy/interceptor             │
+         │  - script-string builders (Tauri/Electron)│
+         │  - parseCallData + safeJson               │
+         │  - IpcContext seeding                     │
+         └──────────────────────────────────────────┘
 ```
 
 ## Key Concepts
@@ -20,6 +27,18 @@ Test Process (WDIO Worker)              App Process (Electron/Tauri)
 - JSON serialization is required due to CDP/WebDriver process boundary
 - Sync is **one-directional**: inner call data → outer mock
 - `mockImplementation`/`mockReturnValue` methods push config from outer → inner
+
+## Serialization Layer (`@wdio/native-spy/interceptor`)
+
+The sub-path export `@wdio/native-spy/interceptor` is **test-process-only** (never bundled into the app).
+It provides a shared `IpcInterceptor` interface for building the script strings injected into the app context.
+
+- **Tauri** uses `createIpcInterceptor('tauri')` — all `build*Script` methods port from `tauri-service/src/mock.ts`
+- **Electron** uses `createIpcInterceptor('electron')` — stub (throws `Not implemented`), filled in by a future browser-mode spec
+- Transport stays in each service (`tauriExecute`, CDP, etc.) — interceptor returns strings only
+
+Error values in `mockRejectedValue`/`mockRejectedValueOnce` are serialized with `safeJson()` as
+`{ __wdioError: true, message }` and reconstructed as `new Error(message)` inside the app script.
 
 ## Mock Methods (all async)
 Every mock method operates on **both** inner and outer:

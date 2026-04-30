@@ -120,7 +120,7 @@ describe('execute — embedded provider (direct eval)', () => {
   });
 
   describe('window label routing', () => {
-    it('sends window_label when per-call option is provided', async () => {
+    it('should send window_label when per-call option is provided', async () => {
       const mockFn = mockFetch({ value: 1 });
       vi.stubGlobal('fetch', mockFn);
       await execute(browser, '() => 1', { __wdioOptions__: true, windowLabel: 'settings' } as never);
@@ -128,7 +128,7 @@ describe('execute — embedded provider (direct eval)', () => {
       expect(body.window_label).toBe('settings');
     });
 
-    it('omits window_label for default session', async () => {
+    it('should omit window_label for default session', async () => {
       const mockFn = mockFetch({ value: 1 });
       vi.stubGlobal('fetch', mockFn);
       await execute(browser, '() => 1');
@@ -138,7 +138,7 @@ describe('execute — embedded provider (direct eval)', () => {
   });
 
   describe('client caching', () => {
-    it('reuses the same client for the same browser', async () => {
+    it('should reuse the same client for the same browser', async () => {
       const mockFn = mockFetch({ value: 1 });
       vi.stubGlobal('fetch', mockFn);
       await execute(browser, '() => 1');
@@ -147,7 +147,7 @@ describe('execute — embedded provider (direct eval)', () => {
       expect(mockFn.mock.calls[0][0]).toBe(mockFn.mock.calls[1][0]);
     });
 
-    it('creates separate clients for different browsers', async () => {
+    it('should create separate clients for different browsers', async () => {
       const browser2 = createMockBrowser();
       const mockFn = mockFetch({ value: 1 });
       vi.stubGlobal('fetch', mockFn);
@@ -156,7 +156,7 @@ describe('execute — embedded provider (direct eval)', () => {
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
 
-    it('creates a new client when TAURI_WEBDRIVER_PORT changes between calls', async () => {
+    it('should create a new client when TAURI_WEBDRIVER_PORT changes between calls', async () => {
       const mockFn = mockFetch({ value: 1 });
       vi.stubGlobal('fetch', mockFn);
 
