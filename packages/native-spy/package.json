@@ -20,6 +20,18 @@
           "default": "./dist/cjs/index.js"
         }
       }
+    ],
+    "./interceptor": [
+      {
+        "import": {
+          "types": "./dist/esm/interceptor/index.d.ts",
+          "default": "./dist/esm/interceptor.js"
+        },
+        "require": {
+          "types": "./dist/cjs/interceptor/index.d.ts",
+          "default": "./dist/cjs/interceptor.js"
+        }
+      }
     ]
   },
   "engines": {
