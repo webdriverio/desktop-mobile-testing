@@ -101,7 +101,6 @@ jobs:
       contents: write
       id-token: write
     with:
-      target_packages: ${{ needs.gate.outputs.target }}
       target_branch: main
       bump: ${{ needs.gate.outputs.bump }}
       release_type: ${{ needs.gate.outputs.stable == 'true' && 'stable' || 'prerelease' }}
