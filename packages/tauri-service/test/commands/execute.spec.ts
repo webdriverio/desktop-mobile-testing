@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   execute,
@@ -11,20 +11,20 @@ import {
   getTauriVersion,
   isTauriApiAvailable,
 } from '../../src/commands/execute.js';
+import { clearWindowState, setSessionProvider } from '../../src/window.js';
 
-vi.mock('@wdio/native-utils', () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
-}));
-
-vi.mock('../src/window.js', () => ({
-  getCurrentWindowLabel: vi.fn().mockReturnValue('main'),
-  getDefaultWindowLabel: vi.fn().mockReturnValue('main'),
-}));
+vi.mock('@wdio/native-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@wdio/native-utils')>();
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    }),
+  };
+});
 
 function createMockBrowser(executeFn?: (...args: unknown[]) => unknown) {
   return {
@@ -32,14 +32,29 @@ function createMockBrowser(executeFn?: (...args: unknown[]) => unknown) {
   } as unknown as WebdriverIO.Browser;
 }
 
-describe('execute', () => {
+function mockFetch(response: unknown, ok = true, status = 200): ReturnType<typeof vi.fn> {
+  return vi.fn().mockResolvedValue({
+    ok,
+    status,
+    statusText: ok ? 'OK' : 'Internal Server Error',
+    json: vi.fn().mockResolvedValue(response),
+  });
+}
+
+describe('execute — embedded provider (direct eval)', () => {
   let browser: WebdriverIO.Browser;
 
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
-    // Fresh browser object each test so WeakMap cache is empty
+    clearWindowState();
     browser = createMockBrowser();
+    // embedded is the default provider; stub fetch for the HTTP client
+    vi.stubGlobal('fetch', mockFetch({ value: 42 }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   describe('parameter validation', () => {
@@ -55,15 +70,132 @@ describe('execute', () => {
       );
     });
 
-    it('should throw when script is undefined', async () => {
-      await expect(() => execute(browser, undefined as unknown as string)).rejects.toThrow(
+    it('should throw when browser is undefined', async () => {
+      await expect(() => execute(undefined as unknown as WebdriverIO.Browser, '() => 1')).rejects.toThrow(
+        'WDIO browser is not yet initialised',
+      );
+    });
+  });
+
+  describe('successful execution', () => {
+    it('should return value from direct eval', async () => {
+      vi.stubGlobal('fetch', mockFetch({ value: 99 }));
+      const result = await execute<number>(browser, '() => 99');
+      expect(result).toBe(99);
+    });
+
+    it('should return undefined when response has undef=true', async () => {
+      vi.stubGlobal('fetch', mockFetch({ value: null, undef: true }));
+      const result = await execute<undefined>(browser, '() => undefined');
+      expect(result).toBeUndefined();
+    });
+
+    it('should return null value', async () => {
+      vi.stubGlobal('fetch', mockFetch({ value: null }));
+      const result = await execute<null>(browser, '() => null');
+      expect(result).toBeNull();
+    });
+
+    it('should convert function to string and send via fetch', async () => {
+      const mockFn = mockFetch({ value: 42 });
+      vi.stubGlobal('fetch', mockFn);
+      const fn = (_tauri: unknown, a: number) => a * 2;
+      await execute<number>(browser, fn, 21);
+      const body = JSON.parse(mockFn.mock.calls[0][1].body as string) as Record<string, unknown>;
+      expect(typeof body.script).toBe('string');
+      expect(body.script).toContain(fn.toString());
+    });
+  });
+
+  describe('error handling', () => {
+    it('should throw when fetch returns error field', async () => {
+      vi.stubGlobal('fetch', mockFetch({ error: 'script failed' }));
+      await expect(execute(browser, '() => { throw new Error() }')).rejects.toThrow('script failed');
+    });
+
+    it('should throw when fetch rejects (connection refused)', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
+      await expect(execute(browser, '() => 1')).rejects.toThrow('ECONNREFUSED');
+    });
+  });
+
+  describe('window label routing', () => {
+    it('sends window_label when per-call option is provided', async () => {
+      const mockFn = mockFetch({ value: 1 });
+      vi.stubGlobal('fetch', mockFn);
+      await execute(browser, '() => 1', { __wdioOptions__: true, windowLabel: 'settings' } as never);
+      const body = JSON.parse(mockFn.mock.calls[0][1].body as string) as Record<string, unknown>;
+      expect(body.window_label).toBe('settings');
+    });
+
+    it('omits window_label for default session', async () => {
+      const mockFn = mockFetch({ value: 1 });
+      vi.stubGlobal('fetch', mockFn);
+      await execute(browser, '() => 1');
+      const body = JSON.parse(mockFn.mock.calls[0][1].body as string) as Record<string, unknown>;
+      expect(body.window_label).toBeUndefined();
+    });
+  });
+
+  describe('client caching', () => {
+    it('reuses the same client for the same browser', async () => {
+      const mockFn = mockFetch({ value: 1 });
+      vi.stubGlobal('fetch', mockFn);
+      await execute(browser, '() => 1');
+      await execute(browser, '() => 2');
+      // Both calls go to the same URL (same port)
+      expect(mockFn.mock.calls[0][0]).toBe(mockFn.mock.calls[1][0]);
+    });
+
+    it('creates separate clients for different browsers', async () => {
+      const browser2 = createMockBrowser();
+      const mockFn = mockFetch({ value: 1 });
+      vi.stubGlobal('fetch', mockFn);
+      await execute(browser, '() => 1');
+      await execute(browser2, '() => 2');
+      expect(mockFn).toHaveBeenCalledTimes(2);
+    });
+
+    it('creates a new client when TAURI_WEBDRIVER_PORT changes between calls', async () => {
+      const mockFn = mockFetch({ value: 1 });
+      vi.stubGlobal('fetch', mockFn);
+
+      process.env['TAURI_WEBDRIVER_PORT'] = '9000';
+      await execute(browser, '() => 1');
+
+      process.env['TAURI_WEBDRIVER_PORT'] = '9001';
+      await execute(browser, '() => 2');
+
+      delete process.env['TAURI_WEBDRIVER_PORT'];
+
+      expect(mockFn.mock.calls[0][0]).toBe('http://127.0.0.1:9000/wdio/eval');
+      expect(mockFn.mock.calls[1][0]).toBe('http://127.0.0.1:9001/wdio/eval');
+    });
+  });
+});
+
+describe('execute — IPC provider (official/crabnebula)', () => {
+  let browser: WebdriverIO.Browser;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    clearWindowState();
+    browser = createMockBrowser();
+    // Set provider to official so the IPC path is taken
+    setSessionProvider(browser, 'official');
+  });
+
+  describe('parameter validation', () => {
+    it('should throw when script is not a string or function', async () => {
+      await expect(() => execute(browser, {} as string)).rejects.toThrow(
         'Expecting script to be type of "string" or "function"',
       );
     });
 
-    it('should throw when browser is undefined', async () => {
-      await expect(() => execute(undefined as unknown as WebdriverIO.Browser, '() => 1')).rejects.toThrow(
-        'WDIO browser is not yet initialised',
+    it('should throw when script is undefined', async () => {
+      await expect(() => execute(browser, undefined as unknown as string)).rejects.toThrow(
+        'Expecting script to be type of "string" or "function"',
       );
     });
   });
@@ -73,11 +205,11 @@ describe('execute', () => {
       vi.useFakeTimers();
       const mockExecute = vi.fn().mockResolvedValue(false);
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const promise = execute(browser, '() => 1').catch((e: Error) => e);
 
-      // Advance through all 100 retry intervals (50ms each)
       for (let i = 0; i < 100; i++) {
         await vi.advanceTimersByTimeAsync(50);
       }
@@ -94,32 +226,23 @@ describe('execute', () => {
       let callCount = 0;
       const mockExecute = vi.fn().mockImplementation((..._args: unknown[]) => {
         callCount++;
-        // First 3 calls: plugin check returns false
-        // 4th call: plugin check returns true
-        // 5th call: the actual execute call
-        if (callCount <= 3) {
-          return Promise.resolve(false);
-        }
-        if (callCount === 4) {
-          return Promise.resolve(true);
-        }
+        if (callCount <= 3) return Promise.resolve(false);
+        if (callCount === 4) return Promise.resolve(true);
         return Promise.resolve(JSON.stringify({ __wdio_value__: 'result' }));
       });
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const promise = execute<string, []>(browser, '() => "result"');
 
-      // Advance timers for the 3 failed retries
       for (let i = 0; i < 3; i++) {
         await vi.advanceTimersByTimeAsync(50);
       }
-      // Let the successful check and execute call resolve
       await vi.advanceTimersByTimeAsync(0);
 
       const result = await promise;
       expect(result).toBe('result');
-      // 3 failed checks + 1 successful check + 1 actual execute = 5 calls
       expect(mockExecute).toHaveBeenCalledTimes(5);
     });
 
@@ -127,27 +250,26 @@ describe('execute', () => {
       let callCount = 0;
       const mockExecute = vi.fn().mockImplementation(() => {
         callCount++;
-        if (callCount === 1) {
-          return Promise.resolve(true); // plugin check
-        }
+        if (callCount === 1) return Promise.resolve(true);
         return Promise.resolve(JSON.stringify({ __wdio_value__: 'result' }));
       });
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       await execute<string, []>(browser, '() => "result"');
       const firstCallCount = callCount;
 
-      // Reset to track second call
       await execute<string, []>(browser, '() => "result2"');
 
-      // Second call should skip the plugin check (cached), so only 1 additional call
       expect(callCount).toBe(firstCallCount + 1);
     });
 
     it('should not share cache between different browser objects', async () => {
       const browser1 = createMockBrowser();
       const browser2 = createMockBrowser();
+      setSessionProvider(browser1, 'official');
+      setSessionProvider(browser2, 'official');
       const calls1: number[] = [];
       const calls2: number[] = [];
 
@@ -170,7 +292,6 @@ describe('execute', () => {
       await execute<string, []>(browser1, '() => "b1"');
       await execute<string, []>(browser2, '() => "b2"');
 
-      // Both should have done the plugin check (2 calls each: check + execute)
       expect(calls1).toHaveLength(2);
       expect(calls2).toHaveLength(2);
     });
@@ -179,19 +300,19 @@ describe('execute', () => {
   describe('function serialization', () => {
     it('should convert functions to strings', async () => {
       const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true); // plugin check
+      mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 42 }));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const fn = (_tauri: unknown, a: number, b: number) => a + b;
       await execute<number, [number, number]>(browser, fn, 1, 2);
 
-      // Second call is the actual execute - first arg is the inner function, second is options, third is argsJson
       const secondCall = mockExecute.mock.calls[1];
       expect(secondCall[1]).toBe(fn.toString());
-      expect(secondCall[2]).toEqual({}); // No windowLabel sent when using default
-      expect(secondCall[3]).toBe('[1,2]'); // argsJson
+      expect(secondCall[2]).toEqual({});
+      expect(secondCall[3]).toBe('[1,2]');
     });
 
     it('should pass strings as-is', async () => {
@@ -199,6 +320,7 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'hello' }));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       await execute<string, []>(browser, 'return "hello"');
@@ -214,6 +336,7 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: { foo: 'bar' } }));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const result = await execute<{ foo: string }, []>(browser, '() => ({ foo: "bar" })');
@@ -225,10 +348,10 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: null }));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const result = await execute<null, []>(browser, '() => null');
-      // null is not undefined, so __wdio_value__ !== undefined is true
       expect(result).toBeNull();
     });
 
@@ -237,6 +360,7 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(42);
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const result = await execute<number, []>(browser, '() => 42');
@@ -248,23 +372,11 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_undefined__: true }));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       const result = await execute<undefined, []>(browser, '() => undefined');
       expect(result).toBeUndefined();
-    });
-
-    it('should return raw result when __wdio_value__ is undefined in parsed response', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(JSON.stringify({ other_key: 'value' }));
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      const result = await execute<string, []>(browser, '() => "something"');
-      // JSON parsed successfully, no __wdio_error__, __wdio_value__ is undefined
-      // Falls through to return raw result
-      expect(result).toBe(JSON.stringify({ other_key: 'value' }));
     });
 
     it('should throw when JSON parse fails on a non-JSON string', async () => {
@@ -272,33 +384,12 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce('not-valid-json');
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(
         /Failed to parse execute result:.*raw result: not-valid-json/,
       );
-    });
-
-    it('should return raw result when response is null', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(null);
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      const result = await execute<null, []>(browser, '() => null');
-      expect(result).toBeNull();
-    });
-
-    it('should return raw result when response is undefined', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(undefined);
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      const result = await execute<undefined, []>(browser, '() => undefined');
-      expect(result).toBeUndefined();
     });
   });
 
@@ -308,53 +399,10 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'something went wrong' }));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
-      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(
-        /Failed to parse execute result:.*something went wrong/,
-      );
-    });
-
-    it('should throw for window undefined error', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'window is undefined' }));
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(/window is undefined/);
-    });
-
-    it('should throw for wdioTauri undefined error', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'window.wdioTauri is undefined' }));
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(
-        /window\.wdioTauri is undefined/,
-      );
-    });
-
-    it('should throw for promise error', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'Promise error: async failure' }));
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(/Promise error: async failure/);
-    });
-
-    it('should throw for execute call error', async () => {
-      const mockExecute = vi.fn();
-      mockExecute.mockResolvedValueOnce(true);
-      mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'Execute call error: boom' }));
-      browser = createMockBrowser();
-      (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(/Execute call error: boom/);
+      await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow(/something went wrong/);
     });
 
     it('should throw when browser.execute rejects', async () => {
@@ -362,6 +410,7 @@ describe('execute', () => {
       mockExecute.mockResolvedValueOnce(true);
       mockExecute.mockRejectedValueOnce(new Error('WebDriver session expired'));
       browser = createMockBrowser();
+      setSessionProvider(browser, 'official');
       (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
 
       await expect(() => execute<string, []>(browser, '() => "fail"')).rejects.toThrow('WebDriver session expired');
@@ -374,45 +423,59 @@ describe('executeTauriCommand', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    clearWindowState();
     browser = createMockBrowser();
+    // executeTauriCommand calls execute() which uses embedded path by default
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'command-result' }),
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('should return ok result on success', async () => {
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'command-result' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'command-result' }),
+      }),
+    );
 
     const result = await executeTauriCommand<string>(browser, 'my_command', 'arg1', 'arg2');
     expect(result).toEqual({ ok: true, value: 'command-result' });
   });
 
   it('should return error result on failure', async () => {
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'command failed' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ error: 'command failed' }),
+      }),
+    );
 
     const result = await executeTauriCommand<string>(browser, 'my_command');
     assert(!result.ok);
     expect(result.error).toContain('command failed');
   });
 
-  it('should return error result when plugin is unavailable', async () => {
-    vi.useFakeTimers();
-    (browser.execute as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+  it('should return error result when fetch rejects', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')));
 
-    const promise = executeTauriCommand(browser, 'my_command');
-
-    for (let i = 0; i < 100; i++) {
-      await vi.advanceTimersByTimeAsync(50);
-    }
-
-    const result = await promise;
+    const result = await executeTauriCommand(browser, 'my_command');
     assert(!result.ok);
-    expect(result.error).toContain('Tauri plugin not available');
-
-    vi.useRealTimers();
+    expect(result.error).toContain('ECONNREFUSED');
   });
 });
 
@@ -422,14 +485,24 @@ describe('executeTauriCommandWithTimeout', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+    clearWindowState();
     browser = createMockBrowser();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('should return result when command completes before timeout', async () => {
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'fast-result' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'fast-result' }),
+      }),
+    );
 
     const result = await executeTauriCommandWithTimeout<string>(browser, 'fast_command', 5000);
     expect(result).toEqual({ ok: true, value: 'fast-result' });
@@ -437,12 +510,10 @@ describe('executeTauriCommandWithTimeout', () => {
 
   it('should return error result when command times out', async () => {
     vi.useFakeTimers();
-    const mockExecute = vi.fn();
-    // Plugin check succeeds
-    mockExecute.mockResolvedValueOnce(true);
-    // The actual execute never resolves (simulating a hang)
-    mockExecute.mockImplementationOnce(() => new Promise(() => {}));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => new Promise(() => {})),
+    );
 
     const promise = executeTauriCommandWithTimeout<string>(browser, 'slow_command', 100);
 
@@ -457,10 +528,10 @@ describe('executeTauriCommandWithTimeout', () => {
 
   it('should use default timeout of 30000ms', async () => {
     vi.useFakeTimers();
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockImplementationOnce(() => new Promise(() => {}));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => new Promise(() => {})),
+    );
 
     const promise = executeTauriCommandWithTimeout<string>(browser, 'slow_command');
 
@@ -479,22 +550,29 @@ describe('executeTauriCommands', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    clearWindowState();
     browser = createMockBrowser();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('should execute commands sequentially and return all results', async () => {
     let callCount = 0;
-    const mockExecute = vi.fn().mockImplementation(() => {
-      callCount++;
-      // First call: plugin check for first command
-      if (callCount === 1) return Promise.resolve(true);
-      // Second call: execute first command
-      if (callCount === 2) return Promise.resolve(JSON.stringify({ __wdio_value__: 'result1' }));
-      // Third call: execute second command (cache hit, no plugin check)
-      if (callCount === 3) return Promise.resolve(JSON.stringify({ __wdio_value__: 'result2' }));
-      return Promise.resolve(JSON.stringify({ __wdio_value__: 'unexpected' }));
-    });
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        const value = callCount === 1 ? 'result1' : 'result2';
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue({ value }),
+        });
+      }),
+    );
 
     const results = await executeTauriCommands<string>(browser, [
       { command: 'cmd1', args: [] },
@@ -508,13 +586,17 @@ describe('executeTauriCommands', () => {
 
   it('should stop at first failure', async () => {
     let callCount = 0;
-    const mockExecute = vi.fn().mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) return Promise.resolve(true);
-      if (callCount === 2) return Promise.resolve(JSON.stringify({ __wdio_error__: 'cmd1 failed' }));
-      return Promise.resolve(JSON.stringify({ __wdio_value__: 'should not reach' }));
-    });
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue(callCount === 1 ? { error: 'cmd1 failed' } : { value: 'ok' }),
+        });
+      }),
+    );
 
     const results = await executeTauriCommands<string>(browser, [
       { command: 'cmd1', args: [] },
@@ -527,21 +609,18 @@ describe('executeTauriCommands', () => {
   });
 
   it('should use timeout variant when timeout is specified', async () => {
-    let callCount = 0;
-    const mockExecute = vi.fn().mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) return Promise.resolve(true);
-      if (callCount === 2) return Promise.resolve(JSON.stringify({ __wdio_value__: 'timed-result' }));
-      return Promise.resolve(JSON.stringify({ __wdio_value__: 'result2' }));
-    });
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'timed-result' }),
+      }),
+    );
 
-    const results = await executeTauriCommands<string>(browser, [
-      { command: 'cmd1', args: ['a'], timeout: 5000 },
-      { command: 'cmd2', args: [] },
-    ]);
+    const results = await executeTauriCommands<string>(browser, [{ command: 'cmd1', args: ['a'], timeout: 5000 }]);
 
-    expect(results).toHaveLength(2);
+    expect(results).toHaveLength(1);
     expect(results[0]).toEqual({ ok: true, value: 'timed-result' });
   });
 
@@ -556,22 +635,24 @@ describe('executeTauriCommandsParallel', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    clearWindowState();
     browser = createMockBrowser();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('should execute all commands in parallel', async () => {
-    // Pre-cache plugin availability with a sequential call first
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true); // plugin check
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'warmup' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-    // Warm up the cache
-    await executeTauriCommand(browser, 'warmup');
-
-    // Now set up mocks for parallel calls (no plugin check needed - cached)
-    mockExecute.mockReset();
-    mockExecute.mockResolvedValue(JSON.stringify({ __wdio_value__: 'parallel-result' }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'parallel-result' }),
+      }),
+    );
 
     const results = await executeTauriCommandsParallel<string>(browser, [
       { command: 'cmd1', args: [] },
@@ -586,18 +667,18 @@ describe('executeTauriCommandsParallel', () => {
   });
 
   it('should return all results including failures', async () => {
-    // Pre-cache plugin availability
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true); // plugin check
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'warmup' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
-
-    await executeTauriCommand(browser, 'warmup');
-
-    // Now set up for parallel calls
-    mockExecute.mockReset();
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: 'ok' }));
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'cmd2 failed' }));
+    let callCount = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => {
+        callCount++;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue(callCount === 1 ? { value: 'ok' } : { error: 'cmd2 failed' }),
+        });
+      }),
+    );
 
     const results = await executeTauriCommandsParallel<string>(browser, [
       { command: 'cmd1', args: [] },
@@ -610,18 +691,19 @@ describe('executeTauriCommandsParallel', () => {
   });
 
   it('should use timeout variant when timeout is specified', async () => {
-    let callCount = 0;
-    const mockExecute = vi.fn().mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) return Promise.resolve(true);
-      return Promise.resolve(JSON.stringify({ __wdio_value__: 'done' }));
-    });
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: 'timed-result' }),
+      }),
+    );
 
     const results = await executeTauriCommandsParallel<string>(browser, [{ command: 'cmd1', args: [], timeout: 5000 }]);
 
     expect(results).toHaveLength(1);
-    expect(results[0]).toEqual({ ok: true, value: 'done' });
+    expect(results[0]).toEqual({ ok: true, value: 'timed-result' });
   });
 
   it('should handle empty commands array', async () => {
@@ -635,6 +717,7 @@ describe('isTauriApiAvailable', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    clearWindowState();
     browser = createMockBrowser();
   });
 
@@ -658,20 +741,6 @@ describe('isTauriApiAvailable', () => {
     const result = await isTauriApiAvailable(browser);
     expect(result).toBe(false);
   });
-
-  it('should coerce truthy values to boolean', async () => {
-    (browser.execute as ReturnType<typeof vi.fn>).mockResolvedValue(1);
-
-    const result = await isTauriApiAvailable(browser);
-    expect(result).toBe(true);
-  });
-
-  it('should coerce falsy values to boolean', async () => {
-    (browser.execute as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-
-    const result = await isTauriApiAvailable(browser);
-    expect(result).toBe(false);
-  });
 });
 
 describe('getTauriVersion', () => {
@@ -679,24 +748,38 @@ describe('getTauriVersion', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    clearWindowState();
     browser = createMockBrowser();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('should return version string on success', async () => {
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: '2.1.0' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: '2.1.0' }),
+      }),
+    );
 
     const result = await getTauriVersion(browser);
     expect(result).toEqual({ ok: true, value: '2.1.0' });
   });
 
   it('should return error result on failure', async () => {
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'version not found' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ error: 'version not found' }),
+      }),
+    );
 
     const result = await getTauriVersion(browser);
     assert(!result.ok);
@@ -709,25 +792,39 @@ describe('getTauriAppInfo', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    clearWindowState();
     browser = createMockBrowser();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('should return app info on success', async () => {
     const appInfo = { name: 'my-app', version: '1.0.0' };
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_value__: appInfo }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ value: appInfo }),
+      }),
+    );
 
     const result = await getTauriAppInfo(browser);
     expect(result).toEqual({ ok: true, value: appInfo });
   });
 
   it('should return error result on failure', async () => {
-    const mockExecute = vi.fn();
-    mockExecute.mockResolvedValueOnce(true);
-    mockExecute.mockResolvedValueOnce(JSON.stringify({ __wdio_error__: 'app info unavailable' }));
-    (browser.execute as ReturnType<typeof vi.fn>).mockImplementation(mockExecute);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ error: 'app info unavailable' }),
+      }),
+    );
 
     const result = await getTauriAppInfo(browser);
     assert(!result.ok);

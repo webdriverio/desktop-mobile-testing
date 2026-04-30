@@ -10,10 +10,10 @@
 | # | Improvement | Applies To | Effort | Impact | Status |
 |---|-------------|------------|--------|--------|--------|
 | 1 | Browser-only test mode with mocked native IPC | Tauri + Electron | Large | High | Pending |
-| 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High | Pending |
+| 2 | Direct WebView eval channel (supplement WebDriver) | Tauri (embedded) | Large | High | **Completed** |
 | 3 | Multi-window label configuration | Tauri | Small | Medium | **Completed** |
 | 4 | Native screenshot capture | Tauri + Electron | Medium | Low | Pending |
-| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | **Done** |
+| 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | **Completed** |
 | 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium | Pending |
 
 ---
@@ -127,72 +127,63 @@ Both frameworks have a JavaScript bridge that can be intercepted:
 
 ### What
 
-Extend the embedded Tauri plugin (`tauri-plugin-wdio-webdriver`) to support direct JavaScript evaluation in the webview via `WebviewWindow::eval()`, with results returned via Tauri IPC. This supplements — not replaces — the WebDriver protocol.
+A new `POST /wdio/eval` endpoint on the embedded Axum HTTP server that executes JavaScript directly in the webview using native platform APIs, bypassing the W3C WebDriver session layer and Tauri IPC entirely.
 
 ### Why
 
-- **Faster Tauri command execution**: `browser.tauri.execute()` currently goes through WebDriver's `execute` command, adding serialization overhead
-- **Richer return types**: Direct IPC can handle types that WebDriver JSON wire protocol struggles with
-- **Better mock sync**: Mock state could sync more efficiently through a direct channel
-- **Validated by PR #1**: tauri-playwright's PR #1 proves `WebviewWindow::eval()` + IPC is reliable and simpler than HTTP polling
+- **Dramatically fewer hops**: the old `browser.tauri.execute()` path took ~10 hops (W3C → IPC → Tauri event roundtrip); the new path is a single HTTP roundtrip
+- **Promise-aware natively**: uses `execute_async_script` on each platform (WKWebView's `callAsyncJavaScript` on macOS, WebView2's `ExecuteScript` + postMessage on Windows, WebKitGTK callbacks on Linux) — no polling
+- **Zero user-facing change**: routing is automatic based on the detected provider; `browser.tauri.execute()` API is unchanged
+- **Mock-routing preserved**: the wrapped script checks `window.__wdio_mocks__` first, so mocks work identically to the old path
 
 ### Applies to: Tauri only (embedded provider)
 
-Electron already has this via CDP (`Runtime.callFunctionOn`). This improvement brings Tauri's embedded provider to parity.
+Electron already has this via CDP (`Runtime.callFunctionOn`). The IPC path is preserved for `official` and `crabnebula` providers.
 
 ### Design
 
 ```
-┌─────────────────────────────┐
-│  WebdriverIO Worker         │
-│  browser.tauri.execute()    │
-└──────────┬──────────────────┘
-           │ (1) JSON command via socket/HTTP
-           ▼
-┌─────────────────────────────────────┐
-│  tauri-plugin-wdio-webdriver        │
-│  (Rust, in Tauri app process)       │
-│                                     │
-│  (2) WebviewWindow::eval(script)    │
-│      ↓                              │
-│  (3) Script runs in webview         │
-│      ↓                              │
-│  (4) Result via invoke('pw_result') │
-│      ↓                              │
-│  (5) Response back via socket/HTTP  │
-└─────────────────────────────────────┘
+browser.tauri.execute(script, ...args)          [test process]
+  └─ getSessionProvider(browser) === 'embedded'
+        │
+        ▼  HTTP POST http://127.0.0.1:{port}/wdio/eval
+        │  { script: wrappedScript, args, window_label?, timeout_ms? }
+        │
+[tauri-plugin-webdriver Axum server — in app process]
+  └─ executor.execute_async_script(wrappedScript)
+        │
+        ▼  native API (callAsyncJavaScript / ExecuteScript / WebKitGTK)
+        │
+[webview JS context]
+  └─ arguments[arguments.length-1]({ ok, value, undef })
+        │
+        ▼  result in HTTP response body
 ```
 
-Key learnings from tauri-playwright PR #1 to apply:
-- Use `WebviewWindow::eval()` instead of HTTP polling (eliminates 16ms latency + 2 round-trips)
-- Use `serde_json::to_string()` for all JS string interpolation (not manual escaping)
-- Add Tauri 2 permissions (`build.rs`, `default.toml`, schema) for any new IPC commands
-- Handle window readiness: retry/backoff if `get_webview_window()` returns `None`
-- Avoid `eval()` / `new Function()` in injected JS to prevent CSP issues
+The embedded provider is detected automatically — no opt-in required.
 
-### Implementation Steps
+### Status: ✅ Completed (2026-04-29)
 
-1. **Add `eval_js` command** to `tauri-plugin-wdio-webdriver`:
-   - Accept script + args as JSON
-   - Wrap in try-catch IIFE
-   - Execute via `webview.eval()`
-   - Return result via `invoke('wdio_eval_result')` IPC command
-2. **Add Tauri 2 permission scaffolding**: `build.rs`, permission TOML, schema
-3. **Add `wdio_eval_result` IPC handler** in plugin init
-4. **Create `DirectEvalBridge` class** in tauri-service TypeScript:
-   - Connect to plugin's socket/HTTP endpoint
-   - Send eval commands, receive results
-   - Timeout handling and retry logic
-5. **Route `browser.tauri.execute()`** through direct eval when embedded provider is active
-6. **Route mock sync** through direct eval for faster updates
-7. **Add window label configuration** (ties into Improvement 3)
+**Implementation:**
 
-### Open Questions
+- Added `POST /wdio/eval` route to the Axum server in `tauri-plugin-webdriver`
+- Handler resolves window label (default `"main"`), builds timeouts, calls `get_executor_for_window` then `execute_async_script`; maps `{ ok, value, undef }` / `{ ok: false, error }` from the script callback into the JSON response
+- `wrapScriptForDirectEval` in `tauri-service` wraps the user script using the same function-vs-statement-vs-expression detection as `guest-js/index.ts`, injecting `__wdio_tauri` with mock-routing invoke and the `__wdio_original_core__` wait loop (macOS Proxy invariant safety)
+- `DirectEvalClient` POSTs to the endpoint, handles `undef: true` → `undefined`, propagates errors; uses `AbortSignal.timeout` with 5s headroom over the server timeout
+- `execute.ts` branches on `getSessionProvider(browser)`: `'embedded'` → `DirectEvalClient`, otherwise → existing `browser.execute` IPC path (unchanged)
+- `getSessionProvider` exported from `window.ts`; provider cached per browser session in a `Map`
 
-- Should we use the same socket that the embedded WebDriver server uses, or a separate channel?
-- How to handle the transition — should `execute()` automatically pick the best channel, or should users opt in?
-- What's the fallback behavior if the direct channel fails? (Silent fallback to WebDriver `execute`?)
-
+**Files modified/created:**
+- `packages/tauri-plugin-webdriver/src/server/handlers/direct_eval.rs` *(new)*
+- `packages/tauri-plugin-webdriver/src/server/handlers/mod.rs`
+- `packages/tauri-plugin-webdriver/src/server/router.rs`
+- `packages/tauri-service/src/directEvalClient.ts` *(new)*
+- `packages/tauri-service/src/wrapForDirectEval.ts` *(new)*
+- `packages/tauri-service/src/commands/execute.ts`
+- `packages/tauri-service/src/window.ts`
+- `packages/tauri-service/test/directEvalClient.spec.ts` *(new)*
+- `packages/tauri-service/test/wrapForDirectEval.spec.ts` *(new)*
+- `packages/tauri-service/test/commands/execute.spec.ts`
 ---
 
 ## Improvement 3: Multi-Window Label Configuration
@@ -378,19 +369,19 @@ expect(mock).toHaveBeenCalledWith({ name: 'World' }); // No update() needed
 
 ## Implementation Order
 
-### Phase A: Quick Wins (1-2 weeks)
+### Phase A: Quick Wins ✅ Completed
 
 ```
-5. Audit JS string interpolation ──→ Both services
+5. Audit JS string interpolation ──→ Both services ✅
 ```
 
-### Phase B: Foundation (3-4 weeks)
+### Phase B: Foundation ✅ Completed
 
 ```
-2. Direct WebView eval channel ────→ Tauri embedded plugin
+2. Direct WebView eval channel ────→ Tauri embedded plugin ✅
 ```
 
-This is the architectural prerequisite for faster `execute()` and better mock sync. Build this before browser-only mode since the patterns inform the mock layer design.
+Single HTTP roundtrip replaces the ~10-hop W3C → IPC → event path. Zero user-facing API change — routing is automatic for the embedded provider. Patterns from this work (script wrapping, `__wdio_original_core__` snapshot, mock-routing invoke) inform the browser-only mock layer in Phase C.
 
 ### Phase C: Browser-Only Mode (4-6 weeks)
 
@@ -415,7 +406,9 @@ Pursue when users request it or when visual regression testing becomes a priorit
 ### Completed
 
 ```
+5. Audit JS string interpolation ──→ Both services ✅
 3. Multi-window label config ──────→ Tauri service ✅
+2. Direct WebView eval channel ────→ Tauri embedded plugin ✅
 ```
 
 ---

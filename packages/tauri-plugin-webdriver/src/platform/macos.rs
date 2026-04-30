@@ -157,13 +157,11 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for MacOSExecutor<R> {
         let args_json = serde_json::to_string(args)
             .map_err(|e| WebDriverErrorResponse::invalid_argument(&e.to_string()))?;
 
-        // Build wrapper that includes argument deserialization
-        // callAsyncJavaScript handles Promises natively - we wrap the script in a Promise
-        // and provide __done via closure.
-        // Note: NO 'return' keyword at top level - callAsyncJavaScript evaluates expressions,
-        // not statements. The Promise expression below evaluates to the result.
+        // Build wrapper that includes argument deserialization.
+        // callAsyncJavaScript treats the body as function statements, so `return` is required —
+        // without it the function returns undefined immediately and the Promise is discarded.
         let wrapper = format!(
-            r"new Promise((resolve, reject) => {{
+            r"return new Promise((resolve, reject) => {{
                 var ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
                 function deserializeArg(arg) {{
                     if (arg === null || arg === undefined) return arg;
