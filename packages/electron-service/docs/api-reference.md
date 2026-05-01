@@ -175,7 +175,7 @@ startWdioSession(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `capabilities` | `ElectronServiceCapabilities` | A capabilities object (use [`createElectronCapabilities()`](#createelectroncapabilities)) or an array containing one. |
+| `capabilities` | `ElectronServiceCapabilities` | An array of standalone capability objects (typically one, built with [`createElectronCapabilities()`](#createelectroncapabilities)), or a multiremote capabilities object. |
 | `globalOptions` | `ElectronServiceGlobalOptions` | Optional. Service-level options applied to all capabilities (e.g., `rootDir`). |
 
 **Returns:**
