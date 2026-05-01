@@ -257,6 +257,11 @@
         "dist/**"
       ]
     },
+    "@wdio/tauri-plugin#build": {
+      "dependsOn": [
+        "@wdio/tauri-plugin#build:js"
+      ]
+    },
     "@wdio/tauri-plugin#build:js": {
       "dependsOn": [
         "@wdio/native-spy#build",

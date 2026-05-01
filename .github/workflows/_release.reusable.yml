@@ -98,12 +98,14 @@ jobs:
       - name: Compute target packages from scope
         id: targets
         run: |
-          case "${{ inputs.scope }}" in
+          scope="${{ inputs.scope }}"
+          scope="${scope#scope:}"
+          case "$scope" in
             electron)
               echo "packages=@wdio/electron-service,@wdio/electron-cdp-bridge" >> $GITHUB_OUTPUT
               ;;
             tauri)
-              echo "packages=@wdio/tauri-service,@wdio/tauri-plugin" >> $GITHUB_OUTPUT
+              echo "packages=@wdio/tauri-service,@wdio/tauri-plugin,tauri-plugin-wdio-webdriver" >> $GITHUB_OUTPUT
               ;;
             utils)
               echo "packages=@wdio/native-utils" >> $GITHUB_OUTPUT
@@ -118,7 +120,7 @@ jobs:
               echo "packages=@wdio/native-utils,@wdio/native-types,@wdio/native-spy" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "::error::Unknown scope: ${{ inputs.scope }}"
+              echo "::error::Unknown scope: $scope"
               exit 1
               ;;
           esac

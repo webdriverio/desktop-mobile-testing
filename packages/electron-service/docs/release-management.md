@@ -15,7 +15,7 @@ The monorepo publishes several packages to npm, but GitHub release notes are onl
 | `@wdio/native-spy` | No — shared internal mock implementation |
 | `@wdio/native-types` | No — shared internal type definitions |
 
-The internal packages are versioned and published to npm so workspace dependency resolution works correctly, but they have no direct consumers and no user-facing changelog to maintain. GitHub release drafts and tags created for these packages by the release tooling can be ignored.
+The internal packages are versioned and published to npm so workspace dependency resolution works correctly, but they have no direct consumers and no user-facing changelog to maintain. GitHub release draft creation is suppressed for them via the `publish.githubRelease.skipPackages` array in `releasekit.config.json`. Tags are still created for skipped packages — this is required so that changelog range detection works correctly on the next release.
 
 ## Milestone Structure
 
