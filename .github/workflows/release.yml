@@ -70,7 +70,6 @@ jobs:
       should_release: ${{ steps.gate.outputs.should-release }}
       bump: ${{ steps.gate.outputs.bump }}
       scope: ${{ steps.gate.outputs.gate-scope }}
-      target: ${{ steps.gate.outputs.gate-target }}
       stable: ${{ steps.gate.outputs.gate-stable }}
     steps:
       - name: Checkout

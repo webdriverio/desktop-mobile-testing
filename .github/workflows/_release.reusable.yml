@@ -120,7 +120,7 @@ jobs:
               echo "packages=@wdio/native-utils,@wdio/native-types,@wdio/native-spy" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "::error::Unknown scope: ${{ inputs.scope }}"
+              echo "::error::Unknown scope: $scope"
               exit 1
               ;;
           esac
