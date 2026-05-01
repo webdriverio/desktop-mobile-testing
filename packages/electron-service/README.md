@@ -10,6 +10,8 @@ Enables cross-platform E2E testing of Electron apps via the extensive WebdriverI
 
 Spiritual successor to [Spectron](https://github.com/electron-userland/spectron) ([RIP](https://github.com/electron-userland/spectron/issues/1045)).
 
+> **v10 highlights** — the package is now scoped as `@wdio/electron-service`. v10 adds class mocking (`browser.electron.mock('Tray')`), per-API mock management (`clearAllMocks('app')`), main- and renderer-process console log capture, AppArmor auto-install for Ubuntu 24.04+, and a `electronBuilderConfig` option for projects with multiple build configs. Coming from v9? See the [v9 → v10 migration guide](./docs/migration/v9-to-v10.md).
+
 ### Features
 
 Makes testing Electron applications much easier via:
@@ -117,17 +119,27 @@ This is because WDIO uses Chrome for Testing to download Chromedriver, which onl
 
 ## Documentation
 
-**[Configuration](./docs/configuration.md)** \
-**[API Reference](./docs/api-reference.md)** \
-**[Electron APIs](./docs/electron-apis.md)** \
-**[Deeplink Testing](./docs/deeplink-testing.md)** \
-**[Window Management](./docs/window-management.md)** \
-**[Standalone Mode](./docs/standalone-mode.md)** \
-**[Debugging](./docs/debugging.md)** \
-**[Common Issues](./docs/common-issues.md)** \
-**[Development](./docs/development.md)** \
-**[Migration: v9 → v10](./docs/migration/v9-to-v10.md)** \
-**[Migration: v8 → v9](./docs/migration/v8-to-v9.md)**
+### Getting Started
+- **[Configuration](./docs/configuration.md)** — service options and Chromedriver setup
+- **[Electron APIs](./docs/electron-apis.md)** — accessing and mocking Electron APIs in tests
+
+### Reference
+- **[API Reference](./docs/api-reference.md)** — every `browser.electron.*` method and exported helper
+- **[Window Management](./docs/window-management.md)** — automatic window focus behaviour
+
+### Operations
+- **[Deeplink Testing](./docs/deeplink-testing.md)** — protocol handler tests across platforms
+- **[Standalone Mode](./docs/standalone-mode.md)** — using the service without the WDIO test runner
+- **[Debugging](./docs/debugging.md)** — log capture, debug namespaces, troubleshooting
+- **[Common Issues](./docs/common-issues.md)** — known issues and workarounds
+
+### Migration
+- **[v9 → v10](./docs/migration/v9-to-v10.md)** — package rename, new features
+- **[v8 → v9](./docs/migration/v8-to-v9.md)**
+
+### Contributing
+- **[Development](./docs/development.md)** — local setup, testing, dependency catalogs
+- **[Release Management](./docs/release-management.md)** — release labels and workflow
 
 ## Development
 

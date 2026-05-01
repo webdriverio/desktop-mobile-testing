@@ -370,6 +370,15 @@ The service will automatically determine the path to the Electron binary of your
 
 If you want to manually set this value, you can specify the [`appBinaryPath`](#appbinarypath) option.
 
+### Build tool compatibility
+
+The v10 release is exercised in CI against:
+
+- **electron-builder** 26.x
+- **@electron-forge/cli** 7.x
+
+Other 2.x and 7.x versions generally work because the layout of `dist-electron/` and `out/` paths has been stable across these majors. If you run into a detection issue with a specific version, please open an issue with your build tool config so the path resolver can be updated.
+
 ### Supported config locations:
 
 ##### Electron Builder

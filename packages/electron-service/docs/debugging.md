@@ -11,6 +11,8 @@ If you need extra insight into what the service is doing you can enable namespac
 - `DEBUG=wdio-electron-service` is equivalent to `DEBUG=wdio-electron-service:*` (enable all service namespaces)
 - You can target specific areas, e.g. `DEBUG=wdio-electron-service:service,mock`
 
+> **Migrating from v9?** The debug namespace **did not change** with the v10 package rename. Continue to use `wdio-electron-service:*` rather than `@wdio/electron-service:*` — the colon separator inside the namespace is what `debug` parses, so the unscoped form is preserved deliberately.
+
 Examples:
 
 ```bash

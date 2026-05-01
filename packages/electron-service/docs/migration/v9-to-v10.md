@@ -55,7 +55,7 @@ import type { ElectronServiceCapabilities } from '@wdio/electron-service';
 
 ## New Features (Optional)
 
-v10 introduces new optional logging capabilities that you may want to enable:
+v10 introduces several new capabilities that you may want to adopt:
 
 ### Console Log Capture
 
@@ -74,7 +74,66 @@ export const config = {
 };
 ```
 
-See the [Debugging documentation](../debugging.md#electron-log-capture) for details.
+Main process capture requires the `EnableNodeCliInspectArguments` Electron fuse to be enabled. Renderer capture works independently. See [Debugging documentation](../debugging.md#electron-log-capture) for details.
+
+### Class Mocking
+
+`browser.electron.mock()` now accepts a class name (no function name) to mock entire Electron classes such as `Tray`, `BrowserWindow`, or `Menu`. Constructor calls are tracked via the special `__constructor` mock, and instance methods are individually mockable:
+
+```ts
+const mockTray = await browser.electron.mock('Tray');
+
+await browser.electron.execute((electron) => {
+  const tray = new electron.Tray('/path/to/icon.png');
+  tray.setTitle('My App');
+});
+
+expect(mockTray.__constructor).toHaveBeenCalledWith('/path/to/icon.png');
+expect(mockTray.setTitle).toHaveBeenCalledWith('My App');
+```
+
+See [API Reference – Electron Class Mock](../api-reference.md#electron-class-mock).
+
+### Per-API Mock Management
+
+`clearAllMocks()`, `resetAllMocks()`, and `restoreAllMocks()` now accept an optional `apiName` argument to scope the operation to a single Electron API:
+
+```ts
+const mockSetName = await browser.electron.mock('app', 'setName');
+const mockWriteText = await browser.electron.mock('clipboard', 'writeText');
+
+// Clear only the `app` mocks; clipboard mocks are untouched.
+await browser.electron.clearAllMocks('app');
+```
+
+### `apparmorAutoInstall` (Linux)
+
+A new option to control automatic installation of AppArmor profiles on Ubuntu 24.04+ and other AppArmor-enabled distributions, where unprivileged user namespace restrictions otherwise block Electron from starting:
+
+```ts
+services: [
+  ['electron', {
+    // false (default) | true | 'sudo'
+    apparmorAutoInstall: 'sudo'
+  }]
+]
+```
+
+See [`apparmorAutoInstall`](../configuration.md#apparmorautoinstall) for details.
+
+### `electronBuilderConfig`
+
+Point the service at a custom electron-builder config file when your project keeps multiple build configurations side-by-side (e.g., staging vs production):
+
+```ts
+services: [
+  ['electron', {
+    electronBuilderConfig: 'config/electron-builder-staging.config.js'
+  }]
+]
+```
+
+The service resolves any `extends` chain to determine the binary output path. See [`electronBuilderConfig`](../configuration.md#electronbuilderconfig).
 
 ## Breaking Changes
 
