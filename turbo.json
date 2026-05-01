@@ -259,15 +259,7 @@
     },
     "@wdio/tauri-plugin#build": {
       "dependsOn": [
-        "@wdio/native-spy#build",
-        "@wdio/native-utils#build"
-      ],
-      "inputs": [
-        "guest-js/**",
-        "scripts/build-guest-js.ts"
-      ],
-      "outputs": [
-        "dist-js/**"
+        "@wdio/tauri-plugin#build:js"
       ]
     },
     "@wdio/tauri-plugin#build:js": {
