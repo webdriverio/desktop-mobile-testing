@@ -10,7 +10,7 @@ Enables cross-platform E2E testing of Electron apps via the extensive WebdriverI
 
 Spiritual successor to [Spectron](https://github.com/electron-userland/spectron) ([RIP](https://github.com/electron-userland/spectron/issues/1045)).
 
-> **v10 highlights** — the package is now scoped as `@wdio/electron-service`. v10 adds class mocking (`browser.electron.mock('Tray')`), per-API mock management (`clearAllMocks('app')`), main- and renderer-process console log capture, AppArmor auto-install for Ubuntu 24.04+, and a `electronBuilderConfig` option for projects with multiple build configs. Coming from v9? See the [v9 → v10 migration guide](./docs/migration/v9-to-v10.md).
+> **v10 highlights** — the package is now scoped as `@wdio/electron-service`. v10 adds class mocking (`browser.electron.mock('Tray')`), main- and renderer-process console log capture, deeplink testing (`browser.electron.triggerDeeplink()`), and an `electronBuilderConfig` option for projects with multiple build configs. See the [v10.0.0 release notes](./docs/release-notes/v10.0.0.md) for the full list, or the [v9 → v10 migration guide](./docs/migration/v9-to-v10.md) if you're upgrading.
 
 ### Features
 
@@ -133,9 +133,10 @@ This is because WDIO uses Chrome for Testing to download Chromedriver, which onl
 - **[Debugging](./docs/debugging.md)** — log capture, debug namespaces, troubleshooting
 - **[Common Issues](./docs/common-issues.md)** — known issues and workarounds
 
-### Migration
-- **[v9 → v10](./docs/migration/v9-to-v10.md)** — package rename, new features
-- **[v8 → v9](./docs/migration/v8-to-v9.md)**
+### Migration & Release Notes
+- **[v10.0.0 Release Notes](./docs/release-notes/v10.0.0.md)** — full list of v10 changes
+- **[v9 → v10 Migration](./docs/migration/v9-to-v10.md)** — required upgrade actions
+- **[v8 → v9 Migration](./docs/migration/v8-to-v9.md)**
 
 ### Contributing
 - **[Development](./docs/development.md)** — local setup, testing, dependency catalogs
