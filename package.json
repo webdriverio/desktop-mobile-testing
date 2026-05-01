@@ -86,11 +86,11 @@
   },
   "lint-staged": {
     "**/*.{j,t}s": [
-      "biome check --write",
+      "biome check --write --no-errors-on-unmatched",
       "eslint --fix --cache"
     ],
     "**/*.json": [
-      "biome format --write"
+      "biome format --write --no-errors-on-unmatched"
     ]
   },
   "pnpm": {
