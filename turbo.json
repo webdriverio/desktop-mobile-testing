@@ -259,8 +259,7 @@
     },
     "@wdio/tauri-plugin#build": {
       "dependsOn": [
-        "@wdio/tauri-plugin#build:js",
-        "@wdio/tauri-plugin#build:rust"
+        "@wdio/tauri-plugin#build:js"
       ]
     },
     "@wdio/tauri-plugin#build:js": {

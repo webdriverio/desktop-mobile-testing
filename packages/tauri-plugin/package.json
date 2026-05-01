@@ -20,7 +20,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm build:js && pnpm build:rust",
+    "build": "pnpm build:js",
     "build:js": "tsx scripts/build-guest-js.ts",
     "build:rust": "cargo build",
     "test": "vitest run"
