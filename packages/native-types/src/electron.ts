@@ -115,10 +115,25 @@ export interface ElectronServiceAPI {
 }
 
 /**
+ * Fields from BaseServiceOptions that are not consumed by the Electron service.
+ * Captured here so the Omit list stays in sync with the documented surface.
+ */
+type ElectronUnsupportedBaseOptions =
+  | 'commandTimeout'
+  | 'startTimeout'
+  | 'captureBackendLogs'
+  | 'captureFrontendLogs'
+  | 'backendLogLevel'
+  | 'frontendLogLevel'
+  | 'clearMocksPrefix'
+  | 'resetMocksPrefix'
+  | 'restoreMocksPrefix';
+
+/**
  * The options for the Electron Service.
  * Extends base service options with Electron-specific configuration.
  */
-export interface ElectronServiceOptions extends BaseServiceOptions {
+export interface ElectronServiceOptions extends Omit<BaseServiceOptions, ElectronUnsupportedBaseOptions> {
   /**
    * The path to the electron entry point of the app for testing.
    */
@@ -166,7 +181,17 @@ export interface ElectronServiceOptions extends BaseServiceOptions {
  * Global options for the Electron Service
  * Extends base global options with Electron-specific configuration
  */
-export interface ElectronServiceGlobalOptions extends BaseServiceGlobalOptions {
+export interface ElectronServiceGlobalOptions
+  extends Omit<
+    BaseServiceGlobalOptions,
+    | 'captureBackendLogs'
+    | 'captureFrontendLogs'
+    | 'backendLogLevel'
+    | 'frontendLogLevel'
+    | 'clearMocksPrefix'
+    | 'resetMocksPrefix'
+    | 'restoreMocksPrefix'
+  > {
   /**
    * The path to the electron binary of the app for testing.
    */
