@@ -24,7 +24,7 @@ A Tauri v2 plugin providing execute and mocking capabilities for WebDriverIO tes
 
 ```toml
 [dependencies]
-tauri-plugin-wdio = "0.1"
+tauri-plugin-wdio = "1"
 ```
 
 ### 2. Register Plugin in Your App
@@ -153,22 +153,22 @@ The plugin provides these Tauri commands:
 
 ### Permissions Detail
 
-The `wdio:default` permission includes:
+The `wdio:default` permission includes the following entries. The mock-related entries (`set-mock`, `get-mock`, `clear-mocks`, `reset-mocks`, `restore-mocks`) and `switch-to-main` are reserved for forward compatibility — mocking is implemented via JS-side invoke interception today, so these permissions are no-ops.
 
-| Permission | Description |
-|---|---|
-| `wdio:allow-execute` | Execute JavaScript in frontend context |
-| `wdio:allow-log-frontend` | Forward frontend logs |
-| `wdio:allow-debug-plugin` | Debug plugin state |
-| `wdio:allow-set-mock` | Set mock configuration |
-| `wdio:allow-get-mock` | Get mock configuration |
-| `wdio:allow-clear-mocks` | Clear all mocks |
-| `wdio:allow-reset-mocks` | Reset all mocks |
-| `wdio:allow-restore-mocks` | Restore all mocks |
-| `wdio:allow-get-active-window-label` | Get active window label |
-| `wdio:allow-get-window-states` | Get window states |
-| `wdio:allow-list-windows` | List windows |
-| `wdio:allow-switch-to-main` | Switch to main window |
+| Permission | Description | Wired |
+|---|---|---|
+| `wdio:allow-execute` | Execute JavaScript in frontend context | ✅ |
+| `wdio:allow-log-frontend` | Forward frontend logs | ✅ |
+| `wdio:allow-debug-plugin` | Debug plugin state | ✅ |
+| `wdio:allow-get-active-window-label` | Get active window label | ✅ |
+| `wdio:allow-get-window-states` | Get window states | ✅ |
+| `wdio:allow-list-windows` | List windows | ✅ |
+| `wdio:allow-set-mock` | Set mock configuration | reserved |
+| `wdio:allow-get-mock` | Get mock configuration | reserved |
+| `wdio:allow-clear-mocks` | Clear all mocks | reserved |
+| `wdio:allow-reset-mocks` | Reset all mocks | reserved |
+| `wdio:allow-restore-mocks` | Restore all mocks | reserved |
+| `wdio:allow-switch-to-main` | Switch to main window | reserved |
 
 ## Configuration
 

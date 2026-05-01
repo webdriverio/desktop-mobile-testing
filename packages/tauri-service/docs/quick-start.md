@@ -128,11 +128,11 @@ fn main() {
 
 ```toml
 [dependencies]
-tauri = { version = "2.9", features = [] }
-tauri-plugin-wdio = { path = "../../packages/tauri-plugin" }
+tauri = { version = "2", features = [] }
+tauri-plugin-wdio = "1"
 
 [build-dependencies]
-tauri-build = "2.0"
+tauri-build = "2"
 ```
 
 **`src-tauri/build.rs`**

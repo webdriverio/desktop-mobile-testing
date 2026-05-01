@@ -350,7 +350,7 @@ Remove this mock and restore the original command implementation.
 
 Set the mock to return `this` when called (useful for chaining).
 
-**Returns:** `Promise<unknown>`
+**Returns:** `Promise<TauriMock>`
 
 ---
 
@@ -557,9 +557,17 @@ interface TauriServiceOptions {
   frontendLogLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error';
   driverProvider?: 'official' | 'crabnebula' | 'embedded';
   embeddedPort?: number;
+  statusPollTimeout?: number;
   crabnebulaDriverPath?: string;
   crabnebulaManageBackend?: boolean;
   crabnebulaBackendPort?: number;
+  windowLabel?: string;
+  clearMocks?: boolean;
+  clearMocksPrefix?: string;
+  resetMocks?: boolean;
+  resetMocksPrefix?: string;
+  restoreMocks?: boolean;
+  restoreMocksPrefix?: string;
   env?: Record<string, string>;
   autoInstallTauriDriver?: boolean;
   autoDownloadEdgeDriver?: boolean;

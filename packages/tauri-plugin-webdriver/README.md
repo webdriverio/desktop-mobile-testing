@@ -39,7 +39,7 @@ Add to your `Cargo.toml` as a dev/test-only dependency:
 
 ```toml
 [target.'cfg(debug_assertions)'.dependencies]
-tauri-plugin-wdio-webdriver = "0.1"
+tauri-plugin-wdio-webdriver = "1"
 ```
 
 Or use a feature flag for more control:
@@ -49,7 +49,7 @@ Or use a feature flag for more control:
 webdriver = ["tauri-plugin-wdio-webdriver"]
 
 [dependencies]
-tauri-plugin-wdio-webdriver = { version = "0.1", optional = true }
+tauri-plugin-wdio-webdriver = { version = "1", optional = true }
 ```
 
 ## Usage with @wdio/tauri-service
