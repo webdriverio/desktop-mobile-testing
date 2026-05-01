@@ -2,6 +2,21 @@
 
 This document outlines how we manage releases, milestones, and issue/PR tracking for the WebdriverIO Electron Service project.
 
+## GitHub Release Notes Policy
+
+The monorepo publishes several packages to npm, but GitHub release notes are only maintained for user-facing service packages:
+
+| Package | Release notes |
+|---|---|
+| `@wdio/electron-service` | Yes |
+| `@wdio/tauri-service` | Yes |
+| `@wdio/electron-cdp-bridge` | No — internal implementation detail of the Electron service |
+| `@wdio/native-utils` | No — shared internal utilities |
+| `@wdio/native-spy` | No — shared internal mock implementation |
+| `@wdio/native-types` | No — shared internal type definitions |
+
+The internal packages are versioned and published to npm so workspace dependency resolution works correctly, but they have no direct consumers and no user-facing changelog to maintain. GitHub release draft creation is suppressed for them via the `publish.githubRelease.skipPackages` array in `releasekit.config.json`. Tags are still created for skipped packages — this is required so that changelog range detection works correctly on the next release.
+
 ## Milestone Structure
 
 We use a two-tier milestone structure:
