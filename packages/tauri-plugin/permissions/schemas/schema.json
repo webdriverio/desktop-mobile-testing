@@ -295,18 +295,6 @@
       "type": "string",
       "oneOf": [
         {
-          "description": "Enables the clear_mocks command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-clear-mocks",
-          "markdownDescription": "Enables the clear_mocks command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the clear_mocks command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-clear-mocks",
-          "markdownDescription": "Denies the clear_mocks command without any pre-configured scope."
-        },
-        {
           "description": "Enables the debug_plugin command without any pre-configured scope.",
           "type": "string",
           "const": "allow-debug-plugin",
@@ -341,18 +329,6 @@
           "type": "string",
           "const": "deny-get-active-window-label",
           "markdownDescription": "Denies the get_active_window_label command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the get_mock command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-mock",
-          "markdownDescription": "Enables the get_mock command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_mock command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-mock",
-          "markdownDescription": "Denies the get_mock command without any pre-configured scope."
         },
         {
           "description": "Enables the get_window_states command without any pre-configured scope.",
@@ -391,58 +367,10 @@
           "markdownDescription": "Denies the log_frontend command without any pre-configured scope."
         },
         {
-          "description": "Enables the reset_mocks command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-reset-mocks",
-          "markdownDescription": "Enables the reset_mocks command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the reset_mocks command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-reset-mocks",
-          "markdownDescription": "Denies the reset_mocks command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the restore_mocks command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-restore-mocks",
-          "markdownDescription": "Enables the restore_mocks command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the restore_mocks command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-restore-mocks",
-          "markdownDescription": "Denies the restore_mocks command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the set_mock command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-set-mock",
-          "markdownDescription": "Enables the set_mock command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the set_mock command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-set-mock",
-          "markdownDescription": "Denies the set_mock command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the switch_to_main command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-switch-to-main",
-          "markdownDescription": "Enables the switch_to_main command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the switch_to_main command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-switch-to-main",
-          "markdownDescription": "Denies the switch_to_main command without any pre-configured scope."
-        },
-        {
-          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `wdio:allow-execute`\n- `wdio:allow-log-frontend`\n- `wdio:allow-debug-plugin`\n- `wdio:allow-set-mock`\n- `wdio:allow-get-mock`\n- `wdio:allow-clear-mocks`\n- `wdio:allow-reset-mocks`\n- `wdio:allow-restore-mocks`\n- `wdio:allow-get-active-window-label`\n- `wdio:allow-get-window-states`\n- `wdio:allow-list-windows`\n- `wdio:allow-switch-to-main`",
+          "description": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `wdio:allow-execute`\n- `wdio:allow-log-frontend`\n- `wdio:allow-debug-plugin`\n- `wdio:allow-get-active-window-label`\n- `wdio:allow-get-window-states`\n- `wdio:allow-list-windows`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `wdio:allow-execute`\n- `wdio:allow-log-frontend`\n- `wdio:allow-debug-plugin`\n- `wdio:allow-set-mock`\n- `wdio:allow-get-mock`\n- `wdio:allow-clear-mocks`\n- `wdio:allow-reset-mocks`\n- `wdio:allow-restore-mocks`\n- `wdio:allow-get-active-window-label`\n- `wdio:allow-get-window-states`\n- `wdio:allow-list-windows`\n- `wdio:allow-switch-to-main`"
+          "markdownDescription": "Allows all WebDriverIO plugin commands for testing\n#### This default permission set includes:\n\n- `wdio:allow-execute`\n- `wdio:allow-log-frontend`\n- `wdio:allow-debug-plugin`\n- `wdio:allow-get-active-window-label`\n- `wdio:allow-get-window-states`\n- `wdio:allow-list-windows`"
         }
       ]
     }

@@ -153,22 +153,16 @@ The plugin provides these Tauri commands:
 
 ### Permissions Detail
 
-The `wdio:default` permission includes the following entries. The mock-related entries (`set-mock`, `get-mock`, `clear-mocks`, `reset-mocks`, `restore-mocks`) and `switch-to-main` are reserved for forward compatibility — mocking is implemented via JS-side invoke interception today, so these permissions are no-ops.
+The `wdio:default` permission grants every plugin command. Mocking is implemented entirely via JS-side invoke interception (`window.__wdio_mocks__`), so there are no mock-related Rust permissions.
 
-| Permission | Description | Wired |
-|---|---|---|
-| `wdio:allow-execute` | Execute JavaScript in frontend context | ✅ |
-| `wdio:allow-log-frontend` | Forward frontend logs | ✅ |
-| `wdio:allow-debug-plugin` | Debug plugin state | ✅ |
-| `wdio:allow-get-active-window-label` | Get active window label | ✅ |
-| `wdio:allow-get-window-states` | Get window states | ✅ |
-| `wdio:allow-list-windows` | List windows | ✅ |
-| `wdio:allow-set-mock` | Set mock configuration | reserved |
-| `wdio:allow-get-mock` | Get mock configuration | reserved |
-| `wdio:allow-clear-mocks` | Clear all mocks | reserved |
-| `wdio:allow-reset-mocks` | Reset all mocks | reserved |
-| `wdio:allow-restore-mocks` | Restore all mocks | reserved |
-| `wdio:allow-switch-to-main` | Switch to main window | reserved |
+| Permission | Description |
+|---|---|
+| `wdio:allow-execute` | Execute JavaScript in frontend context |
+| `wdio:allow-log-frontend` | Forward frontend logs |
+| `wdio:allow-debug-plugin` | Debug plugin state |
+| `wdio:allow-get-active-window-label` | Get active window label |
+| `wdio:allow-get-window-states` | Get window states |
+| `wdio:allow-list-windows` | List windows |
 
 ## Configuration
 

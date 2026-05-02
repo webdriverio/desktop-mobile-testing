@@ -8,13 +8,9 @@
 # - [allow-*]: Individual permissions for each command
 #
 # Usage in Apps:
-# Add to your app's capabilities file (e.g., capabilities/default.json):
-#   "wdio:allow-execute",
-#   "wdio:allow-set-mock",
-#   etc.
-#
-# Or use the default set:
-#   "wdio:default"
+# Add `"wdio:default"` to your app's capabilities file (e.g.,
+# capabilities/default.json) to grant access to all plugin commands. Individual
+# `wdio:allow-*` permissions are also exposed if you need finer-grained control.
 #
 # For more on Tauri v2 permissions: https://v2.tauri.app/security/capabilities/
 
@@ -26,15 +22,9 @@ permissions = [
   "wdio:allow-execute",
   "wdio:allow-log-frontend",
   "wdio:allow-debug-plugin",
-  "wdio:allow-set-mock",
-  "wdio:allow-get-mock",
-  "wdio:allow-clear-mocks",
-  "wdio:allow-reset-mocks",
-  "wdio:allow-restore-mocks",
   "wdio:allow-get-active-window-label",
   "wdio:allow-get-window-states",
-  "wdio:allow-list-windows",
-  "wdio:allow-switch-to-main"
+  "wdio:allow-list-windows"
 ]
 
 [wdio_allow_execute]
@@ -52,31 +42,6 @@ identifier = "wdio:allow-debug-plugin"
 description = "Allow debug plugin command"
 commands = { allow = ["debug_plugin"], deny = [] }
 
-[wdio_allow_set_mock]
-identifier = "wdio:allow-set-mock"
-description = "Allow setting mocks via the wdio plugin"
-commands = { allow = ["set_mock"], deny = [] }
-
-[wdio_allow_get_mock]
-identifier = "wdio:allow-get-mock"
-description = "Allow getting mocks via the wdio plugin"
-commands = { allow = ["get_mock"], deny = [] }
-
-[wdio_allow_clear_mocks]
-identifier = "wdio:allow-clear-mocks"
-description = "Allow clearing mocks via the wdio plugin"
-commands = { allow = ["clear_mocks"], deny = [] }
-
-[wdio_allow_reset_mocks]
-identifier = "wdio:allow-reset-mocks"
-description = "Allow resetting mocks via the wdio plugin"
-commands = { allow = ["reset_mocks"], deny = [] }
-
-[wdio_allow_restore_mocks]
-identifier = "wdio:allow-restore-mocks"
-description = "Allow restoring mocks via the wdio plugin"
-commands = { allow = ["restore_mocks"], deny = [] }
-
 [wdio_allow_get_active_window_label]
 identifier = "wdio:allow-get-active-window-label"
 description = "Allow get_active_window_label command"
@@ -91,8 +56,3 @@ commands = { allow = ["get_window_states"], deny = [] }
 identifier = "wdio:allow-list-windows"
 description = "Allow list_windows command"
 commands = { allow = ["list_windows"], deny = [] }
-
-[wdio_allow_switch_to_main]
-identifier = "wdio:allow-switch-to-main"
-description = "Allow switch_to_main command"
-commands = { allow = ["switch_to_main"], deny = [] }
