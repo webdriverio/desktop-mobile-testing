@@ -30,7 +30,8 @@
         "allow-identifier",
         "allow-bundle-type",
         "allow-register-listener",
-        "allow-remove-listener"
+        "allow-remove-listener",
+        "allow-supports-multiple-windows"
       ]
     },
     "permissions": {
@@ -150,6 +151,16 @@
         "commands": {
           "allow": [
             "set_dock_visibility"
+          ],
+          "deny": []
+        }
+      },
+      "allow-supports-multiple-windows": {
+        "identifier": "allow-supports-multiple-windows",
+        "description": "Enables the supports_multiple_windows command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "supports_multiple_windows"
           ],
           "deny": []
         }
@@ -291,6 +302,16 @@
           "allow": [],
           "deny": [
             "set_dock_visibility"
+          ]
+        }
+      },
+      "deny-supports-multiple-windows": {
+        "identifier": "deny-supports-multiple-windows",
+        "description": "Denies the supports_multiple_windows command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "supports_multiple_windows"
           ]
         }
       },
@@ -1233,6 +1254,7 @@
         "allow-set-visible",
         "allow-set-temp-dir-path",
         "allow-set-icon-as-template",
+        "allow-set-icon-with-as-template",
         "allow-set-show-menu-on-left-click"
       ]
     },
@@ -1283,6 +1305,16 @@
         "commands": {
           "allow": [
             "set_icon_as_template"
+          ],
+          "deny": []
+        }
+      },
+      "allow-set-icon-with-as-template": {
+        "identifier": "allow-set-icon-with-as-template",
+        "description": "Enables the set_icon_with_as_template command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "set_icon_with_as_template"
           ],
           "deny": []
         }
@@ -1394,6 +1426,16 @@
           "allow": [],
           "deny": [
             "set_icon_as_template"
+          ]
+        }
+      },
+      "deny-set-icon-with-as-template": {
+        "identifier": "deny-set-icon-with-as-template",
+        "description": "Denies the set_icon_with_as_template command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "set_icon_with_as_template"
           ]
         }
       },
@@ -1867,10 +1909,22 @@
         "allow-cursor-position",
         "allow-theme",
         "allow-is-always-on-top",
+        "allow-activity-name",
+        "allow-scene-identifier",
         "allow-internal-toggle-maximize"
       ]
     },
     "permissions": {
+      "allow-activity-name": {
+        "identifier": "allow-activity-name",
+        "description": "Enables the activity_name command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "activity_name"
+          ],
+          "deny": []
+        }
+      },
       "allow-available-monitors": {
         "identifier": "allow-available-monitors",
         "description": "Enables the available_monitors command without any pre-configured scope.",
@@ -2187,6 +2241,16 @@
         "commands": {
           "allow": [
             "scale_factor"
+          ],
+          "deny": []
+        }
+      },
+      "allow-scene-identifier": {
+        "identifier": "allow-scene-identifier",
+        "description": "Enables the scene_identifier command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "scene_identifier"
           ],
           "deny": []
         }
@@ -2631,6 +2695,16 @@
           "deny": []
         }
       },
+      "deny-activity-name": {
+        "identifier": "deny-activity-name",
+        "description": "Denies the activity_name command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "activity_name"
+          ]
+        }
+      },
       "deny-available-monitors": {
         "identifier": "deny-available-monitors",
         "description": "Denies the available_monitors command without any pre-configured scope.",
@@ -2948,6 +3022,16 @@
           "allow": [],
           "deny": [
             "scale_factor"
+          ]
+        }
+      },
+      "deny-scene-identifier": {
+        "identifier": "deny-scene-identifier",
+        "description": "Denies the scene_identifier command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "scene_identifier"
           ]
         }
       },
@@ -3587,12 +3671,32 @@
           "deny": []
         }
       },
+      "allow-start-accessing-security-scoped-resource": {
+        "identifier": "allow-start-accessing-security-scoped-resource",
+        "description": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "start_accessing_security_scoped_resource"
+          ],
+          "deny": []
+        }
+      },
       "allow-stat": {
         "identifier": "allow-stat",
         "description": "Enables the stat command without any pre-configured scope.",
         "commands": {
           "allow": [
             "stat"
+          ],
+          "deny": []
+        }
+      },
+      "allow-stop-accessing-security-scoped-resource": {
+        "identifier": "allow-stop-accessing-security-scoped-resource",
+        "description": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "stop_accessing_security_scoped_resource"
           ],
           "deny": []
         }
@@ -3850,6 +3954,16 @@
           ]
         }
       },
+      "deny-start-accessing-security-scoped-resource": {
+        "identifier": "deny-start-accessing-security-scoped-resource",
+        "description": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "start_accessing_security_scoped_resource"
+          ]
+        }
+      },
       "deny-stat": {
         "identifier": "deny-stat",
         "description": "Denies the stat command without any pre-configured scope.",
@@ -3857,6 +3971,16 @@
           "allow": [],
           "deny": [
             "stat"
+          ]
+        }
+      },
+      "deny-stop-accessing-security-scoped-resource": {
+        "identifier": "deny-stop-accessing-security-scoped-resource",
+        "description": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "stop_accessing_security_scoped_resource"
           ]
         }
       },
@@ -6647,28 +6771,12 @@
         "wdio:allow-execute",
         "wdio:allow-log-frontend",
         "wdio:allow-debug-plugin",
-        "wdio:allow-set-mock",
-        "wdio:allow-get-mock",
-        "wdio:allow-clear-mocks",
-        "wdio:allow-reset-mocks",
-        "wdio:allow-restore-mocks",
         "wdio:allow-get-active-window-label",
         "wdio:allow-get-window-states",
-        "wdio:allow-list-windows",
-        "wdio:allow-switch-to-main"
+        "wdio:allow-list-windows"
       ]
     },
     "permissions": {
-      "allow-clear-mocks": {
-        "identifier": "allow-clear-mocks",
-        "description": "Enables the clear_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "clear_mocks"
-          ],
-          "deny": []
-        }
-      },
       "allow-debug-plugin": {
         "identifier": "allow-debug-plugin",
         "description": "Enables the debug_plugin command without any pre-configured scope.",
@@ -6695,16 +6803,6 @@
         "commands": {
           "allow": [
             "get_active_window_label"
-          ],
-          "deny": []
-        }
-      },
-      "allow-get-mock": {
-        "identifier": "allow-get-mock",
-        "description": "Enables the get_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "get_mock"
           ],
           "deny": []
         }
@@ -6739,56 +6837,6 @@
           "deny": []
         }
       },
-      "allow-reset-mocks": {
-        "identifier": "allow-reset-mocks",
-        "description": "Enables the reset_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "reset_mocks"
-          ],
-          "deny": []
-        }
-      },
-      "allow-restore-mocks": {
-        "identifier": "allow-restore-mocks",
-        "description": "Enables the restore_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "restore_mocks"
-          ],
-          "deny": []
-        }
-      },
-      "allow-set-mock": {
-        "identifier": "allow-set-mock",
-        "description": "Enables the set_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "set_mock"
-          ],
-          "deny": []
-        }
-      },
-      "allow-switch-to-main": {
-        "identifier": "allow-switch-to-main",
-        "description": "Enables the switch_to_main command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "switch_to_main"
-          ],
-          "deny": []
-        }
-      },
-      "deny-clear-mocks": {
-        "identifier": "deny-clear-mocks",
-        "description": "Denies the clear_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "clear_mocks"
-          ]
-        }
-      },
       "deny-debug-plugin": {
         "identifier": "deny-debug-plugin",
         "description": "Denies the debug_plugin command without any pre-configured scope.",
@@ -6819,16 +6867,6 @@
           ]
         }
       },
-      "deny-get-mock": {
-        "identifier": "deny-get-mock",
-        "description": "Denies the get_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "get_mock"
-          ]
-        }
-      },
       "deny-get-window-states": {
         "identifier": "deny-get-window-states",
         "description": "Denies the get_window_states command without any pre-configured scope.",
@@ -6856,46 +6894,6 @@
           "allow": [],
           "deny": [
             "log_frontend"
-          ]
-        }
-      },
-      "deny-reset-mocks": {
-        "identifier": "deny-reset-mocks",
-        "description": "Denies the reset_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "reset_mocks"
-          ]
-        }
-      },
-      "deny-restore-mocks": {
-        "identifier": "deny-restore-mocks",
-        "description": "Denies the restore_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "restore_mocks"
-          ]
-        }
-      },
-      "deny-set-mock": {
-        "identifier": "deny-set-mock",
-        "description": "Denies the set_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "set_mock"
-          ]
-        }
-      },
-      "deny-switch-to-main": {
-        "identifier": "deny-switch-to-main",
-        "description": "Denies the switch_to_main command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "switch_to_main"
           ]
         }
       }

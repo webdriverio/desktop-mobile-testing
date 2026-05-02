@@ -33,11 +33,6 @@
         }
       ]
     },
-    "wdio:allow-execute",
-    "wdio:allow-set-mock",
-    "wdio:allow-get-mock",
-    "wdio:allow-clear-mocks",
-    "wdio:allow-reset-mocks",
-    "wdio:allow-restore-mocks"
+    "wdio:allow-execute"
   ]
 }

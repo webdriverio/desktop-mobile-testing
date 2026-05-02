@@ -4,16 +4,16 @@ This directory contains capability files that define the ACL (Access Control Lis
 
 ## WebDriverIO Plugin Permissions
 
-The following permissions are required for the `@wdio/tauri-plugin` to function during testing:
+The `@wdio/tauri-plugin` exposes the following permissions:
 
 - `wdio:allow-execute` - Allows executing JavaScript in the frontend with access to Tauri APIs
-- `wdio:allow-set-mock` - Allows setting mock configurations for Tauri commands
-- `wdio:allow-get-mock` - Allows retrieving mock configurations
-- `wdio:allow-clear-mocks` - Allows clearing all mocks
-- `wdio:allow-reset-mocks` - Allows resetting mocks to initial state
-- `wdio:allow-restore-mocks` - Allows restoring original command handlers
+- `wdio:allow-log-frontend` - Allows the plugin to forward frontend logs through Rust's logger
+- `wdio:allow-debug-plugin` - Diagnostic helper command for plugin state
+- `wdio:allow-get-active-window-label` - Read the currently active webview window label
+- `wdio:allow-get-window-states` - Read window state metadata
+- `wdio:allow-list-windows` - List all webview window labels
 
-These permissions are defined in the plugin's `permissions/default.toml` file and must be explicitly included in your app's capability files.
+The bundled `wdio:default` permission grants all of the above. Mocking is handled entirely on the JavaScript side via invoke interception, so no mock-related Rust permissions are required.
 
 ## For More Information
 

@@ -3713,12 +3713,32 @@
           "deny": []
         }
       },
+      "allow-start-accessing-security-scoped-resource": {
+        "identifier": "allow-start-accessing-security-scoped-resource",
+        "description": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "start_accessing_security_scoped_resource"
+          ],
+          "deny": []
+        }
+      },
       "allow-stat": {
         "identifier": "allow-stat",
         "description": "Enables the stat command without any pre-configured scope.",
         "commands": {
           "allow": [
             "stat"
+          ],
+          "deny": []
+        }
+      },
+      "allow-stop-accessing-security-scoped-resource": {
+        "identifier": "allow-stop-accessing-security-scoped-resource",
+        "description": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [
+            "stop_accessing_security_scoped_resource"
           ],
           "deny": []
         }
@@ -3976,6 +3996,16 @@
           ]
         }
       },
+      "deny-start-accessing-security-scoped-resource": {
+        "identifier": "deny-start-accessing-security-scoped-resource",
+        "description": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "start_accessing_security_scoped_resource"
+          ]
+        }
+      },
       "deny-stat": {
         "identifier": "deny-stat",
         "description": "Denies the stat command without any pre-configured scope.",
@@ -3983,6 +4013,16 @@
           "allow": [],
           "deny": [
             "stat"
+          ]
+        }
+      },
+      "deny-stop-accessing-security-scoped-resource": {
+        "identifier": "deny-stop-accessing-security-scoped-resource",
+        "description": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+        "commands": {
+          "allow": [],
+          "deny": [
+            "stop_accessing_security_scoped_resource"
           ]
         }
       },
@@ -6773,28 +6813,12 @@
         "wdio:allow-execute",
         "wdio:allow-log-frontend",
         "wdio:allow-debug-plugin",
-        "wdio:allow-set-mock",
-        "wdio:allow-get-mock",
-        "wdio:allow-clear-mocks",
-        "wdio:allow-reset-mocks",
-        "wdio:allow-restore-mocks",
         "wdio:allow-get-active-window-label",
         "wdio:allow-get-window-states",
-        "wdio:allow-list-windows",
-        "wdio:allow-switch-to-main"
+        "wdio:allow-list-windows"
       ]
     },
     "permissions": {
-      "allow-clear-mocks": {
-        "identifier": "allow-clear-mocks",
-        "description": "Enables the clear_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "clear_mocks"
-          ],
-          "deny": []
-        }
-      },
       "allow-debug-plugin": {
         "identifier": "allow-debug-plugin",
         "description": "Enables the debug_plugin command without any pre-configured scope.",
@@ -6821,16 +6845,6 @@
         "commands": {
           "allow": [
             "get_active_window_label"
-          ],
-          "deny": []
-        }
-      },
-      "allow-get-mock": {
-        "identifier": "allow-get-mock",
-        "description": "Enables the get_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "get_mock"
           ],
           "deny": []
         }
@@ -6865,56 +6879,6 @@
           "deny": []
         }
       },
-      "allow-reset-mocks": {
-        "identifier": "allow-reset-mocks",
-        "description": "Enables the reset_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "reset_mocks"
-          ],
-          "deny": []
-        }
-      },
-      "allow-restore-mocks": {
-        "identifier": "allow-restore-mocks",
-        "description": "Enables the restore_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "restore_mocks"
-          ],
-          "deny": []
-        }
-      },
-      "allow-set-mock": {
-        "identifier": "allow-set-mock",
-        "description": "Enables the set_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "set_mock"
-          ],
-          "deny": []
-        }
-      },
-      "allow-switch-to-main": {
-        "identifier": "allow-switch-to-main",
-        "description": "Enables the switch_to_main command without any pre-configured scope.",
-        "commands": {
-          "allow": [
-            "switch_to_main"
-          ],
-          "deny": []
-        }
-      },
-      "deny-clear-mocks": {
-        "identifier": "deny-clear-mocks",
-        "description": "Denies the clear_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "clear_mocks"
-          ]
-        }
-      },
       "deny-debug-plugin": {
         "identifier": "deny-debug-plugin",
         "description": "Denies the debug_plugin command without any pre-configured scope.",
@@ -6945,16 +6909,6 @@
           ]
         }
       },
-      "deny-get-mock": {
-        "identifier": "deny-get-mock",
-        "description": "Denies the get_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "get_mock"
-          ]
-        }
-      },
       "deny-get-window-states": {
         "identifier": "deny-get-window-states",
         "description": "Denies the get_window_states command without any pre-configured scope.",
@@ -6982,46 +6936,6 @@
           "allow": [],
           "deny": [
             "log_frontend"
-          ]
-        }
-      },
-      "deny-reset-mocks": {
-        "identifier": "deny-reset-mocks",
-        "description": "Denies the reset_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "reset_mocks"
-          ]
-        }
-      },
-      "deny-restore-mocks": {
-        "identifier": "deny-restore-mocks",
-        "description": "Denies the restore_mocks command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "restore_mocks"
-          ]
-        }
-      },
-      "deny-set-mock": {
-        "identifier": "deny-set-mock",
-        "description": "Denies the set_mock command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "set_mock"
-          ]
-        }
-      },
-      "deny-switch-to-main": {
-        "identifier": "deny-switch-to-main",
-        "description": "Denies the switch_to_main command without any pre-configured scope.",
-        "commands": {
-          "allow": [],
-          "deny": [
-            "switch_to_main"
           ]
         }
       }
