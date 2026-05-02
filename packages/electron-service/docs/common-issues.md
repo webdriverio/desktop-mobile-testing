@@ -96,6 +96,8 @@ export const config = {
 
 ### TypeError: logger is not a function
 
+> Still applies in v10. The package was renamed from `wdio-electron-service` to `@wdio/electron-service`, but the import-time initialization order didn't change — the same workaround is needed.
+
 This error occurs when importing the `browser` object directly at the top level of test files:
 
 ```typescript

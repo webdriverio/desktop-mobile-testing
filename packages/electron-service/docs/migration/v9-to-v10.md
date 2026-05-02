@@ -53,28 +53,9 @@ import { startWdioSession, cleanupWdioSession } from '@wdio/electron-service';
 import type { ElectronServiceCapabilities } from '@wdio/electron-service';
 ```
 
-## New Features (Optional)
+## What's New in v10
 
-v10 introduces new optional logging capabilities that you may want to enable:
-
-### Console Log Capture
-
-You can now capture console output from both main and renderer processes:
-
-```ts
-export const config = {
-  services: [
-    ['electron', {
-      captureMainProcessLogs: true,
-      captureRendererLogs: true,
-      mainProcessLogLevel: 'info',
-      rendererLogLevel: 'info'
-    }]
-  ]
-};
-```
-
-See the [Debugging documentation](../debugging.md#electron-log-capture) for details.
+For the full list of new features (console log capture, class mocking, deeplink testing, `electronBuilderConfig`, `getElectronBinaryPath()`, and more), see the [v10.0.0 release notes](../release-notes/v10.0.0.md). All new features are additive and require no migration action.
 
 ## Breaking Changes
 

@@ -72,32 +72,23 @@ pnpm test:dev
 
 ## Release
 
-Project maintainers publish releases using GitHub Actions. The release workflow supports both manual triggers and automated releases via PR labels.
+Project maintainers publish releases using GitHub Actions. Releases are driven by PR labels (`track:`, `semver:`, `release:`) and executed via the Release workflow. See [Release Management](./release-management.md) for the full label scheme and workflow.
 
-### Autorelease (Recommended)
+### Quick Reference
 
-1. Add labels to your PR: `scope:electron` and a version label like `release:major`
-2. After CI passes and the PR is merged, the release workflow automatically publishes
+- **Track labels**: `track:main`, `track:feature`, `track:maintenance`
+- **Semver labels**: `semver:patch`, `semver:minor`, `semver:major`
+- **Timing labels**: `release:next` (include in next release), `release:future` (defer)
 
 ### Manual Release
 
-1. Go to Actions → Release
+1. Go to Actions → "Manual Release Publish" (or "Manual Pre-Release Publish")
 2. Click "Run workflow"
-3. Select scope (`electron`), version type, and dry run option
-
-### Version Types
-
-- `patch`, `minor`, `major` - Stable releases
-- `prepatch`, `preminor`, `premajor`, `prerelease` - Pre-releases
-
-### Pre-releases
-
-Use prerelease labels for testing:
-- `scope:electron` + `release:premajor` → Electron packages as premajor (e.g., 11.0.0-beta.0)
+3. Select branch, version increment type, and dry run option
 
 ### Contributing
 
 See [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines, commit format, and PR process.
 
-- **[Help Wanted Issues](https://github.com/webdriverio/desktop-mobile/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3Ahelp%3Awanted+label%3Ascope%3Aelectron)**
-- **[Beginner Friendly Issues](https://github.com/webdriverio/desktop-mobile/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3Ahelp%3Abeginner-friendly+label%3Ascope%3Aelectron)**
+- **[Help Wanted Issues](https://github.com/webdriverio/desktop-mobile/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3Ahelp%3Awanted)**
+- **[Beginner Friendly Issues](https://github.com/webdriverio/desktop-mobile/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3Ahelp%3Abeginner-friendly)**

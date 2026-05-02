@@ -63,10 +63,8 @@ Add the plugin to your `src-tauri/Cargo.toml`:
 
 ```toml
 [dependencies]
-tauri = { version = "2.9", features = ["..your other features.."] }
-tauri-plugin-wdio = { path = "../../packages/tauri-plugin" }
-# Or when published to crates.io:
-# tauri-plugin-wdio = "1.0"
+tauri = { version = "2", features = ["..your other features.."] }
+tauri-plugin-wdio = "1"
 ```
 
 ### Step 2: Register Plugin in Rust
@@ -294,10 +292,9 @@ If you get Rust compilation errors:
    - If you're on Tauri v1, this plugin won't work
 
 4. **Check dependency versions**
-   All plugins and tauri should be the same version. Edit `Cargo.toml`:
    ```toml
-   tauri = { version = "2.9", ... }
-   tauri-plugin-wdio = { version = "2.9", ... }
+   tauri = { version = "2", ... }
+   tauri-plugin-wdio = "1"
    ```
 
 ## Plugin Architecture
@@ -386,7 +383,7 @@ This would enable the execute and basic mock APIs but disable log forwarding and
    wdio = ["dep:tauri-plugin-wdio"]
 
    [dependencies]
-   tauri-plugin-wdio = { version = "1.0", optional = true }
+   tauri-plugin-wdio = { version = "1", optional = true }
    ```
 
    ```rust
@@ -441,7 +438,7 @@ This plugin embeds a W3C WebDriver HTTP server directly in your Tauri applicatio
 
 ```toml
 [target.'cfg(debug_assertions)'.dependencies]
-tauri-plugin-wdio-webdriver = "0.1"
+tauri-plugin-wdio-webdriver = "1"
 ```
 
 #### 2. Register Plugin in Rust
@@ -468,10 +465,12 @@ fn main() {
   "permissions": [
     "core:default",
     "core:window:default",
-    "webdriver:default"
+    "wdio-webdriver:default"
   ]
 }
 ```
+
+> The `wdio-webdriver:default` set currently grants no IPC permissions — the plugin is an in-process HTTP server, not a command surface — but listing it ensures Tauri loads the plugin's ACL manifest.
 
 ### Configuration
 

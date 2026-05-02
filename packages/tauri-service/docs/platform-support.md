@@ -335,7 +335,7 @@ The embedded WebDriver provider uses `tauri-plugin-wdio-webdriver` to provide na
      "permissions": [
        "core:default",
        "core:window:default",
-       "webdriver:default"
+       "wdio-webdriver:default"
      ]
    }
    ```

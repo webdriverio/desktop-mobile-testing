@@ -156,10 +156,10 @@ Timeout in milliseconds for individual command execution.
 
 **Example:**
 ```typescript
-commandTimeout: 30000  // 30 seconds
+commandTimeout: 60000  // 60 seconds
 ```
 
-**Default:** `10000` (10 seconds)
+**Default:** `30000` (30 seconds)
 
 ---
 
@@ -169,10 +169,10 @@ Timeout in milliseconds for the Tauri app to start and become ready.
 
 **Example:**
 ```typescript
-startTimeout: 30000  // 30 seconds
+startTimeout: 60000  // 60 seconds
 ```
 
-**Default:** `30000`
+**Default:** `30000` for the `'official'` and `'crabnebula'` providers, `60000` for the `'embedded'` provider (the embedded WebDriver server takes longer to come up, especially on Windows CI).
 
 ---
 
@@ -249,6 +249,90 @@ logDir: './test-logs'
 
 ---
 
+### `statusPollTimeout` (number, optional)
+
+Timeout in milliseconds for the `/status` endpoint poll during embedded WebDriver server startup. Increase this in slow CI environments (e.g. containerised Windows runners) where a healthy-but-busy server may miss the default deadline and trigger a false-positive restart.
+
+**Example:**
+```typescript
+statusPollTimeout: 5000
+```
+
+**Default:** `2000`
+
+**Note:** Only applies when `driverProvider: 'embedded'`.
+
+---
+
+### `clearMocks` (boolean, optional)
+
+If `true`, all mock call history is cleared before each test. Equivalent to calling `browser.tauri.clearAllMocks()` in a `beforeEach`.
+
+**Example:**
+```typescript
+clearMocks: true
+```
+
+**Default:** `false`
+
+---
+
+### `clearMocksPrefix` (string, optional)
+
+If set, only mocks whose command name starts with this prefix are cleared. Only used when `clearMocks: true`.
+
+**Example:**
+```typescript
+clearMocks: true,
+clearMocksPrefix: 'clipboard'  // Only clears clipboard.* mocks
+```
+
+**Default:** `undefined`
+
+---
+
+### `resetMocks` (boolean, optional)
+
+If `true`, all mocks are reset (implementation + history) before each test. Equivalent to `browser.tauri.resetAllMocks()` in a `beforeEach`.
+
+**Example:**
+```typescript
+resetMocks: true
+```
+
+**Default:** `false`
+
+---
+
+### `resetMocksPrefix` (string, optional)
+
+If set, only mocks whose command name starts with this prefix are reset. Only used when `resetMocks: true`.
+
+**Default:** `undefined`
+
+---
+
+### `restoreMocks` (boolean, optional)
+
+If `true`, all mocks are restored to their original implementations before each test. Equivalent to `browser.tauri.restoreAllMocks()` in a `beforeEach`.
+
+**Example:**
+```typescript
+restoreMocks: true
+```
+
+**Default:** `false`
+
+---
+
+### `restoreMocksPrefix` (string, optional)
+
+If set, only mocks whose command name starts with this prefix are restored. Only used when `restoreMocks: true`.
+
+**Default:** `undefined`
+
+---
+
 ### `driverProvider` ('official' | 'crabnebula' | 'embedded', optional)
 
 Select which driver provider to use for WebDriver communication.
@@ -305,7 +389,7 @@ Port for the embedded WebDriver server. Only used when `driverProvider: 'embedde
 
 - The service spawns your Tauri app with this port
 - Each worker instance gets a unique port (basePort + workerIndex)
-- Can also be set via `TAURI_WEBDRIVER_PORT` environment variable
+- Can also be set via the `TAURI_WEBDRIVER_PORT` or `WDIO_EMBEDDED_PORT` environment variable. Setting either env var also serves as the auto-detection signal that opts you into the embedded provider on Windows/Linux.
 
 **Example:**
 ```typescript
@@ -371,6 +455,8 @@ capabilities: [{
   }
 }]
 ```
+
+> `browserName` accepts either `'tauri'` (preferred) or `'wry'` (the underlying webview library). Both are treated identically by the service.
 
 ### Full Configuration
 

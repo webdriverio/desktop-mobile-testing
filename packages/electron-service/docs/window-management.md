@@ -1,13 +1,37 @@
 # Window Management
 
-The service automatically handles window management in your Electron applications. This means you can focus on writing tests without worrying about managing window focus.
+The service automatically tracks the active Electron `BrowserWindow` and ensures WebdriverIO commands target it. You can write tests against your app without manually shuffling window handles when the renderer changes (for example, splash screen → main window).
 
-## What It Does
+## How It Works
 
-- Automatically detects and switches to the active window when window was switched
-- Handles multiple windows seamlessly
-- Works with both single and multi-remote browser instances
-- Supports common scenarios like splash screens and popups
+Before each WebdriverIO command, the service inspects all Electron page targets via Puppeteer. If the active target differs from the one currently selected, it calls `browser.switchToWindow()` on your behalf and records the new handle on `browser.electron.windowHandle`.
+
+This runs on the WDIO `beforeCommand` hook, so the switch happens transparently between commands without any explicit setup.
+
+### When the Switch Triggers
+
+The service evaluates window state before every command **except** the four that already deal in window state directly:
+
+- `getWindowHandle`
+- `getWindowHandles`
+- `switchToWindow`
+- `execute`
+
+Internal `browser.electron.execute` calls are also skipped to avoid recursion.
+
+### Multiremote
+
+In multiremote mode the service evaluates each Electron instance independently. Non-Electron instances (e.g., a Chrome browser running alongside the app) are ignored so they keep their own window state.
+
+## `browser.electron.windowHandle`
+
+The currently selected window handle is exposed on the browser:
+
+```ts
+const handle = browser.electron.windowHandle;
+```
+
+The service updates it any time it auto-switches windows. You generally don't need to read it directly — it's primarily an internal hook used by `ensureActiveWindowFocus()` to detect changes — but it is useful when debugging unexpected window state.
 
 ## Example
 
@@ -28,7 +52,7 @@ await expect(browser).toHaveTitle('Main Window');
 
 ## Manual Window Control
 
-While window management is automatic, sometimes you may need explicit control. Here's a practical example:
+When you need explicit control (e.g. a popup that should remain open while you assert against the parent), use the standard WebdriverIO window APIs. The service won't fight you — `switchToWindow` is in the exclusion list above, so the next command runs against whatever window you selected.
 
 ```ts
 describe('Settings window', () => {
@@ -50,9 +74,16 @@ describe('Settings window', () => {
 });
 ```
 
-The above example shows how to:
+## Troubleshooting
 
-- Open a settings window from the main window
-- Switch to the newly opened window
-- Perform actions in the popup
-- Switch back to the main window
+### Test commands target the wrong window
+
+The service decides which window is "active" by asking Puppeteer for all `page` targets and picking the first one that's still valid. When several windows are open simultaneously, that ordering may not match your intent. Use `browser.switchToWindow()` explicitly in those cases.
+
+### `windowHandle` is `undefined`
+
+This means Puppeteer reported zero page targets when the service last checked — typically during early startup before the renderer has loaded, or after all windows have been destroyed. Wait for at least one `BrowserWindow` to be ready before issuing renderer-side commands.
+
+### Window focus management disabled warning
+
+A log entry like `Failed to get Puppeteer for instance ..., window focus management disabled` means the service couldn't open a CDP session for that instance (typically a non-Electron multiremote peer). Other instances continue to work; the affected instance simply skips automatic switching.

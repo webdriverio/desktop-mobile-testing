@@ -7,6 +7,8 @@ This document provides a complete reference for all `browser.electron.*` methods
 - [Utility Functions](#utility-functions)
   - [`createElectronCapabilities()`](#createelectroncapabilities)
   - [`getElectronBinaryPath()`](#getelectronbinarypath)
+  - [`startWdioSession()`](#startwdiosession)
+  - [`cleanupWdioSession()`](#cleanupwdiosession)
 - [Execution Methods](#execution-methods)
   - [`execute()`](#execute)
   - [`triggerDeeplink()`](#triggerdeeplink)
@@ -152,6 +154,85 @@ console.log(binaryPath);
 
 **See Also:**
 - [Configuration - Automatic detection of App binary](./configuration.md#automatic-detection-of-app-binary)
+
+---
+
+### `startWdioSession()`
+
+Starts a WebdriverIO session in standalone mode (without the WDIO test runner). Performs the same launcher setup the runner does — binary detection, capability mutation, log writer initialization — and returns a browser instance.
+
+**Signature:**
+```ts
+import { startWdioSession } from '@wdio/electron-service';
+
+startWdioSession(
+  capabilities: ElectronServiceCapabilities,
+  globalOptions?: ElectronServiceGlobalOptions,
+): Promise<WebdriverIO.Browser>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `capabilities` | `ElectronServiceCapabilities` | An array of standalone capability objects (typically one, built with [`createElectronCapabilities()`](#createelectroncapabilities)), or a multiremote capabilities object. |
+| `globalOptions` | `ElectronServiceGlobalOptions` | Optional. Service-level options applied to all capabilities (e.g., `rootDir`). |
+
+**Returns:**
+
+`Promise<WebdriverIO.Browser>` - The browser instance, with `browser.electron.*` available.
+
+**Example:**
+
+```ts
+import { startWdioSession, cleanupWdioSession, createElectronCapabilities } from '@wdio/electron-service';
+
+const caps = createElectronCapabilities({
+  appBinaryPath: '/path/to/MyApp',
+  captureMainProcessLogs: true,
+  logDir: './logs',
+});
+
+const browser = await startWdioSession([caps]);
+
+try {
+  const name = await browser.electron.execute((electron) => electron.app.getName());
+  console.log(name);
+} finally {
+  await cleanupWdioSession(browser);
+}
+```
+
+**See Also:**
+- [Standalone Mode](./standalone-mode.md)
+- [`cleanupWdioSession()`](#cleanupwdiosession)
+
+---
+
+### `cleanupWdioSession()`
+
+Tears down a standalone session started with [`startWdioSession()`](#startwdiosession). Calls `browser.deleteSession()` and runs the launcher's `onComplete` cleanup so the Electron process and any spawned drivers are released.
+
+**Signature:**
+```ts
+import { cleanupWdioSession } from '@wdio/electron-service';
+
+cleanupWdioSession(browser: WebdriverIO.Browser): Promise<void>
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `browser` | `WebdriverIO.Browser` | The browser instance returned from `startWdioSession()`. |
+
+**Returns:**
+
+`Promise<void>`
+
+**See Also:**
+- [Standalone Mode](./standalone-mode.md)
+- [`startWdioSession()`](#startwdiosession)
 
 ---
 
@@ -539,7 +620,7 @@ mockImplementation(fn: (...args: any[]) => any): Promise<ElectronFunctionMock>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -562,11 +643,11 @@ expect(result).toBe('mocked value');
 
 ### `mockImplementationOnce()`
 
-Accepts a function that will be used as mock's implementation during the next call. If chained, every consecutive call will produce different results. When implementations run out, falls back to the default implementation set with [`mockImplementation()`](#mockimplementation).
+Accepts a function that will be used as mock's implementation during the next call. If chained, every consecutive call will produce different results. When the queued implementations run out, the mock falls back to whatever was set via [`mockImplementation()`](#mockimplementation); if no default has been set, calls return `undefined` (or `null` when the original API returns `null`).
 
 **Signature:**
 ```ts
-mockImplementationOnce(fn: (...args: any[]) => any): Promise<MockObject>
+mockImplementationOnce(fn: (...args: any[]) => any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -577,7 +658,7 @@ mockImplementationOnce(fn: (...args: any[]) => any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -602,7 +683,7 @@ Accepts a value that will be returned whenever the mock function is called.
 
 **Signature:**
 ```ts
-mockReturnValue(value: any): Promise<MockObject>
+mockReturnValue(value: any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -613,7 +694,7 @@ mockReturnValue(value: any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -633,7 +714,7 @@ Accepts a value that will be returned during the next function call. If chained,
 
 **Signature:**
 ```ts
-mockReturnValueOnce(value: any): Promise<MockObject>
+mockReturnValueOnce(value: any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -644,7 +725,7 @@ mockReturnValueOnce(value: any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -669,7 +750,7 @@ Accepts a value that will be resolved (for async functions) whenever the mock is
 
 **Signature:**
 ```ts
-mockResolvedValue(value: any): Promise<MockObject>
+mockResolvedValue(value: any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -680,7 +761,7 @@ mockResolvedValue(value: any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -701,7 +782,7 @@ Accepts a value that will be resolved during the next function call. If chained,
 
 **Signature:**
 ```ts
-mockResolvedValueOnce(value: any): Promise<MockObject>
+mockResolvedValueOnce(value: any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -712,7 +793,7 @@ mockResolvedValueOnce(value: any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -739,7 +820,7 @@ Accepts a value that will be rejected (for async functions) whenever the mock is
 
 **Signature:**
 ```ts
-mockRejectedValue(value: any): Promise<MockObject>
+mockRejectedValue(value: any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -750,7 +831,7 @@ mockRejectedValue(value: any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -777,7 +858,7 @@ Accepts a value that will be rejected during the next function call. If chained,
 
 **Signature:**
 ```ts
-mockRejectedValueOnce(value: any): Promise<MockObject>
+mockRejectedValueOnce(value: any): Promise<ElectronFunctionMock>
 ```
 
 **Parameters:**
@@ -788,7 +869,7 @@ mockRejectedValueOnce(value: any): Promise<MockObject>
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
@@ -950,7 +1031,7 @@ expect(result).toBe('temporary mock icon');
 
 ### `getMockImplementation()`
 
-Returns the current mock implementation if there is one.
+Returns the current mock implementation if there is one. **This call is synchronous** — unlike most mock methods, it doesn't cross the CDP/WebDriver boundary because the implementation function is cached on the outer mock object in the test process.
 
 **Signature:**
 ```ts
@@ -1029,26 +1110,32 @@ expect(mockGetName.getMockName()).toBe('test mock');
 
 ### `mockReturnThis()`
 
-Useful if you need to return the `this` context from the method without invoking implementation. Shorthand for `mockImplementation(function () { return this; })`. Enables API functions to be chained.
+Useful if you need to return the `this` context from the method without invoking the original implementation. Shorthand for `mockImplementation(function () { return this; })`. Useful for builder-style APIs that chain calls on the same object.
 
 **Signature:**
 ```ts
-mockReturnThis(): Promise<MockObject>
+mockReturnThis(): Promise<ElectronFunctionMock>
 ```
 
 **Returns:**
 
-`Promise<MockObject>` - Returns the mock object for chaining
+`Promise<ElectronFunctionMock>` - Resolves with the mock object for chaining
 
 **Example:**
 
 ```ts
-const mockGetName = await browser.electron.mock('app', 'getName');
-const mockGetVersion = await browser.electron.mock('app', 'getVersion');
-await mockGetName.mockReturnThis();
-await browser.electron.execute((electron) => electron.app.getName().getVersion());
+// `BrowserWindow.setMenuBarVisibility` is a void method. After mockReturnThis()
+// it returns the BrowserWindow instance, allowing it to be chained.
+const mockSetMenuBarVisibility = await browser.electron.mock('BrowserWindow', 'setMenuBarVisibility');
+await mockSetMenuBarVisibility.mockReturnThis();
 
-expect(mockGetVersion).toHaveBeenCalled();
+await browser.electron.execute((electron) => {
+  const win = electron.BrowserWindow.getFocusedWindow();
+  // setMenuBarVisibility now returns `win`, enabling the chained focus() call
+  win.setMenuBarVisibility(false).focus();
+});
+
+expect(mockSetMenuBarVisibility).toHaveBeenCalledWith(false);
 ```
 
 ---

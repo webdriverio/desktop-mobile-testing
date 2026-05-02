@@ -14,7 +14,7 @@
 | 3 | Multi-window label configuration | Tauri | Small | Medium | **Completed** |
 | 4 | Native screenshot capture | Tauri + Electron | Medium | Low | Pending |
 | 5 | Audit JS string interpolation / escaping | Tauri + Electron | Small | Medium | **Completed** |
-| 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium | Pending |
+| 6 | IPC mock serialization pattern | Tauri + Electron | Medium | Medium | **In Progress** (feat/ipc-mock) |
 
 ---
 
