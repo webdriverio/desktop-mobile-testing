@@ -10,7 +10,7 @@ import { getAppBuildInfo } from './appBuildInfo.js';
 import { getBinaryPath } from './binaryPath.js';
 import { getElectronVersion } from './electronVersion.js';
 
-const log = createLogger('wdio-electron-service', 'launcher');
+const log = createLogger('electron-service', 'launcher');
 
 import type { Capabilities, Options, Services } from '@wdio/types';
 import getPort from 'get-port';
