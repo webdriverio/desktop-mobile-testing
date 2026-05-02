@@ -107,14 +107,15 @@ Or use individual permissions if you prefer fine-grained control:
     "core:window:default",
     "wdio:allow-execute",
     "wdio:allow-log-frontend",
-    "wdio:allow-set-mock",
-    "wdio:allow-get-mock",
-    "wdio:allow-clear-mocks",
-    "wdio:allow-reset-mocks",
-    "wdio:allow-restore-mocks"
+    "wdio:allow-debug-plugin",
+    "wdio:allow-get-active-window-label",
+    "wdio:allow-get-window-states",
+    "wdio:allow-list-windows"
   ]
 }
 ```
+
+> **Note:** Mocking is implemented entirely on the JavaScript side via invoke interception (`window.__wdio_mocks__`), so there are no `wdio:allow-set-mock` / `allow-clear-mocks` style permissions to configure.
 
 ### Step 4: Enable Global Tauri API
 
@@ -327,33 +328,26 @@ When you import `@wdio/tauri-plugin`:
 
 ### Permissions Detail
 
-The `wdio:default` permission includes:
+The `wdio:default` permission includes every plugin command:
+
 - `wdio:allow-execute` - Execute JavaScript in frontend context
 - `wdio:allow-log-frontend` - Forward frontend logs
 - `wdio:allow-debug-plugin` - Debug plugin state
-- `wdio:allow-set-mock` - Set mock configuration
-- `wdio:allow-get-mock` - Get mock configuration
-- `wdio:allow-clear-mocks` - Clear all mocks
-- `wdio:allow-reset-mocks` - Reset all mocks
-- `wdio:allow-restore-mocks` - Restore all mocks
 - `wdio:allow-get-active-window-label` - Get active window label
 - `wdio:allow-get-window-states` - Get window states
 - `wdio:allow-list-windows` - List windows
-- `wdio:allow-switch-to-main` - Switch to main window
 
-For production, you might want to use only specific permissions:
+Mocking is implemented entirely on the JavaScript side via invoke interception, so there are no mock-related Rust permissions.
+
+If you want a smaller surface, you can grant a subset — `wdio:allow-execute` alone is enough to run scripts and use the mocking API:
 
 ```json
 {
   "permissions": [
-    "wdio:allow-execute",
-    "wdio:allow-set-mock",
-    "wdio:allow-get-mock"
+    "wdio:allow-execute"
   ]
 }
 ```
-
-This would enable the execute and basic mock APIs but disable log forwarding and window management.
 
 ## Production Considerations
 
