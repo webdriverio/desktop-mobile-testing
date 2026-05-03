@@ -100,7 +100,7 @@ describe('Script App Example', () => {
     expect(windowSize).not.toBeNull();
     expect(windowSize?.width).toBe(900);
     if (process.platform === 'darwin') {
-      expect(windowSize?.height ?? 0).toBeGreaterThanOrEqual(680);
+      expect(windowSize?.height ?? 0).toBeGreaterThanOrEqual(670);
       expect(windowSize?.height ?? 0).toBeLessThanOrEqual(720);
     } else {
       expect(windowSize?.height).toBe(700);

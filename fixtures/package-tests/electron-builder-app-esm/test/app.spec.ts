@@ -85,8 +85,9 @@ describe('Builder App Example', () => {
     expect(result).not.toBeNull();
     expect(result?.width).toBe(900);
     if (process.platform === 'darwin') {
-      // Allow minor variance on macOS due to frame metrics and work area fitting
-      expect(result.height).toBeGreaterThanOrEqual(680);
+      // Allow minor variance on macOS due to frame metrics and work area fitting.
+      // macOS 26 has slightly taller titlebar metrics; lower bound covers ~674px observed there.
+      expect(result.height).toBeGreaterThanOrEqual(670);
       expect(result.height).toBeLessThanOrEqual(720);
     } else {
       expect(result?.height).toBe(700);
