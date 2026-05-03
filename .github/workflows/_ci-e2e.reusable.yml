@@ -220,6 +220,11 @@ jobs:
             }
             return scenarios.map(s => `test:e2e:electron-${s}`).join(' ');
 
+      # Ensure the log directory exists so ChromeDriver's --log-path can write to it
+      - name: 📁 Prepare Log Directory
+        shell: bash
+        run: mkdir -p e2e/logs
+
       # Run the E2E tests using Turbo with the generated test commands
       # Each test builds its own apps with correct environment context
       - name: 🧪 Execute E2E Tests
@@ -227,6 +232,12 @@ jobs:
         env:
           ENABLE_SPLASH_WINDOW: 'true'
           TEST_TASKS: ${{ steps.gen-test.outputs.result }}
+          # Diagnostic logging — captures Electron startup output and a verbose
+          # ChromeDriver log so failures (e.g. macOS 26 session-not-created) are debuggable
+          ELECTRON_ENABLE_LOGGING: '1'
+          ELECTRON_ENABLE_STACK_DUMPING: '1'
+          WDIO_CHROMEDRIVER_VERBOSE: '1'
+          WDIO_CHROMEDRIVER_LOG_PATH: ${{ github.workspace }}/e2e/logs/chromedriver.log
         run: pnpm exec turbo run $TEST_TASKS --only --log-order=stream
 
       # Show logs on failure for debugging
@@ -249,6 +260,30 @@ jobs:
           path: e2e/logs/**/*.log
           retention-days: 90
           if-no-files-found: warn
+
+      # Collect macOS crash reports on failure
+      # macOS writes .ips dumps to ~/Library/Logs/DiagnosticReports/ when a process exits abnormally.
+      # Useful for diagnosing immediate Electron crashes (e.g. macOS 26 sandbox/codesigning failures)
+      # where ChromeDriver only reports "Chrome instance exited" without further detail.
+      - name: 🍎 Collect macOS Crash Reports
+        if: failure() && runner.os == 'macOS'
+        continue-on-error: true
+        shell: bash
+        run: |
+          DEST="${{ github.workspace }}/logs/macos-crash-reports"
+          mkdir -p "$DEST"
+          cp -v ~/Library/Logs/DiagnosticReports/*.ips "$DEST/" 2>/dev/null || echo "No .ips reports found"
+          cp -v /Library/Logs/DiagnosticReports/*.ips "$DEST/" 2>/dev/null || true
+
+      - name: 📦 Upload macOS Crash Reports
+        if: failure() && runner.os == 'macOS'
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-crash-reports-${{ inputs.os }}${{ inputs.variant && format('-{0}', inputs.variant) || '' }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.scenario }}
+          path: logs/macos-crash-reports/*.ips
+          retention-days: 90
+          if-no-files-found: ignore
 
       # Provide an interactive debugging session on failure
       # This allows manual investigation of the environment

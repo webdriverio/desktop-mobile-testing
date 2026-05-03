@@ -204,6 +204,12 @@ jobs:
           - os: macos-15-intel
             display-name: macOS-Intel
             module-type: esm
+          # Forward-compat coverage: catches macOS 26 regressions before
+          # `macos-latest` aliases to it. The `check-macos-alias-overlap` job
+          # below auto-fails when this becomes redundant.
+          - os: macos-26
+            display-name: macOS-26
+            module-type: esm
     uses: ./.github/workflows/_ci-package.reusable.yml
     secrets: inherit
     with:
@@ -213,6 +219,60 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       artifact_size: ${{ needs.build.outputs.artifact_size }}
       cache_key: ${{ needs.build.outputs.cache_key }}
+
+  # macOS alias-overlap guard
+  # The `package-electron-matrix` includes a dedicated `macos-26` row to catch
+  # macOS 26 regressions before `macos-latest` aliases to that version. When
+  # GitHub eventually flips the alias, the dedicated row becomes redundant.
+  # These three jobs detect that automatically: each `detect-*` job emits the
+  # major OS version of its runner, and `check-macos-alias-overlap` fails with
+  # a clear remediation message if the majors match.
+  detect-macos-latest-version:
+    name: Detect - macos-latest OS major
+    runs-on: macos-latest
+    outputs:
+      major: ${{ steps.detect.outputs.major }}
+    steps:
+      - name: Detect macOS major version
+        id: detect
+        shell: bash
+        run: |
+          MAJOR=$(sw_vers -productVersion | cut -d. -f1)
+          echo "macos-latest reports macOS $MAJOR.x"
+          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+
+  detect-macos-26-version:
+    name: Detect - macos-26 OS major
+    runs-on: macos-26
+    outputs:
+      major: ${{ steps.detect.outputs.major }}
+    steps:
+      - name: Detect macOS major version
+        id: detect
+        shell: bash
+        run: |
+          MAJOR=$(sw_vers -productVersion | cut -d. -f1)
+          echo "macos-26 reports macOS $MAJOR.x"
+          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+
+  check-macos-alias-overlap:
+    name: Check - macOS alias overlap
+    needs: [detect-macos-latest-version, detect-macos-26-version]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify macos-latest does not alias to macos-26
+        shell: bash
+        env:
+          LATEST_MAJOR: ${{ needs.detect-macos-latest-version.outputs.major }}
+          PINNED_MAJOR: ${{ needs.detect-macos-26-version.outputs.major }}
+        run: |
+          echo "macos-latest major: $LATEST_MAJOR"
+          echo "macos-26    major: $PINNED_MAJOR"
+          if [ "$LATEST_MAJOR" = "$PINNED_MAJOR" ]; then
+            echo "::error::macos-latest now aliases to macOS $LATEST_MAJOR — the dedicated macos-26 row in package-electron-matrix is redundant. Remove the macos-26 row from .github/workflows/ci.yml AND remove this alias-overlap guard (detect-macos-latest-version, detect-macos-26-version, check-macos-alias-overlap)."
+            exit 1
+          fi
+          echo "Not redundant — macos-26 row still provides forward-compat coverage."
 
   package-tauri-linux:
     name: Package - Tauri [Linux]
