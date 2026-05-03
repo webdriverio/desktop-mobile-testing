@@ -344,6 +344,17 @@ For testing changes before a stable release, use the `release:prerelease` label 
 - `scope:electron` + `bump:major` + `release:prerelease` → Electron packages as major prerelease (e.g., 11.0.0-next.0)
 - `scope:shared` + `bump:patch` + `release:prerelease` → Shared packages as patch prerelease (e.g., 2.0.0-next.0)
 
+### Release Notes Policy
+
+GitHub release notes are published per **user-installed** package — not per internal dependency. Packages that users only consume transitively are versioned and tagged but skipped from release notes (configured via `publish.githubRelease.skipPackages` in `releasekit.config.json`).
+
+| Framework | Packages with release notes | Skipped (internal only) |
+|-----------|-----------------------------|-------------------------|
+| Electron  | `@wdio/electron-service` | `@wdio/electron-cdp-bridge`, `@wdio/native-utils`, `@wdio/native-spy`, `@wdio/native-types` |
+| Tauri     | `@wdio/tauri-service`, `tauri-plugin`, `tauri-plugin-webdriver` | — |
+
+Tauri publishes three sets of release notes because `tauri-plugin` and `tauri-plugin-webdriver` are installed and configured directly by users in their Tauri app (Cargo dependency, capability/permission setup), so their breaking changes need their own changelog entries. Electron's internal packages have no equivalent direct-install surface.
+
 ## Getting Help
 
 - **Questions**: Ask on [GitHub Discussions](https://github.com/webdriverio/desktop-mobile/discussions)
