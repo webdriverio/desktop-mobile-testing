@@ -199,7 +199,7 @@ export function createTauriCapabilities(
       tauriDriverPort: options.tauriDriverPort,
       logLevel: options.logLevel || 'info',
       commandTimeout: options.commandTimeout || 30000,
-      startTimeout: options.startTimeout || 30000,
+      startTimeout: options.startTimeout || 60000,
       driverProvider: options.driverProvider,
       autoInstallTauriDriver: options.autoInstallTauriDriver,
     },

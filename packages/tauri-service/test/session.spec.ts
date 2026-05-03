@@ -131,7 +131,7 @@ describe('session', () => {
           tauriDriverPort: undefined,
           logLevel: 'info',
           commandTimeout: 30000,
-          startTimeout: 30000,
+          startTimeout: 60000,
           driverProvider: undefined,
           autoInstallTauriDriver: undefined,
         },
@@ -144,7 +144,7 @@ describe('session', () => {
 
       expect(serviceOpts?.logLevel).toBe('info');
       expect(serviceOpts?.commandTimeout).toBe(30000);
-      expect(serviceOpts?.startTimeout).toBe(30000);
+      expect(serviceOpts?.startTimeout).toBe(60000);
       expect(serviceOpts?.appArgs).toEqual([]);
     });
 
