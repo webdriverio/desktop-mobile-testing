@@ -144,6 +144,24 @@ export async function startEmbeddedDriver(
     });
   });
 
+  // Reject if the app exits before the WebDriver server becomes ready.
+  // Without this, a crashed/early-exiting app shows up as a generic poll timeout
+  // with no exit code or signal, leaving the user with no signal to debug.
+  let exitHandler: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined;
+  const earlyExitPromise = new Promise<never>((_, reject) => {
+    exitHandler = (code, signal) => {
+      reject(
+        new Error(
+          `Tauri app exited before the embedded WebDriver server became ready ` +
+            `(code=${code}, signal=${signal}). ` +
+            `The app likely crashed during startup. ` +
+            `Set captureBackendLogs: true in wdio:tauriServiceOptions to see the app's stderr.`,
+        ),
+      );
+    };
+    child.once('exit', exitHandler);
+  });
+
   // Create a promise that resolves when the server is ready
   const readyPromise = pollWebDriverStatus(port, startTimeout).then(async () => {
     // On Windows, add a small delay after ready to allow WebView2 to fully stabilize
@@ -153,11 +171,16 @@ export async function startEmbeddedDriver(
   });
 
   try {
-    // Race between ready, spawn error, and timeout
-    await Promise.race([readyPromise, spawnErrorPromise]);
+    // Race between ready, spawn error, early exit, and timeout
+    await Promise.race([readyPromise, spawnErrorPromise, earlyExitPromise]);
   } catch (error) {
     cleanup();
     throw error;
+  } finally {
+    // Detach the exit listener so a normal later exit doesn't surface as an unhandled rejection
+    if (exitHandler) {
+      child.removeListener('exit', exitHandler);
+    }
   }
 
   return { proc: child, logHandlers };
