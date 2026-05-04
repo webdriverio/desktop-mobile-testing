@@ -75,8 +75,8 @@ export class TauriAdapter implements FrameworkAdapter {
   const callback = (${callbackFnSource});
   let result;
   const mockObj = ${lookup};
-  mockObj?.withImplementation?.(impl, () => { result = callback(_tauri); });
-  return result?.then ? await result : result;
+  await mockObj?.withImplementation?.(impl, async () => { result = await callback(_tauri); });
+  return result;
 }`;
   }
 }

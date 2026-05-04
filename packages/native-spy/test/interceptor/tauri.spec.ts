@@ -11,7 +11,7 @@ describe('TauriAdapter', () => {
   });
 
   describe('buildRegistrationScript', () => {
-    it('returns a function-like string', () => {
+    it('should return a function-like string', () => {
       const script = adapter.buildRegistrationScript('my_command');
       expect(script.trim()).toMatch(/^\(_tauri\)/);
     });
@@ -21,12 +21,12 @@ describe('TauriAdapter', () => {
       expect(script).toContain('"get_platform"');
     });
 
-    it('sets mock name as tauri.<command>', () => {
+    it('should set mock name as tauri.<command>', () => {
       const script = adapter.buildRegistrationScript('my_cmd');
       expect(script).toContain('tauri.my_cmd');
     });
 
-    it('calls mockClear after registration', () => {
+    it('should call mockClear after registration', () => {
       const script = adapter.buildRegistrationScript('cmd');
       expect(script).toContain('mockClear()');
     });
@@ -38,7 +38,7 @@ describe('TauriAdapter', () => {
   });
 
   describe('buildCallDataReadScript', () => {
-    it('returns function string with mockObj lookup', () => {
+    it('should return function string with mockObj lookup', () => {
       const script = adapter.buildCallDataReadScript('my_cmd');
       expect(script).toContain('"my_cmd"');
       expect(script).toContain('mockObj.mock');
@@ -69,24 +69,24 @@ describe('TauriAdapter', () => {
   });
 
   describe('buildInnerInvocationScript', () => {
-    it('calls mockClear', () => {
+    it('should call mockClear', () => {
       const script = adapter.buildInnerInvocationScript('cmd', 'mockClear');
       expect(script).toContain('mockClear?.()');
     });
 
-    it('calls mockReset', () => {
+    it('should call mockReset', () => {
       const script = adapter.buildInnerInvocationScript('cmd', 'mockReset');
       expect(script).toContain('mockReset?.()');
     });
 
-    it('calls mockReturnThis', () => {
+    it('should call mockReturnThis', () => {
       const script = adapter.buildInnerInvocationScript('cmd', 'mockReturnThis');
       expect(script).toContain('mockReturnThis?.()');
     });
   });
 
   describe('buildInnerSetterScript', () => {
-    it('calls mockReturnValue with the value', () => {
+    it('should call mockReturnValue with the value', () => {
       const script = adapter.buildInnerSetterScript('cmd', 'mockReturnValue', 42);
       expect(script).toContain('mockReturnValue');
       expect(script).toContain('42');
@@ -104,7 +104,7 @@ describe('TauriAdapter', () => {
       expect(script).toContain('"hello"');
     });
 
-    it('handles null value', () => {
+    it('should handle null value', () => {
       const script = adapter.buildInnerSetterScript('cmd', 'mockReturnValue', null);
       expect(script).toContain('null');
     });
@@ -125,10 +125,12 @@ describe('TauriAdapter', () => {
       expect(script).toContain('withImplementation');
     });
 
-    it('is async and awaits result', () => {
+    it('is async and awaits the callback', () => {
       const script = adapter.buildWithImplementationScript('cmd', '() => {}', '() => {}');
       expect(script.trim()).toMatch(/^async/);
-      expect(script).toContain('await result');
+      expect(script).toContain('await mockObj?.withImplementation');
+      expect(script).toContain('async () =>');
+      expect(script).toContain('await callback(_tauri)');
     });
 
     it('passes _tauri to callback', () => {
