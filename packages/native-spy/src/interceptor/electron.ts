@@ -1,6 +1,10 @@
 import type { FrameworkAdapter, InnerMockMethod, InnerMockSetterMethod } from './framework.js';
 import type { SerializedHandler } from './serialize.js';
 
+/**
+ * @internal Placeholder adapter — Electron support is not yet implemented.
+ * All methods throw `'Not implemented'` at runtime. Do not use in production code.
+ */
 export class ElectronAdapter implements FrameworkAdapter {
   readonly framework = 'electron' as const;
 

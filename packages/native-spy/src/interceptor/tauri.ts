@@ -11,7 +11,7 @@ export class TauriAdapter implements FrameworkAdapter {
   const spy = window.__wdio_spy__;
   if (!spy?.fn) { throw new Error('@wdio/native-spy not available. Make sure @wdio/tauri-plugin is imported and initialized in your app.'); }
   const mockFn = spy.fn();
-  mockFn.mockName('tauri.${mockName}');
+  mockFn.mockName(${JSON.stringify(`tauri.${mockName}`)});
   if (!window.__wdio_mocks__) { window.__wdio_mocks__ = {}; }
   window.__wdio_mocks__[${JSON.stringify(mockName)}] = mockFn;
   mockFn.mockClear();

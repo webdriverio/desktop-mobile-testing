@@ -43,4 +43,14 @@ describe('safeJson', () => {
     const parsed = JSON.parse(result) as { __wdioError: boolean; message: string };
     expect(parsed.message).toBe('type error message');
   });
+
+  it('returns the string "undefined" for undefined input', () => {
+    expect(safeJson(undefined)).toBe('undefined');
+  });
+
+  it('returns "[unserializable]" for circular references', () => {
+    const obj: Record<string, unknown> = {};
+    obj.self = obj;
+    expect(safeJson(obj)).toBe('"[unserializable]"');
+  });
 });

@@ -11,5 +11,9 @@ export function safeJson(value: unknown): string {
   if (value instanceof Error) {
     return JSON.stringify({ __wdioError: true, message: value.message });
   }
-  return JSON.stringify(value);
+  try {
+    return JSON.stringify(value) ?? 'undefined';
+  } catch {
+    return '"[unserializable]"';
+  }
 }
