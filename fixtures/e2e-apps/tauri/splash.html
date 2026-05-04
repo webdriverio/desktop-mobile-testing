@@ -1,67 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Splash Screen</title>
-  <style>
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      margin: 0;
-    }
-    .container {
-      text-align: center;
-      padding: 2rem;
-      background: rgba(255,255,255,0.1);
-      border-radius: 1rem;
-    }
-    button {
-      padding: 12px 24px;
-      font-size: 1.1rem;
-      cursor: pointer;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(45deg, #61dafb, #21a1f1);
-      color: white;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Tauri E2E Test App</h1>
-    <p>Splash Screen</p>
-    <button type="button" id="switch-main-window" class="switch-main-window">Continue</button>
-  </div>
-  
-  <!-- CRITICAL: Load plugin JS explicitly for Tauri v2 dynamic windows -->
-  <script type="module">
-    import '@wdio/tauri-plugin';
-    
-    // Debug: Verify plugin loaded
-    console.log('[Splash] wdioTauri available:', !!window.wdioTauri);
-    console.log('[Splash] __TAURI__ available:', !!window.__TAURI__);
-  </script>
-  
-  <script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('switch-main-window');
-      if (!btn) return;
-      
-      btn.addEventListener('click', async () => {
-        if (window.__TAURI__?.core?.invoke) {
-          try {
-            await window.__TAURI__.core.invoke('switch_to_main');
-            console.log('[Splash] switch_to_main invoked successfully');
-          } catch (e) {
-            console.error('[Splash] switch_to_main failed:', e);
-          }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Splash Screen</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        overflow: hidden;
+      }
+
+      .container {
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 300;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 1rem auto;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
         }
+      }
+
+      .status {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Tauri E2E Test App</h1>
+      <p>Splash Screen</p>
+      <div class="spinner"></div>
+      <button type="button" id="switch-main-window" class="switch-main-window">Continue</button>
+    </div>
+
+    <!-- CRITICAL: Load plugin JS explicitly for Tauri v2 dynamic windows -->
+    <script type="module">
+      import '@wdio/tauri-plugin';
+      console.log('[Splash] wdioTauri available:', !!window.wdioTauri);
+      console.log('[Splash] __TAURI__ available:', !!window.__TAURI__);
+    </script>
+
+    <script type="module">
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('switch-main-window');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+          if (window.__TAURI__?.core?.invoke) {
+            try {
+              await window.__TAURI__.core.invoke('switch_to_main');
+              console.log('[Splash] switch_to_main invoked successfully');
+            } catch (e) {
+              console.error('[Splash] switch_to_main failed:', e);
+            }
+          }
+        });
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>
