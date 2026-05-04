@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildContextSeedScript } from '../../src/interceptor/ipcContext.js';
 
 describe('buildContextSeedScript', () => {
-  it('returns a function-like string', () => {
+  it('should return a function-like string', () => {
     const script = buildContextSeedScript({ foo: 'bar' });
     expect(script.trim()).toMatch(/^\(_tauri\)/);
   });
@@ -22,8 +22,15 @@ describe('buildContextSeedScript', () => {
     expect(script).toContain('JSON.parse');
   });
 
-  it('handles empty context', () => {
+  it('should handle empty context', () => {
     const script = buildContextSeedScript({});
     expect(script).toContain('{}');
+  });
+
+  it('escapes HTML-unsafe characters in context values', () => {
+    const script = buildContextSeedScript({ tag: '</script>' });
+    expect(script).not.toContain('</script>');
+    expect(script).toContain('\\u003C');
+    expect(script).toContain('\\u003E');
   });
 });
