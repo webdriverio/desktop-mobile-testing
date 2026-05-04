@@ -103,8 +103,8 @@ export class RollupExecutor {
         const compilerOptions: CompilerOptions = {
           noEmitOnError: false,
           outDir: resolve(targetCwd, configSpec.output.dir),
-          module: 'NodeNext',
-          moduleResolution: 'NodeNext',
+          module: 'ESNext',
+          moduleResolution: 'Bundler',
         };
 
         if (hasTsconfig) {
