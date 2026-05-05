@@ -335,14 +335,18 @@ async function createBrowserModeMock(command: string, browser: WebdriverIO.Brows
   };
 
   mock.withImplementation = async (implFn, callbackFn) => {
-    return await runInterceptorScript<unknown>(
-      browser,
-      interceptor.buildWithImplementationScript(
-        command,
-        implFn as (...a: unknown[]) => unknown,
-        callbackFn as (...a: unknown[]) => unknown,
-      ),
+    const script = interceptor.buildWithImplementationScript(
+      command,
+      implFn as (...a: unknown[]) => unknown,
+      callbackFn as (...a: unknown[]) => unknown,
     );
+    return browser.executeAsync((s: string, done: (v: unknown) => void) => {
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('return (' + s + ')')() as () => Promise<unknown>;
+      Promise.resolve(fn()).then(done, (err: unknown) => {
+        done({ __wdioAsyncErr__: err instanceof Error ? err.message : String(err) });
+      });
+    }, script);
   };
 
   log.debug(`[${command}] Browser-mode mock created successfully`);

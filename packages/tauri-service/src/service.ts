@@ -281,6 +281,12 @@ export default class TauriWorkerService {
     await browser.url(this.devServerUrl);
     await browser.execute(browserInterceptor.buildBrowserIpcInjectionScript());
     (browser as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+    if ((browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
+      const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
+      for (const instanceName of mrBrowser.instances) {
+        (mrBrowser.getInstance(instanceName) as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+      }
+    }
     this.addTauriApi(browser, true);
     this.installCommandOverrides();
     log.debug('Browser-only mode initialized');
