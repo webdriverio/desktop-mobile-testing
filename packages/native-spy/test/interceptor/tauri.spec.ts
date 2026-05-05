@@ -130,12 +130,12 @@ describe('TauriAdapter', () => {
       expect(script.trim()).toMatch(/^async/);
       expect(script).toContain('await mockObj?.withImplementation');
       expect(script).toContain('async () =>');
-      expect(script).toContain('await callback(_tauri)');
+      expect(script).toContain('callback');
     });
 
-    it('passes _tauri to callback', () => {
+    it('passes _tauri to callback only when defined (browser mode compat)', () => {
       const script = adapter.buildWithImplementationScript('cmd', '() => {}', '() => {}');
-      expect(script).toContain('callback(_tauri)');
+      expect(script).toContain('_tauri !== undefined ? callback(_tauri) : callback()');
     });
   });
 });

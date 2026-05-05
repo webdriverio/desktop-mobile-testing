@@ -104,8 +104,9 @@ export class TauriAdapter implements FrameworkAdapter {
         }
       } else if (_defaultRejectedValue !== undefined) {
         var rv = _defaultRejectedValue;
-        _results.push({ type: 'throw', value: rv });
-        throw rv;
+        var rejectedPromise = Promise.reject(rv);
+        _results.push({ type: 'return', value: rejectedPromise });
+        return rejectedPromise;
       } else if (_defaultResolvedValue !== undefined) {
         var p = Promise.resolve(_defaultResolvedValue);
         _results.push({ type: 'return', value: p });
@@ -148,7 +149,7 @@ export class TauriAdapter implements FrameworkAdapter {
       _defaultResolvedValue = undefined; _returnThis = false; return mockFn;
     };
     mockFn.mockRejectedValueOnce = function(val) {
-      _implQueue.push(function() { throw val; }); return mockFn;
+      _implQueue.push(function() { return Promise.reject(val); }); return mockFn;
     };
     mockFn.mockClear = function() {
       _calls = []; _results = []; _invocationCallOrder = []; _implQueue = [];
@@ -200,7 +201,7 @@ export class TauriAdapter implements FrameworkAdapter {
   const callback = (${callbackFnSource});
   let result;
   const mockObj = ${lookup};
-  await mockObj?.withImplementation?.(impl, async () => { result = await callback(_tauri); });
+  await mockObj?.withImplementation?.(impl, async () => { result = await (_tauri !== undefined ? callback(_tauri) : callback()); });
   return result;
 }`;
   }

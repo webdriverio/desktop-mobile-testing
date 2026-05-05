@@ -13,7 +13,7 @@ function runInBrowserContext(script: string, windowProps: Record<string, unknown
 describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
   const adapter = new TauriAdapter();
 
-  it('sets window.__wdio_spy__ with a fn factory', () => {
+  it('should set window.__wdio_spy__ with a fn factory', () => {
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script);
     expect(typeof (window.__wdio_spy__ as Record<string, unknown>)?.fn).toBe('function');
@@ -114,6 +114,28 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
     (mockFn.mockImplementation as (fn: (x: number) => number) => void)((x: number) => x * 2);
     const result = (mockFn as unknown as (x: number) => number)(5);
     expect(result).toBe(10);
+  });
+
+  it('fn() mockRejectedValue returns a rejected Promise, not a synchronous throw', async () => {
+    const script = adapter.buildBrowserIpcInjectionScript();
+    const window = runInBrowserContext(script);
+    const spy = window.__wdio_spy__ as Record<string, unknown>;
+    const mockFn = (spy.fn as () => Record<string, unknown>)();
+    (mockFn.mockRejectedValue as (v: unknown) => void)(new Error('oops'));
+    const result = (mockFn as unknown as () => Promise<unknown>)();
+    expect(result).toBeInstanceOf(Promise);
+    await expect(result).rejects.toThrow('oops');
+  });
+
+  it('fn() mockRejectedValueOnce returns a rejected Promise, not a synchronous throw', async () => {
+    const script = adapter.buildBrowserIpcInjectionScript();
+    const window = runInBrowserContext(script);
+    const spy = window.__wdio_spy__ as Record<string, unknown>;
+    const mockFn = (spy.fn as () => Record<string, unknown>)();
+    (mockFn.mockRejectedValueOnce as (v: unknown) => void)(new Error('once'));
+    const result = (mockFn as unknown as () => Promise<unknown>)();
+    expect(result).toBeInstanceOf(Promise);
+    await expect(result).rejects.toThrow('once');
   });
 });
 

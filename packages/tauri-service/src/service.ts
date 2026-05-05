@@ -275,7 +275,10 @@ export default class TauriWorkerService {
    */
   private async initBrowserMode(browser: WebdriverIO.Browser): Promise<void> {
     log.debug('Initializing browser-only mode');
-    await browser.url(this.devServerUrl!);
+    if (!this.devServerUrl) {
+      throw new Error('devServerUrl is required for browser mode but was not set');
+    }
+    await browser.url(this.devServerUrl);
     await browser.execute(browserInterceptor.buildBrowserIpcInjectionScript());
     (browser as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
     this.addTauriApi(browser, true);
