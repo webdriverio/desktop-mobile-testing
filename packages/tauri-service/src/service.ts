@@ -284,7 +284,9 @@ export default class TauriWorkerService {
     if ((browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
       const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       for (const instanceName of mrBrowser.instances) {
-        (mrBrowser.getInstance(instanceName) as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+        const instance = mrBrowser.getInstance(instanceName);
+        (instance as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+        this.addTauriApi(instance, true);
       }
     }
     this.addTauriApi(browser, true);
