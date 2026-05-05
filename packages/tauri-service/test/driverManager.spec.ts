@@ -143,12 +143,12 @@ describe('isCargoAvailable', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns true when cargo --version succeeds', () => {
+  it('should return true when cargo --version succeeds', () => {
     vi.mocked(execSync).mockReturnValue('cargo 1.75.0');
     expect(isCargoAvailable()).toBe(true);
   });
 
-  it('returns false when cargo --version throws', () => {
+  it('should return false when cargo --version throws', () => {
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error('command not found');
     });
@@ -164,7 +164,7 @@ describe('findTauriDriver', () => {
     Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
   });
 
-  it('returns path when which command finds tauri-driver on Unix', () => {
+  it('should return path when which command finds tauri-driver on Unix', () => {
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     vi.mocked(execSync).mockReturnValue('/usr/local/bin/tauri-driver\n');
     vi.mocked(existsSync).mockReturnValue(true);
@@ -172,7 +172,7 @@ describe('findTauriDriver', () => {
     expect(findTauriDriver()).toBe('/usr/local/bin/tauri-driver');
   });
 
-  it('returns path when where command finds tauri-driver on Windows', () => {
+  it('should return path when where command finds tauri-driver on Windows', () => {
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
     vi.mocked(execSync).mockReturnValue('C:\\Users\\user\\.cargo\\bin\\tauri-driver.exe\n');
     vi.mocked(existsSync).mockReturnValue(true);
@@ -180,7 +180,7 @@ describe('findTauriDriver', () => {
     expect(findTauriDriver()).toBe('C:\\Users\\user\\.cargo\\bin\\tauri-driver.exe');
   });
 
-  it('returns undefined when command throws and no common paths exist', () => {
+  it('should return undefined when command throws and no common paths exist', () => {
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error('not found');
@@ -190,7 +190,7 @@ describe('findTauriDriver', () => {
     expect(findTauriDriver()).toBeUndefined();
   });
 
-  it('falls back to common paths when command fails', () => {
+  it('should fall back to common paths when command fails', () => {
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
     vi.mocked(execSync).mockImplementation(() => {
       throw new Error('not found');
@@ -208,7 +208,7 @@ describe('installTauriDriver', () => {
     vi.restoreAllMocks();
   });
 
-  it('resolves with driver path on successful install', async () => {
+  it('should resolve with driver path on successful install', async () => {
     const mockProc = new EventEmitter() as any;
     mockProc.stdout = new EventEmitter();
     mockProc.stderr = new EventEmitter();
@@ -228,7 +228,7 @@ describe('installTauriDriver', () => {
     expect(result).toContain('tauri-driver');
   });
 
-  it('rejects when cargo install fails with non-zero exit code', async () => {
+  it('should reject when cargo install fails with non-zero exit code', async () => {
     const mockProc = new EventEmitter() as any;
     mockProc.stdout = new EventEmitter();
     mockProc.stderr = new EventEmitter();
@@ -246,7 +246,7 @@ describe('installTauriDriver', () => {
     await expect(promise).rejects.toThrow('cargo install failed with code 1');
   });
 
-  it('rejects when binary not found after successful install', async () => {
+  it('should reject when binary not found after successful install', async () => {
     const mockProc = new EventEmitter() as any;
     mockProc.stdout = new EventEmitter();
     mockProc.stderr = new EventEmitter();
@@ -265,7 +265,7 @@ describe('installTauriDriver', () => {
     await expect(promise).rejects.toThrow('binary not found');
   });
 
-  it('rejects on spawn error', async () => {
+  it('should reject on spawn error', async () => {
     const mockProc = new EventEmitter() as any;
     mockProc.stdout = new EventEmitter();
     mockProc.stderr = new EventEmitter();
@@ -297,7 +297,7 @@ describe('ensureTauriDriver', () => {
   });
 
   describe('crabnebula provider', () => {
-    it('returns Ok with custom path when crabnebulaDriverPath exists', async () => {
+    it('should return Ok with custom path when crabnebulaDriverPath exists', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
 
       const result = await ensureTauriDriver({
@@ -310,7 +310,7 @@ describe('ensureTauriDriver', () => {
       expect(result.value.method).toBe('found');
     });
 
-    it('returns Err when custom crabnebulaDriverPath does not exist', async () => {
+    it('should return Err when custom crabnebulaDriverPath does not exist', async () => {
       vi.mocked(existsSync).mockReturnValue(false);
 
       const result = await ensureTauriDriver({
@@ -322,7 +322,7 @@ describe('ensureTauriDriver', () => {
       expect(result.error.message).toContain('CrabNebula driver not found');
     });
 
-    it('returns Err when no crabnebula driver detected in node_modules', async () => {
+    it('should return Err when no crabnebula driver detected in node_modules', async () => {
       vi.mocked(existsSync).mockReturnValue(false);
 
       const result = await ensureTauriDriver({ driverProvider: 'crabnebula' });
@@ -333,7 +333,7 @@ describe('ensureTauriDriver', () => {
   });
 
   describe('official provider', () => {
-    it('returns Ok with custom tauriDriverPath when it exists', async () => {
+    it('should return Ok with custom tauriDriverPath when it exists', async () => {
       vi.mocked(existsSync).mockReturnValue(true);
 
       const result = await ensureTauriDriver({
@@ -345,7 +345,7 @@ describe('ensureTauriDriver', () => {
       expect(result.value.method).toBe('found');
     });
 
-    it('returns Err when custom tauriDriverPath does not exist', async () => {
+    it('should return Err when custom tauriDriverPath does not exist', async () => {
       vi.mocked(existsSync).mockReturnValue(false);
 
       const result = await ensureTauriDriver({
@@ -356,7 +356,7 @@ describe('ensureTauriDriver', () => {
       expect(result.error.message).toContain('tauri-driver not found at provided path');
     });
 
-    it('returns Ok when findTauriDriver finds existing driver', async () => {
+    it('should return Ok when findTauriDriver finds existing driver', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
       vi.mocked(execSync).mockReturnValue('/usr/local/bin/tauri-driver\n');
       vi.mocked(existsSync).mockReturnValue(true);
@@ -367,7 +367,7 @@ describe('ensureTauriDriver', () => {
       expect(result.value.method).toBe('found');
     });
 
-    it('auto-installs when enabled and driver not found', async () => {
+    it('should auto-install when enabled and driver not found', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
 
       vi.mocked(execSync).mockImplementation((cmd: string) => {
@@ -395,7 +395,7 @@ describe('ensureTauriDriver', () => {
       expect(result.value.method).toBe('installed');
     });
 
-    it('returns Err when auto-install is enabled but cargo is unavailable', async () => {
+    it('should return Err when auto-install is enabled but cargo is unavailable', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
 
       vi.mocked(execSync).mockImplementation(() => {
@@ -409,7 +409,7 @@ describe('ensureTauriDriver', () => {
       expect(result.error.message).toContain('Rust toolchain (cargo) not found');
     });
 
-    it('returns Err when auto-install fails', async () => {
+    it('should return Err when auto-install fails', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
 
       vi.mocked(execSync).mockImplementation((cmd: string) => {
@@ -436,7 +436,7 @@ describe('ensureTauriDriver', () => {
       expect(result.error.message).toContain('cargo install failed');
     });
 
-    it('returns Err with install instructions when driver not found and no auto-install', async () => {
+    it('should return Err with install instructions when driver not found and no auto-install', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
 
       vi.mocked(execSync).mockImplementation(() => {

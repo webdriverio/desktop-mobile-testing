@@ -1,42 +1,12 @@
 import { fn as vitestFn } from '@wdio/native-spy';
+import { createIpcInterceptor } from '@wdio/native-spy/interceptor';
 import type { AbstractFn, TauriMock } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { execute as tauriExecute } from './commands/execute.js';
 import mockStore from './mockStore.js';
 
 const log = createLogger('tauri-service', 'mock');
-
-interface InnerMock {
-  mock?: { calls?: unknown[]; results?: unknown[]; invocationCallOrder?: number[] };
-  mockClear?: () => void;
-  mockReset?: () => void;
-  mockReturnValue?: (val: unknown) => void;
-  mockReturnValueOnce?: (val: unknown) => void;
-  mockResolvedValue?: (val: unknown) => void;
-  mockResolvedValueOnce?: (val: unknown) => void;
-  mockRejectedValue?: (val: unknown) => void;
-  mockRejectedValueOnce?: (val: unknown) => void;
-  mockImplementation?: (fn: unknown) => void;
-  mockImplementationOnce?: (fn: unknown) => void;
-  mockReturnThis?: () => void;
-  withImplementation?: (impl: unknown, cb: unknown) => void;
-}
-
-async function restoreTauriCommand(command: string, browserContext?: WebdriverIO.Browser) {
-  const browserToUse = browserContext || browser;
-
-  await tauriExecute<void, [string]>(
-    browserToUse,
-    (_tauri, cmd) => {
-      // @ts-expect-error - window is available in browser context
-      if (window.__wdio_mocks__?.[cmd]) {
-        // @ts-expect-error - window is available in browser context
-        delete window.__wdio_mocks__[cmd];
-      }
-    },
-    command,
-  );
-}
+const interceptor = createIpcInterceptor('tauri');
 
 export async function createMock(command: string, browserContext?: WebdriverIO.Browser): Promise<TauriMock> {
   log.debug(`[${command}] createMock called - starting mock creation`);
@@ -86,65 +56,13 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   log.debug(`[${command}] Using browser context:`, typeof browserToUse, browserToUse?.constructor?.name);
 
   log.debug(`[${command}] Setting up JavaScript mock`);
-  await tauriExecute<void, [string]>(
-    browserToUse,
-    (_tauri, cmd) => {
-      // @ts-expect-error - window is available in browser context
-      const spy = window.__wdio_spy__;
-      if (!spy?.fn) {
-        throw new Error(
-          '@wdio/native-spy not available. Make sure @wdio/tauri-plugin is imported and initialized in your app.',
-        );
-      }
-
-      const mockFn = spy.fn();
-      mockFn.mockName(`tauri.${cmd}`);
-
-      // @ts-expect-error - window is available in browser context
-      if (!window.__wdio_mocks__) {
-        // @ts-expect-error - window is available in browser context
-        window.__wdio_mocks__ = {};
-      }
-      // @ts-expect-error - window is available in browser context
-      window.__wdio_mocks__[cmd] = mockFn;
-    },
-    command,
-  );
+  await tauriExecute<void>(browserToUse, interceptor.buildRegistrationScript(command));
   log.debug(`[${command}] JavaScript mock setup complete`);
-
-  await tauriExecute<void, [string]>(
-    browserToUse,
-    (_tauri, cmd) => {
-      // @ts-expect-error - window is available in browser context
-      const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-      mockObj?.mockClear?.();
-    },
-    command,
-  );
-  log.debug(`[${command}] Inner mock cleared to ensure clean initial state`);
 
   mock.update = async () => {
     log.debug(`[${command}] Starting mock update`);
-    const syncData = (await tauriExecute<
-      { calls: unknown[][]; results: { type: string; value: unknown }[]; invocationCallOrder: number[] },
-      [string]
-    >(
-      browserToUse,
-      (_tauri, cmd: string) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        if (!mockObj?.mock) {
-          return { calls: [], results: [], invocationCallOrder: [] };
-        }
-        const m = mockObj.mock;
-        return {
-          calls: JSON.parse(JSON.stringify(m.calls || [])),
-          results: JSON.parse(JSON.stringify(m.results || [])),
-          invocationCallOrder: JSON.parse(JSON.stringify(m.invocationCallOrder || [])),
-        };
-      },
-      command,
-    )) || { calls: [], results: [], invocationCallOrder: [] };
+    const raw = await tauriExecute<unknown>(browserToUse, interceptor.buildCallDataReadScript(command));
+    const syncData = interceptor.parseCallData(raw);
 
     const existingCount = originalMock.calls.length;
     log.debug(
@@ -170,175 +88,59 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockImplementation = async (implFn: AbstractFn) => {
-    const implStr = implFn.toString();
-    await tauriExecute<void, [string]>(
-      browserToUse,
-      `(_tauri, cmd) => { const mockObj = window.__wdio_mocks__?.[cmd]; if (mockObj) { mockObj.mockImplementation?.(${implStr}); } }`,
-      command,
-    );
-
+    const s = interceptor.serializeHandler(implFn);
+    await tauriExecute<void>(browserToUse, interceptor.buildSetImplementationScript(command, s));
     outerMockImplementation(implFn);
-
     return mock;
   };
 
   mock.mockImplementationOnce = async (implFn: AbstractFn) => {
-    const implStr = implFn.toString();
-    await tauriExecute<void, [string]>(
-      browserToUse,
-      `(_tauri, cmd) => { const mockObj = window.__wdio_mocks__?.[cmd]; if (mockObj) { mockObj.mockImplementationOnce?.(${implStr}); } }`,
-      command,
-    );
-
+    const s = interceptor.serializeHandler(implFn);
+    await tauriExecute<void>(browserToUse, interceptor.buildSetImplementationScript(command, s, true));
     outerMockImplementationOnce(implFn);
-
     return mock;
   };
 
   mock.mockReturnValue = async (value: unknown) => {
-    await tauriExecute<void, [string, unknown]>(
-      browserToUse,
-      (_tauri, cmd, returnValue) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockReturnValue?.(returnValue);
-      },
-      command,
-      value,
-    );
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerSetterScript(command, 'mockReturnValue', value));
     return mock;
   };
 
   mock.mockReturnValueOnce = async (value: unknown) => {
-    await tauriExecute<void, [string, unknown]>(
-      browserToUse,
-      (_tauri, cmd, returnValue) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockReturnValueOnce?.(returnValue);
-      },
-      command,
-      value,
-    );
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerSetterScript(command, 'mockReturnValueOnce', value));
     return mock;
   };
 
   mock.mockResolvedValue = async (value: unknown) => {
-    await tauriExecute<void, [string, unknown]>(
-      browserToUse,
-      (_tauri, cmd, resolvedValue) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockResolvedValue?.(resolvedValue);
-      },
-      command,
-      value,
-    );
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerSetterScript(command, 'mockResolvedValue', value));
     return mock;
   };
 
   mock.mockResolvedValueOnce = async (value: unknown) => {
-    await tauriExecute<void, [string, unknown]>(
-      browserToUse,
-      (_tauri, cmd, resolvedValue) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockResolvedValueOnce?.(resolvedValue);
-      },
-      command,
-      value,
-    );
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerSetterScript(command, 'mockResolvedValueOnce', value));
     return mock;
   };
 
   mock.mockRejectedValue = async (value: unknown) => {
-    if (value instanceof Error) {
-      await tauriExecute<void, [string, string]>(
-        browserToUse,
-        (_tauri, cmd, errMsg) => {
-          // @ts-expect-error - window is available in browser context
-          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-          mockObj?.mockRejectedValue?.(new Error(errMsg));
-        },
-        command,
-        value.message,
-      );
-    } else {
-      await tauriExecute<void, [string, unknown]>(
-        browserToUse,
-        (_tauri, cmd, rejectedValue) => {
-          // @ts-expect-error - window is available in browser context
-          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-          mockObj?.mockRejectedValue?.(rejectedValue);
-        },
-        command,
-        value,
-      );
-    }
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerSetterScript(command, 'mockRejectedValue', value));
     return mock;
   };
 
   mock.mockRejectedValueOnce = async (value: unknown) => {
-    if (value instanceof Error) {
-      await tauriExecute<void, [string, string]>(
-        browserToUse,
-        (_tauri, cmd, errMsg) => {
-          // @ts-expect-error - window is available in browser context
-          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-          mockObj?.mockRejectedValueOnce?.(new Error(errMsg));
-        },
-        command,
-        value.message,
-      );
-    } else {
-      await tauriExecute<void, [string, unknown]>(
-        browserToUse,
-        (_tauri, cmd, rejectedValue) => {
-          // @ts-expect-error - window is available in browser context
-          const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-          mockObj?.mockRejectedValueOnce?.(rejectedValue);
-        },
-        command,
-        value,
-      );
-    }
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerSetterScript(command, 'mockRejectedValueOnce', value));
     return mock;
   };
 
   mock.mockClear = async () => {
-    await tauriExecute<void, [string]>(
-      browserToUse,
-      (_tauri, cmd) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockClear?.();
-      },
-      command,
-    );
-
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerInvocationScript(command, 'mockClear'));
     outerMockClear();
-
     return mock;
   };
 
   mock.mockReset = async () => {
     const currentName = outerMock.getMockName();
 
-    await tauriExecute<void, [string]>(
-      browserToUse,
-      (_tauri, cmd) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockReset?.();
-      },
-      command,
-    );
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerInvocationScript(command, 'mockReset'));
 
     // Temporarily restore the sync mockClear so outerMockReset's internal mockFn.mockClear()
     // call doesn't fire the async override, which would defer outerMockClear() and race
@@ -356,46 +158,25 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   };
 
   mock.mockRestore = async () => {
-    await restoreTauriCommand(command, browserToUse);
-
+    await tauriExecute<void>(browserToUse, interceptor.buildUnregistrationScript(command));
     outerMockClear();
     mockStore.deleteMock(`tauri.${command}`);
-
     return mock;
   };
 
   mock.mockReturnThis = async () => {
-    await tauriExecute<void, [string]>(
-      browserToUse,
-      (_tauri, cmd) => {
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.mockReturnThis?.();
-      },
-      command,
-    );
+    await tauriExecute<void>(browserToUse, interceptor.buildInnerInvocationScript(command, 'mockReturnThis'));
     return mock;
   };
 
   mock.withImplementation = async (implFn, callbackFn) => {
-    return await tauriExecute<unknown, [string, string, string]>(
+    return await tauriExecute<unknown>(
       browserToUse,
-      async (tauri, cmd, implFnStr, callbackFnStr) => {
-        const callback = new Function(`return ${callbackFnStr}`)();
-        const impl = new Function(`return ${implFnStr}`)();
-        let result: unknown | Promise<unknown>;
-
-        // @ts-expect-error - window is available in browser context
-        const mockObj = window.__wdio_mocks__?.[cmd] as InnerMock | undefined;
-        mockObj?.withImplementation?.(impl, () => {
-          result = callback(tauri);
-        });
-
-        return (result as Promise<unknown>)?.then ? await result : result;
-      },
-      command,
-      implFn.toString(),
-      callbackFn.toString(),
+      interceptor.buildWithImplementationScript(
+        command,
+        implFn as (...a: unknown[]) => unknown,
+        callbackFn as (...a: unknown[]) => unknown,
+      ),
     );
   };
 

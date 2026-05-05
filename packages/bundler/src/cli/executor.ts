@@ -100,16 +100,11 @@ export class RollupExecutor {
         const tsconfigPath = resolve(targetCwd, 'tsconfig.json');
         const hasTsconfig = existsSync(tsconfigPath);
 
-        // Only add declaration options if tsconfig.json exists to avoid TypeScript plugin issues
         const compilerOptions: CompilerOptions = {
-          target: 'ES2020',
-          module: 'ESNext',
-          moduleResolution: 'Node',
-          allowSyntheticDefaultImports: true,
-          esModuleInterop: true,
-          skipLibCheck: true,
           noEmitOnError: false,
           outDir: resolve(targetCwd, configSpec.output.dir),
+          module: 'ESNext',
+          moduleResolution: 'Bundler',
         };
 
         if (hasTsconfig) {

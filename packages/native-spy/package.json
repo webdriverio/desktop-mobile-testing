@@ -20,6 +20,18 @@
           "default": "./dist/cjs/index.js"
         }
       }
+    ],
+    "./interceptor": [
+      {
+        "import": {
+          "types": "./dist/esm/interceptor.d.ts",
+          "default": "./dist/esm/interceptor.js"
+        },
+        "require": {
+          "types": "./dist/cjs/interceptor.d.ts",
+          "default": "./dist/cjs/interceptor.js"
+        }
+      }
     ]
   },
   "engines": {
@@ -28,6 +40,7 @@
   "scripts": {
     "clean": "shx rm -rf dist coverage .turbo",
     "build": "tsx ../../scripts/build-package.ts",
+    "postbuild": "node scripts/postbuild.js",
     "dev": "tsx ../../scripts/build-package.ts --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
