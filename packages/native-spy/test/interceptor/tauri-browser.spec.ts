@@ -19,26 +19,26 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
     expect(typeof (window.__wdio_spy__ as Record<string, unknown>)?.fn).toBe('function');
   });
 
-  it('creates window.__wdio_mocks__ if absent', () => {
+  it('should create window.__wdio_mocks__ if absent', () => {
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script);
     expect(window.__wdio_mocks__).toEqual({});
   });
 
-  it('does not overwrite existing window.__wdio_mocks__', () => {
+  it('should not overwrite existing window.__wdio_mocks__', () => {
     const existing = { greet: () => {} };
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script, { __wdio_mocks__: existing });
     expect(window.__wdio_mocks__).toBe(existing);
   });
 
-  it('creates window.__TAURI_INTERNALS__ if absent', () => {
+  it('should create window.__TAURI_INTERNALS__ if absent', () => {
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script);
     expect(typeof (window.__TAURI_INTERNALS__ as Record<string, unknown>)?.invoke).toBe('function');
   });
 
-  it('preserves existing __TAURI_INTERNALS__ object and only patches invoke', () => {
+  it('should preserve existing __TAURI_INTERNALS__ object and only patch invoke', () => {
     const existingInternal = { other: 'value' };
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script, { __TAURI_INTERNALS__: existingInternal });
@@ -47,7 +47,7 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
     expect(typeof internals.invoke).toBe('function');
   });
 
-  it('invoke rejects with error for unmocked commands', async () => {
+  it('should invoke reject with error for unmocked commands', async () => {
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script);
     const internals = window.__TAURI_INTERNALS__ as Record<string, unknown>;
@@ -55,7 +55,7 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
     await expect(invoke('unknown_cmd', {})).rejects.toThrow('unmocked Tauri command in browser mode: unknown_cmd');
   });
 
-  it('invoke routes to window.__wdio_mocks__[cmd] when registered', async () => {
+  it('should invoke route to window.__wdio_mocks__[cmd] when registered', async () => {
     const script = adapter.buildBrowserIpcInjectionScript();
     const window = runInBrowserContext(script);
     (window.__wdio_mocks__ as Record<string, unknown>).greet = (_args: unknown) => 'hello';
@@ -64,83 +64,85 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
     await expect(invoke('greet', { name: 'world' })).resolves.toBe('hello');
   });
 
-  it('fn() creates a mock with empty call history', () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => Record<string, unknown>)();
-    const mock = mockFn.mock as Record<string, unknown>;
-    expect(mock.calls).toEqual([]);
-    expect(mock.results).toEqual([]);
-    expect(mock.invocationCallOrder).toEqual([]);
-  });
+  describe('fn()', () => {
+    it('should create a mock with empty call history', () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      const mock = mockFn.mock as Record<string, unknown>;
+      expect(mock.calls).toEqual([]);
+      expect(mock.results).toEqual([]);
+      expect(mock.invocationCallOrder).toEqual([]);
+    });
 
-  it('fn() records calls and results', () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => (...a: unknown[]) => unknown)();
-    mockFn('arg1', 'arg2');
-    const mock = (mockFn as unknown as Record<string, unknown>).mock as Record<string, unknown[][]>;
-    expect(mock.calls).toEqual([['arg1', 'arg2']]);
-  });
+    it('should record calls and results', () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => (...a: unknown[]) => unknown)();
+      mockFn('arg1', 'arg2');
+      const mock = (mockFn as unknown as Record<string, unknown>).mock as Record<string, unknown[][]>;
+      expect(mock.calls).toEqual([['arg1', 'arg2']]);
+    });
 
-  it('fn() supports mockReturnValue', () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => Record<string, unknown>)();
-    (mockFn.mockReturnValue as (v: unknown) => void)(42);
-    expect((mockFn as unknown as (...a: unknown[]) => unknown)()).toBe(42);
-  });
+    it('should support mockReturnValue', () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn.mockReturnValue as (v: unknown) => void)(42);
+      expect((mockFn as unknown as (...a: unknown[]) => unknown)()).toBe(42);
+    });
 
-  it('fn() supports mockClear', () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => Record<string, unknown>)();
-    (mockFn as unknown as (...a: unknown[]) => unknown)('x');
-    (mockFn.mockClear as () => void)();
-    const mock = mockFn.mock as Record<string, unknown[]>;
-    expect(mock.calls).toEqual([]);
-    expect(mock.results).toEqual([]);
-  });
+    it('should support mockClear', () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn as unknown as (...a: unknown[]) => unknown)('x');
+      (mockFn.mockClear as () => void)();
+      const mock = mockFn.mock as Record<string, unknown[]>;
+      expect(mock.calls).toEqual([]);
+      expect(mock.results).toEqual([]);
+    });
 
-  it('fn() supports mockImplementation', () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => Record<string, unknown>)();
-    (mockFn.mockImplementation as (fn: (x: number) => number) => void)((x: number) => x * 2);
-    const result = (mockFn as unknown as (x: number) => number)(5);
-    expect(result).toBe(10);
-  });
+    it('should support mockImplementation', () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn.mockImplementation as (fn: (x: number) => number) => void)((x: number) => x * 2);
+      const result = (mockFn as unknown as (x: number) => number)(5);
+      expect(result).toBe(10);
+    });
 
-  it('fn() mockRejectedValue returns a rejected Promise, not a synchronous throw', async () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => Record<string, unknown>)();
-    (mockFn.mockRejectedValue as (v: unknown) => void)(new Error('oops'));
-    const result = (mockFn as unknown as () => Promise<unknown>)();
-    expect(result).toBeInstanceOf(Promise);
-    await expect(result).rejects.toThrow('oops');
-  });
+    it('should return a rejected Promise for mockRejectedValue', async () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn.mockRejectedValue as (v: unknown) => void)(new Error('oops'));
+      const result = (mockFn as unknown as () => Promise<unknown>)();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).rejects.toThrow('oops');
+    });
 
-  it('fn() mockRejectedValueOnce returns a rejected Promise, not a synchronous throw', async () => {
-    const script = adapter.buildBrowserIpcInjectionScript();
-    const window = runInBrowserContext(script);
-    const spy = window.__wdio_spy__ as Record<string, unknown>;
-    const mockFn = (spy.fn as () => Record<string, unknown>)();
-    (mockFn.mockRejectedValueOnce as (v: unknown) => void)(new Error('once'));
-    const result = (mockFn as unknown as () => Promise<unknown>)();
-    expect(result).toBeInstanceOf(Promise);
-    await expect(result).rejects.toThrow('once');
+    it('should return a rejected Promise for mockRejectedValueOnce', async () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn.mockRejectedValueOnce as (v: unknown) => void)(new Error('once'));
+      const result = (mockFn as unknown as () => Promise<unknown>)();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).rejects.toThrow('once');
+    });
   });
 });
 
 describe('createIpcInterceptor buildBrowserIpcInjectionScript delegation', () => {
-  it('delegates to the TauriAdapter', () => {
+  it('should delegate to the TauriAdapter', () => {
     const interceptor = createIpcInterceptor('tauri');
     const script = interceptor.buildBrowserIpcInjectionScript();
     expect(script).toContain('window.__wdio_spy__');
