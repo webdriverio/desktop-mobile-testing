@@ -40,7 +40,7 @@
   "scripts": {
     "clean": "shx rm -rf dist coverage .turbo",
     "build": "tsx ../../scripts/build-package.ts",
-    "postbuild": "echo \"export * from './interceptor/index.js';\" > dist/esm/interceptor.d.ts && echo \"export * from './interceptor/index.js';\" > dist/cjs/interceptor.d.ts",
+    "postbuild": "node scripts/postbuild.js",
     "dev": "tsx ../../scripts/build-package.ts --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
