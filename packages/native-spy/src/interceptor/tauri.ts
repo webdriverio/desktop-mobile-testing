@@ -152,11 +152,12 @@ export class TauriAdapter implements FrameworkAdapter {
       _implQueue.push(function() { return Promise.reject(val); }); return mockFn;
     };
     mockFn.mockClear = function() {
-      _calls = []; _results = []; _invocationCallOrder = []; _implQueue = [];
+      _calls = []; _results = []; _invocationCallOrder = [];
       return mockFn;
     };
     mockFn.mockReset = function() {
       mockFn.mockClear();
+      _implQueue = [];
       _defaultImpl = undefined; _defaultReturnValue = undefined;
       _defaultResolvedValue = undefined; _defaultRejectedValue = undefined; _returnThis = false;
       return mockFn;
