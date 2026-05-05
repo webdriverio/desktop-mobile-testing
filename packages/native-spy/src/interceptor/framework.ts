@@ -21,4 +21,6 @@ export interface FrameworkAdapter {
   buildUnregistrationScript(mockName: string): string;
   buildWithImplementationScript(mockName: string, implFnSource: string, callbackFnSource: string): string;
   buildContextSeedScript(context: IpcContext): string;
+  /** One-shot browser-context init script: sets up window.__wdio_spy__, window.__wdio_mocks__, and patches the framework IPC bridge. */
+  buildBrowserIpcInjectionScript(): string;
 }

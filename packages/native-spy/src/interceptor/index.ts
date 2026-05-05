@@ -32,6 +32,7 @@ export interface IpcInterceptor {
   ): string;
   parseCallData(raw: unknown): MockCallData;
   buildContextSeedScript(context: IpcContext): string;
+  buildBrowserIpcInjectionScript(): string;
   setContext(partial: IpcContext): IpcContext;
   getContext(): IpcContext;
 }
@@ -91,6 +92,10 @@ class IpcInterceptorImpl implements IpcInterceptor {
 
   buildContextSeedScript(context: IpcContext): string {
     return this.adapter.buildContextSeedScript(context);
+  }
+
+  buildBrowserIpcInjectionScript(): string {
+    return this.adapter.buildBrowserIpcInjectionScript();
   }
 
   setContext(partial: IpcContext): IpcContext {
