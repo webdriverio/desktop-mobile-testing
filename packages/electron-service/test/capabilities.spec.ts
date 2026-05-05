@@ -1,5 +1,5 @@
 import type { Capabilities } from '@wdio/types';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   getChromedriverOptions,
   getChromeOptions,
@@ -90,6 +90,46 @@ describe('Capabilities Utilities', () => {
           },
         }),
       ).toStrictEqual({});
+    });
+
+    describe('when WDIO_CHROMEDRIVER_VERBOSE=1', () => {
+      const originalEnv = { ...process.env };
+
+      beforeEach(() => {
+        process.env.WDIO_CHROMEDRIVER_VERBOSE = '1';
+        delete process.env.WDIO_CHROMEDRIVER_LOG_PATH;
+      });
+
+      afterEach(() => {
+        process.env = { ...originalEnv };
+      });
+
+      it('should inject verbose: true', () => {
+        expect(getChromedriverOptions({})).toStrictEqual({
+          verbose: true,
+        });
+      });
+
+      it('should inject logPath when WDIO_CHROMEDRIVER_LOG_PATH is set', () => {
+        process.env.WDIO_CHROMEDRIVER_LOG_PATH = '/tmp/cd.log';
+        expect(getChromedriverOptions({})).toStrictEqual({
+          verbose: true,
+          logPath: '/tmp/cd.log',
+        });
+      });
+
+      it('should preserve existing chromedriverOptions', () => {
+        expect(
+          getChromedriverOptions({
+            'wdio:chromedriverOptions': {
+              binary: '/path/to/chromedriver',
+            },
+          }),
+        ).toStrictEqual({
+          binary: '/path/to/chromedriver',
+          verbose: true,
+        });
+      });
     });
   });
 

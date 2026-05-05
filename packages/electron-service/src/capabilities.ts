@@ -15,7 +15,14 @@ export function getChromeOptions(options: ElectronServiceOptions, cap: Webdriver
 
 export function getChromedriverOptions(cap: WebdriverIO.Capabilities) {
   const existingOptions = cap['wdio:chromedriverOptions'] || {};
-  return existingOptions;
+  if (process.env.WDIO_CHROMEDRIVER_VERBOSE !== '1') {
+    return existingOptions;
+  }
+  return {
+    ...existingOptions,
+    verbose: true,
+    ...(process.env.WDIO_CHROMEDRIVER_LOG_PATH ? { logPath: process.env.WDIO_CHROMEDRIVER_LOG_PATH } : {}),
+  };
 }
 
 const isElectron = (cap: unknown) => (cap as WebdriverIO.Capabilities)?.browserName?.toLowerCase() === 'electron';
