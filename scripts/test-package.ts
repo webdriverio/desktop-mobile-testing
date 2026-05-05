@@ -89,8 +89,13 @@ async function buildAndPackService(service: 'electron' | 'tauri' | 'both' = 'bot
   log(`Building and packing services and dependencies (service: ${service})...`);
 
   try {
-    // Build all packages
-    execCommand('pnpm build', rootDir, 'Building all packages');
+    // Build only the packages required for the requested service
+    const buildFilters: Record<'electron' | 'tauri' | 'both', string> = {
+      electron: '--filter=@wdio/electron-service --filter=@wdio/native-spy',
+      tauri: '--filter=@wdio/tauri-service',
+      both: '--filter=./packages/*',
+    };
+    execCommand(`pnpm turbo run build ${buildFilters[service]}`, rootDir, `Building packages for ${service}`);
 
     // Pack native-utils (required for both services)
     const utilsDir = normalize(join(rootDir, 'packages', 'native-utils'));
