@@ -1,5 +1,7 @@
 import type { FrameworkAdapter, InnerMockMethod, InnerMockSetterMethod } from './framework.js';
 import { errorReconstructExpr, mockLookupExpr } from './injection.js';
+import type { IpcContext } from './ipcContext.js';
+import { buildContextSeedScript } from './ipcContext.js';
 import type { SerializedHandler } from './serialize.js';
 import { safeJson } from './serialize.js';
 
@@ -66,6 +68,10 @@ export class TauriAdapter implements FrameworkAdapter {
     delete window.__wdio_mocks__[${JSON.stringify(mockName)}];
   }
 }`;
+  }
+
+  buildContextSeedScript(context: IpcContext): string {
+    return buildContextSeedScript(context);
   }
 
   buildWithImplementationScript(mockName: string, implFnSource: string, callbackFnSource: string): string {

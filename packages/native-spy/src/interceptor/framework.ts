@@ -1,3 +1,4 @@
+import type { IpcContext } from './ipcContext.js';
 import type { SerializedHandler } from './serialize.js';
 
 export type Framework = 'tauri' | 'electron';
@@ -19,4 +20,5 @@ export interface FrameworkAdapter {
   buildCallDataReadScript(mockName: string): string;
   buildUnregistrationScript(mockName: string): string;
   buildWithImplementationScript(mockName: string, implFnSource: string, callbackFnSource: string): string;
+  buildContextSeedScript(context: IpcContext): string;
 }

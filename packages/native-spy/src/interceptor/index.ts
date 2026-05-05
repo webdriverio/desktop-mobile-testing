@@ -1,7 +1,6 @@
 import { ElectronAdapter } from './electron.js';
 import type { Framework, FrameworkAdapter, InnerMockMethod, InnerMockSetterMethod } from './framework.js';
 import type { IpcContext } from './ipcContext.js';
-import { buildContextSeedScript } from './ipcContext.js';
 import type { SerializedHandler } from './serialize.js';
 import { serializeHandler } from './serialize.js';
 import type { MockCallData } from './syncProtocol.js';
@@ -15,7 +14,6 @@ export type { MockCallData } from './syncProtocol.js';
 
 export interface InterceptorOptions {
   context?: IpcContext;
-  onDebug?: (msg: string) => void;
 }
 
 export interface IpcInterceptor {
@@ -92,7 +90,7 @@ class IpcInterceptorImpl implements IpcInterceptor {
   }
 
   buildContextSeedScript(context: IpcContext): string {
-    return buildContextSeedScript(context);
+    return this.adapter.buildContextSeedScript(context);
   }
 
   setContext(partial: IpcContext): IpcContext {

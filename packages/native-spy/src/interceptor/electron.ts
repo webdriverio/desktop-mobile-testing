@@ -1,4 +1,5 @@
 import type { FrameworkAdapter, InnerMockMethod, InnerMockSetterMethod } from './framework.js';
+import type { IpcContext } from './ipcContext.js';
 import type { SerializedHandler } from './serialize.js';
 
 /**
@@ -33,6 +34,10 @@ export class ElectronAdapter implements FrameworkAdapter {
   }
 
   buildWithImplementationScript(_mockName: string, _implFnSource: string, _callbackFnSource: string): string {
+    throw new Error('Not implemented');
+  }
+
+  buildContextSeedScript(_context: IpcContext): string {
     throw new Error('Not implemented');
   }
 }
