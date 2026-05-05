@@ -8,8 +8,21 @@ import mockStore from './mockStore.js';
 const log = createLogger('tauri-service', 'mock');
 const interceptor = createIpcInterceptor('tauri');
 
+function isBrowserMode(browser: WebdriverIO.Browser): boolean {
+  return !!(browser as unknown as Record<string, unknown>).__wdioBrowserMode__;
+}
+
+async function runInterceptorScript<T>(browser: WebdriverIO.Browser, script: string): Promise<T> {
+  return browser.execute(`return (${script})()`) as Promise<T>;
+}
+
 export async function createMock(command: string, browserContext?: WebdriverIO.Browser): Promise<TauriMock> {
   log.debug(`[${command}] createMock called - starting mock creation`);
+
+  const browserToUse = (browserContext || browser) as WebdriverIO.Browser;
+  if (isBrowserMode(browserToUse)) {
+    return createBrowserModeMock(command, browserToUse);
+  }
 
   const outerMock = vitestFn();
   const outerMockImplementation = outerMock.mockImplementation;
@@ -50,8 +63,6 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       return originalMock;
     },
   });
-
-  const browserToUse: WebdriverIO.Browser = (browserContext || browser) as WebdriverIO.Browser;
 
   log.debug(`[${command}] Using browser context:`, typeof browserToUse, browserToUse?.constructor?.name);
 
@@ -201,4 +212,139 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
   log.debug(`[${command}] Auto-updating mock wrapper created successfully`);
 
   return wrapperMock;
+}
+
+async function createBrowserModeMock(command: string, browser: WebdriverIO.Browser): Promise<TauriMock> {
+  log.debug(`[${command}] createBrowserModeMock called`);
+
+  const outerMock = vitestFn();
+  const outerMockImplementation = outerMock.mockImplementation;
+  const outerMockImplementationOnce = outerMock.mockImplementationOnce;
+  const outerMockClear = outerMock.mockClear;
+  const outerMockReset = outerMock.mockReset;
+
+  outerMock.mockName(`tauri.${command}`);
+
+  const mock = outerMock as unknown as TauriMock;
+  mock.__isTauriMock = true;
+
+  const originalMock = outerMock.mock;
+
+  await runInterceptorScript<void>(browser, interceptor.buildRegistrationScript(command));
+
+  mock.update = async () => {
+    const raw = await runInterceptorScript<unknown>(browser, interceptor.buildCallDataReadScript(command));
+    const syncData = interceptor.parseCallData(raw);
+
+    const existingCount = originalMock.calls.length;
+    if (existingCount < syncData.calls.length) {
+      for (let i = existingCount; i < syncData.calls.length; i++) {
+        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
+        (originalMock.results as { type: string; value: unknown }[]).push(
+          syncData.results[i] ?? { type: 'return', value: undefined },
+        );
+        (originalMock.invocationCallOrder as number[]).push(
+          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
+        );
+      }
+    }
+    return mock;
+  };
+
+  mock.mockImplementation = async (implFn: AbstractFn) => {
+    const s = interceptor.serializeHandler(implFn);
+    await runInterceptorScript<void>(browser, interceptor.buildSetImplementationScript(command, s));
+    outerMockImplementation(implFn);
+    return mock;
+  };
+
+  mock.mockImplementationOnce = async (implFn: AbstractFn) => {
+    const s = interceptor.serializeHandler(implFn);
+    await runInterceptorScript<void>(browser, interceptor.buildSetImplementationScript(command, s, true));
+    outerMockImplementationOnce(implFn);
+    return mock;
+  };
+
+  mock.mockReturnValue = async (value: unknown) => {
+    await runInterceptorScript<void>(browser, interceptor.buildInnerSetterScript(command, 'mockReturnValue', value));
+    return mock;
+  };
+
+  mock.mockReturnValueOnce = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      interceptor.buildInnerSetterScript(command, 'mockReturnValueOnce', value),
+    );
+    return mock;
+  };
+
+  mock.mockResolvedValue = async (value: unknown) => {
+    await runInterceptorScript<void>(browser, interceptor.buildInnerSetterScript(command, 'mockResolvedValue', value));
+    return mock;
+  };
+
+  mock.mockResolvedValueOnce = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      interceptor.buildInnerSetterScript(command, 'mockResolvedValueOnce', value),
+    );
+    return mock;
+  };
+
+  mock.mockRejectedValue = async (value: unknown) => {
+    await runInterceptorScript<void>(browser, interceptor.buildInnerSetterScript(command, 'mockRejectedValue', value));
+    return mock;
+  };
+
+  mock.mockRejectedValueOnce = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      interceptor.buildInnerSetterScript(command, 'mockRejectedValueOnce', value),
+    );
+    return mock;
+  };
+
+  mock.mockClear = async () => {
+    await runInterceptorScript<void>(browser, interceptor.buildInnerInvocationScript(command, 'mockClear'));
+    outerMockClear();
+    return mock;
+  };
+
+  mock.mockReset = async () => {
+    const currentName = outerMock.getMockName();
+    await runInterceptorScript<void>(browser, interceptor.buildInnerInvocationScript(command, 'mockReset'));
+    const asyncMockClearFn = mock.mockClear;
+    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
+    outerMockClear();
+    outerMockReset();
+    mock.mockClear = asyncMockClearFn;
+    outerMock.mockName(currentName);
+    return mock;
+  };
+
+  mock.mockRestore = async () => {
+    await runInterceptorScript<void>(browser, interceptor.buildUnregistrationScript(command));
+    outerMockClear();
+    mockStore.deleteMock(`tauri.${command}`);
+    return mock;
+  };
+
+  mock.mockReturnThis = async () => {
+    await runInterceptorScript<void>(browser, interceptor.buildInnerInvocationScript(command, 'mockReturnThis'));
+    return mock;
+  };
+
+  mock.withImplementation = async (implFn, callbackFn) => {
+    return await runInterceptorScript<unknown>(
+      browser,
+      interceptor.buildWithImplementationScript(
+        command,
+        implFn as (...a: unknown[]) => unknown,
+        callbackFn as (...a: unknown[]) => unknown,
+      ),
+    );
+  };
+
+  log.debug(`[${command}] Browser-mode mock created successfully`);
+  return mock;
 }

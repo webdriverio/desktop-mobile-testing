@@ -73,6 +73,7 @@ export default class TauriLaunchService {
   private portManager: PortManager;
   private backendPortManager: PortManager;
   private driverPool: DriverPool;
+  private browserMode: boolean = false;
   private embeddedProcesses: Map<string, EmbeddedDriverInfo> = new Map();
   private embeddedConfigs: Map<string, { appBinaryPath: string; port: number; options: TauriServiceOptions }> =
     new Map();
@@ -134,6 +135,26 @@ export default class TauriLaunchService {
     const capsList = Array.isArray(capabilities)
       ? capabilities
       : Object.values(capabilities).map((multiremoteOption) => multiremoteOption.capabilities);
+
+    // Browser mode: skip all driver/binary setup — worker navigates to a Vite dev server
+    if (mergedOptions.mode === 'browser') {
+      const devServerUrl = mergedOptions.devServerUrl;
+      if (!devServerUrl) {
+        throw new SevereServiceError('devServerUrl is required when mode is "browser"');
+      }
+      try {
+        new URL(devServerUrl);
+      } catch {
+        throw new SevereServiceError(`devServerUrl is not a valid URL: ${devServerUrl}`);
+      }
+      this.browserMode = true;
+      for (const cap of capsList) {
+        (cap as { browserName?: string }).browserName = 'chrome';
+        delete (cap as { 'tauri:options'?: unknown })['tauri:options'];
+      }
+      log.info('Browser mode enabled — skipping driver/binary setup');
+      return;
+    }
 
     // Validate capabilities
     for (const cap of capsList) {
@@ -575,6 +596,11 @@ export default class TauriLaunchService {
   ): Promise<void> {
     log.debug(`Starting Tauri worker session: ${cid}`);
 
+    if (this.browserMode) {
+      log.debug(`Worker ${cid}: browser mode — skipping driver setup`);
+      return;
+    }
+
     if (!caps) {
       log.warn('onWorkerStart: No capabilities provided, skipping setup');
       return;
@@ -855,6 +881,10 @@ export default class TauriLaunchService {
    */
   async onWorkerEnd(cid: string): Promise<void> {
     log.debug(`Ending Tauri worker session: ${cid}`);
+
+    if (this.browserMode) {
+      return;
+    }
 
     // Stop worker's test-runner-backend if spawned (CrabNebula per-worker mode)
     const workerBackend = this.workerBackends.get(cid);

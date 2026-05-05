@@ -1,3 +1,4 @@
+import { createIpcInterceptor } from '@wdio/native-spy/interceptor';
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, hasSemicolonOutsideQuotes, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
@@ -20,6 +21,7 @@ import {
 const log = createLogger('tauri-service', 'service');
 
 const EXECUTE_PATCHED = Symbol('wdio-tauri-execute-patched');
+const browserInterceptor = createIpcInterceptor('tauri');
 
 /**
  * Tauri worker service
@@ -36,6 +38,8 @@ export default class TauriWorkerService {
   private restoreMocksPrefix?: string;
   private driverProvider?: 'official' | 'crabnebula' | 'embedded';
   private windowLabel: string;
+  private mode?: string;
+  private devServerUrl?: string;
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
@@ -46,6 +50,8 @@ export default class TauriWorkerService {
     this.restoreMocksPrefix = options.restoreMocksPrefix;
     this.driverProvider = options.driverProvider;
     this.windowLabel = options.windowLabel || getDefaultWindowLabel();
+    this.mode = options.mode;
+    this.devServerUrl = options.devServerUrl;
     log.debug('TauriWorkerService initialized');
   }
 
@@ -59,6 +65,11 @@ export default class TauriWorkerService {
   ): Promise<void> {
     log.debug('Initializing Tauri worker service');
     this.browser = browser;
+
+    if (this.mode === 'browser') {
+      await this.initBrowserMode(browser as WebdriverIO.Browser);
+      return;
+    }
 
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
@@ -260,23 +271,41 @@ export default class TauriWorkerService {
   }
 
   /**
+   * Initialize browser-only mode: navigate to dev server, inject IPC layer, expose API
+   */
+  private async initBrowserMode(browser: WebdriverIO.Browser): Promise<void> {
+    log.debug('Initializing browser-only mode');
+    await browser.url(this.devServerUrl!);
+    await browser.execute(browserInterceptor.buildBrowserIpcInjectionScript());
+    (browser as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+    this.addTauriApi(browser, true);
+    this.installCommandOverrides();
+    log.debug('Browser-only mode initialized');
+  }
+
+  /**
    * Add Tauri API to browser object
    * Matches the Electron service API surface exactly
    */
-  private addTauriApi(browser: WebdriverIO.Browser): void {
-    (browser as WebdriverIO.Browser & { tauri: TauriServiceAPI }).tauri = this.getTauriAPI(browser);
+  private addTauriApi(browser: WebdriverIO.Browser, browserMode = false): void {
+    (browser as WebdriverIO.Browser & { tauri: TauriServiceAPI }).tauri = this.getTauriAPI(browser, browserMode);
   }
 
   /**
    * Get Tauri API object for a browser instance
    * Handles both standard and multiremote browsers
    */
-  private getTauriAPI(browser: WebdriverIO.Browser): TauriServiceAPI {
+  private getTauriAPI(browser: WebdriverIO.Browser, browserMode = false): TauriServiceAPI {
     return {
       execute: async <ReturnValue, InnerArguments extends unknown[]>(
         script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
         ...args: InnerArguments
       ): Promise<ReturnValue> => {
+        if (browserMode) {
+          throw new Error(
+            'browser.tauri.execute() is not supported in browser mode. Use browser.execute() for frontend code or browser.tauri.mock() to intercept Tauri commands.',
+          );
+        }
         const result = await execute<ReturnValue, InnerArguments>(browser, script, ...args);
         await updateAllMocks();
         return result;
@@ -311,14 +340,27 @@ export default class TauriWorkerService {
       },
 
       triggerDeeplink: async (url: string): Promise<void> => {
+        if (browserMode) {
+          throw new Error('browser.tauri.triggerDeeplink() is not supported in browser mode.');
+        }
         return triggerDeeplink.call({ browser }, url);
       },
 
       switchWindow: async (label: string): Promise<void> => {
+        if (browserMode) {
+          throw new Error(
+            'browser.tauri.switchWindow() is not supported in browser mode. Multi-window is unavailable in browser mode.',
+          );
+        }
         await switchWindowByLabel(browser, label);
       },
 
       listWindows: async (): Promise<string[]> => {
+        if (browserMode) {
+          throw new Error(
+            'browser.tauri.listWindows() is not supported in browser mode. Multi-window is unavailable in browser mode.',
+          );
+        }
         return listWindowLabels(browser);
       },
     };

@@ -1,0 +1,142 @@
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../src/embeddedProvider.js', () => ({
+  checkEmbeddedServerAlive: vi.fn(),
+  startEmbeddedDriver: vi.fn(),
+  stopEmbeddedDriver: vi.fn(),
+  getEmbeddedPort: vi.fn().mockReturnValue(4445),
+  isEmbeddedProvider: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('../src/diagnostics.js', () => ({
+  diagnoseTauriEnvironment: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@wdio/native-utils', () => ({
+  createLogger: () => ({ info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() }),
+  formatDiagnosticResults: vi.fn(),
+  isErr: vi.fn().mockReturnValue(false),
+  isOk: vi.fn().mockReturnValue(true),
+  Ok: (v: unknown) => ({ ok: true, value: v }),
+  Err: (e: unknown) => ({ ok: false, error: e }),
+}));
+
+vi.mock('node:fs', () => ({
+  existsSync: vi.fn().mockReturnValue(true),
+}));
+
+vi.mock('../src/driverPool.js', () => ({
+  DriverPool: class MockDriverPool {
+    startDriver = vi.fn();
+    stopDriver = vi.fn().mockResolvedValue(undefined);
+    stopAll = vi.fn().mockResolvedValue(undefined);
+    getStatus = vi.fn().mockReturnValue({ count: 0, running: false });
+    getRunningPids = vi.fn().mockReturnValue([]);
+  },
+}));
+
+vi.mock('../src/portManager.js', () => ({
+  PortManager: class MockPortManager {
+    allocatePortPair = vi.fn().mockResolvedValue({ port: 4444, nativePort: 4445 });
+    allocatePorts = vi.fn().mockResolvedValue([{ port: 4444, nativePort: 4445 }]);
+    allocatePort = vi.fn().mockResolvedValue(4444);
+    clear = vi.fn();
+  },
+}));
+
+vi.mock('../src/pathResolver.js', () => ({
+  getTauriAppInfo: vi.fn().mockResolvedValue({ version: '1.0.0' }),
+  getTauriBinaryPath: vi.fn().mockResolvedValue('/app/my-app'),
+  getWebKitWebDriverPath: vi.fn().mockReturnValue('/usr/bin/WebKitWebDriver'),
+}));
+
+vi.mock('../src/driverManager.js', () => ({
+  ensureTauriDriver: vi.fn().mockResolvedValue({ ok: true, value: { path: '/tauri-driver', method: 'found' } }),
+  findTestRunnerBackend: vi.fn(),
+}));
+
+vi.mock('../src/edgeDriverManager.js', () => ({
+  ensureMsEdgeDriver: vi.fn().mockResolvedValue({ ok: true, value: { method: 'found', driverVersion: '120' } }),
+}));
+
+vi.mock('../src/commands/triggerDeeplink.js', () => ({
+  setEmbeddedModeInfo: vi.fn(),
+  setCrabnebulaModeInfo: vi.fn(),
+}));
+
+vi.mock('../src/crabnebulaBackend.js', () => ({
+  startTestRunnerBackend: vi.fn(),
+  stopTestRunnerBackend: vi.fn().mockResolvedValue(undefined),
+  waitTestRunnerBackendReady: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { ensureTauriDriver } from '../src/driverManager.js';
+import TauriLaunchService from '../src/launcher.js';
+
+const DEV_SERVER = 'http://localhost:1420';
+
+function createLauncher(globalOpts: Record<string, unknown> = {}): TauriLaunchService {
+  return new TauriLaunchService(globalOpts as any, {} as any, { maxInstances: 1 } as any);
+}
+
+describe('TauriLaunchService — browser mode', () => {
+  describe('onPrepare', () => {
+    it('mutates browserName to "chrome" and removes tauri:options', async () => {
+      const launcher = createLauncher();
+      const caps: any[] = [
+        {
+          'tauri:options': { application: '/app/my-app' },
+          'wdio:tauriServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER },
+        },
+      ];
+      await launcher.onPrepare({} as any, caps);
+      expect(caps[0].browserName).toBe('chrome');
+      expect(caps[0]['tauri:options']).toBeUndefined();
+    });
+
+    it('does not spawn tauri-driver in browser mode', async () => {
+      const launcher = createLauncher();
+      const caps: any[] = [{ 'wdio:tauriServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } }];
+      await launcher.onPrepare({} as any, caps);
+      expect(ensureTauriDriver).not.toHaveBeenCalled();
+    });
+
+    it('throws SevereServiceError when devServerUrl is missing', async () => {
+      const launcher = createLauncher();
+      const caps: any[] = [{ 'wdio:tauriServiceOptions': { mode: 'browser' } }];
+      await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('devServerUrl is required');
+    });
+
+    it('throws SevereServiceError when devServerUrl is not a valid URL', async () => {
+      const launcher = createLauncher();
+      const caps: any[] = [{ 'wdio:tauriServiceOptions': { mode: 'browser', devServerUrl: 'not-a-url' } }];
+      await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('not a valid URL');
+    });
+
+    it('accepts devServerUrl via global options', async () => {
+      const launcher = createLauncher({ mode: 'browser', devServerUrl: DEV_SERVER });
+      const caps: any[] = [{}];
+      await launcher.onPrepare({} as any, caps);
+      expect(caps[0].browserName).toBe('chrome');
+    });
+  });
+
+  describe('onWorkerStart', () => {
+    it('returns immediately without setting up drivers', async () => {
+      const launcher = createLauncher();
+      const caps: any[] = [{ 'wdio:tauriServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } }];
+      await launcher.onPrepare({} as any, caps);
+      await expect(launcher.onWorkerStart('0-0', caps as any)).resolves.toBeUndefined();
+      expect(ensureTauriDriver).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onWorkerEnd', () => {
+    it('returns immediately in browser mode', async () => {
+      const launcher = createLauncher();
+      const caps: any[] = [{ 'wdio:tauriServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } }];
+      await launcher.onPrepare({} as any, caps);
+      await expect(launcher.onWorkerEnd('0-0')).resolves.toBeUndefined();
+    });
+  });
+});
