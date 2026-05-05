@@ -105,6 +105,8 @@ export class RollupExecutor {
           outDir: resolve(targetCwd, configSpec.output.dir),
           module: 'ESNext',
           moduleResolution: 'Bundler',
+          skipLibCheck: true,
+          target: 'ES2022',
         };
 
         if (hasTsconfig) {

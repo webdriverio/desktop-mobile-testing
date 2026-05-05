@@ -3,5 +3,5 @@ export function mockLookupExpr(mockName: string): string {
 }
 
 export function errorReconstructExpr(varName: string): string {
-  return `(${varName} && typeof ${varName} === 'object' && ${varName}.__wdioError ? new Error(${varName}.message) : ${varName})`;
+  return `(${varName} && typeof ${varName} === 'object' && ${varName}.__wdioError === true ? new Error(${varName}.message) : ${varName})`;
 }
