@@ -221,6 +221,11 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         const caps =
           (instance.requestedCapabilities as Capabilities.W3CCapabilities).alwaysMatch ||
           (instance.requestedCapabilities as WebdriverIO.Capabilities);
+
+        if (!caps[CUSTOM_CAPABILITY_NAME]) {
+          continue;
+        }
+
         const instanceOptions = caps[CUSTOM_CAPABILITY_NAME] as ElectronServiceGlobalOptions | undefined;
         const instanceDevServerUrl = instanceOptions?.devServerUrl ?? this.globalOptions.devServerUrl;
 

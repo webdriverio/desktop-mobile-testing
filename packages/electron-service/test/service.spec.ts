@@ -940,12 +940,56 @@ describe('Electron Worker Service', () => {
       });
     });
 
+    describe('mixed multiremote (non-Electron instances skipped)', () => {
+      it('does not inject the IPC script into non-Electron multiremote instances', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
+
+        const electronBrowser = {
+          url: vi.fn().mockResolvedValue(undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          requestedCapabilities: {
+            alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
+          },
+          electron: {},
+        } as unknown as WebdriverIO.Browser;
+
+        const firefoxBrowser = {
+          url: vi.fn().mockResolvedValue(undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          requestedCapabilities: {
+            alwaysMatch: { browserName: 'firefox' },
+          },
+          electron: {},
+        } as unknown as WebdriverIO.Browser;
+
+        const rootBrowser = {
+          instances: ['app1', 'ff1'],
+          getInstance: (name: string) => (name === 'app1' ? electronBrowser : firefoxBrowser),
+          execute: vi.fn().mockResolvedValue(undefined),
+          url: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          isMultiremote: true,
+          electron: {},
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        await instance.before({}, [], rootBrowser);
+
+        // Electron instance gets the injection script
+        expect((electronBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0);
+        // Firefox instance gets no execute calls at all
+        expect((firefoxBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+        expect((firefoxBrowser.url as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+      });
+    });
+
     describe('root multiremote browser.electron.mock()', () => {
       it('throws when mock() is called on the root multiremote browser in browser mode', async () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
 
         browserModeBrowser.requestedCapabilities = {
-          alwaysMatch: { browserName: 'electron' },
+          alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
         };
 
         const rootBrowser = {
@@ -969,7 +1013,7 @@ describe('Electron Worker Service', () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
 
         browserModeBrowser.requestedCapabilities = {
-          alwaysMatch: { browserName: 'electron' },
+          alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
         };
 
         const rootBrowser = {
@@ -993,7 +1037,7 @@ describe('Electron Worker Service', () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
 
         browserModeBrowser.requestedCapabilities = {
-          alwaysMatch: { browserName: 'electron' },
+          alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
         };
         (browserModeBrowser.execute as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 

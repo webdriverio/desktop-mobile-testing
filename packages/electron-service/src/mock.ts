@@ -359,6 +359,7 @@ export async function createElectronBrowserModeMock(
     if (result && typeof result === 'object' && '__wdioAsyncErr__' in result) {
       throw new Error((result as { __wdioAsyncErr__: string }).__wdioAsyncErr__);
     }
+    await mock.update();
     return result;
   };
 
