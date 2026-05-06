@@ -49,7 +49,7 @@ export async function nativeScreenshot(
           `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
           `$b=New-Object Drawing.Bitmap ($r.R-$r.L),($r.B-$r.T); ` +
           `$g=[Drawing.Graphics]::FromImage($b); ` +
-          `[W]::PrintWindow($h,$g.GetHdc(),2) | Out-Null; ` +
+          `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
           `$b.Save('${out.replace(/\\/g, '/')}', [Drawing.Imaging.ImageFormat]::Png)`;
         const r = spawnSync('powershell', ['-NoProfile', '-Command', ps]);
         if (r.error) throw r.error;
