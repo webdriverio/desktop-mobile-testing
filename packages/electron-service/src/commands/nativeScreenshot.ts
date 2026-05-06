@@ -79,23 +79,16 @@ export async function nativeScreenshot(
       // When --disable-gpu-compositing is set, Chromium's software compositor BitBlt's frames
       // to the GDI screen buffer. PrintWindow(WM_PRINT=0) is ineffective for Chromium windows
       // because Chromium's HWND procedure paints via BeginPaint/EndPaint rather than to the
-      // WM_PRINT HDC. CopyFromScreen reads the physical GDI framebuffer directly, which
-      // contains the software-composited content. We bring the window to the foreground first
-      // and sleep briefly to ensure the compositor has flushed its last frame to the screen.
+      // WM_PRINT HDC. CopyFromScreen (GDI BitBlt from the screen DC) captures the composited
+      // output. We use bounds from the Electron main process to avoid extra P/Invoke and the
+      // Add-Type compilation overhead that can trigger antivirus scanning on CI.
+      const { x, y, width, height } = windowInfo.bounds;
       ps =
         `Add-Type -AssemblyName System.Drawing; ` +
-        `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
-        `public class W{[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
-        `[DllImport("user32.dll")]public static extern bool SetForegroundWindow(IntPtr h);` +
-        `[DllImport("user32.dll")]public static extern bool BringWindowToTop(IntPtr h);` +
-        `public struct RECT{public int L,T,R,B;}}'; ` +
-        `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
-        `[W]::BringWindowToTop($h) | Out-Null; [W]::SetForegroundWindow($h) | Out-Null; ` +
-        `Start-Sleep -Milliseconds 200; ` +
-        `$w=$r.R-$r.L; $th=$r.B-$r.T; ` +
-        `$b=New-Object Drawing.Bitmap $w,$th; ` +
+        `$b=New-Object Drawing.Bitmap ${width},${height}; ` +
         `$g=[Drawing.Graphics]::FromImage($b); ` +
-        `$g.CopyFromScreen($r.L,$r.T,0,0,(New-Object Drawing.Size $w,$th)); $g.Dispose(); ` +
+        `$g.CopyFromScreen(${x},${y},0,0,(New-Object Drawing.Size ${width},${height})); ` +
+        `$g.Dispose(); ` +
         `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
     }
     const r = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 30_000 });
