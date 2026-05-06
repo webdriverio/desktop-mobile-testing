@@ -268,6 +268,18 @@ export interface TauriServiceAPI {
  */
 export interface TauriServiceOptions extends BaseServiceOptions, DriverProviderConfig {
   /**
+   * Run mode for the Tauri service.
+   * - 'native': default; requires a built Tauri binary and tauri-driver.
+   * - 'browser': runs the frontend in plain Chrome against a Vite dev server with Tauri IPC intercepted at the JS boundary. No binary or native driver required.
+   * @default 'native'
+   */
+  mode?: 'native' | 'browser';
+  /**
+   * URL of the Vite dev server to navigate to when mode is 'browser'.
+   * Required when mode === 'browser'. e.g. 'http://localhost:1420'
+   */
+  devServerUrl?: string;
+  /**
    * The port for tauri-driver to listen on.
    */
   tauriDriverPort?: number;
@@ -311,6 +323,8 @@ export interface TauriServiceOptions extends BaseServiceOptions, DriverProviderC
  * Extends base global options with Tauri-specific configuration
  */
 export interface TauriServiceGlobalOptions extends BaseServiceGlobalOptions, DriverProviderConfig {
+  mode?: 'native' | 'browser';
+  devServerUrl?: string;
   logLevel?: LogLevel;
   tauriDriverPort?: number;
   nativeDriverPath?: string;

@@ -74,6 +74,128 @@ export class TauriAdapter implements FrameworkAdapter {
     return buildContextSeedScript(context);
   }
 
+  buildBrowserIpcInjectionScript(): string {
+    return `(function() {
+  window.__wdio_call_id__ = window.__wdio_call_id__ || 0;
+  var NOT_SET = {};
+  function createMockFn() {
+    var _name = 'spy';
+    var _defaultImpl;
+    var _implQueue = [];
+    var _defaultReturnValue = NOT_SET;
+    var _defaultResolvedValue = NOT_SET;
+    var _defaultRejectedValue = NOT_SET;
+    var _returnThis = false;
+    var _calls = [];
+    var _results = [];
+    var _invocationCallOrder = [];
+    function mockFn() {
+      var args = Array.prototype.slice.call(arguments);
+      _calls.push(args);
+      _invocationCallOrder.push(window.__wdio_call_id__++);
+      var impl = _implQueue.length > 0 ? _implQueue.shift() : _defaultImpl;
+      if (impl !== undefined) {
+        try {
+          var val = impl.apply(this, args);
+          _results.push({ type: 'return', value: val });
+          return val;
+        } catch (e) {
+          _results.push({ type: 'throw', value: e });
+          throw e;
+        }
+      } else if (_defaultRejectedValue !== NOT_SET) {
+        var rv = _defaultRejectedValue;
+        var rejectedPromise = Promise.reject(rv);
+        _results.push({ type: 'return', value: rejectedPromise });
+        return rejectedPromise;
+      } else if (_defaultResolvedValue !== NOT_SET) {
+        var p = Promise.resolve(_defaultResolvedValue);
+        _results.push({ type: 'return', value: p });
+        return p;
+      } else if (_returnThis) {
+        _results.push({ type: 'return', value: this });
+        return this;
+      } else if (_defaultReturnValue !== NOT_SET) {
+        _results.push({ type: 'return', value: _defaultReturnValue });
+        return _defaultReturnValue;
+      } else {
+        _results.push({ type: 'return', value: undefined });
+        return undefined;
+      }
+    }
+    mockFn._isMockFunction = true;
+    Object.defineProperty(mockFn, 'mock', {
+      get: function() { return { calls: _calls, results: _results, invocationCallOrder: _invocationCallOrder }; },
+      enumerable: true, configurable: true
+    });
+    mockFn.mockName = function(n) { _name = n; return mockFn; };
+    mockFn.getMockName = function() { return _name; };
+    mockFn.getMockImplementation = function() { return _defaultImpl; };
+    mockFn.mockImplementation = function(fn) { _defaultImpl = fn; _returnThis = false; return mockFn; };
+    mockFn.mockImplementationOnce = function(fn) { _implQueue.push(fn); return mockFn; };
+    mockFn.mockReturnValue = function(val) {
+      _defaultImpl = undefined; _defaultReturnValue = val; _defaultResolvedValue = NOT_SET;
+      _defaultRejectedValue = NOT_SET; _returnThis = false; return mockFn;
+    };
+    mockFn.mockReturnValueOnce = function(val) { _implQueue.push(function() { return val; }); return mockFn; };
+    mockFn.mockResolvedValue = function(val) {
+      _defaultImpl = undefined; _defaultResolvedValue = val; _defaultReturnValue = NOT_SET;
+      _defaultRejectedValue = NOT_SET; _returnThis = false; return mockFn;
+    };
+    mockFn.mockResolvedValueOnce = function(val) {
+      _implQueue.push(function() { return Promise.resolve(val); }); return mockFn;
+    };
+    mockFn.mockRejectedValue = function(val) {
+      _defaultImpl = undefined; _defaultRejectedValue = val; _defaultReturnValue = NOT_SET;
+      _defaultResolvedValue = NOT_SET; _returnThis = false; return mockFn;
+    };
+    mockFn.mockRejectedValueOnce = function(val) {
+      _implQueue.push(function() { return Promise.reject(val); }); return mockFn;
+    };
+    mockFn.mockClear = function() {
+      _calls = []; _results = []; _invocationCallOrder = [];
+      return mockFn;
+    };
+    mockFn.mockReset = function() {
+      mockFn.mockClear();
+      _implQueue = [];
+      _defaultImpl = undefined; _defaultReturnValue = NOT_SET;
+      _defaultResolvedValue = NOT_SET; _defaultRejectedValue = NOT_SET; _returnThis = false;
+      return mockFn;
+    };
+    mockFn.mockReturnThis = function() {
+      _returnThis = true; _defaultReturnValue = NOT_SET; _defaultResolvedValue = NOT_SET;
+      _defaultRejectedValue = NOT_SET; return mockFn;
+    };
+    mockFn.withImplementation = function(fn, callback) {
+      var prevImpl = _defaultImpl, prevQueue = _implQueue.slice(), prevReturnThis = _returnThis;
+      _defaultImpl = fn; _implQueue = []; _returnThis = false;
+      var result = callback();
+      if (result && typeof result.then === 'function') {
+        return result.then(function(r) {
+          _defaultImpl = prevImpl; _implQueue = prevQueue; _returnThis = prevReturnThis; return r;
+        }, function(e) {
+          _defaultImpl = prevImpl; _implQueue = prevQueue; _returnThis = prevReturnThis; throw e;
+        });
+      }
+      _defaultImpl = prevImpl; _implQueue = prevQueue; _returnThis = prevReturnThis;
+      return result;
+    };
+    return mockFn;
+  }
+  window.__wdio_spy__ = { fn: createMockFn };
+  if (!window.__wdio_mocks__) { window.__wdio_mocks__ = {}; }
+  if (!window.__TAURI_INTERNALS__) { window.__TAURI_INTERNALS__ = {}; }
+  window.__TAURI_INTERNALS__.invoke = function(cmd, args, options) {
+    var mock = window.__wdio_mocks__ && window.__wdio_mocks__[cmd];
+    if (mock && typeof mock === 'function') {
+      return Promise.resolve().then(function() { return mock(args, options); });
+    }
+    return Promise.reject(new Error('unmocked Tauri command in browser mode: ' + cmd));
+  };
+})()`;
+  }
+
   buildWithImplementationScript(mockName: string, implFnSource: string, callbackFnSource: string): string {
     const lookup = mockLookupExpr(mockName);
     return `async (_tauri) => {
@@ -81,7 +203,7 @@ export class TauriAdapter implements FrameworkAdapter {
   const callback = (${callbackFnSource});
   let result;
   const mockObj = ${lookup};
-  await mockObj?.withImplementation?.(impl, async () => { result = await callback(_tauri); });
+  await mockObj?.withImplementation?.(impl, async () => { result = await (_tauri !== undefined ? callback(_tauri) : callback()); });
   return result;
 }`;
   }

@@ -40,4 +40,8 @@ export class ElectronAdapter implements FrameworkAdapter {
   buildContextSeedScript(_context: IpcContext): string {
     throw new Error('Not implemented');
   }
+
+  buildBrowserIpcInjectionScript(): string {
+    throw new Error('Not implemented');
+  }
 }

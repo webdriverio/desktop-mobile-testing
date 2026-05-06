@@ -45,26 +45,26 @@ afterEach(() => {
 });
 
 describe('createMock', () => {
-  it('calls tauriExecute once for registration (registration + initial mockClear are combined)', async () => {
+  it('should call tauriExecute once for registration', async () => {
     const browser = makeBrowser();
     await createMock('my_cmd', browser);
     expect(mockExecute).toHaveBeenCalledTimes(1);
   });
 
-  it('returns a TauriMock with __isTauriMock', async () => {
+  it('should return a TauriMock with __isTauriMock', async () => {
     const browser = makeBrowser();
     const mock = await createMock('my_cmd', browser);
     expect(mock.__isTauriMock).toBe(true);
   });
 
-  it('mock name is set to tauri.<command>', async () => {
+  it('should set mock name to tauri.<command>', async () => {
     const browser = makeBrowser();
     const mock = await createMock('platform_info', browser);
     expect(mock.getMockName()).toBe('tauri.platform_info');
   });
 
   describe('update()', () => {
-    it('populates calls from parsed call data', async () => {
+    it('should populate calls from parsed call data', async () => {
       const browser = makeBrowser();
       mockExecute.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
         calls: [['arg1'], ['arg2']],
@@ -83,7 +83,7 @@ describe('createMock', () => {
       expect(mock.mock.calls[1]).toEqual(['arg2']);
     });
 
-    it('does not duplicate existing calls on a second update', async () => {
+    it('should not duplicate existing calls on a second update', async () => {
       const browser = makeBrowser();
       const syncPayload = {
         calls: [['arg1']],
@@ -102,7 +102,33 @@ describe('createMock', () => {
       expect(mock.mock.calls).toHaveLength(1);
     });
 
-    it('uses fallback result when syncData.results entry is missing', async () => {
+    it('should replace outer data when inner call count shrinks', async () => {
+      const browser = makeBrowser();
+      const twoCallsPayload = {
+        calls: [['a'], ['b']],
+        results: [
+          { type: 'return', value: 1 },
+          { type: 'return', value: 2 },
+        ],
+        invocationCallOrder: [0, 1],
+      };
+      const zeroCallsPayload = { calls: [], results: [], invocationCallOrder: [] };
+      mockExecute
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(twoCallsPayload)
+        .mockResolvedValueOnce(zeroCallsPayload);
+
+      const mock = await createMock('my_cmd', browser);
+      await mock.update();
+      expect(mock.mock.calls).toHaveLength(2);
+
+      await mock.update();
+      expect(mock.mock.calls).toHaveLength(0);
+      expect(mock.mock.results).toHaveLength(0);
+      expect(mock.mock.invocationCallOrder).toHaveLength(0);
+    });
+
+    it('should use fallback result when syncData.results entry is missing', async () => {
       const browser = makeBrowser();
       mockExecute.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
         calls: [['arg1']],
@@ -116,7 +142,7 @@ describe('createMock', () => {
       expect(mock.mock.results[0]).toEqual({ type: 'return', value: undefined });
     });
 
-    it('returns a mock object for chaining', async () => {
+    it('should return a mock object for chaining', async () => {
       const browser = makeBrowser();
       mockExecute
         .mockResolvedValueOnce(undefined)
@@ -130,7 +156,7 @@ describe('createMock', () => {
   });
 
   describe('mockReset() race-condition hack', () => {
-    it('preserves mock name after mockReset', async () => {
+    it('should preserve mock name after mockReset', async () => {
       const browser = makeBrowser();
       const mock = await createMock('my_cmd', browser);
       const nameBefore = mock.getMockName();
@@ -141,7 +167,7 @@ describe('createMock', () => {
       expect(mock.getMockName()).toBe(nameBefore);
     });
 
-    it('restores async mockClear (not the sync outerMockClear) after mockReset completes', async () => {
+    it('should restore async mockClear after mockReset completes', async () => {
       const browser = makeBrowser();
       const mock = await createMock('my_cmd', browser);
 
@@ -155,7 +181,7 @@ describe('createMock', () => {
       expect(mockExecute).toHaveBeenCalled();
     });
 
-    it('clears calls after mockReset', async () => {
+    it('should clear calls after mockReset', async () => {
       const browser = makeBrowser();
       const syncPayload = { calls: [['arg']], results: [{ type: 'return', value: 1 }], invocationCallOrder: [0] };
       mockExecute.mockResolvedValueOnce(undefined).mockResolvedValueOnce(syncPayload).mockResolvedValueOnce(undefined);
@@ -170,7 +196,7 @@ describe('createMock', () => {
   });
 
   describe('mockRestore()', () => {
-    it('calls mockStore.deleteMock with the tauri-prefixed name', async () => {
+    it('should call mockStore.deleteMock with the tauri-prefixed name', async () => {
       const browser = makeBrowser();
       const mock = await createMock('my_cmd', browser);
 
@@ -182,14 +208,14 @@ describe('createMock', () => {
   });
 
   describe('wrapperMock', () => {
-    it('wrapperMock.mock returns the outer mock state', async () => {
+    it('should return the outer mock state', async () => {
       const browser = makeBrowser();
       const wrapper = await createMock('my_cmd', browser);
       expect(wrapper.mock).toBeDefined();
       expect(Array.isArray(wrapper.mock.calls)).toBe(true);
     });
 
-    it('wrapperMock.update is bound and functional', async () => {
+    it('should have bound and functional wrapperMock.update', async () => {
       const browser = makeBrowser();
       const wrapper = await createMock('my_cmd', browser);
 

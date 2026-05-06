@@ -1,3 +1,4 @@
+import { createIpcInterceptor } from '@wdio/native-spy/interceptor';
 import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, hasSemicolonOutsideQuotes, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
@@ -20,6 +21,7 @@ import {
 const log = createLogger('tauri-service', 'service');
 
 const EXECUTE_PATCHED = Symbol('wdio-tauri-execute-patched');
+const browserInterceptor = createIpcInterceptor('tauri');
 
 /**
  * Tauri worker service
@@ -36,6 +38,8 @@ export default class TauriWorkerService {
   private restoreMocksPrefix?: string;
   private driverProvider?: 'official' | 'crabnebula' | 'embedded';
   private windowLabel: string;
+  private mode?: string;
+  private devServerUrl?: string;
 
   constructor(options: TauriServiceOptions & TauriServiceGlobalOptions, _capabilities: TauriCapabilities) {
     this.clearMocks = options.clearMocks ?? false;
@@ -46,6 +50,8 @@ export default class TauriWorkerService {
     this.restoreMocksPrefix = options.restoreMocksPrefix;
     this.driverProvider = options.driverProvider;
     this.windowLabel = options.windowLabel || getDefaultWindowLabel();
+    this.mode = options.mode;
+    this.devServerUrl = options.devServerUrl;
     log.debug('TauriWorkerService initialized');
   }
 
@@ -59,6 +65,11 @@ export default class TauriWorkerService {
   ): Promise<void> {
     log.debug('Initializing Tauri worker service');
     this.browser = browser;
+
+    if (this.mode === 'browser') {
+      await this.initBrowserMode(browser as WebdriverIO.Browser);
+      return;
+    }
 
     if (browser.isMultiremote) {
       const mrBrowser = browser as WebdriverIO.MultiRemoteBrowser;
@@ -260,23 +271,86 @@ export default class TauriWorkerService {
   }
 
   /**
+   * Initialize browser-only mode: navigate to dev server, inject IPC layer, expose API.
+   *
+   * Timing note: the IPC interceptor is injected after browser.url() resolves
+   * (i.e. after readyState === "complete"). Any invoke() calls the app makes
+   * during module init, DOMContentLoaded, or onload handlers will therefore
+   * run against the real (unpatched) __TAURI_INTERNALS__ and be missed by mocks.
+   * In practice this is only a problem for apps that call invoke() on startup
+   * before any user interaction. If your app does this, structure tests so that
+   * all mocks are created before the first navigation, or use a Vite plugin to
+   * import the injection script as a top-level module in your dev build.
+   */
+  private async initBrowserMode(browser: WebdriverIO.Browser): Promise<void> {
+    log.debug('Initializing browser-only mode');
+    if (!this.devServerUrl) {
+      throw new Error('devServerUrl is required for browser mode but was not set');
+    }
+    const injectionScript = browserInterceptor.buildBrowserIpcInjectionScript();
+    await browser.url(this.devServerUrl);
+    await browser.execute(injectionScript);
+    (browser as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+    if ((browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
+      const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
+      for (const instanceName of mrBrowser.instances) {
+        const instance = mrBrowser.getInstance(instanceName);
+        (instance as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
+        this.addTauriApi(instance, true);
+        this.patchBrowserUrl(instance, injectionScript);
+      }
+    }
+    this.addTauriApi(browser, true);
+    this.patchBrowserUrl(browser, injectionScript);
+    this.installCommandOverrides();
+    log.debug('Browser-only mode initialized');
+  }
+
+  /**
+   * Patch browser.url() so the IPC injection script is re-applied after every
+   * navigation. A page load wipes window state, so without this any browser.url()
+   * call inside a test would silently remove __TAURI_INTERNALS__ patching and
+   * __wdio_mocks__, breaking all mocks registered for that test.
+   */
+  private patchBrowserUrl(browser: WebdriverIO.Browser, injectionScript: string): void {
+    type UrlFn = (href?: string) => Promise<string | void>;
+    const originalUrl = (browser.url as unknown as UrlFn).bind(browser);
+    (browser as unknown as { url: UrlFn }).url = async (href?: string): Promise<string | void> => {
+      const result = await originalUrl(href);
+      if (href !== undefined) {
+        try {
+          await browser.execute(injectionScript);
+        } catch (error) {
+          log.warn('Failed to re-inject IPC script after navigation:', error);
+        }
+      }
+      return result;
+    };
+  }
+
+  /**
    * Add Tauri API to browser object
    * Matches the Electron service API surface exactly
    */
-  private addTauriApi(browser: WebdriverIO.Browser): void {
-    (browser as WebdriverIO.Browser & { tauri: TauriServiceAPI }).tauri = this.getTauriAPI(browser);
+  private addTauriApi(browser: WebdriverIO.Browser, browserMode = false): void {
+    (browser as WebdriverIO.Browser & { tauri: TauriServiceAPI }).tauri = this.getTauriAPI(browser, browserMode);
   }
 
   /**
    * Get Tauri API object for a browser instance
    * Handles both standard and multiremote browsers
    */
-  private getTauriAPI(browser: WebdriverIO.Browser): TauriServiceAPI {
+  private getTauriAPI(browser: WebdriverIO.Browser, browserMode = false): TauriServiceAPI {
     return {
       execute: async <ReturnValue, InnerArguments extends unknown[]>(
         script: string | ((tauri: TauriAPIs, ...innerArgs: InnerArguments) => ReturnValue),
         ...args: InnerArguments
       ): Promise<ReturnValue> => {
+        if (browserMode) {
+          throw new Error(
+            'browser.tauri.execute() is not supported in browser mode. Use browser.execute() for frontend code or browser.tauri.mock() to intercept Tauri commands.',
+          );
+        }
         const result = await execute<ReturnValue, InnerArguments>(browser, script, ...args);
         await updateAllMocks();
         return result;
@@ -311,14 +385,27 @@ export default class TauriWorkerService {
       },
 
       triggerDeeplink: async (url: string): Promise<void> => {
+        if (browserMode) {
+          throw new Error('browser.tauri.triggerDeeplink() is not supported in browser mode.');
+        }
         return triggerDeeplink.call({ browser }, url);
       },
 
       switchWindow: async (label: string): Promise<void> => {
+        if (browserMode) {
+          throw new Error(
+            'browser.tauri.switchWindow() is not supported in browser mode. Multi-window is unavailable in browser mode.',
+          );
+        }
         await switchWindowByLabel(browser, label);
       },
 
       listWindows: async (): Promise<string[]> => {
+        if (browserMode) {
+          throw new Error(
+            'browser.tauri.listWindows() is not supported in browser mode. Multi-window is unavailable in browser mode.',
+          );
+        }
         return listWindowLabels(browser);
       },
     };
