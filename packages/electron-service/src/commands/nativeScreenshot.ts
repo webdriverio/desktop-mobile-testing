@@ -57,17 +57,20 @@ export async function nativeScreenshot(
   } else if (process.platform === 'win32') {
     const hwnd = windowInfo.nativeHandle!;
     const outFwd = out.replace(/\\/g, '/');
+    // CopyFromScreen captures from the GDI screen surface using the window's physical rect.
+    // PrintWindow(PW_RENDERFULLCONTENT) requires DWM composition and deadlocks on CI runners.
     const ps =
       `Add-Type -AssemblyName System.Drawing,System.Windows.Forms; ` +
       `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
-      `public class W{[DllImport("user32.dll")]public static extern bool PrintWindow(IntPtr h,IntPtr d,uint f);` +
-      `[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
+      `public class W{[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
       `public struct RECT{public int L,T,R,B;}}'; ` +
       `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
-      `$b=New-Object Drawing.Bitmap ($r.R-$r.L),($r.B-$r.T); ` +
+      `$w=$r.R-$r.L; $ht=$r.B-$r.T; ` +
+      `$b=New-Object Drawing.Bitmap $w,$ht; ` +
       `$g=[Drawing.Graphics]::FromImage($b); ` +
-      `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
-      `$b.Save('${outFwd}', [Drawing.Imaging.ImageFormat]::Png)`;
+      `$g.CopyFromScreen($r.L,$r.T,0,0,(New-Object Drawing.Size $w,$ht)); ` +
+      `$g.Dispose(); ` +
+      `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
     const r = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 30_000 });
     if (r.error) throw r.error;
     if (r.status !== 0) throw new Error(`PowerShell capture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
