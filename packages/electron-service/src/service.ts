@@ -217,13 +217,14 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         (instance as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
         instance.electron = this.getElectronBrowserModeAPI(instance);
         this.patchBrowserUrl(instance, injectionScript);
+        this.installCommandOverrides(instance);
       }
     }
     browser.electron = this.getElectronBrowserModeAPI(browser);
+    this.patchBrowserUrl(browser, injectionScript);
     if (!(browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
-      this.patchBrowserUrl(browser, injectionScript);
+      this.installCommandOverrides();
     }
-    this.installCommandOverrides();
     log.debug('Electron browser mode initialised');
   }
 
@@ -279,9 +280,13 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
           mockStore.setMock(newMock);
           return newMock;
         }
-        // Re-register browser-side entry — navigation wipes window.__wdio_mocks__
-        await browser.execute(`return (${browserInterceptor.buildRegistrationScript(channel)})()`);
-        await existing.mockReset();
+        // Re-register browser-side entry only if navigation wiped window.__wdio_mocks__
+        const isBrowserSideLive = (await browser.execute(
+          `return !!(window.__wdio_mocks__ && typeof window.__wdio_mocks__[${JSON.stringify(channel)}] === 'function')`,
+        )) as boolean;
+        if (!isBrowserSideLive) {
+          await browser.execute(`return (${browserInterceptor.buildRegistrationScript(channel)})()`);
+        }
         return existing;
       },
       mockAll: async () => {
@@ -309,18 +314,18 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   /**
    * Install command overrides to trigger mock updates after DOM interactions
    */
-  private installCommandOverrides() {
+  private installCommandOverrides(targetBrowser?: WebdriverIO.Browser) {
     const commandsToOverride = ['click', 'doubleClick', 'setValue', 'clearValue'];
     commandsToOverride.forEach((commandName) => {
-      this.overrideElementCommand(commandName as ElementCommands);
+      this.overrideElementCommand(commandName as ElementCommands, targetBrowser);
     });
   }
 
   /**
    * Override an element-level command to add mock update after execution
    */
-  private overrideElementCommand(commandName: ElementCommands) {
-    const browser = this.browser as WebdriverIO.Browser;
+  private overrideElementCommand(commandName: ElementCommands, targetBrowser?: WebdriverIO.Browser) {
+    const browser = (targetBrowser ?? this.browser) as WebdriverIO.Browser;
     try {
       const testOverride = async function (
         this: WebdriverIO.Element,

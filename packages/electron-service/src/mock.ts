@@ -216,31 +216,17 @@ export async function createElectronBrowserModeMock(
     const raw = await runInterceptorScript<unknown>(browser, browserInterceptor.buildCallDataReadScript(channel));
     const syncData = browserInterceptor.parseCallData(raw);
 
-    const existingCount = originalMock.calls.length;
-
-    if (syncData.calls.length < existingCount) {
-      (originalMock.calls as unknown[][]).length = 0;
-      (originalMock.results as { type: string; value: unknown }[]).length = 0;
-      (originalMock.invocationCallOrder as number[]).length = 0;
-      for (let i = 0; i < syncData.calls.length; i++) {
-        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
-        (originalMock.results as { type: string; value: unknown }[]).push(
-          syncData.results[i] ?? { type: 'return', value: undefined },
-        );
-        (originalMock.invocationCallOrder as number[]).push(
-          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
-        );
-      }
-    } else if (existingCount < syncData.calls.length) {
-      for (let i = existingCount; i < syncData.calls.length; i++) {
-        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
-        (originalMock.results as { type: string; value: unknown }[]).push(
-          syncData.results[i] ?? { type: 'return', value: undefined },
-        );
-        (originalMock.invocationCallOrder as number[]).push(
-          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
-        );
-      }
+    (originalMock.calls as unknown[][]).length = 0;
+    (originalMock.results as { type: string; value: unknown }[]).length = 0;
+    (originalMock.invocationCallOrder as number[]).length = 0;
+    for (let i = 0; i < syncData.calls.length; i++) {
+      (originalMock.calls as unknown[][]).push(syncData.calls[i]);
+      (originalMock.results as { type: string; value: unknown }[]).push(
+        syncData.results[i] ?? { type: 'return', value: undefined },
+      );
+      (originalMock.invocationCallOrder as number[]).push(
+        syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
+      );
     }
     return mock;
   };
