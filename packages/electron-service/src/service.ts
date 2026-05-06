@@ -169,6 +169,9 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   }
 
   async beforeCommand(commandName: string, args: unknown[]) {
+    if (this.globalOptions.mode === 'browser') {
+      return;
+    }
     const excludeCommands = ['getWindowHandle', 'getWindowHandles', 'switchToWindow', 'execute'];
     if (!this.browser || excludeCommands.includes(commandName) || isInternalCommand(args)) {
       return;
