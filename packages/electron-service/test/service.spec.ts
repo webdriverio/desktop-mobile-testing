@@ -908,7 +908,7 @@ describe('Electron Worker Service', () => {
     });
 
     describe('patchBrowserUrl()', () => {
-      it('re-throws when the IPC injection script fails after navigation', async () => {
+      it('should re-throw when the IPC injection script fails after navigation', async () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
         await instance.before({}, [], browserModeBrowser);
 
@@ -921,14 +921,14 @@ describe('Electron Worker Service', () => {
         );
       });
 
-      it('resolves normally when the injection script succeeds after navigation', async () => {
+      it('should resolve normally when the injection script succeeds after navigation', async () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
         await instance.before({}, [], browserModeBrowser);
 
         await expect(browserModeBrowser.url('http://localhost:5173/settings')).resolves.toBeUndefined();
       });
 
-      it('does not run the injection script when url() is called without a href (get current URL)', async () => {
+      it('should not run the injection script when url() is called without a href', async () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
         await instance.before({}, [], browserModeBrowser);
 
@@ -940,8 +940,31 @@ describe('Electron Worker Service', () => {
       });
     });
 
+    describe('multiremote missing devServerUrl', () => {
+      it('throws SevereServiceError when an Electron instance has no devServerUrl (neither per-cap nor global)', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser' }, {});
+
+        browserModeBrowser.requestedCapabilities = {
+          alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
+        };
+
+        const rootBrowser = {
+          instances: ['app1'],
+          getInstance: (name: string) => (name === 'app1' ? browserModeBrowser : undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          url: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          isMultiremote: true,
+          electron: {},
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        const { SevereServiceError } = await import('webdriverio');
+        await expect(instance.before({}, [], rootBrowser)).rejects.toBeInstanceOf(SevereServiceError);
+      });
+    });
+
     describe('mixed multiremote (non-Electron instances skipped)', () => {
-      it('does not inject the IPC script into non-Electron multiremote instances', async () => {
+      it('should not inject the IPC script into non-Electron multiremote instances', async () => {
         instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
 
         const electronBrowser = {

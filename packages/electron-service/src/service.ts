@@ -228,8 +228,13 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
 
         const instanceOptions = caps[CUSTOM_CAPABILITY_NAME] as ElectronServiceGlobalOptions | undefined;
         const instanceDevServerUrl = instanceOptions?.devServerUrl ?? this.globalOptions.devServerUrl;
+        if (!instanceDevServerUrl) {
+          throw new SevereServiceError(
+            `devServerUrl is required for browser mode but was not set for multiremote instance "${instanceName}"`,
+          );
+        }
 
-        await instance.url(instanceDevServerUrl!);
+        await instance.url(instanceDevServerUrl);
         await instance.execute(injectionScript);
         (instance as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
         instance.electron = this.getElectronBrowserModeAPI(instance);
