@@ -314,7 +314,7 @@ export async function createElectronBrowserModeMock(
   mock.mockRestore = async () => {
     await runInterceptorScript<void>(browser, browserInterceptor.buildUnregistrationScript(channel));
     outerMockClear();
-    mockStore.deleteMock(`electron.${channel}`);
+    mockStore.deleteMockByRef(mock);
     return mock;
   };
 

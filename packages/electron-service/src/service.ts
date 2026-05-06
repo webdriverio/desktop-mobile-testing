@@ -31,7 +31,15 @@ import { isInternalCommand } from './utils.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
 
 const browserInterceptor = createIpcInterceptor('electron');
-const browserModeMockOwner = new WeakMap<ElectronFunctionMock, WebdriverIO.Browser>();
+const browserModeInstanceIds = new WeakMap<WebdriverIO.Browser, number>();
+let browserModeInstanceCount = 0;
+
+function browserModeStoreKey(browser: WebdriverIO.Browser, channel: string): string {
+  if (!browserModeInstanceIds.has(browser)) {
+    browserModeInstanceIds.set(browser, browserModeInstanceCount++);
+  }
+  return `electron.${channel}\x00${browserModeInstanceIds.get(browser)}`;
+}
 
 const log = createLogger('electron-service', 'service');
 
@@ -263,12 +271,10 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
               `Use browser.electron.mock('${channel}') to mock the IPC channel directly.`,
           );
         }
+        const storeKey = browserModeStoreKey(browser, channel);
         let existing: ElectronFunctionMock | undefined;
         try {
-          const found = mockStore.getMock(`electron.${channel}`) as ElectronFunctionMock;
-          if (browserModeMockOwner.get(found) === browser) {
-            existing = found;
-          }
+          existing = mockStore.getMock(storeKey) as ElectronFunctionMock;
         } catch (e) {
           if (!(e instanceof Error && e.message.startsWith('No mock registered for'))) {
             throw e;
@@ -276,8 +282,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         }
         if (!existing) {
           const newMock = await createElectronBrowserModeMock(channel, browser);
-          browserModeMockOwner.set(newMock, browser);
-          mockStore.setMock(newMock);
+          mockStore.setMockWithKey(storeKey, newMock);
           return newMock;
         }
         // Re-register browser-side entry only if navigation wiped window.__wdio_mocks__
