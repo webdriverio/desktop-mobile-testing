@@ -17,23 +17,26 @@ export function visionEnabled(): boolean {
 
 export async function visionYesNo(png: Buffer, question: string): Promise<boolean> {
   const dataUrl = `data:image/png;base64,${png.toString('base64')}`;
-  const res = await client().chat.completions.create({
-    model: MODEL,
-    temperature: 0,
-    max_tokens: 8,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: dataUrl } },
-          {
-            type: 'text',
-            text: `${question}\n\nReply with exactly one word: YES or NO. No explanation.`,
-          },
-        ],
-      },
-    ],
-  });
+  const res = await client().chat.completions.create(
+    {
+      model: MODEL,
+      temperature: 0,
+      max_tokens: 8,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: dataUrl } },
+            {
+              type: 'text',
+              text: `${question}\n\nReply with exactly one word: YES or NO. No explanation.`,
+            },
+          ],
+        },
+      ],
+    },
+    { signal: AbortSignal.timeout(30_000) },
+  );
   const answer = (res.choices[0]?.message?.content ?? '').trim().toUpperCase();
   if (!/^(YES|NO)$/.test(answer)) {
     throw new Error(`vision model returned unparseable answer: "${answer}"`);

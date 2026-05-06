@@ -37,9 +37,10 @@ describe('tauri native screenshot', () => {
     const webviewPng = Buffer.from(webviewBase64, 'base64');
     const nativePng = await browser.tauri.nativeScreenshot();
 
-    // Layer 1 — structural: valid PNG with non-zero dimensions
+    // Layer 1 — structural: valid PNGs, and native is a distinct capture (not the webview screenshot re-emitted)
     assertValidPng(webviewPng);
     assertValidPng(nativePng);
+    expect(nativePng.equals(webviewPng)).toBe(false);
 
     // Layer 2 — OCR: fixture content is present in the screenshot
     await assertOcrContains(nativePng, ['tauri', 'e2e test app', 'increment', '7']);
