@@ -1014,6 +1014,10 @@ pub trait PlatformExecutor<R: Runtime>: Send + Sync {
     async fn take_element_screenshot(&self, js_var: &str)
         -> Result<String, WebDriverErrorResponse>;
 
+    /// Take a native OS screenshot of the window including title bar and decorations.
+    /// Returns raw PNG bytes. Unsupported on Linux.
+    async fn take_native_screenshot(&self) -> Result<Vec<u8>, WebDriverErrorResponse>;
+
     // =========================================================================
     // Actions (Keyboard/Pointer)
     // =========================================================================

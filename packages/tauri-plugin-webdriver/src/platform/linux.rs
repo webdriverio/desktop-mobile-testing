@@ -331,6 +331,12 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for LinuxExecutor<R> {
         self.take_screenshot().await
     }
 
+    async fn take_native_screenshot(&self) -> Result<Vec<u8>, WebDriverErrorResponse> {
+        Err(WebDriverErrorResponse::unsupported_operation(
+            "native screenshot is not supported on Linux",
+        ))
+    }
+
     // =========================================================================
     // Print
     // =========================================================================

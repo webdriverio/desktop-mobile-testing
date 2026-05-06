@@ -36,6 +36,14 @@ features = [ "rt-multi-thread", "sync", "net", "time" ]
 version = "1"
 features = [ "v4" ]
 
+[target."cfg(any(target_os = \"macos\", target_os = \"windows\"))".dependencies]
+xcap = "0.9"
+
+[target."cfg(any(target_os = \"macos\", target_os = \"windows\"))".dependencies.image]
+version = "0.25"
+default-features = false
+features = ["png"]
+
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
 block2 = "0.6"

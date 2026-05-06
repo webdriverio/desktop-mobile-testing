@@ -11,6 +11,7 @@ pub mod actions;
 pub mod alert;
 pub mod cookie;
 pub mod direct_eval;
+pub mod native_screenshot;
 pub mod document;
 pub mod element;
 pub mod frame;
