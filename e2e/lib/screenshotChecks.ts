@@ -32,10 +32,11 @@ export function assertCapturesChrome(native: StructuralResult, webview: Structur
   }
 }
 
-let worker: Awaited<ReturnType<typeof createWorker>> | undefined;
+let workerPromise: Promise<Awaited<ReturnType<typeof createWorker>>> | undefined;
 
 export async function ocrText(png: Buffer): Promise<string> {
-  worker ??= await createWorker('eng', undefined, { logger: () => {} });
+  workerPromise ??= createWorker('eng', undefined, { logger: () => {} });
+  const worker = await workerPromise;
   const { data } = await worker.recognize(png);
   return data.text;
 }
@@ -51,6 +52,7 @@ export async function assertOcrContains(png: Buffer, expected: string[]): Promis
 }
 
 export async function disposeOcr(): Promise<void> {
-  await worker?.terminate();
-  worker = undefined;
+  const w = workerPromise ? await workerPromise : undefined;
+  workerPromise = undefined;
+  await w?.terminate();
 }
