@@ -68,6 +68,26 @@ describe('ElectronLaunchService — browser mode', () => {
       await launcher.onPrepare({} as any, caps);
       expect(caps[0].browserName).toBe('chrome');
     });
+
+    it('throws SevereServiceError when capabilities have mixed modes', async () => {
+      const launcher = makeLauncher();
+      const caps: any[] = [
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } },
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'native' } },
+      ];
+      await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('mixed modes');
+    });
+
+    it('applies browser mode to all capabilities when all agree', async () => {
+      const launcher = makeLauncher();
+      const caps: any[] = [
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } },
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } },
+      ];
+      await launcher.onPrepare({} as any, caps);
+      expect(caps[0].browserName).toBe('chrome');
+      expect(caps[1].browserName).toBe('chrome');
+    });
   });
 
   describe('onWorkerStart', () => {

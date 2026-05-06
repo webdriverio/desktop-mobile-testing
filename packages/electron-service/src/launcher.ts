@@ -114,11 +114,24 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           (multiremoteOption) => (multiremoteOption as Capabilities.WithRequestedCapabilities).capabilities,
         );
 
-    // Browser mode: skip all Electron binary/CDP setup — worker navigates to a dev server
-    const firstElectronCap = capsList.find((cap) => (cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME]);
+    // Determine and validate run mode across all Electron capabilities
+    const electronCapsList = capsList.filter((cap) => (cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME]);
+    const modes = electronCapsList.map((cap) => {
+      const capOpts = ((cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME] ?? {}) as ElectronServiceGlobalOptions;
+      return capOpts.mode ?? this.#globalOptions.mode ?? 'native';
+    });
+    const uniqueModes = new Set(modes);
+    if (uniqueModes.size > 1) {
+      throw new SevereServiceError(
+        `All Electron capabilities must use the same mode, but found mixed modes: ${[...uniqueModes].join(', ')}. ` +
+          "Set mode consistently across all 'wdio:electronServiceOptions' entries.",
+      );
+    }
+    const mode = modes[0] ?? 'native';
+
+    const firstElectronCap = electronCapsList[0];
     const firstCapOptions = ((firstElectronCap as Record<string, unknown>)?.[CUSTOM_CAPABILITY_NAME] ??
       {}) as ElectronServiceGlobalOptions;
-    const mode = firstCapOptions.mode ?? this.#globalOptions.mode;
     const devServerUrl = firstCapOptions.devServerUrl ?? this.#globalOptions.devServerUrl;
 
     if (mode === 'browser') {
