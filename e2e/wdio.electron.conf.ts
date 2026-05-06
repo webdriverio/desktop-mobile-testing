@@ -168,6 +168,11 @@ type MultiremoteCapabilities = {
 
 type StandardCapabilities = ElectronCapability[];
 
+// On CI, disable GPU compositing so PrintWindow(WM_PRINT) can capture the software-
+// composited window content. With hardware GPU, PrintWindow(PW_RENDERFULLCONTENT) is
+// used instead (see nativeScreenshot.ts), which requires DWM's DX surface sharing.
+const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing'] : [];
+
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
 if (envContext.isMultiremote) {
@@ -178,7 +183,7 @@ if (envContext.isMultiremote) {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
           ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
-          appArgs: ['--foo', '--bar=baz', '--browser=A'],
+          appArgs: ['--foo', '--bar=baz', '--browser=A', ...ciAppArgs],
           apparmorAutoInstall: 'sudo',
           restoreMocks: true,
           captureMainProcessLogs: true,
@@ -193,7 +198,7 @@ if (envContext.isMultiremote) {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
           ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
-          appArgs: ['--foo', '--bar=baz', '--browser=B'],
+          appArgs: ['--foo', '--bar=baz', '--browser=B', ...ciAppArgs],
           apparmorAutoInstall: 'sudo',
           restoreMocks: true,
           captureMainProcessLogs: true,
@@ -211,7 +216,7 @@ if (envContext.isMultiremote) {
       browserName: 'electron',
       'wdio:electronServiceOptions': {
         ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
-        appArgs: ['foo', 'bar=baz'],
+        appArgs: ['foo', 'bar=baz', ...ciAppArgs],
         apparmorAutoInstall: 'sudo',
         restoreMocks: true,
         captureMainProcessLogs: true,

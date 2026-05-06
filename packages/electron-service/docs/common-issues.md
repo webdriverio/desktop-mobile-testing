@@ -94,6 +94,32 @@ export const config = {
 
 **Manual AppArmor workaround**: Run `sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` before running your tests. This command requires root privileges; if necessary, run it as the root user or use the `sudo` command.
 
+## `nativeScreenshot()` produces a black window on Windows CI / virtual machines
+
+`browser.electron.nativeScreenshot()` uses `PrintWindow(PW_RENDERFULLCONTENT)` by default on Windows. This flag captures the DWM off-screen DirectX surface, which is the only reliable way to capture ANGLE/D3D11 Electron content. However, it requires DWM to have a hardware-backed DX shared surface — GitHub Actions Windows runners and most CI/virtual-machine environments only have a WARP software GPU, so DWM cannot fulfil the request and the call either deadlocks or returns a blank bitmap.
+
+#### Solution
+
+Pass `--disable-gpu-compositing` in `appArgs`. This switches Chromium to a software (GDI-compatible) compositor, allowing `PrintWindow` to capture the window content via the classic WM\_PRINT message path. The service detects the flag automatically via `app.commandLine.hasSwitch('disable-gpu-compositing')` and picks the correct `PrintWindow` mode at runtime — no other code changes are required.
+
+```typescript
+// wdio.conf.ts
+const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing'] : [];
+
+export const config = {
+  capabilities: [
+    {
+      browserName: 'electron',
+      'wdio:electronServiceOptions': {
+        appArgs: [...ciAppArgs],
+      },
+    },
+  ],
+};
+```
+
+On developer machines with a real GPU the flag is omitted, so `PW_RENDERFULLCONTENT` is used and captures GPU-composited content correctly.
+
 ### TypeError: logger is not a function
 
 > Still applies in v10. The package was renamed from `wdio-electron-service` to `@wdio/electron-service`, but the import-time initialization order didn't change — the same workaround is needed.
