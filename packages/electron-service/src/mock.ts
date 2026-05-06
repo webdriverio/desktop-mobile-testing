@@ -212,6 +212,7 @@ export async function createElectronBrowserModeMock(
   type ImplState =
     | { kind: 'returnValue' | 'resolvedValue' | 'rejectedValue'; value: unknown }
     | { kind: 'implementation'; fn: AbstractFn }
+    | { kind: 'returnThis' }
     | null;
   let implState: ImplState = null;
 
@@ -339,6 +340,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockReturnThis = async () => {
+    implState = { kind: 'returnThis' };
     await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReturnThis'));
     return mock;
   };
@@ -371,6 +373,11 @@ export async function createElectronBrowserModeMock(
     if (implState.kind === 'implementation') {
       const s = browserInterceptor.serializeHandler(implState.fn);
       await runInterceptorScript<void>(browser, browserInterceptor.buildSetImplementationScript(channel, s));
+    } else if (implState.kind === 'returnThis') {
+      await runInterceptorScript<void>(
+        browser,
+        browserInterceptor.buildInnerInvocationScript(channel, 'mockReturnThis'),
+      );
     } else {
       const method =
         implState.kind === 'returnValue'
