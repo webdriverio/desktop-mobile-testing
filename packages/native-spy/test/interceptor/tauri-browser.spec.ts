@@ -117,7 +117,7 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
       expect(result).toBe(10);
     });
 
-    it('fn() mockResolvedValue(undefined) returns Promise.resolve(undefined)', async () => {
+    it('should return Promise.resolve(undefined) for mockResolvedValue(undefined)', async () => {
       const script = adapter.buildBrowserIpcInjectionScript();
       const window = runInBrowserContext(script);
       const spy = window.__wdio_spy__ as Record<string, unknown>;
@@ -128,7 +128,7 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
       await expect(result as Promise<unknown>).resolves.toBeUndefined();
     });
 
-    it('fn() mockRejectedValue(undefined) returns Promise.reject(undefined)', async () => {
+    it('should return Promise.reject(undefined) for mockRejectedValue(undefined)', async () => {
       const script = adapter.buildBrowserIpcInjectionScript();
       const window = runInBrowserContext(script);
       const spy = window.__wdio_spy__ as Record<string, unknown>;
@@ -139,7 +139,7 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
       await expect(result as Promise<unknown>).rejects.toBeUndefined();
     });
 
-    it('fn() mockClear preserves queued once-implementations', () => {
+    it('should preserve queued once-implementations across mockClear', () => {
       const script = adapter.buildBrowserIpcInjectionScript();
       const window = runInBrowserContext(script);
       const spy = window.__wdio_spy__ as Record<string, unknown>;
@@ -150,7 +150,7 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
       expect(result).toBe(99);
     });
 
-    it('fn() mockReset drains queued once-implementations', () => {
+    it('should drain queued once-implementations on mockReset', () => {
       const script = adapter.buildBrowserIpcInjectionScript();
       const window = runInBrowserContext(script);
       const spy = window.__wdio_spy__ as Record<string, unknown>;
