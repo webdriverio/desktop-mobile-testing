@@ -69,6 +69,24 @@ describe('ElectronLaunchService — browser mode', () => {
       expect(caps[0].browserName).toBe('chrome');
     });
 
+    it('throws SevereServiceError when a per-capability devServerUrl is invalid', async () => {
+      const launcher = makeLauncher();
+      const caps: any[] = [
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } },
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: 'bad-url' } },
+      ];
+      await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('not a valid URL');
+    });
+
+    it('throws SevereServiceError when a per-capability devServerUrl is missing', async () => {
+      const launcher = makeLauncher();
+      const caps: any[] = [
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: DEV_SERVER } },
+        { browserName: 'electron', 'wdio:electronServiceOptions': { mode: 'browser' } },
+      ];
+      await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('devServerUrl is required');
+    });
+
     it('throws SevereServiceError when capabilities have mixed modes', async () => {
       const launcher = makeLauncher();
       const caps: any[] = [

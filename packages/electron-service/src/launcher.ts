@@ -129,19 +129,19 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
     }
     const mode = modes[0] ?? 'native';
 
-    const firstElectronCap = electronCapsList[0];
-    const firstCapOptions = ((firstElectronCap as Record<string, unknown>)?.[CUSTOM_CAPABILITY_NAME] ??
-      {}) as ElectronServiceGlobalOptions;
-    const devServerUrl = firstCapOptions.devServerUrl ?? this.#globalOptions.devServerUrl;
-
     if (mode === 'browser') {
-      if (!devServerUrl) {
-        throw new SevereServiceError('devServerUrl is required when mode is "browser"');
-      }
-      try {
-        new URL(devServerUrl);
-      } catch {
-        throw new SevereServiceError(`devServerUrl is not a valid URL: ${devServerUrl}`);
+      for (const cap of electronCapsList) {
+        const capOpts = ((cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME] ??
+          {}) as ElectronServiceGlobalOptions;
+        const devServerUrl = capOpts.devServerUrl ?? this.#globalOptions.devServerUrl;
+        if (!devServerUrl) {
+          throw new SevereServiceError('devServerUrl is required when mode is "browser"');
+        }
+        try {
+          new URL(devServerUrl);
+        } catch {
+          throw new SevereServiceError(`devServerUrl is not a valid URL: ${devServerUrl}`);
+        }
       }
       this.#browserMode = true;
       const electronCaps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
