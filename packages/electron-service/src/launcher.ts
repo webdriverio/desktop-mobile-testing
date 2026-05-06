@@ -114,9 +114,11 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
           (multiremoteOption) => (multiremoteOption as Capabilities.WithRequestedCapabilities).capabilities,
         );
 
+    // Extract all Electron capabilities once — handles both standard and W3C alwaysMatch format
+    const caps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
+
     // Determine and validate run mode across all Electron capabilities
-    const electronCapsList = capsList.filter((cap) => (cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME]);
-    const modes = electronCapsList.map((cap) => {
+    const modes = caps.map((cap) => {
       const capOpts = ((cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME] ?? {}) as ElectronServiceGlobalOptions;
       return capOpts.mode ?? this.#globalOptions.mode ?? 'native';
     });
@@ -130,7 +132,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
     const mode = modes[0] ?? 'native';
 
     if (mode === 'browser') {
-      for (const cap of electronCapsList) {
+      for (const cap of caps) {
         const capOpts = ((cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME] ??
           {}) as ElectronServiceGlobalOptions;
         const devServerUrl = capOpts.devServerUrl ?? this.#globalOptions.devServerUrl;
@@ -142,19 +144,14 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
         } catch {
           throw new SevereServiceError(`devServerUrl is not a valid URL: ${devServerUrl}`);
         }
-      }
-      this.#browserMode = true;
-      const electronCaps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
-      for (const cap of electronCaps) {
         cap.browserName = 'chrome';
         delete (cap as Record<string, unknown>)['goog:chromeOptions'];
         delete (cap as Record<string, unknown>)['wdio:enforceWebDriverClassic'];
       }
+      this.#browserMode = true;
       log.info('Browser mode enabled — skipping Electron binary and CDP bridge setup');
       return;
     }
-
-    const caps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
     const pkg =
       (await readPackageUp({ cwd: this.#projectRoot })) ||
       ({ packageJson: { dependencies: {}, devDependencies: {} }, path: '' } as NormalizedReadResult);

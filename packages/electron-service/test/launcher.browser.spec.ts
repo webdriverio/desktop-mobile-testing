@@ -87,6 +87,19 @@ describe('ElectronLaunchService — browser mode', () => {
       await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('devServerUrl is required');
     });
 
+    it('validates devServerUrl for W3C alwaysMatch-wrapped capabilities', async () => {
+      const launcher = makeLauncher();
+      const caps: any[] = [
+        {
+          alwaysMatch: {
+            browserName: 'electron',
+            'wdio:electronServiceOptions': { mode: 'browser', devServerUrl: 'not-a-url' },
+          },
+        },
+      ];
+      await expect(launcher.onPrepare({} as any, caps)).rejects.toThrow('not a valid URL');
+    });
+
     it('throws SevereServiceError when capabilities have mixed modes', async () => {
       const launcher = makeLauncher();
       const caps: any[] = [
