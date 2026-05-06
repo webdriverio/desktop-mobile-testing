@@ -11,10 +11,10 @@ export async function nativeScreenshot(
 ): Promise<Buffer> {
   log.debug('capturing native screenshot', options);
 
-  const base64 = await execute<string, [typeof options]>(
+  const base64 = await execute<Promise<string>, [typeof options]>(
     browser,
     cdpBridge,
-    (electron, opts: { windowHandle?: string } | undefined) => {
+    async (electron, opts: { windowHandle?: string } | undefined) => {
       const { BrowserWindow } = electron;
       const win = opts?.windowHandle
         ? BrowserWindow.fromId(Number(opts.windowHandle))
@@ -22,14 +22,12 @@ export async function nativeScreenshot(
 
       if (!win) throw new Error('no Electron BrowserWindow available to capture');
 
-      // biome-ignore lint/style/noCommonJs: callback runs in Electron main process (CommonJS) via CDP
-      const { spawnSync } = require('node:child_process') as typeof import('child_process');
-      // biome-ignore lint/style/noCommonJs: callback runs in Electron main process (CommonJS) via CDP
-      const { tmpdir } = require('node:os') as typeof import('os');
-      // biome-ignore lint/style/noCommonJs: callback runs in Electron main process (CommonJS) via CDP
-      const { join } = require('node:path') as typeof import('path');
-      // biome-ignore lint/style/noCommonJs: callback runs in Electron main process (CommonJS) via CDP
-      const { readFileSync, unlinkSync } = require('node:fs') as typeof import('fs');
+      const [{ spawnSync }, { tmpdir }, { join }, { readFileSync, unlinkSync }] = await Promise.all([
+        import('node:child_process'),
+        import('node:os'),
+        import('node:path'),
+        import('node:fs'),
+      ]);
 
       const out = join(tmpdir(), `wdio-native-${Date.now()}.png`);
 
