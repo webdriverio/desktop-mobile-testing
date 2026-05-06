@@ -234,6 +234,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
 
       browser.electron = this.getElectronBrowserModeAPI(browser);
       this.patchBrowserUrl(browser, injectionScript);
+      this.installCommandOverrides(browser as unknown as WebdriverIO.Browser);
     } else {
       const devServerUrl = this.globalOptions.devServerUrl;
       if (!devServerUrl) {
@@ -312,6 +313,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         )) as boolean;
         if (!isBrowserSideLive) {
           await browser.execute(`return (${browserInterceptor.buildRegistrationScript(channel)})()`);
+          await existing.mockClear();
         }
         return existing;
       },
