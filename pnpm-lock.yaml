@@ -7,35 +7,35 @@ settings:
 catalogs:
   default:
     '@wdio/cli':
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
     '@wdio/globals':
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
     '@wdio/local-runner':
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
     '@wdio/logger':
       specifier: ^9.18.0
       version: 9.18.0
     '@wdio/mocha-framework':
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
     '@wdio/spec-reporter':
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
     '@wdio/types':
-      specifier: 9.27.0
-      version: 9.27.0
+      specifier: 9.27.1
+      version: 9.27.1
     '@wdio/xvfb':
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
     electron:
       specifier: 41.2.0
       version: 41.2.0
     webdriverio:
-      specifier: ^9.27.0
-      version: 9.27.0
+      specifier: ^9.27.1
+      version: 9.27.1
 
 importers:
 
@@ -55,10 +55,10 @@ importers:
         version: 25.6.0
       '@typescript-eslint/parser':
         specifier: ^8.57.0
-        version: 8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@5.9.3)
+        version: 8.58.2(eslint@10.2.0(jiti@2.7.0))(typescript@5.9.3)
       '@vitest/eslint-plugin':
         specifier: ^1.6.11
-        version: 1.6.16(eslint@10.2.0(jiti@2.6.1))(typescript@5.9.3)(vitest@4.1.4)
+        version: 1.6.16(eslint@10.2.0(jiti@2.7.0))(typescript@5.9.3)(vitest@4.1.4)
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
@@ -67,10 +67,10 @@ importers:
         version: 10.1.0
       eslint:
         specifier: ^10.0.3
-        version: 10.2.0(jiti@2.6.1)
+        version: 10.2.0(jiti@2.7.0)
       eslint-plugin-wdio:
         specifier: ^9.25.0
-        version: 9.27.0(eslint@10.2.0(jiti@2.6.1))(globals@17.5.0)
+        version: 9.27.0(eslint@10.2.0(jiti@2.7.0))(globals@17.5.0)
       globals:
         specifier: ^17.4.0
         version: 17.5.0
@@ -103,19 +103,19 @@ importers:
     dependencies:
       '@wdio/cli':
         specifier: catalog:default
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: link:../packages/electron-service
         version: link:../packages/electron-service
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
         specifier: catalog:default
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       '@wdio/native-utils':
         specifier: workspace:*
         version: link:../packages/native-utils
@@ -124,7 +124,7 @@ importers:
         version: link:../packages/tauri-service
       '@wdio/xvfb':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       electron:
         specifier: catalog:default
         version: 41.2.0
@@ -133,7 +133,7 @@ importers:
         version: 4.21.0
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
     devDependencies:
       '@crabnebula/tauri-driver':
         specifier: ^2.0.9
@@ -158,7 +158,7 @@ importers:
         version: link:../packages/native-types
       '@wdio/types':
         specifier: 'catalog:'
-        version: 9.27.0
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -179,16 +179,16 @@ importers:
         version: 25.6.0
       '@wdio/cli':
         specifier: catalog:default
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
         specifier: catalog:default
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       electron:
         specifier: catalog:default
         version: 41.2.0
@@ -197,13 +197,13 @@ importers:
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
 
   fixtures/e2e-apps/electron-forge:
     devDependencies:
@@ -215,28 +215,28 @@ importers:
         version: 25.6.0
       '@wdio/cli':
         specifier: catalog:default
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
         specifier: catalog:default
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       electron:
         specifier: catalog:default
         version: 41.2.0
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
 
   fixtures/e2e-apps/electron-script:
     devDependencies:
@@ -245,28 +245,28 @@ importers:
         version: 25.6.0
       '@wdio/cli':
         specifier: catalog:default
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
         specifier: catalog:default
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       electron:
         specifier: catalog:default
         version: 41.2.0
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
 
   fixtures/e2e-apps/tauri:
     dependencies:
@@ -290,17 +290,17 @@ importers:
         specifier: 2.11.0
         version: 2.11.0
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/tauri-service':
         specifier: workspace:*
         version: link:../../../packages/tauri-service
@@ -309,7 +309,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^7.3.1
-        version: 7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
   fixtures/package-tests/electron-builder-app-cjs:
     devDependencies:
@@ -317,23 +317,23 @@ importers:
         specifier: ^25.5.0
         version: 25.6.0
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/globals':
-        specifier: ^9.27.0
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -345,7 +345,7 @@ importers:
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -356,23 +356,23 @@ importers:
         specifier: ^25.5.0
         version: 25.6.0
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/globals':
-        specifier: ^9.27.0
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -384,7 +384,7 @@ importers:
         version: 26.8.1(electron-builder-squirrel-windows@26.8.1)
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -410,20 +410,20 @@ importers:
         specifier: ^25.5.0
         version: 25.6.0
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/globals':
-        specifier: ^9.27.0
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/native-types':
         specifier: workspace:*
         version: link:../../../packages/native-types
@@ -431,8 +431,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/native-utils
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -441,7 +441,7 @@ importers:
         version: 41.2.0
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -467,20 +467,20 @@ importers:
         specifier: ^25.5.0
         version: 25.6.0
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/globals':
-        specifier: ^9.27.0
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/native-types':
         specifier: workspace:*
         version: link:../../../packages/native-types
@@ -488,8 +488,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/native-utils
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -498,7 +498,7 @@ importers:
         version: 41.2.0
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -512,23 +512,23 @@ importers:
         specifier: ^7.7.1
         version: 7.7.1
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/globals':
-        specifier: ^9.27.0
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -537,7 +537,7 @@ importers:
         version: 41.2.0
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       semver:
         specifier: ^7.7.4
         version: 7.7.4
@@ -554,23 +554,23 @@ importers:
         specifier: ^7.7.1
         version: 7.7.1
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/electron-service':
         specifier: workspace:*
         version: link:../../../packages/electron-service
       '@wdio/globals':
-        specifier: ^9.27.0
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -579,7 +579,7 @@ importers:
         version: 41.2.0
       electron-vite:
         specifier: ^5.0.0
-        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       semver:
         specifier: ^7.7.4
         version: 7.7.4
@@ -603,17 +603,17 @@ importers:
         specifier: 2.11.0
         version: 2.11.0
       '@wdio/cli':
-        specifier: ^9.27.0
-        version: 9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
+        specifier: ^9.27.1
+        version: 9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)
       '@wdio/local-runner':
-        specifier: ^9.27.0
-        version: 9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        specifier: ^9.27.1
+        version: 9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/mocha-framework':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/spec-reporter':
-        specifier: ^9.27.0
-        version: 9.27.0
+        specifier: ^9.27.1
+        version: 9.27.1
       '@wdio/tauri-service':
         specifier: workspace:*
         version: link:../../../packages/tauri-service
@@ -668,7 +668,7 @@ importers:
         version: 4.21.0
       vitest:
         specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/electron-cdp-bridge:
     dependencies:
@@ -714,7 +714,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/electron-service:
     dependencies:
@@ -732,7 +732,7 @@ importers:
         version: link:../electron-cdp-bridge
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0
@@ -771,7 +771,7 @@ importers:
         version: 0.23.11
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
       yaml:
         specifier: ^2.8.2
         version: 2.8.3
@@ -799,7 +799,7 @@ importers:
         version: link:../native-spy
       '@wdio/types':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       builder-util:
         specifier: ^26.8.0
         version: 26.8.1
@@ -826,7 +826,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/native-spy:
     devDependencies:
@@ -844,7 +844,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/native-types:
     devDependencies:
@@ -859,13 +859,13 @@ importers:
         version: 25.6.0
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/native-spy':
         specifier: workspace:*
         version: link:../native-spy
       '@wdio/types':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       builder-util:
         specifier: ^26.8.0
         version: 26.8.1
@@ -880,7 +880,7 @@ importers:
         version: 5.9.3
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
 
   packages/native-utils:
     dependencies:
@@ -929,7 +929,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/tauri-plugin:
     dependencies:
@@ -963,13 +963,13 @@ importers:
         version: 5.9.3
       vitest:
         specifier: 4.1.4
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/tauri-service:
     dependencies:
       '@wdio/globals':
         specifier: catalog:default
-        version: 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+        version: 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/logger':
         specifier: catalog:default
         version: 9.18.0
@@ -984,10 +984,10 @@ importers:
         version: link:../native-utils
       '@wdio/spec-reporter':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       '@wdio/types':
         specifier: catalog:default
-        version: 9.27.0
+        version: 9.27.1
       debug:
         specifier: ^4.4.3
         version: 4.4.3(supports-color@8.1.1)
@@ -999,7 +999,7 @@ importers:
         version: 2.8.1
       webdriverio:
         specifier: catalog:default
-        version: 9.27.0(puppeteer-core@24.41.0)
+        version: 9.27.1(puppeteer-core@24.41.0)
     devDependencies:
       '@babel/parser':
         specifier: ^7.29.0
@@ -1024,7 +1024,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.18
-        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
 packages:
 
@@ -2258,8 +2258,8 @@ packages:
     resolution: {integrity: sha512-cXu86tF4VQVfwz8W1SPbhoRyHJkti6mjH/XJIxp40jhO4j2k1m4KYrEykxqWPkFF3vrK4rgQppBh//AwyGSXPA==}
     engines: {node: '>=18'}
 
-  '@nodable/entities@1.1.0':
-    resolution: {integrity: sha512-bidpxmTBP0pOsxULw6XlxzQpTgrAGLDHGBK/JuWhPDL6ZV0GZ/PmN9CA9do6e+A9lYI6qx6ikJUtJYRxup141g==}
+  '@nodable/entities@2.1.0':
+    resolution: {integrity: sha512-nyT7T3nbMyBI/lvr6L5TyWbFJAI9FTgVRakNoBqCD+PmID8DzFrrNdLLtHMwMszOtqZa8PAOV24ZqDnQrhQINA==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -2360,6 +2360,11 @@ packages:
 
   '@puppeteer/browsers@2.13.0':
     resolution: {integrity: sha512-46BZJYJjc/WwmKjsvDFykHtXrtomsCIrwYQPOP7VfMJoZY2bsDF9oROBABR3paDjDcmkUye1Pb1BqdcdiipaWA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  '@puppeteer/browsers@2.13.1':
+    resolution: {integrity: sha512-zmS4RTK9fbrc++WlAJhxYbfz3IjDeOmkK/CwwbLmk7ydfS9e2CiEeRJHEPvjDVElO/bwXbidwGA37Bsm6LzCnQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -2676,8 +2681,8 @@ packages:
   '@tauri-apps/plugin-log@2.8.0':
     resolution: {integrity: sha512-a+7rOq3MJwpTOLLKbL8d0qGZ85hgHw5pNOWusA9o3cf7cEgtYHiGY/+O8fj8MvywQIGqFv0da2bYQDlrqLE7rw==}
 
-  '@tootallnate/once@2.0.0':
-    resolution: {integrity: sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A==}
+  '@tootallnate/once@2.0.1':
+    resolution: {integrity: sha512-HqmEUIGRJ5fSXchkVgR5F7qn48bDBzv0kWj/Kfu5e6uci4UlEeng4331LnBkWffb++Ei3FOVLxo8JJWMFBDMeQ==}
     engines: {node: '>= 10'}
 
   '@tootallnate/quickjs-emscripten@0.23.0':
@@ -2916,6 +2921,9 @@ packages:
   '@vitest/pretty-format@4.1.4':
     resolution: {integrity: sha512-ddmDHU0gjEUyEVLxtZa7xamrpIefdEETu3nZjWtHeZX4QxqJ7tRxSteHVXJOcr8jhiLoGAhkK4WJ3WqBpjx42A==}
 
+  '@vitest/pretty-format@4.1.5':
+    resolution: {integrity: sha512-7I3q6l5qr03dVfMX2wCo9FxwSJbPdwKjy2uu/YPpU3wfHvIL4QHwVRp57OfGrDFeUJ8/8QdfBKIV12FTtLn00g==}
+
   '@vitest/runner@4.1.4':
     resolution: {integrity: sha512-xTp7VZ5aXP5ZJrn15UtJUWlx6qXLnGtF6jNxHepdPHpMfz/aVPx+htHtgcAL2mDXJgKhpoo2e9/hVJsIeFbytQ==}
 
@@ -2925,79 +2933,85 @@ packages:
   '@vitest/snapshot@4.1.4':
     resolution: {integrity: sha512-MCjCFgaS8aZz+m5nTcEcgk/xhWv0rEH4Yl53PPlMXOZ1/Ka2VcZU6CJ+MgYCZbcJvzGhQRjVrGQNZqkGPttIKw==}
 
+  '@vitest/snapshot@4.1.5':
+    resolution: {integrity: sha512-zypXEt4KH/XgKGPUz4eC2AvErYx0My5hfL8oDb1HzGFpEk1P62bxSohdyOmvz+d9UJwanI68MKwr2EquOaOgMQ==}
+
   '@vitest/spy@4.1.4':
     resolution: {integrity: sha512-XxNdAsKW7C+FLydqFJLb5KhJtl3PGCMmYwFRfhvIgxJvLSXhhVI1zM8f1qD3Zg7RCjTSzDVyct6sghs9UEgBEQ==}
 
   '@vitest/utils@4.1.4':
     resolution: {integrity: sha512-13QMT+eysM5uVGa1rG4kegGYNp6cnQcsTc67ELFbhNLQO+vgsygtYJx2khvdt4gVQqSSpC/KT5FZZxUpP3Oatw==}
 
+  '@vitest/utils@4.1.5':
+    resolution: {integrity: sha512-76wdkrmfXfqGjueGgnb45ITPyUi1ycZ4IHgC2bhPDUfWHklY/q3MdLOAB+TF1e6xfl8NxNY0ZYaPCFNWSsw3Ug==}
+
   '@vscode/sudo-prompt@9.3.2':
     resolution: {integrity: sha512-gcXoCN00METUNFeQOFJ+C9xUI0DKB+0EGMVg7wbVYRHBw2Eq3fKisDZOkRdOz3kqXRKOENMfShPOmypw1/8nOw==}
 
-  '@wdio/cli@9.27.0':
-    resolution: {integrity: sha512-k3kSs1sWTnDwdFLdBua7j5O//0N9k3qTj2nkyfMnkCEzOU00UMV2Y0f/yzNrn8BkkvohrJmwdEQPYx7rNhfj9g==}
+  '@wdio/cli@9.27.1':
+    resolution: {integrity: sha512-FxwHq7UZs81FWHWUhk3F/Nh2U8VpKzJrrDTminj8EYquNzsBOr6gw11M4lENuQ+Cre/aS01cxZYkgTYWkPGrOw==}
     engines: {node: '>=18.20.0'}
     hasBin: true
 
-  '@wdio/config@9.27.0':
-    resolution: {integrity: sha512-9y8z7ugIbU6ycKrA2SqCpKh1/hobut2rDq9CLt/BNVzSlebBBVOTMiAt1XroZzcPnA7/ZqpbkpOsbpPUaAQuNQ==}
+  '@wdio/config@9.27.1':
+    resolution: {integrity: sha512-QVfSCqcpMfVum9KlpxgjaLlSLXkc53UQ2CPJU+IUVBp8LkbSyeX972HQS8V9Hnn6vSPE1dYScItg7wblnJ8RQg==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/dot-reporter@9.27.0':
-    resolution: {integrity: sha512-gYFCTeEHZxzqdXCn/L519HDAFpci+dsdfzLHg+2XMlzIWEGSgHxMIr4/iLjvCwDgCSLeh+XvsBsPm3U+qOtwdg==}
+  '@wdio/dot-reporter@9.27.1':
+    resolution: {integrity: sha512-MF42psa0wEZp6UsBsmiS8uSkDBrVDtncBhyHi34aLkiBuZ+exftO910KKXD3c5QNJcZwV2ps8eayjuqLdFp0XQ==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/globals@9.27.0':
-    resolution: {integrity: sha512-yT6EAyvEqm+wFD11fg89BMxvFkYLgnIVCihfJx+k73Gm3utL/DfZQpSheQdwrlQzu5p7jHi/JwOD76740F5Peg==}
+  '@wdio/globals@9.27.1':
+    resolution: {integrity: sha512-jm6gTQ6Qo3EOBY6PA09U/5Pf17WLEJM1/lTfhc6jzLFE770EuhuhbuphqrInH0hVR9WMyWtSZQ+LRCcLfcmOPQ==}
     engines: {node: '>=18.20.0'}
     peerDependencies:
       expect-webdriverio: ^5.6.5
       webdriverio: ^9.0.0
 
-  '@wdio/local-runner@9.27.0':
-    resolution: {integrity: sha512-0AqAbz1UhZ9e72ebqH4/B9/qOy0LVm3iOOYp16Rz2zkE5DOudLPPn3DpakafqW22Z7Q+Wb/23KRttPMrq0rOxw==}
+  '@wdio/local-runner@9.27.1':
+    resolution: {integrity: sha512-Uvol8Je1VrCUDZqLT1/fhrvXOGpAGcjEXd69LbhupFAVv336fGX+aonJlWV8VJyWow55xSW4zmKnaLIhpFk3Uw==}
     engines: {node: '>=18.20.0'}
 
   '@wdio/logger@9.18.0':
     resolution: {integrity: sha512-HdzDrRs+ywAqbXGKqe1i/bLtCv47plz4TvsHFH3j729OooT5VH38ctFn5aLXgECmiAKDkmH/A6kOq2Zh5DIxww==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/mocha-framework@9.27.0':
-    resolution: {integrity: sha512-bngxUgV7FRcrcPsf5oeNBPHMBCiQoMAg6fdv0iaaOvmNQOzu2y5hB/dmLBH8FjXby4Ni/H6ea2oA2MPwJYW9FA==}
+  '@wdio/mocha-framework@9.27.1':
+    resolution: {integrity: sha512-HJ2FtV6qgy7Rs7xGKjyGIKMtFBlCRfxiK9jTElRlOPyQjv79BHc1+sDcQpvufunKuma35rLUCuwtbeY3HotJVg==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/protocols@9.27.0':
-    resolution: {integrity: sha512-rIk69BsY1+6uU2PEN5FiRpI6K7HJ86YHzZRFBe4iRzKXQgGNk1zWzbdVJIuNFoOWsnmYUkK42KSSOT4Le6EmiQ==}
+  '@wdio/protocols@9.27.1':
+    resolution: {integrity: sha512-Ril46AmySoiYX9nuKqFr3SNJqquU3VmF9FzSndQlDib0G3oA4pYx9wcBXvdvkFxRjjmFwQDzmvztKrssAHymgw==}
 
   '@wdio/repl@9.16.2':
     resolution: {integrity: sha512-FLTF0VL6+o5BSTCO7yLSXocm3kUnu31zYwzdsz4n9s5YWt83sCtzGZlZpt7TaTzb3jVUfxuHNQDTb8UMkCu0lQ==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/reporter@9.27.0':
-    resolution: {integrity: sha512-JsazSrpdKrUEz0RkZcNzHHO9EaoJsWnjzi8Lk3hyI3e2T0M0d/EZTaYwLU+zZXr9VRJBulv8DhRfmBx+gbY2jw==}
+  '@wdio/reporter@9.27.1':
+    resolution: {integrity: sha512-2ueVjd5hOCclfC+GV3yhaN/4Tids1mXMcpPtNTPushHIQY4gLmBqqKDe5RSXAED3bNU+DRdHq2uBiZTBd4QDJg==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/runner@9.27.0':
-    resolution: {integrity: sha512-PAuvuq0GaziutDXO8pZkUmca/qFGnGY2O3e4mQtqDUZbkyxYF4W68WJWhkvwuDAvN5GH1V+K/FBmiwL8m+roxw==}
+  '@wdio/runner@9.27.1':
+    resolution: {integrity: sha512-vd/cVrI1++TAqs85CJFt0eJT3/fr1njMBV5I0GDjsHN6J0g9hemJk3VV7T4x1cBtAnCPlj22Q2Bzy4JhYN2gLg==}
     engines: {node: '>=18.20.0'}
     peerDependencies:
       expect-webdriverio: ^5.6.5
       webdriverio: ^9.0.0
 
-  '@wdio/spec-reporter@9.27.0':
-    resolution: {integrity: sha512-pSrSfflFGthCc14B/4VZqthrz6T5/N+PDqpIOf+bfwJwtPgVlzZoLzbkKYDmCYHGDlDFt1QrZS9WQ5Qw2Qz/Ow==}
+  '@wdio/spec-reporter@9.27.1':
+    resolution: {integrity: sha512-q9UMJJbCcP+nCOojIvOIcsXnerhHICmWu94guRMRYPbW2IsG/5VM/uhzwru8SU/1WRXLtKgTjkuXXsjzjVpf2w==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/types@9.27.0':
-    resolution: {integrity: sha512-DQJ+OdRBqUBcQ30DN2Z651hEVh3OoxnlDUSRqlWy9An2AY6v9rYWTj825B6zsj5pLLEToYO1tfwWq0ab183pXg==}
+  '@wdio/types@9.27.1':
+    resolution: {integrity: sha512-EHBNCvLmvpYerln4mb/OBxzKtnavL2wdenjhwuYjzkZMOWHgm/uLXH6sLThM0y6DIbCU72Asth16fo1eDcsofA==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/utils@9.27.0':
-    resolution: {integrity: sha512-fUasd5OKJTy2seJfWnYZ9xlxTtY0p/Kyeuh7Tbb8kcofBqmBi2fTvM3sfZlo1tGQX9yCh+IS2N7hlfyFMmuZ+w==}
+  '@wdio/utils@9.27.1':
+    resolution: {integrity: sha512-s2w1tFrvmpdkZ33LYsIw4ONRdWIIm4MxkyIuibbcG1ILV5fFMS9rU59csHuWIM0KhJoEoLU+fzE3ze9O7TpWhw==}
     engines: {node: '>=18.20.0'}
 
-  '@wdio/xvfb@9.27.0':
-    resolution: {integrity: sha512-sumk8m5wzOPMs8TizfQkWG0MTqe0p1yfu77ouz+xy1hNW+gaSf99uiU3lvz4rSghloM1esKfqRCFQibJI4+d/w==}
+  '@wdio/xvfb@9.27.1':
+    resolution: {integrity: sha512-7qOnrAF+3o+bg0ijqIoxsXloCQZ9sG9o8Jt9btg4NiyC6mRIQoqxnQBDo0M/v4ZnmAaz/hSCDvQNU0Y/7baNZA==}
     engines: {node: '>=18'}
 
   '@webassemblyjs/ast@1.14.1':
@@ -3048,6 +3062,7 @@ packages:
   '@xmldom/xmldom@0.8.12':
     resolution: {integrity: sha512-9k/gHF6n/pAi/9tqr3m3aqkuiNosYTurLLUtc7xQ9sxB/wm7WPygCv8GYa6mS0fLJEHhqMC1ATYhz++U/lRHqg==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -3638,8 +3653,8 @@ packages:
   crc@3.8.0:
     resolution: {integrity: sha512-iX3mfgcTMIq3ZKLIsVFAbv7+Mc10kxabAGQb8HvjA1o3T1PIYprbakQ65d3I+2HGHt6nSKkM9PYjgoJO2KcFBQ==}
 
-  create-wdio@9.27.0:
-    resolution: {integrity: sha512-6ot1WVks07Otj+5jDsi/NU0L3avsIA9C1mh0MtlXsR6kSvZNxwc56NH6sX3M1p+5e8Ysl777Vs4PqmgHh7LrNg==}
+  create-wdio@9.27.1:
+    resolution: {integrity: sha512-/cpc9s3iJWYBhglj8x0DhxH4OMSAh4daYnJg0E93XTCnv+jmS+Nb88Yq+fl1hvNEziTOPn4A93+6nEfiVuwdIQ==}
     engines: {node: '>=12.0.0'}
     hasBin: true
 
@@ -4179,11 +4194,11 @@ packages:
   fast-wrap-ansi@0.2.0:
     resolution: {integrity: sha512-rLV8JHxTyhVmFYhBJuMujcrHqOT2cnO5Zxj37qROj23CP39GXubJRBUFF0z8KFK77Uc0SukZUf7JZhsVEQ6n8w==}
 
-  fast-xml-builder@1.1.4:
-    resolution: {integrity: sha512-f2jhpN4Eccy0/Uz9csxh3Nu6q4ErKxf0XIsasomfOihuSUa3/xw6w8dnOtCDgEItQFJG8KyXPzQXzcODDrrbOg==}
+  fast-xml-builder@1.1.9:
+    resolution: {integrity: sha512-jcyKVSEX13iseJqg7n/KWw+xnu/7fdrZ333Fac54KjHDIELVCfDDJXYIm6DTJ0Su4gSzrhqiK0DzY/wZbF40mw==}
 
-  fast-xml-parser@5.6.0:
-    resolution: {integrity: sha512-5G+uaEBbOm9M4dgMOV3K/rBzfUNGqGqoUTaYJM3hBwM8t71w07gxLQZoTsjkY8FtfjabqgQHEkeIySBDYeBmJw==}
+  fast-xml-parser@5.7.3:
+    resolution: {integrity: sha512-C0AaNuC+mscy6vrAQKAc/rMq+zAPHodfHGZu4sGVehvAQt/JLG1O5zEcYcXSY5zSqr4YVgxsB+pHXTq0i7eDlg==}
     hasBin: true
 
   fastq@1.20.1:
@@ -4635,6 +4650,10 @@ packages:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
     engines: {node: '>= 12'}
 
+  ip-address@10.2.0:
+    resolution: {integrity: sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA==}
+    engines: {node: '>= 12'}
+
   is-arrayish@0.2.1:
     resolution: {integrity: sha512-zz06S8t0ozoDXMG+ube26zeCTNXcKIPJZJi8hBrF4idCLms4CG9QtK7qBl1boi5ODzFpjswb5JPmHCbMpjaYzg==}
 
@@ -4794,6 +4813,10 @@ packages:
 
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
+    hasBin: true
+
+  jiti@2.7.0:
+    resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
 
   jju@1.4.0:
@@ -5960,6 +5983,10 @@ packages:
     resolution: {integrity: sha512-HLpt+uLy/pxB+bum/9DzAgiKS8CX1EvbWxI4zlmgGCExImLdiad2iCwXT5Z4c9c3Eq8rP2318mPW2c+QbtjK8A==}
     engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
 
+  socks@2.8.8:
+    resolution: {integrity: sha512-NlGELfPrgX2f1TAAcz0WawlLn+0r3FyhhCRpFFK2CemXenPYvzMWWZINv3eDNo9ucdwme7oCHRY0Jnbs4aIkog==}
+    engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -6489,12 +6516,12 @@ packages:
   webdriver-bidi-protocol@0.4.1:
     resolution: {integrity: sha512-ARrjNjtWRRs2w4Tk7nqrf2gBI0QXWuOmMCx2hU+1jUt6d00MjMxURrhxhGbrsoiZKJrhTSTzbIrc554iKI10qw==}
 
-  webdriver@9.27.0:
-    resolution: {integrity: sha512-w07ThZND48SIr0b4S7eFougYUyclmoUwdmju8yXvEJiXYjDjeYUpl8wZrYPEYRBylxpSx+sBHfEUBrPQkcTTRQ==}
+  webdriver@9.27.1:
+    resolution: {integrity: sha512-vr6h+RNQ75O2cofgVrdupGxtKjPEBaBYx/lHCHe0giJfAK01oL0U/yrOksJi7kmpev/daN93ldFPhlIlmWtv8Q==}
     engines: {node: '>=18.20.0'}
 
-  webdriverio@9.27.0:
-    resolution: {integrity: sha512-Y4FbMf4bKBXpPB0lYpglzQ2GfDDe6uojmMZl85uPyrDx18NW7mqN84ZawGoIg/FRvcLaVhcOzc98WOPo725Rag==}
+  webdriverio@9.27.1:
+    resolution: {integrity: sha512-iPaIU/DluYY7zfLiwXDdoLU/6ZW8eup4PNwQikrCzTfvH/ITllRhFUe6NRDTEEePSxxRTeXAn9nehCs98xWGVA==}
     engines: {node: '>=18.20.0'}
     peerDependencies:
       puppeteer-core: '>=22.x || <=24.x'
@@ -7566,9 +7593,9 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@eslint-community/eslint-utils@4.9.1(eslint@10.2.0(jiti@2.6.1))':
+  '@eslint-community/eslint-utils@4.9.1(eslint@10.2.0(jiti@2.7.0))':
     dependencies:
-      eslint: 10.2.0(jiti@2.6.1)
+      eslint: 10.2.0(jiti@2.7.0)
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/regexpp@4.12.2': {}
@@ -8066,7 +8093,7 @@ snapshots:
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
 
-  '@nodable/entities@1.1.0': {}
+  '@nodable/entities@2.1.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -8184,6 +8211,21 @@ snapshots:
       spacetrim: 0.11.59
 
   '@puppeteer/browsers@2.13.0':
+    dependencies:
+      debug: 4.4.3(supports-color@8.1.1)
+      extract-zip: 2.0.1
+      progress: 2.0.3
+      proxy-agent: 6.5.0
+      semver: 7.7.4
+      tar-fs: 3.1.2
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - react-native-b4a
+      - supports-color
+
+  '@puppeteer/browsers@2.13.1':
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
       extract-zip: 2.0.1
@@ -8448,7 +8490,7 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.11.0
 
-  '@tootallnate/once@2.0.0': {}
+  '@tootallnate/once@2.0.1': {}
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
@@ -8594,14 +8636,14 @@ snapshots:
       '@types/node': 25.6.0
     optional: true
 
-  '@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@5.9.3)':
+  '@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.58.2
       '@typescript-eslint/types': 8.58.2
       '@typescript-eslint/typescript-estree': 8.58.2(typescript@5.9.3)
       '@typescript-eslint/visitor-keys': 8.58.2
       debug: 4.4.3(supports-color@8.1.1)
-      eslint: 10.2.0(jiti@2.6.1)
+      eslint: 10.2.0(jiti@2.7.0)
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -8641,13 +8683,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@5.9.3)':
+  '@typescript-eslint/utils@8.58.2(eslint@10.2.0(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.1(eslint@10.2.0(jiti@2.6.1))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@10.2.0(jiti@2.7.0))
       '@typescript-eslint/scope-manager': 8.58.2
       '@typescript-eslint/types': 8.58.2
       '@typescript-eslint/typescript-estree': 8.58.2(typescript@5.9.3)
-      eslint: 10.2.0(jiti@2.6.1)
+      eslint: 10.2.0(jiti@2.7.0)
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -8669,16 +8711,16 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  '@vitest/eslint-plugin@1.6.16(eslint@10.2.0(jiti@2.6.1))(typescript@5.9.3)(vitest@4.1.4)':
+  '@vitest/eslint-plugin@1.6.16(eslint@10.2.0(jiti@2.7.0))(typescript@5.9.3)(vitest@4.1.4)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.58.2
-      '@typescript-eslint/utils': 8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@5.9.3)
-      eslint: 10.2.0(jiti@2.6.1)
+      '@typescript-eslint/utils': 8.58.2(eslint@10.2.0(jiti@2.7.0))(typescript@5.9.3)
+      eslint: 10.2.0(jiti@2.7.0)
     optionalDependencies:
       typescript: 5.9.3
-      vitest: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
     transitivePeerDependencies:
       - supports-color
 
@@ -8691,19 +8733,23 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.4(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))':
+  '@vitest/mocker@4.1.4(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.1.4
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite: 7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
 
   '@vitest/pretty-format@4.1.4':
+    dependencies:
+      tinyrainbow: 3.1.0
+
+  '@vitest/pretty-format@4.1.5':
     dependencies:
       tinyrainbow: 3.1.0
 
@@ -8725,6 +8771,13 @@ snapshots:
       magic-string: 0.30.21
       pathe: 2.0.3
 
+  '@vitest/snapshot@4.1.5':
+    dependencies:
+      '@vitest/pretty-format': 4.1.5
+      '@vitest/utils': 4.1.5
+      magic-string: 0.30.21
+      pathe: 2.0.3
+
   '@vitest/spy@4.1.4': {}
 
   '@vitest/utils@4.1.4':
@@ -8733,21 +8786,27 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
+  '@vitest/utils@4.1.5':
+    dependencies:
+      '@vitest/pretty-format': 4.1.5
+      convert-source-map: 2.0.0
+      tinyrainbow: 3.1.0
+
   '@vscode/sudo-prompt@9.3.2': {}
 
-  '@wdio/cli@9.27.0(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)':
+  '@wdio/cli@9.27.1(@types/node@25.6.0)(expect-webdriverio@5.6.5)(puppeteer-core@24.41.0)':
     dependencies:
       '@vitest/snapshot': 2.1.9
-      '@wdio/config': 9.27.0
-      '@wdio/globals': 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+      '@wdio/config': 9.27.1
+      '@wdio/globals': 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/logger': 9.18.0
-      '@wdio/protocols': 9.27.0
-      '@wdio/types': 9.27.0
-      '@wdio/utils': 9.27.0
+      '@wdio/protocols': 9.27.1
+      '@wdio/types': 9.27.1
+      '@wdio/utils': 9.27.1
       async-exit-hook: 2.0.1
       chalk: 5.6.2
       chokidar: 4.0.3
-      create-wdio: 9.27.0(@types/node@25.6.0)
+      create-wdio: 9.27.1(@types/node@25.6.0)
       dotenv: 17.4.2
       import-meta-resolve: 4.2.0
       lodash.flattendeep: 4.4.0
@@ -8755,7 +8814,7 @@ snapshots:
       lodash.union: 4.6.0
       read-pkg-up: 10.1.0
       tsx: 4.21.0
-      webdriverio: 9.27.0(puppeteer-core@24.41.0)
+      webdriverio: 9.27.1(puppeteer-core@24.41.0)
       yargs: 17.7.2
     transitivePeerDependencies:
       - '@types/node'
@@ -8768,42 +8827,42 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@wdio/config@9.27.0':
+  '@wdio/config@9.27.1':
     dependencies:
       '@wdio/logger': 9.18.0
-      '@wdio/types': 9.27.0
-      '@wdio/utils': 9.27.0
+      '@wdio/types': 9.27.1
+      '@wdio/utils': 9.27.1
       deepmerge-ts: 7.1.5
       glob: 10.5.0
       import-meta-resolve: 4.2.0
-      jiti: 2.6.1
+      jiti: 2.7.0
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
       - react-native-b4a
       - supports-color
 
-  '@wdio/dot-reporter@9.27.0':
+  '@wdio/dot-reporter@9.27.1':
     dependencies:
-      '@wdio/reporter': 9.27.0
-      '@wdio/types': 9.27.0
+      '@wdio/reporter': 9.27.1
+      '@wdio/types': 9.27.1
       chalk: 5.6.2
 
-  '@wdio/globals@9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))':
+  '@wdio/globals@9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))':
     dependencies:
-      expect-webdriverio: 5.6.5(@wdio/globals@9.27.0)(@wdio/logger@9.18.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
-      webdriverio: 9.27.0(puppeteer-core@24.41.0)
+      expect-webdriverio: 5.6.5(@wdio/globals@9.27.1)(@wdio/logger@9.18.0)(webdriverio@9.27.1(puppeteer-core@24.41.0))
+      webdriverio: 9.27.1(puppeteer-core@24.41.0)
 
-  '@wdio/local-runner@9.27.0(@wdio/globals@9.27.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))':
+  '@wdio/local-runner@9.27.1(@wdio/globals@9.27.1)(webdriverio@9.27.1(puppeteer-core@24.41.0))':
     dependencies:
       '@types/node': 20.19.39
       '@wdio/logger': 9.18.0
       '@wdio/repl': 9.16.2
-      '@wdio/runner': 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
-      '@wdio/types': 9.27.0
-      '@wdio/xvfb': 9.27.0
+      '@wdio/runner': 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
+      '@wdio/types': 9.27.1
+      '@wdio/xvfb': 9.27.1
       exit-hook: 4.0.0
-      expect-webdriverio: 5.6.5(@wdio/globals@9.27.0)(@wdio/logger@9.18.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+      expect-webdriverio: 5.6.5(@wdio/globals@9.27.1)(@wdio/logger@9.18.0)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       split2: 4.2.0
       stream-buffers: 3.0.3
     transitivePeerDependencies:
@@ -8824,13 +8883,13 @@ snapshots:
       safe-regex2: 5.1.0
       strip-ansi: 7.2.0
 
-  '@wdio/mocha-framework@9.27.0':
+  '@wdio/mocha-framework@9.27.1':
     dependencies:
       '@types/mocha': 10.0.10
       '@types/node': 20.19.39
       '@wdio/logger': 9.18.0
-      '@wdio/types': 9.27.0
-      '@wdio/utils': 9.27.0
+      '@wdio/types': 9.27.1
+      '@wdio/utils': 9.27.1
       mocha: 10.8.2
     transitivePeerDependencies:
       - bare-abort-controller
@@ -8838,33 +8897,33 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@wdio/protocols@9.27.0': {}
+  '@wdio/protocols@9.27.1': {}
 
   '@wdio/repl@9.16.2':
     dependencies:
       '@types/node': 20.19.39
 
-  '@wdio/reporter@9.27.0':
+  '@wdio/reporter@9.27.1':
     dependencies:
       '@types/node': 20.19.39
       '@wdio/logger': 9.18.0
-      '@wdio/types': 9.27.0
+      '@wdio/types': 9.27.1
       diff: 8.0.4
       object-inspect: 1.13.4
 
-  '@wdio/runner@9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))':
+  '@wdio/runner@9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))':
     dependencies:
       '@types/node': 20.19.39
-      '@wdio/config': 9.27.0
-      '@wdio/dot-reporter': 9.27.0
-      '@wdio/globals': 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+      '@wdio/config': 9.27.1
+      '@wdio/dot-reporter': 9.27.1
+      '@wdio/globals': 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/logger': 9.18.0
-      '@wdio/types': 9.27.0
-      '@wdio/utils': 9.27.0
+      '@wdio/types': 9.27.1
+      '@wdio/utils': 9.27.1
       deepmerge-ts: 7.1.5
-      expect-webdriverio: 5.6.5(@wdio/globals@9.27.0)(@wdio/logger@9.18.0)(webdriverio@9.27.0(puppeteer-core@24.41.0))
-      webdriver: 9.27.0
-      webdriverio: 9.27.0(puppeteer-core@24.41.0)
+      expect-webdriverio: 5.6.5(@wdio/globals@9.27.1)(@wdio/logger@9.18.0)(webdriverio@9.27.1(puppeteer-core@24.41.0))
+      webdriver: 9.27.1
+      webdriverio: 9.27.1(puppeteer-core@24.41.0)
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -8873,23 +8932,23 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@wdio/spec-reporter@9.27.0':
+  '@wdio/spec-reporter@9.27.1':
     dependencies:
-      '@wdio/reporter': 9.27.0
-      '@wdio/types': 9.27.0
+      '@wdio/reporter': 9.27.1
+      '@wdio/types': 9.27.1
       chalk: 5.6.2
       easy-table: 1.2.0
       pretty-ms: 9.3.0
 
-  '@wdio/types@9.27.0':
+  '@wdio/types@9.27.1':
     dependencies:
       '@types/node': 20.19.39
 
-  '@wdio/utils@9.27.0':
+  '@wdio/utils@9.27.1':
     dependencies:
-      '@puppeteer/browsers': 2.13.0
+      '@puppeteer/browsers': 2.13.1
       '@wdio/logger': 9.18.0
-      '@wdio/types': 9.27.0
+      '@wdio/types': 9.27.1
       decamelize: 6.0.1
       deepmerge-ts: 7.1.5
       edgedriver: 6.3.0
@@ -8907,7 +8966,7 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@wdio/xvfb@9.27.0':
+  '@wdio/xvfb@9.27.1':
     dependencies:
       '@wdio/logger': 9.18.0
 
@@ -9621,7 +9680,7 @@ snapshots:
       buffer: 5.7.1
     optional: true
 
-  create-wdio@9.27.0(@types/node@25.6.0):
+  create-wdio@9.27.1(@types/node@25.6.0):
     dependencies:
       chalk: 5.6.2
       commander: 14.0.3
@@ -9855,7 +9914,7 @@ snapshots:
       '@zip.js/zip.js': 2.8.26
       decamelize: 6.0.1
       edge-paths: 3.0.5
-      fast-xml-parser: 5.6.0
+      fast-xml-parser: 5.7.3
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       which: 6.0.1
@@ -9954,7 +10013,7 @@ snapshots:
 
   electron-to-chromium@1.5.336: {}
 
-  electron-vite@5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
+  electron-vite@5.0.0(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.29.0)
@@ -9962,7 +10021,7 @@ snapshots:
       esbuild: 0.25.12
       magic-string: 0.30.21
       picocolors: 1.1.1
-      vite: 7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite: 7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
     transitivePeerDependencies:
       - supports-color
 
@@ -10123,9 +10182,9 @@ snapshots:
     optionalDependencies:
       source-map: 0.6.1
 
-  eslint-plugin-wdio@9.27.0(eslint@10.2.0(jiti@2.6.1))(globals@17.5.0):
+  eslint-plugin-wdio@9.27.0(eslint@10.2.0(jiti@2.7.0))(globals@17.5.0):
     dependencies:
-      eslint: 10.2.0(jiti@2.6.1)
+      eslint: 10.2.0(jiti@2.7.0)
       globals: 17.5.0
 
   eslint-scope@5.1.1:
@@ -10144,9 +10203,9 @@ snapshots:
 
   eslint-visitor-keys@5.0.1: {}
 
-  eslint@10.2.0(jiti@2.6.1):
+  eslint@10.2.0(jiti@2.7.0):
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.1(eslint@10.2.0(jiti@2.6.1))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@10.2.0(jiti@2.7.0))
       '@eslint-community/regexpp': 4.12.2
       '@eslint/config-array': 0.23.5
       '@eslint/config-helpers': 0.5.5
@@ -10177,7 +10236,7 @@ snapshots:
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
-      jiti: 2.6.1
+      jiti: 2.7.0
     transitivePeerDependencies:
       - supports-color
 
@@ -10250,15 +10309,15 @@ snapshots:
 
   expect-type@1.3.0: {}
 
-  expect-webdriverio@5.6.5(@wdio/globals@9.27.0)(@wdio/logger@9.18.0)(webdriverio@9.27.0(puppeteer-core@24.41.0)):
+  expect-webdriverio@5.6.5(@wdio/globals@9.27.1)(@wdio/logger@9.18.0)(webdriverio@9.27.1(puppeteer-core@24.41.0)):
     dependencies:
-      '@vitest/snapshot': 4.1.4
-      '@wdio/globals': 9.27.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0(puppeteer-core@24.41.0))
+      '@vitest/snapshot': 4.1.5
+      '@wdio/globals': 9.27.1(expect-webdriverio@5.6.5)(webdriverio@9.27.1(puppeteer-core@24.41.0))
       '@wdio/logger': 9.18.0
       deep-eql: 5.0.2
       expect: 30.3.0
       jest-matcher-utils: 30.3.0
-      webdriverio: 9.27.0(puppeteer-core@24.41.0)
+      webdriverio: 9.27.1(puppeteer-core@24.41.0)
 
   expect@30.3.0:
     dependencies:
@@ -10324,14 +10383,14 @@ snapshots:
     dependencies:
       fast-string-width: 3.0.2
 
-  fast-xml-builder@1.1.4:
+  fast-xml-builder@1.1.9:
     dependencies:
       path-expression-matcher: 1.5.0
 
-  fast-xml-parser@5.6.0:
+  fast-xml-parser@5.7.3:
     dependencies:
-      '@nodable/entities': 1.1.0
-      fast-xml-builder: 1.1.4
+      '@nodable/entities': 2.1.0
+      fast-xml-builder: 1.1.9
       path-expression-matcher: 1.5.0
       strnum: 2.2.3
 
@@ -10752,7 +10811,7 @@ snapshots:
 
   http-proxy-agent@5.0.0:
     dependencies:
-      '@tootallnate/once': 2.0.0
+      '@tootallnate/once': 2.0.1
       agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
     transitivePeerDependencies:
@@ -10855,6 +10914,8 @@ snapshots:
   interpret@3.1.1: {}
 
   ip-address@10.1.0: {}
+
+  ip-address@10.2.0: {}
 
   is-arrayish@0.2.1: {}
 
@@ -10997,6 +11058,8 @@ snapshots:
       supports-color: 8.1.1
 
   jiti@2.6.1: {}
+
+  jiti@2.7.0: {}
 
   jju@1.4.0: {}
 
@@ -12204,7 +12267,7 @@ snapshots:
     dependencies:
       agent-base: 6.0.2
       debug: 4.4.3(supports-color@8.1.1)
-      socks: 2.8.7
+      socks: 2.8.8
     transitivePeerDependencies:
       - supports-color
 
@@ -12219,6 +12282,11 @@ snapshots:
   socks@2.8.7:
     dependencies:
       ip-address: 10.1.0
+      smart-buffer: 4.2.0
+
+  socks@2.8.8:
+    dependencies:
+      ip-address: 10.2.0
       smart-buffer: 4.2.0
 
   source-map-js@1.2.1: {}
@@ -12628,7 +12696,7 @@ snapshots:
       extsprintf: 1.4.1
     optional: true
 
-  vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3):
+  vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.4)
@@ -12639,15 +12707,15 @@ snapshots:
     optionalDependencies:
       '@types/node': 25.6.0
       fsevents: 2.3.3
-      jiti: 2.6.1
+      jiti: 2.7.0
       terser: 5.46.1
       tsx: 4.21.0
       yaml: 2.8.3
 
-  vitest@4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
+  vitest@4.1.4(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@28.1.0)(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.4
-      '@vitest/mocker': 4.1.4(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/mocker': 4.1.4(vite@7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       '@vitest/pretty-format': 4.1.4
       '@vitest/runner': 4.1.4
       '@vitest/snapshot': 4.1.4
@@ -12664,7 +12732,7 @@ snapshots:
       tinyexec: 1.1.1
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-      vite: 7.3.2(@types/node@25.6.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite: 7.3.2(@types/node@25.6.0)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.6.0
@@ -12698,15 +12766,15 @@ snapshots:
 
   webdriver-bidi-protocol@0.4.1: {}
 
-  webdriver@9.27.0:
+  webdriver@9.27.1:
     dependencies:
       '@types/node': 20.19.39
       '@types/ws': 8.18.1
-      '@wdio/config': 9.27.0
+      '@wdio/config': 9.27.1
       '@wdio/logger': 9.18.0
-      '@wdio/protocols': 9.27.0
-      '@wdio/types': 9.27.0
-      '@wdio/utils': 9.27.0
+      '@wdio/protocols': 9.27.1
+      '@wdio/types': 9.27.1
+      '@wdio/utils': 9.27.1
       deepmerge-ts: 7.1.5
       https-proxy-agent: 7.0.6
       undici: 6.25.0
@@ -12719,16 +12787,16 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  webdriverio@9.27.0(puppeteer-core@24.41.0):
+  webdriverio@9.27.1(puppeteer-core@24.41.0):
     dependencies:
       '@types/node': 20.19.39
       '@types/sinonjs__fake-timers': 8.1.5
-      '@wdio/config': 9.27.0
+      '@wdio/config': 9.27.1
       '@wdio/logger': 9.18.0
-      '@wdio/protocols': 9.27.0
+      '@wdio/protocols': 9.27.1
       '@wdio/repl': 9.16.2
-      '@wdio/types': 9.27.0
-      '@wdio/utils': 9.27.0
+      '@wdio/types': 9.27.1
+      '@wdio/utils': 9.27.1
       archiver: 7.0.1
       aria-query: 5.3.2
       cheerio: 1.2.0
@@ -12745,7 +12813,7 @@ snapshots:
       rgb2hex: 0.2.5
       serialize-error: 12.0.0
       urlpattern-polyfill: 10.1.0
-      webdriver: 9.27.0
+      webdriver: 9.27.1
     optionalDependencies:
       puppeteer-core: 24.41.0
     transitivePeerDependencies:
