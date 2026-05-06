@@ -186,10 +186,10 @@ export class TauriAdapter implements FrameworkAdapter {
   window.__wdio_spy__ = { fn: createMockFn };
   if (!window.__wdio_mocks__) { window.__wdio_mocks__ = {}; }
   if (!window.__TAURI_INTERNALS__) { window.__TAURI_INTERNALS__ = {}; }
-  window.__TAURI_INTERNALS__.invoke = function(cmd, args) {
+  window.__TAURI_INTERNALS__.invoke = function(cmd, args, options) {
     var mock = window.__wdio_mocks__ && window.__wdio_mocks__[cmd];
     if (mock && typeof mock === 'function') {
-      return Promise.resolve().then(function() { return mock(args); });
+      return Promise.resolve().then(function() { return mock(args, options); });
     }
     return Promise.reject(new Error('unmocked Tauri command in browser mode: ' + cmd));
   };

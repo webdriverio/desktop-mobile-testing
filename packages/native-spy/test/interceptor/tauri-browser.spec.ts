@@ -60,8 +60,22 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
     const window = runInBrowserContext(script);
     (window.__wdio_mocks__ as Record<string, unknown>).greet = (_args: unknown) => 'hello';
     const internals = window.__TAURI_INTERNALS__ as Record<string, unknown>;
-    const invoke = internals.invoke as (cmd: string, args: unknown) => Promise<unknown>;
+    const invoke = internals.invoke as (cmd: string, args: unknown, options?: unknown) => Promise<unknown>;
     await expect(invoke('greet', { name: 'world' })).resolves.toBe('hello');
+  });
+
+  it('should pass InvokeOptions as second argument to the registered mock', async () => {
+    const script = adapter.buildBrowserIpcInjectionScript();
+    const window = runInBrowserContext(script);
+    let capturedOptions: unknown;
+    (window.__wdio_mocks__ as Record<string, unknown>).greet = (_args: unknown, opts: unknown) => {
+      capturedOptions = opts;
+      return 'hello';
+    };
+    const internals = window.__TAURI_INTERNALS__ as Record<string, unknown>;
+    const invoke = internals.invoke as (cmd: string, args: unknown, options: unknown) => Promise<unknown>;
+    await invoke('greet', { name: 'world' }, { headers: { 'x-test': '1' } });
+    expect(capturedOptions).toEqual({ headers: { 'x-test': '1' } });
   });
 
   describe('fn()', () => {

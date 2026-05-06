@@ -287,8 +287,9 @@ export default class TauriWorkerService {
     if (!this.devServerUrl) {
       throw new Error('devServerUrl is required for browser mode but was not set');
     }
+    const injectionScript = browserInterceptor.buildBrowserIpcInjectionScript();
     await browser.url(this.devServerUrl);
-    await browser.execute(browserInterceptor.buildBrowserIpcInjectionScript());
+    await browser.execute(injectionScript);
     (browser as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
     if ((browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
       const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
@@ -299,8 +300,31 @@ export default class TauriWorkerService {
       }
     }
     this.addTauriApi(browser, true);
+    this.patchBrowserUrl(browser, injectionScript);
     this.installCommandOverrides();
     log.debug('Browser-only mode initialized');
+  }
+
+  /**
+   * Patch browser.url() so the IPC injection script is re-applied after every
+   * navigation. A page load wipes window state, so without this any browser.url()
+   * call inside a test would silently remove __TAURI_INTERNALS__ patching and
+   * __wdio_mocks__, breaking all mocks registered for that test.
+   */
+  private patchBrowserUrl(browser: WebdriverIO.Browser, injectionScript: string): void {
+    type UrlFn = (href?: string) => Promise<string | void>;
+    const originalUrl = (browser.url as unknown as UrlFn).bind(browser);
+    (browser as unknown as { url: UrlFn }).url = async (href?: string): Promise<string | void> => {
+      const result = await originalUrl(href);
+      if (href !== undefined) {
+        try {
+          await browser.execute(injectionScript);
+        } catch (error) {
+          log.warn('Failed to re-inject IPC script after navigation:', error);
+        }
+      }
+      return result;
+    };
   }
 
   /**
