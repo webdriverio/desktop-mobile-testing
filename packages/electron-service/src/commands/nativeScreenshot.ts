@@ -51,7 +51,7 @@ export async function nativeScreenshot(
 
   if (process.platform === 'darwin') {
     const { x, y, width, height } = windowInfo.bounds;
-    const r = spawnSync('screencapture', ['-x', '-R', `${x},${y},${width},${height}`, out]);
+    const r = spawnSync('screencapture', ['-x', '-R', `${x},${y},${width},${height}`, out], { timeout: 10_000 });
     if (r.error) throw r.error;
     if (r.status !== 0) throw new Error(`screencapture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
   } else if (process.platform === 'win32') {
@@ -68,7 +68,7 @@ export async function nativeScreenshot(
       `$g=[Drawing.Graphics]::FromImage($b); ` +
       `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
       `$b.Save('${outFwd}', [Drawing.Imaging.ImageFormat]::Png)`;
-    const r = spawnSync('powershell', ['-NoProfile', '-Command', ps]);
+    const r = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 30_000 });
     if (r.error) throw r.error;
     if (r.status !== 0) throw new Error(`PowerShell capture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
   } else {

@@ -12,7 +12,7 @@ function client(): OpenAI {
 }
 
 export function visionEnabled(): boolean {
-  return Boolean(process.env.OLLAMA_API_KEY ?? process.env.VISION_API_KEY);
+  return Boolean((process.env.OLLAMA_API_KEY ?? process.env.VISION_API_KEY) && process.env.OLLAMA_BASE_URL);
 }
 
 export async function visionYesNo(png: Buffer, question: string): Promise<boolean> {

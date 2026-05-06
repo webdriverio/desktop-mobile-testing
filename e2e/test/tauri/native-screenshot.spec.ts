@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
-import { assertOcrContains, assertValidPng, disposeOcr } from '../../lib/screenshotChecks.js';
+import { assertCapturesChrome, assertOcrContains, assertValidPng, disposeOcr } from '../../lib/screenshotChecks.js';
 import { visionAssert, visionEnabled } from '../../lib/visionAssert.js';
 
 const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
@@ -37,9 +37,10 @@ describe('tauri native screenshot', () => {
     const webviewPng = Buffer.from(webviewBase64, 'base64');
     const nativePng = await browser.tauri.nativeScreenshot();
 
-    // Layer 1 — structural: valid PNGs, and native is a distinct capture (not the webview screenshot re-emitted)
-    assertValidPng(webviewPng);
-    assertValidPng(nativePng);
+    // Layer 1 — structural: valid PNGs, native is larger (OS chrome adds height), and is a distinct buffer
+    const webviewDims = assertValidPng(webviewPng);
+    const nativeDims = assertValidPng(nativePng);
+    assertCapturesChrome(nativeDims, webviewDims);
     expect(nativePng.equals(webviewPng)).toBe(false);
 
     // Layer 2 — OCR: fixture content is present in the screenshot
