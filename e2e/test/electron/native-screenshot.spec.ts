@@ -30,7 +30,9 @@ describe('electron native screenshot', () => {
     assertCapturesChrome(nativeDims, webviewDims);
 
     // Layer 2 — OCR: fixture content is present in the screenshot
-    await assertOcrContains(nativePng, ['electron', 'e2e test app']);
+    // The fixture heading is "🚀 Electron Builder E2E" (not "E2E Test App"), so assert
+    // the two most reliable OCR tokens from that heading.
+    await assertOcrContains(nativePng, ['electron', 'builder']);
 
     // Layer 3 — vision LLM: runtime-state-tied assertions (merge-to-main only)
     if (visionEnabled()) {

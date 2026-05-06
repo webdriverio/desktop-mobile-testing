@@ -37,10 +37,16 @@ describe('tauri native screenshot', () => {
     const webviewPng = Buffer.from(webviewBase64, 'base64');
     const nativePng = await browser.tauri.nativeScreenshot();
 
-    // Layer 1 — structural: valid PNGs, native is larger (OS chrome adds height), and is a distinct buffer
+    // Layer 1 — structural: valid PNGs and a distinct capture
     const webviewDims = assertValidPng(webviewPng);
     const nativeDims = assertValidPng(nativePng);
-    assertCapturesChrome(nativeDims, webviewDims);
+    // On Windows the title bar adds height above the content area, so we can assert
+    // native.height > webview.height. On macOS, Tauri v2 uses fullSizeContentView by
+    // default (title bar overlays content rather than stacking above it), making both
+    // heights equal — the height check is therefore only valid on Windows.
+    if (process.platform === 'win32') {
+      assertCapturesChrome(nativeDims, webviewDims);
+    }
     expect(nativePng.equals(webviewPng)).toBe(false);
 
     // Layer 2 — OCR: fixture content is present in the screenshot
