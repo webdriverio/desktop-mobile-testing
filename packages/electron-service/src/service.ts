@@ -255,15 +255,21 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
               `Use browser.electron.mock('${channel}') to mock the IPC channel directly.`,
           );
         }
+        let existing: ElectronFunctionMock;
         try {
-          const existing = mockStore.getMock(`electron.${channel}`) as ElectronFunctionMock;
-          await existing.mockReset();
-          return existing;
-        } catch {
-          const newMock = await createElectronBrowserModeMock(channel, browser);
-          mockStore.setMock(newMock);
-          return newMock;
+          existing = mockStore.getMock(`electron.${channel}`) as ElectronFunctionMock;
+        } catch (e) {
+          if (e instanceof Error && e.message.startsWith('No mock registered for')) {
+            const newMock = await createElectronBrowserModeMock(channel, browser);
+            mockStore.setMock(newMock);
+            return newMock;
+          }
+          throw e;
         }
+        // Re-register browser-side entry — navigation wipes window.__wdio_mocks__
+        await browser.execute(`return (${browserInterceptor.buildRegistrationScript(channel)})()`);
+        await existing.mockReset();
+        return existing;
       },
       mockAll: async () => {
         throw new Error(
