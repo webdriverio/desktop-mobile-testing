@@ -77,13 +77,14 @@ export class TauriAdapter implements FrameworkAdapter {
   buildBrowserIpcInjectionScript(): string {
     return `(function() {
   window.__wdio_call_id__ = window.__wdio_call_id__ || 0;
+  var NOT_SET = {};
   function createMockFn() {
     var _name = 'spy';
     var _defaultImpl;
     var _implQueue = [];
-    var _defaultReturnValue;
-    var _defaultResolvedValue;
-    var _defaultRejectedValue;
+    var _defaultReturnValue = NOT_SET;
+    var _defaultResolvedValue = NOT_SET;
+    var _defaultRejectedValue = NOT_SET;
     var _returnThis = false;
     var _calls = [];
     var _results = [];
@@ -102,19 +103,19 @@ export class TauriAdapter implements FrameworkAdapter {
           _results.push({ type: 'throw', value: e });
           throw e;
         }
-      } else if (_defaultRejectedValue !== undefined) {
+      } else if (_defaultRejectedValue !== NOT_SET) {
         var rv = _defaultRejectedValue;
         var rejectedPromise = Promise.reject(rv);
         _results.push({ type: 'return', value: rejectedPromise });
         return rejectedPromise;
-      } else if (_defaultResolvedValue !== undefined) {
+      } else if (_defaultResolvedValue !== NOT_SET) {
         var p = Promise.resolve(_defaultResolvedValue);
         _results.push({ type: 'return', value: p });
         return p;
       } else if (_returnThis) {
         _results.push({ type: 'return', value: this });
         return this;
-      } else if (_defaultReturnValue !== undefined) {
+      } else if (_defaultReturnValue !== NOT_SET) {
         _results.push({ type: 'return', value: _defaultReturnValue });
         return _defaultReturnValue;
       } else {
@@ -133,20 +134,20 @@ export class TauriAdapter implements FrameworkAdapter {
     mockFn.mockImplementation = function(fn) { _defaultImpl = fn; _returnThis = false; return mockFn; };
     mockFn.mockImplementationOnce = function(fn) { _implQueue.push(fn); return mockFn; };
     mockFn.mockReturnValue = function(val) {
-      _defaultImpl = undefined; _defaultReturnValue = val; _defaultResolvedValue = undefined;
-      _defaultRejectedValue = undefined; _returnThis = false; return mockFn;
+      _defaultImpl = undefined; _defaultReturnValue = val; _defaultResolvedValue = NOT_SET;
+      _defaultRejectedValue = NOT_SET; _returnThis = false; return mockFn;
     };
     mockFn.mockReturnValueOnce = function(val) { _implQueue.push(function() { return val; }); return mockFn; };
     mockFn.mockResolvedValue = function(val) {
-      _defaultImpl = undefined; _defaultResolvedValue = val; _defaultReturnValue = undefined;
-      _defaultRejectedValue = undefined; _returnThis = false; return mockFn;
+      _defaultImpl = undefined; _defaultResolvedValue = val; _defaultReturnValue = NOT_SET;
+      _defaultRejectedValue = NOT_SET; _returnThis = false; return mockFn;
     };
     mockFn.mockResolvedValueOnce = function(val) {
       _implQueue.push(function() { return Promise.resolve(val); }); return mockFn;
     };
     mockFn.mockRejectedValue = function(val) {
-      _defaultImpl = undefined; _defaultRejectedValue = val; _defaultReturnValue = undefined;
-      _defaultResolvedValue = undefined; _returnThis = false; return mockFn;
+      _defaultImpl = undefined; _defaultRejectedValue = val; _defaultReturnValue = NOT_SET;
+      _defaultResolvedValue = NOT_SET; _returnThis = false; return mockFn;
     };
     mockFn.mockRejectedValueOnce = function(val) {
       _implQueue.push(function() { return Promise.reject(val); }); return mockFn;
@@ -158,13 +159,13 @@ export class TauriAdapter implements FrameworkAdapter {
     mockFn.mockReset = function() {
       mockFn.mockClear();
       _implQueue = [];
-      _defaultImpl = undefined; _defaultReturnValue = undefined;
-      _defaultResolvedValue = undefined; _defaultRejectedValue = undefined; _returnThis = false;
+      _defaultImpl = undefined; _defaultReturnValue = NOT_SET;
+      _defaultResolvedValue = NOT_SET; _defaultRejectedValue = NOT_SET; _returnThis = false;
       return mockFn;
     };
     mockFn.mockReturnThis = function() {
-      _returnThis = true; _defaultReturnValue = undefined; _defaultResolvedValue = undefined;
-      _defaultRejectedValue = undefined; return mockFn;
+      _returnThis = true; _defaultReturnValue = NOT_SET; _defaultResolvedValue = NOT_SET;
+      _defaultRejectedValue = NOT_SET; return mockFn;
     };
     mockFn.withImplementation = function(fn, callback) {
       var prevImpl = _defaultImpl, prevQueue = _implQueue.slice(), prevReturnThis = _returnThis;

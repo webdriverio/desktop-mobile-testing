@@ -117,6 +117,28 @@ describe('TauriAdapter.buildBrowserIpcInjectionScript', () => {
       expect(result).toBe(10);
     });
 
+    it('fn() mockResolvedValue(undefined) returns Promise.resolve(undefined)', async () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn.mockResolvedValue as (v: unknown) => void)(undefined);
+      const result = (mockFn as unknown as () => unknown)();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result as Promise<unknown>).resolves.toBeUndefined();
+    });
+
+    it('fn() mockRejectedValue(undefined) returns Promise.reject(undefined)', async () => {
+      const script = adapter.buildBrowserIpcInjectionScript();
+      const window = runInBrowserContext(script);
+      const spy = window.__wdio_spy__ as Record<string, unknown>;
+      const mockFn = (spy.fn as () => Record<string, unknown>)();
+      (mockFn.mockRejectedValue as (v: unknown) => void)(undefined);
+      const result = (mockFn as unknown as () => unknown)();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result as Promise<unknown>).rejects.toBeUndefined();
+    });
+
     it('fn() mockClear preserves queued once-implementations', () => {
       const script = adapter.buildBrowserIpcInjectionScript();
       const window = runInBrowserContext(script);
