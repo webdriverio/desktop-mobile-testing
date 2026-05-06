@@ -57,6 +57,8 @@
   },
   "devDependencies": {
     "@crabnebula/tauri-driver": "^2.0.9",
+    "openai": "^4.104.0",
+    "tesseract.js": "^5.1.1",
     "@crabnebula/test-runner-backend": "^0.2.6",
     "@electron-forge/cli": "^7.11.1",
     "@types/mocha": "^10.0.10",
