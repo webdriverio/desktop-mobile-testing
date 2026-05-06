@@ -80,7 +80,21 @@ export async function createMock(command: string, browserContext?: WebdriverIO.B
       `[${command}] Retrieved ${syncData.calls.length} calls from inner mock, outer mock has ${existingCount} calls`,
     );
 
-    if (existingCount < syncData.calls.length) {
+    if (syncData.calls.length < existingCount) {
+      log.debug(`[${command}] Inner mock shrank (cleared after reload or reset); replacing outer data`);
+      (originalMock.calls as unknown[][]).length = 0;
+      (originalMock.results as { type: string; value: unknown }[]).length = 0;
+      (originalMock.invocationCallOrder as number[]).length = 0;
+      for (let i = 0; i < syncData.calls.length; i++) {
+        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
+        (originalMock.results as { type: string; value: unknown }[]).push(
+          syncData.results[i] ?? { type: 'return', value: undefined },
+        );
+        (originalMock.invocationCallOrder as number[]).push(
+          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
+        );
+      }
+    } else if (existingCount < syncData.calls.length) {
       log.debug(`[${command}] Applying ${syncData.calls.length - existingCount} new calls to outer mock`);
       for (let i = existingCount; i < syncData.calls.length; i++) {
         (originalMock.calls as unknown[][]).push(syncData.calls[i]);
@@ -237,7 +251,20 @@ async function createBrowserModeMock(command: string, browser: WebdriverIO.Brows
     const syncData = interceptor.parseCallData(raw);
 
     const existingCount = originalMock.calls.length;
-    if (existingCount < syncData.calls.length) {
+    if (syncData.calls.length < existingCount) {
+      (originalMock.calls as unknown[][]).length = 0;
+      (originalMock.results as { type: string; value: unknown }[]).length = 0;
+      (originalMock.invocationCallOrder as number[]).length = 0;
+      for (let i = 0; i < syncData.calls.length; i++) {
+        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
+        (originalMock.results as { type: string; value: unknown }[]).push(
+          syncData.results[i] ?? { type: 'return', value: undefined },
+        );
+        (originalMock.invocationCallOrder as number[]).push(
+          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
+        );
+      }
+    } else if (existingCount < syncData.calls.length) {
       for (let i = existingCount; i < syncData.calls.length; i++) {
         (originalMock.calls as unknown[][]).push(syncData.calls[i]);
         (originalMock.results as { type: string; value: unknown }[]).push(

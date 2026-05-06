@@ -297,6 +297,7 @@ export default class TauriWorkerService {
         const instance = mrBrowser.getInstance(instanceName);
         (instance as unknown as Record<string, boolean>).__wdioBrowserMode__ = true;
         this.addTauriApi(instance, true);
+        this.patchBrowserUrl(instance, injectionScript);
       }
     }
     this.addTauriApi(browser, true);

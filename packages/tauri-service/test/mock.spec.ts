@@ -102,6 +102,32 @@ describe('createMock', () => {
       expect(mock.mock.calls).toHaveLength(1);
     });
 
+    it('replaces outer data when inner call count shrinks (page reload or in-browser clear)', async () => {
+      const browser = makeBrowser();
+      const twoCallsPayload = {
+        calls: [['a'], ['b']],
+        results: [
+          { type: 'return', value: 1 },
+          { type: 'return', value: 2 },
+        ],
+        invocationCallOrder: [0, 1],
+      };
+      const zeroCallsPayload = { calls: [], results: [], invocationCallOrder: [] };
+      mockExecute
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(twoCallsPayload)
+        .mockResolvedValueOnce(zeroCallsPayload);
+
+      const mock = await createMock('my_cmd', browser);
+      await mock.update();
+      expect(mock.mock.calls).toHaveLength(2);
+
+      await mock.update();
+      expect(mock.mock.calls).toHaveLength(0);
+      expect(mock.mock.results).toHaveLength(0);
+      expect(mock.mock.invocationCallOrder).toHaveLength(0);
+    });
+
     it('uses fallback result when syncData.results entry is missing', async () => {
       const browser = makeBrowser();
       mockExecute.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
