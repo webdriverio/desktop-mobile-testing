@@ -4,6 +4,25 @@ export class DirectEvalClient {
     private readonly defaultTimeoutMs = 30_000,
   ) {}
 
+  async nativeScreenshot(opts: { windowLabel?: string; timeoutMs?: number } = {}): Promise<Buffer> {
+    const timeoutMs = opts.timeoutMs ?? this.defaultTimeoutMs;
+    const url = `http://127.0.0.1:${this.port}/wdio/native-screenshot`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ window_label: opts.windowLabel }),
+      signal: AbortSignal.timeout(timeoutMs + 5_000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`native screenshot failed: ${response.status} ${text}`);
+    }
+
+    return Buffer.from(await response.arrayBuffer());
+  }
+
   async eval(
     wrappedScript: string,
     opts: {

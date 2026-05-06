@@ -12,7 +12,8 @@ export type LogArea =
   | 'e2e'
   | 'fuses'
   | 'window'
-  | 'triggerDeeplink';
+  | 'triggerDeeplink'
+  | 'nativeScreenshot';
 
 // Handle CommonJS/ESM compatibility for @wdio/logger default export
 const createWdioLogger = (logger as unknown as { default: typeof logger }).default || logger;

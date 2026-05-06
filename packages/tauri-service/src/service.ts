@@ -2,6 +2,7 @@ import type { TauriAPIs, TauriServiceAPI } from '@wdio/native-types';
 import { createLogger, hasSemicolonOutsideQuotes, waitUntilWindowAvailable } from '@wdio/native-utils';
 import { execute } from './commands/execute.js';
 import { clearAllMocks, isMockFunction, mock, resetAllMocks, restoreAllMocks } from './commands/mock.js';
+import { nativeScreenshot } from './commands/nativeScreenshot.js';
 import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import mockStore from './mockStore.js';
 import { CONSOLE_WRAPPER_SCRIPT } from './scripts/console-wrapper.js';
@@ -320,6 +321,10 @@ export default class TauriWorkerService {
 
       listWindows: async (): Promise<string[]> => {
         return listWindowLabels(browser);
+      },
+
+      nativeScreenshot: async (options?: { windowLabel?: string }): Promise<Buffer> => {
+        return nativeScreenshot(browser, options);
       },
     };
   }
