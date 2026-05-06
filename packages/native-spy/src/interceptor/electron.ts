@@ -105,6 +105,10 @@ ${WDIO_MOCK_SETUP_SCRIPT}
   window.electron.ipcRenderer.sendSync = function(channel) {
     throw new Error('unmocked Electron IPC channel in browser mode: ' + channel);
   };
+  window.electron.ipcRenderer.on = function() {};
+  window.electron.ipcRenderer.once = function() {};
+  window.electron.ipcRenderer.removeListener = function() {};
+  window.electron.ipcRenderer.removeAllListeners = function() {};
 })()`;
   }
 }

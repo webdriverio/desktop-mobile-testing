@@ -100,6 +100,20 @@ describe('ElectronAdapter.buildBrowserIpcInjectionScript', () => {
     expect(() => sendSync('sync-channel')).toThrow('unmocked Electron IPC channel in browser mode: sync-channel');
   });
 
+  it('should provide no-op stubs for on, once, removeListener, removeAllListeners', () => {
+    const script = adapter.buildBrowserIpcInjectionScript();
+    const window = runInBrowserContext(script);
+    const ipcRenderer = (window.electron as Record<string, unknown>).ipcRenderer as Record<string, unknown>;
+    expect(typeof ipcRenderer.on).toBe('function');
+    expect(typeof ipcRenderer.once).toBe('function');
+    expect(typeof ipcRenderer.removeListener).toBe('function');
+    expect(typeof ipcRenderer.removeAllListeners).toBe('function');
+    expect(() => (ipcRenderer.on as Function)('channel', () => {})).not.toThrow();
+    expect(() => (ipcRenderer.once as Function)('channel', () => {})).not.toThrow();
+    expect(() => (ipcRenderer.removeListener as Function)('channel', () => {})).not.toThrow();
+    expect(() => (ipcRenderer.removeAllListeners as Function)('channel')).not.toThrow();
+  });
+
   describe('fn()', () => {
     it('should create a mock with empty call history', () => {
       const script = adapter.buildBrowserIpcInjectionScript();
