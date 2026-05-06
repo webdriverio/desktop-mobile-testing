@@ -11,6 +11,7 @@ import type {
 } from '@wdio/native-types';
 import { createLogger, waitUntilWindowAvailable } from '@wdio/native-utils';
 import type { Capabilities, Services } from '@wdio/types';
+import { SevereServiceError } from 'webdriverio';
 import { ElectronCdpBridge, getDebuggerEndpoint } from './bridge.js';
 import { clearAllMocks } from './commands/clearAllMocks.js';
 import { execute } from './commands/executeCdp.js';
@@ -30,6 +31,7 @@ import { isInternalCommand } from './utils.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
 
 const browserInterceptor = createIpcInterceptor('electron');
+const browserModeMockOwner = new WeakMap<ElectronFunctionMock, WebdriverIO.Browser>();
 
 const log = createLogger('electron-service', 'service');
 
@@ -202,7 +204,7 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
     log.debug('Initialising Electron browser mode');
     const devServerUrl = this.globalOptions.devServerUrl;
     if (!devServerUrl) {
-      throw new Error('devServerUrl is required for browser mode but was not set');
+      throw new SevereServiceError('devServerUrl is required for browser mode but was not set');
     }
     const injectionScript = browserInterceptor.buildBrowserIpcInjectionScript();
     await browser.url(devServerUrl);
@@ -258,16 +260,22 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
               `Use browser.electron.mock('${channel}') to mock the IPC channel directly.`,
           );
         }
-        let existing: ElectronFunctionMock;
+        let existing: ElectronFunctionMock | undefined;
         try {
-          existing = mockStore.getMock(`electron.${channel}`) as ElectronFunctionMock;
-        } catch (e) {
-          if (e instanceof Error && e.message.startsWith('No mock registered for')) {
-            const newMock = await createElectronBrowserModeMock(channel, browser);
-            mockStore.setMock(newMock);
-            return newMock;
+          const found = mockStore.getMock(`electron.${channel}`) as ElectronFunctionMock;
+          if (browserModeMockOwner.get(found) === browser) {
+            existing = found;
           }
-          throw e;
+        } catch (e) {
+          if (!(e instanceof Error && e.message.startsWith('No mock registered for'))) {
+            throw e;
+          }
+        }
+        if (!existing) {
+          const newMock = await createElectronBrowserModeMock(channel, browser);
+          browserModeMockOwner.set(newMock, browser);
+          mockStore.setMock(newMock);
+          return newMock;
         }
         // Re-register browser-side entry — navigation wipes window.__wdio_mocks__
         await browser.execute(`return (${browserInterceptor.buildRegistrationScript(channel)})()`);
