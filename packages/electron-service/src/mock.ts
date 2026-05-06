@@ -209,6 +209,12 @@ export async function createElectronBrowserModeMock(
 
   const originalMock = outerMock.mock;
 
+  type ImplState =
+    | { kind: 'returnValue' | 'resolvedValue' | 'rejectedValue'; value: unknown }
+    | { kind: 'implementation'; fn: AbstractFn }
+    | null;
+  let implState: ImplState = null;
+
   await runInterceptorScript<void>(browser, browserInterceptor.buildRegistrationScript(channel));
 
   mock.update = async () => {
@@ -231,6 +237,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockImplementation = async (implFn: AbstractFn) => {
+    implState = { kind: 'implementation', fn: implFn };
     const s = browserInterceptor.serializeHandler(implFn);
     await runInterceptorScript<void>(browser, browserInterceptor.buildSetImplementationScript(channel, s));
     outerMockImplementation(implFn);
@@ -245,6 +252,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockReturnValue = async (value: unknown) => {
+    implState = { kind: 'returnValue', value };
     await runInterceptorScript<void>(
       browser,
       browserInterceptor.buildInnerSetterScript(channel, 'mockReturnValue', value),
@@ -261,6 +269,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockResolvedValue = async (value: unknown) => {
+    implState = { kind: 'resolvedValue', value };
     await runInterceptorScript<void>(
       browser,
       browserInterceptor.buildInnerSetterScript(channel, 'mockResolvedValue', value),
@@ -277,6 +286,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockRejectedValue = async (value: unknown) => {
+    implState = { kind: 'rejectedValue', value };
     await runInterceptorScript<void>(
       browser,
       browserInterceptor.buildInnerSetterScript(channel, 'mockRejectedValue', value),
@@ -299,6 +309,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockReset = async () => {
+    implState = null;
     const currentName = outerMock.getMockName();
     await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReset'));
     const asyncMockClearFn = mock.mockClear;
@@ -311,6 +322,7 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockRestore = async () => {
+    implState = null;
     // There is no original Electron API to restore in browser mode — the IPC interceptor
     // is always synthetic. Deregistering the channel would make future ipcRenderer.invoke
     // calls throw "unmocked channel", breaking restoreMocks: true across tests.
@@ -348,6 +360,28 @@ export async function createElectronBrowserModeMock(
       throw new Error((result as { __wdioAsyncErr__: string }).__wdioAsyncErr__);
     }
     return result;
+  };
+
+  // Used by the re-registration path in service.ts to replay persistent implementation
+  // after a navigation wipes window.__wdio_mocks__. "Once" variants are intentionally
+  // excluded — they were consumed before the navigation.
+  (mock as unknown as Record<string, unknown>).__replayBrowserImpl = async (): Promise<void> => {
+    if (!implState) return;
+    if (implState.kind === 'implementation') {
+      const s = browserInterceptor.serializeHandler(implState.fn);
+      await runInterceptorScript<void>(browser, browserInterceptor.buildSetImplementationScript(channel, s));
+    } else {
+      const method =
+        implState.kind === 'returnValue'
+          ? 'mockReturnValue'
+          : implState.kind === 'resolvedValue'
+            ? 'mockResolvedValue'
+            : 'mockRejectedValue';
+      await runInterceptorScript<void>(
+        browser,
+        browserInterceptor.buildInnerSetterScript(channel, method, implState.value),
+      );
+    }
   };
 
   log.debug(`[${channel}] Electron browser-mode mock created successfully`);

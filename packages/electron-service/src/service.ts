@@ -313,6 +313,10 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         )) as boolean;
         if (!isBrowserSideLive) {
           await browser.execute(`return (${browserInterceptor.buildRegistrationScript(channel)})()`);
+          const replayImpl = (existing as unknown as Record<string, unknown>).__replayBrowserImpl;
+          if (typeof replayImpl === 'function') {
+            await (replayImpl as () => Promise<void>)();
+          }
           await existing.mockClear();
         }
         return existing;

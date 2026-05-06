@@ -519,6 +519,104 @@ describe('createElectronBrowserModeMock()', () => {
     });
   });
 
+  describe('__replayBrowserImpl()', () => {
+    it('does nothing and makes no execute call when no impl has been set', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      expect(mockBrowser.execute.mock.calls.length).toBe(callsBefore);
+    });
+
+    it('re-applies mockReturnValue after navigation by running the inner setter script', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockReturnValue('initial');
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      expect(mockBrowser.execute.mock.calls.length).toBe(callsBefore + 1);
+      const replayScript = mockBrowser.execute.mock.calls[callsBefore][0] as string;
+      expect(replayScript).toContain('mockReturnValue');
+    });
+
+    it('re-applies mockResolvedValue after navigation', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockResolvedValue('resolved');
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      const replayScript = mockBrowser.execute.mock.calls[callsBefore][0] as string;
+      expect(replayScript).toContain('mockResolvedValue');
+    });
+
+    it('re-applies mockRejectedValue after navigation', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockRejectedValue(new Error('boom'));
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      const replayScript = mockBrowser.execute.mock.calls[callsBefore][0] as string;
+      expect(replayScript).toContain('mockRejectedValue');
+    });
+
+    it('re-applies mockImplementation after navigation', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockImplementation(() => 'test-impl');
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      expect(mockBrowser.execute.mock.calls.length).toBe(callsBefore + 1);
+    });
+
+    it('replays the latest setter when multiple have been called (last one wins)', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockReturnValue('first');
+      await mock.mockResolvedValue('last');
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      const replayScript = mockBrowser.execute.mock.calls[callsBefore][0] as string;
+      expect(replayScript).toContain('mockResolvedValue');
+      expect(replayScript).not.toContain('mockReturnValue');
+    });
+
+    it('does nothing after mockReset() clears the impl state', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockReturnValue('value');
+      await mock.mockReset();
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      expect(mockBrowser.execute.mock.calls.length).toBe(callsBefore);
+    });
+
+    it('does nothing after mockRestore() clears the impl state', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+      await mock.mockResolvedValue('value');
+      await mock.mockRestore();
+      const callsBefore = mockBrowser.execute.mock.calls.length;
+
+      const replay = (mock as unknown as Record<string, () => Promise<void>>).__replayBrowserImpl;
+      await replay();
+
+      expect(mockBrowser.execute.mock.calls.length).toBe(callsBefore);
+    });
+  });
+
   describe('mockRestore()', () => {
     it('should keep the mock in the store — channel must remain registered for restoreMocks: true to be safe across tests', async () => {
       const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
