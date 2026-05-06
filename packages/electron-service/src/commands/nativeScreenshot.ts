@@ -60,8 +60,8 @@ export async function nativeScreenshot(
     const ps =
       `Add-Type -AssemblyName System.Drawing,System.Windows.Forms; ` +
       `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
-      `public class W{[DllImport(\\"user32.dll\\")]public static extern bool PrintWindow(IntPtr h,IntPtr d,uint f);` +
-      `[DllImport(\\"user32.dll\\")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
+      `public class W{[DllImport("user32.dll")]public static extern bool PrintWindow(IntPtr h,IntPtr d,uint f);` +
+      `[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
       `public struct RECT{public int L,T,R,B;}}'; ` +
       `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
       `$b=New-Object Drawing.Bitmap ($r.R-$r.L),($r.B-$r.T); ` +
