@@ -210,27 +210,40 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
    */
   private async initBrowserMode(browser: WebdriverIO.Browser): Promise<void> {
     log.debug('Initialising Electron browser mode');
-    const devServerUrl = this.globalOptions.devServerUrl;
-    if (!devServerUrl) {
-      throw new SevereServiceError('devServerUrl is required for browser mode but was not set');
-    }
     const injectionScript = browserInterceptor.buildBrowserIpcInjectionScript();
-    await browser.url(devServerUrl);
-    await browser.execute(injectionScript);
-    (browser as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
+
     if ((browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
       const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
+      (browser as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
+
       for (const instanceName of mrBrowser.instances) {
         const instance = mrBrowser.getInstance(instanceName);
+        const caps =
+          (instance.requestedCapabilities as Capabilities.W3CCapabilities).alwaysMatch ||
+          (instance.requestedCapabilities as WebdriverIO.Capabilities);
+        const instanceOptions = caps[CUSTOM_CAPABILITY_NAME] as ElectronServiceGlobalOptions | undefined;
+        const instanceDevServerUrl = instanceOptions?.devServerUrl ?? this.globalOptions.devServerUrl;
+
+        await instance.url(instanceDevServerUrl!);
+        await instance.execute(injectionScript);
         (instance as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
         instance.electron = this.getElectronBrowserModeAPI(instance);
         this.patchBrowserUrl(instance, injectionScript);
         this.installCommandOverrides(instance);
       }
-    }
-    browser.electron = this.getElectronBrowserModeAPI(browser);
-    this.patchBrowserUrl(browser, injectionScript);
-    if (!(browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
+
+      browser.electron = this.getElectronBrowserModeAPI(browser);
+      this.patchBrowserUrl(browser, injectionScript);
+    } else {
+      const devServerUrl = this.globalOptions.devServerUrl;
+      if (!devServerUrl) {
+        throw new SevereServiceError('devServerUrl is required for browser mode but was not set');
+      }
+      await browser.url(devServerUrl);
+      await browser.execute(injectionScript);
+      (browser as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
+      browser.electron = this.getElectronBrowserModeAPI(browser);
+      this.patchBrowserUrl(browser, injectionScript);
       this.installCommandOverrides();
     }
     log.debug('Electron browser mode initialised');
