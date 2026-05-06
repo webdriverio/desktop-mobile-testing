@@ -277,8 +277,15 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
    * main process which does not exist in browser mode.
    */
   private getElectronBrowserModeAPI(browser: WebdriverIO.Browser): BrowserExtension['electron'] {
+    const isRootMultiremote = (browser as unknown as { isMultiremote?: boolean }).isMultiremote === true;
     return {
       mock: async (channel: string, funcName?: string): Promise<ElectronFunctionMock> => {
+        if (isRootMultiremote) {
+          throw new Error(
+            'browser.electron.mock() on the root multiremote browser is not supported in browser mode. ' +
+              `Call it on a specific instance instead: mrBrowser.getInstance('name').electron.mock('${channel}')`,
+          );
+        }
         if (funcName !== undefined) {
           throw new Error(
             'browser.electron.mock(apiName, funcName) is not supported in browser mode. ' +
