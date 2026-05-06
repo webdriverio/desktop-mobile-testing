@@ -11,10 +11,10 @@ export async function nativeScreenshot(
 ): Promise<Buffer> {
   log.debug('capturing native screenshot', options);
 
-  const base64 = await execute<Promise<string>, [typeof options]>(
+  const base64 = await execute<string, [typeof options]>(
     browser,
     cdpBridge,
-    async (electron, opts: { windowHandle?: string } | undefined) => {
+    (electron, opts: { windowHandle?: string } | undefined) => {
       const { BrowserWindow } = electron;
       const win = opts?.windowHandle
         ? BrowserWindow.fromId(Number(opts.windowHandle))
@@ -22,12 +22,14 @@ export async function nativeScreenshot(
 
       if (!win) throw new Error('no Electron BrowserWindow available to capture');
 
-      const [{ spawnSync }, { tmpdir }, { join }, { readFileSync, unlinkSync }] = await Promise.all([
-        import('node:child_process'),
-        import('node:os'),
-        import('node:path'),
-        import('node:fs'),
-      ]);
+      // biome-ignore lint/style/noCommonJs: this function is serialized and run via CDP callFunctionOn in Electron's CJS main-process context; ESM dynamic import() is unavailable there
+      const { spawnSync } = require('node:child_process') as typeof import('node:child_process');
+      // biome-ignore lint/style/noCommonJs: same as above
+      const { tmpdir } = require('node:os') as typeof import('node:os');
+      // biome-ignore lint/style/noCommonJs: same as above
+      const { join } = require('node:path') as typeof import('node:path');
+      // biome-ignore lint/style/noCommonJs: same as above
+      const { readFileSync, unlinkSync } = require('node:fs') as typeof import('node:fs');
 
       const out = join(tmpdir(), `wdio-native-${Date.now()}.png`);
 
@@ -48,7 +50,7 @@ export async function nativeScreenshot(
           `$b=New-Object Drawing.Bitmap ($r.R-$r.L),($r.B-$r.T); ` +
           `$g=[Drawing.Graphics]::FromImage($b); ` +
           `[W]::PrintWindow($h,$g.GetHdc(),2) | Out-Null; ` +
-          `$b.Save('${out.replace(/\\/g, '\\\\')}', [Drawing.Imaging.ImageFormat]::Png)`;
+          `$b.Save('${out.replace(/\\/g, '/')}', [Drawing.Imaging.ImageFormat]::Png)`;
         const r = spawnSync('powershell', ['-NoProfile', '-Command', ps]);
         if (r.error) throw r.error;
         if (r.status !== 0)

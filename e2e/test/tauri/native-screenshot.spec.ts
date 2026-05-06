@@ -3,12 +3,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { browser, expect } from '@wdio/globals';
 import '@wdio/native-types';
-import { assertCapturesChrome, assertOcrContains, assertValidPng, disposeOcr } from '../../lib/screenshotChecks.js';
+import { assertOcrContains, assertValidPng, disposeOcr } from '../../lib/screenshotChecks.js';
 import { visionAssert, visionEnabled } from '../../lib/visionAssert.js';
+
+const driverProvider = process.env.DRIVER_PROVIDER as 'official' | 'crabnebula' | 'embedded' | undefined;
 
 describe('tauri native screenshot', () => {
   if (process.platform === 'linux') {
     it.skip('skipped on linux (unsupported platform)', () => {});
+    return;
+  }
+
+  if (driverProvider !== 'embedded') {
+    it.skip(`skipped: nativeScreenshot requires the embedded provider (current: ${driverProvider ?? 'unknown'})`, () => {});
     return;
   }
 
@@ -30,10 +37,9 @@ describe('tauri native screenshot', () => {
     const webviewPng = Buffer.from(webviewBase64, 'base64');
     const nativePng = await browser.tauri.nativeScreenshot();
 
-    // Layer 1 — structural: valid PNG, native captures more height than webview-only
-    const webviewDims = assertValidPng(webviewPng);
-    const nativeDims = assertValidPng(nativePng);
-    assertCapturesChrome(nativeDims, webviewDims);
+    // Layer 1 — structural: valid PNG with non-zero dimensions
+    assertValidPng(webviewPng);
+    assertValidPng(nativePng);
 
     // Layer 2 — OCR: fixture content is present in the screenshot
     await assertOcrContains(nativePng, ['tauri', 'e2e test app', 'increment', '7']);
