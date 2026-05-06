@@ -10,7 +10,6 @@ import type {
 } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { buildMockMethods } from './mockFactory.js';
-import mockStore from './mockStore.js';
 
 const log = createLogger('electron-service', 'mock');
 const browserInterceptor = createIpcInterceptor('electron');
