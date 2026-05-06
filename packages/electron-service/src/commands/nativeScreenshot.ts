@@ -32,7 +32,12 @@ export async function nativeScreenshot(
       if (!win) throw new Error('no Electron BrowserWindow available to capture');
 
       const bounds = win.getBounds();
-      const nativeHandle = process.platform === 'win32' ? win.getNativeWindowHandle().toString('hex') : undefined;
+      // readBigUInt64LE interprets the Buffer as a little-endian 64-bit integer, matching
+      // the x64 Windows in-memory HWND layout. toString() yields the decimal value PowerShell
+      // needs for [IntPtr]cast. toString('hex') would emit raw bytes in LE order and then
+      // BigInt('0x...') would reinterpret them as big-endian, producing a wrong handle.
+      const nativeHandle =
+        process.platform === 'win32' ? win.getNativeWindowHandle().readBigUInt64LE(0).toString() : undefined;
 
       return { bounds, nativeHandle };
     },
@@ -50,7 +55,7 @@ export async function nativeScreenshot(
     if (r.error) throw r.error;
     if (r.status !== 0) throw new Error(`screencapture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
   } else if (process.platform === 'win32') {
-    const hwnd = BigInt(`0x${windowInfo.nativeHandle!}`).toString();
+    const hwnd = windowInfo.nativeHandle!;
     const outFwd = out.replace(/\\/g, '/');
     const ps =
       `Add-Type -AssemblyName System.Drawing,System.Windows.Forms; ` +
