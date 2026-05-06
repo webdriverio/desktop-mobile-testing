@@ -231,6 +231,30 @@ The injection script runs after `browser.url()` resolves (document `readyState` 
 | `browser.electron.windowHandle` | Not meaningful — standard Chrome window handle |
 | Automatic window focus management | Disabled — standard browser window switching applies |
 | `ipcRenderer.on` / `once` / `removeListener` | No-ops — event listeners not intercepted |
+| `mock.withImplementation()` | Serialised to browser page — see below |
+
+### `withImplementation` in browser mode
+
+`mock.withImplementation(implFn, callbackFn)` serialises **both** functions via `.toString()` and executes them inside the browser page using `executeAsync`. This means:
+
+- The `callbackFn` runs in the browser page, **not** in the Node.js test-runner process.
+- It cannot close over test-runner variables, call WebdriverIO commands (`browser.$()`, `browser.click()`, etc.), or use Node.js APIs (`fs`, `path`, etc.) — those symbols do not exist in the page context.
+- Only use `withImplementation` when both functions are fully self-contained browser-side snippets.
+
+For the common pattern of "use a temporary implementation while performing a UI action", use `mockImplementation` + `mockRestore` instead:
+
+```ts
+const mock = await browser.electron.mock('get-user-data');
+await mock.mockImplementation(() => ({ id: 99, name: 'Temporary' }));
+
+// Perform your UI action using standard WebdriverIO commands
+await $('button#load-user').click();
+await mock.update();
+expect(mock).toHaveBeenCalledTimes(1);
+
+// Restore the original implementation
+await mock.mockRestore();
+```
 
 ## Multiremote
 
