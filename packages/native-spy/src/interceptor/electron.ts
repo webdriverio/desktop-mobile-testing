@@ -81,7 +81,7 @@ export class ElectronAdapter implements FrameworkAdapter {
   const callback = (${callbackFnSource});
   let result;
   const mockObj = ${lookup};
-  await mockObj?.withImplementation?.(impl, async () => { result = await (_electron !== undefined ? callback(_electron) : callback()); });
+  await mockObj?.withImplementation?.(impl, async () => { result = await callback(); });
   return result;
 }`;
   }

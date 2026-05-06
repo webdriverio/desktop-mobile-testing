@@ -220,7 +220,9 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
       }
     }
     browser.electron = this.getElectronBrowserModeAPI(browser);
-    this.patchBrowserUrl(browser, injectionScript);
+    if (!(browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
+      this.patchBrowserUrl(browser, injectionScript);
+    }
     this.installCommandOverrides();
     log.debug('Electron browser mode initialised');
   }
