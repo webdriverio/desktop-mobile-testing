@@ -1,7 +1,9 @@
 import type { CdpBridgeOptions } from '@wdio/electron-cdp-bridge';
+import { createIpcInterceptor } from '@wdio/native-spy/interceptor';
 import type {
   AbstractFn,
   BrowserExtension,
+  ElectronFunctionMock,
   ElectronInterface,
   ElectronServiceGlobalOptions,
   ElectronType,
@@ -21,10 +23,13 @@ import { triggerDeeplink } from './commands/triggerDeeplink.js';
 import { CUSTOM_CAPABILITY_NAME } from './constants.js';
 import { checkInspectFuse } from './fuses.js';
 import { LogCaptureManager, type LogCaptureOptions } from './logCapture.js';
+import { createElectronBrowserModeMock } from './mock.js';
 import mockStore from './mockStore.js';
 import { ServiceConfig } from './serviceConfig.js';
 import { isInternalCommand } from './utils.js';
 import { clearPuppeteerSessions, ensureActiveWindowFocus, getActiveWindowHandle, getPuppeteer } from './window.js';
+
+const browserInterceptor = createIpcInterceptor('electron');
 
 const log = createLogger('electron-service', 'service');
 
@@ -46,9 +51,15 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
     _specs: string[],
     instance: WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser,
   ): Promise<void> {
+    this.browser = instance as WebdriverIO.Browser;
+
+    if (this.globalOptions.mode === 'browser') {
+      await this.initBrowserMode(instance as WebdriverIO.Browser);
+      return;
+    }
+
     log.debug('Initialising CDP bridge...');
 
-    this.browser = instance as WebdriverIO.Browser;
     const cdpBridge = this.browser.isMultiremote ? undefined : await initCdpBridge(this.cdpOptions, capabilities);
 
     // Initialize log capture if enabled
@@ -173,6 +184,107 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
   async afterSession() {
     await restoreAllMocks();
     mockStore.clear();
+  }
+
+  /**
+   * Initialize browser-only mode: navigate to dev server, inject IPC layer, expose API.
+   *
+   * Timing note: the IPC interceptor is injected after browser.url() resolves
+   * (i.e. after readyState === "complete"). Any ipcRenderer.invoke() calls the app
+   * makes during module init or onload handlers will run against the real surface and
+   * be missed by mocks. If your app does this, use a Vite plugin to import the
+   * injection script as a top-level module in your dev build.
+   */
+  private async initBrowserMode(browser: WebdriverIO.Browser): Promise<void> {
+    log.debug('Initialising Electron browser mode');
+    const devServerUrl = this.globalOptions.devServerUrl;
+    if (!devServerUrl) {
+      throw new Error('devServerUrl is required for browser mode but was not set');
+    }
+    const injectionScript = browserInterceptor.buildBrowserIpcInjectionScript();
+    await browser.url(devServerUrl);
+    await browser.execute(injectionScript);
+    (browser as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
+    if ((browser as unknown as { isMultiremote?: boolean }).isMultiremote) {
+      const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
+      for (const instanceName of mrBrowser.instances) {
+        const instance = mrBrowser.getInstance(instanceName);
+        (instance as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
+        instance.electron = this.getElectronBrowserModeAPI(instance);
+        this.patchBrowserUrl(instance, injectionScript);
+      }
+    }
+    browser.electron = this.getElectronBrowserModeAPI(browser);
+    this.patchBrowserUrl(browser, injectionScript);
+    this.installCommandOverrides();
+    log.debug('Electron browser mode initialised');
+  }
+
+  /**
+   * Patch browser.url() so the IPC injection script is re-applied after every
+   * navigation. A page load wipes window state, losing __wdio_mocks__ and the
+   * ipcRenderer patch.
+   */
+  private patchBrowserUrl(browser: WebdriverIO.Browser, injectionScript: string): void {
+    type UrlFn = (href?: string) => Promise<string | void>;
+    const originalUrl = (browser.url as unknown as UrlFn).bind(browser);
+    (browser as unknown as { url: UrlFn }).url = async (href?: string): Promise<string | void> => {
+      const result = await originalUrl(href);
+      if (href !== undefined) {
+        try {
+          await browser.execute(injectionScript);
+        } catch (error) {
+          log.warn('Failed to re-inject IPC script after navigation:', error);
+        }
+      }
+      return result;
+    };
+  }
+
+  /**
+   * Build the browser.electron API surface for browser mode.
+   * execute(), mockAll(), and triggerDeeplink() throw — they require the Electron
+   * main process which does not exist in browser mode.
+   */
+  private getElectronBrowserModeAPI(browser: WebdriverIO.Browser): BrowserExtension['electron'] {
+    return {
+      mock: async (channel: string, funcName?: string): Promise<ElectronFunctionMock> => {
+        if (funcName !== undefined) {
+          throw new Error(
+            'browser.electron.mock(apiName, funcName) is not supported in browser mode. ' +
+              `Use browser.electron.mock('${channel}') to mock the IPC channel directly.`,
+          );
+        }
+        try {
+          const existing = mockStore.getMock(`electron.${channel}`) as ElectronFunctionMock;
+          await existing.mockReset();
+          return existing;
+        } catch {
+          const newMock = await createElectronBrowserModeMock(channel, browser);
+          mockStore.setMock(newMock);
+          return newMock;
+        }
+      },
+      mockAll: async () => {
+        throw new Error(
+          'browser.electron.mockAll() is not supported in browser mode. ' +
+            "Use browser.electron.mock('channel') to mock individual IPC channels.",
+        );
+      },
+      execute: async () => {
+        throw new Error(
+          'browser.electron.execute() is not supported in browser mode. ' +
+            'Use browser.execute() for renderer code or browser.electron.mock() to intercept IPC.',
+        );
+      },
+      clearAllMocks: async (commandPrefix?: string) => clearAllMocks.call(this, commandPrefix),
+      resetAllMocks: async (commandPrefix?: string) => resetAllMocks.call(this, commandPrefix),
+      restoreAllMocks: async (commandPrefix?: string) => restoreAllMocks.call(this, commandPrefix),
+      isMockFunction: (fn: unknown) => isMockFunction.call(this, fn),
+      triggerDeeplink: async () => {
+        throw new Error('browser.electron.triggerDeeplink() is not supported in browser mode.');
+      },
+    } as unknown as BrowserExtension['electron'];
   }
 
   /**

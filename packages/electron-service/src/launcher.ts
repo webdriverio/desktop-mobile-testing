@@ -100,6 +100,7 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
   #globalOptions: ElectronServiceGlobalOptions;
   #projectRoot: string;
   #usedPorts = new Set<number>();
+  #browserMode = false;
 
   constructor(globalOptions: ElectronServiceGlobalOptions, _caps: unknown, config: Options.Testrunner) {
     this.#globalOptions = globalOptions;
@@ -112,6 +113,33 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
       : Object.values(capabilities as Capabilities.RequestedMultiremoteCapabilities).map(
           (multiremoteOption) => (multiremoteOption as Capabilities.WithRequestedCapabilities).capabilities,
         );
+
+    // Browser mode: skip all Electron binary/CDP setup — worker navigates to a dev server
+    const firstElectronCap = capsList.find((cap) => (cap as Record<string, unknown>)[CUSTOM_CAPABILITY_NAME]);
+    const firstCapOptions = ((firstElectronCap as Record<string, unknown>)?.[CUSTOM_CAPABILITY_NAME] ??
+      {}) as ElectronServiceGlobalOptions;
+    const mode = firstCapOptions.mode ?? this.#globalOptions.mode;
+    const devServerUrl = firstCapOptions.devServerUrl ?? this.#globalOptions.devServerUrl;
+
+    if (mode === 'browser') {
+      if (!devServerUrl) {
+        throw new SevereServiceError('devServerUrl is required when mode is "browser"');
+      }
+      try {
+        new URL(devServerUrl);
+      } catch {
+        throw new SevereServiceError(`devServerUrl is not a valid URL: ${devServerUrl}`);
+      }
+      this.#browserMode = true;
+      const electronCaps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
+      for (const cap of electronCaps) {
+        cap.browserName = 'chrome';
+        delete (cap as Record<string, unknown>)['goog:chromeOptions'];
+        delete (cap as Record<string, unknown>)['wdio:enforceWebDriverClassic'];
+      }
+      log.info('Browser mode enabled — skipping Electron binary and CDP bridge setup');
+      return;
+    }
 
     const caps = capsList.flatMap((cap) => getElectronCapabilities(cap) as WebdriverIO.Capabilities);
     const pkg =
@@ -288,6 +316,9 @@ export default class ElectronLaunchService implements Services.ServiceInstance {
    * This allows for reliable parallel debugging of multiple Electron instances.
    */
   async onWorkerStart(_cid: string, capabilities: WebdriverIO.Capabilities) {
+    if (this.#browserMode) {
+      return;
+    }
     try {
       const capsList = Array.isArray(capabilities) ? (capabilities as WebdriverIO.Capabilities[]) : [capabilities];
       const caps = capsList.flatMap((cap) => getConvertedElectronCapabilities(cap) as WebdriverIO.Capabilities);

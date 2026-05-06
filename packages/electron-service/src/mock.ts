@@ -1,5 +1,7 @@
 import { fn as vitestFn } from '@wdio/native-spy';
+import { createIpcInterceptor } from '@wdio/native-spy/interceptor';
 import type {
+  AbstractFn,
   ElectronApiFn,
   ElectronFunctionMock,
   ElectronInterface,
@@ -8,8 +10,10 @@ import type {
 } from '@wdio/native-types';
 import { createLogger } from '@wdio/native-utils';
 import { buildMockMethods } from './mockFactory.js';
+import mockStore from './mockStore.js';
 
 const log = createLogger('electron-service', 'mock');
+const browserInterceptor = createIpcInterceptor('electron');
 
 export { createClassMock } from './classMock.js';
 
@@ -181,4 +185,177 @@ export async function createMock(
   log.debug(`[${apiName}.${funcName}] Auto-updating mock wrapper created successfully`);
 
   return wrapperMock;
+}
+
+async function runInterceptorScript<T>(browser: WebdriverIO.Browser, script: string): Promise<T> {
+  return browser.execute(`return (${script})()`) as Promise<T>;
+}
+
+export async function createElectronBrowserModeMock(
+  channel: string,
+  browser: WebdriverIO.Browser,
+): Promise<ElectronFunctionMock> {
+  log.debug(`[${channel}] createElectronBrowserModeMock called`);
+
+  const outerMock = vitestFn();
+  const outerMockImplementation = outerMock.mockImplementation;
+  const outerMockImplementationOnce = outerMock.mockImplementationOnce;
+  const outerMockClear = outerMock.mockClear;
+  const outerMockReset = outerMock.mockReset;
+
+  outerMock.mockName(`electron.${channel}`);
+
+  const mock = outerMock as unknown as ElectronFunctionMock;
+  mock.__isElectronMock = true;
+
+  const originalMock = outerMock.mock;
+
+  await runInterceptorScript<void>(browser, browserInterceptor.buildRegistrationScript(channel));
+
+  mock.update = async () => {
+    const raw = await runInterceptorScript<unknown>(browser, browserInterceptor.buildCallDataReadScript(channel));
+    const syncData = browserInterceptor.parseCallData(raw);
+
+    const existingCount = originalMock.calls.length;
+
+    if (syncData.calls.length < existingCount) {
+      (originalMock.calls as unknown[][]).length = 0;
+      (originalMock.results as { type: string; value: unknown }[]).length = 0;
+      (originalMock.invocationCallOrder as number[]).length = 0;
+      for (let i = 0; i < syncData.calls.length; i++) {
+        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
+        (originalMock.results as { type: string; value: unknown }[]).push(
+          syncData.results[i] ?? { type: 'return', value: undefined },
+        );
+        (originalMock.invocationCallOrder as number[]).push(
+          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
+        );
+      }
+    } else if (existingCount < syncData.calls.length) {
+      for (let i = existingCount; i < syncData.calls.length; i++) {
+        (originalMock.calls as unknown[][]).push(syncData.calls[i]);
+        (originalMock.results as { type: string; value: unknown }[]).push(
+          syncData.results[i] ?? { type: 'return', value: undefined },
+        );
+        (originalMock.invocationCallOrder as number[]).push(
+          syncData.invocationCallOrder[i] ?? originalMock.invocationCallOrder.length,
+        );
+      }
+    }
+    return mock;
+  };
+
+  mock.mockImplementation = async (implFn: AbstractFn) => {
+    const s = browserInterceptor.serializeHandler(implFn);
+    await runInterceptorScript<void>(browser, browserInterceptor.buildSetImplementationScript(channel, s));
+    outerMockImplementation(implFn);
+    return mock;
+  };
+
+  mock.mockImplementationOnce = async (implFn: AbstractFn) => {
+    const s = browserInterceptor.serializeHandler(implFn);
+    await runInterceptorScript<void>(browser, browserInterceptor.buildSetImplementationScript(channel, s, true));
+    outerMockImplementationOnce(implFn);
+    return mock;
+  };
+
+  mock.mockReturnValue = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      browserInterceptor.buildInnerSetterScript(channel, 'mockReturnValue', value),
+    );
+    return mock;
+  };
+
+  mock.mockReturnValueOnce = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      browserInterceptor.buildInnerSetterScript(channel, 'mockReturnValueOnce', value),
+    );
+    return mock;
+  };
+
+  mock.mockResolvedValue = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      browserInterceptor.buildInnerSetterScript(channel, 'mockResolvedValue', value),
+    );
+    return mock;
+  };
+
+  mock.mockResolvedValueOnce = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      browserInterceptor.buildInnerSetterScript(channel, 'mockResolvedValueOnce', value),
+    );
+    return mock;
+  };
+
+  mock.mockRejectedValue = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      browserInterceptor.buildInnerSetterScript(channel, 'mockRejectedValue', value),
+    );
+    return mock;
+  };
+
+  mock.mockRejectedValueOnce = async (value: unknown) => {
+    await runInterceptorScript<void>(
+      browser,
+      browserInterceptor.buildInnerSetterScript(channel, 'mockRejectedValueOnce', value),
+    );
+    return mock;
+  };
+
+  mock.mockClear = async () => {
+    await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockClear'));
+    outerMockClear();
+    return mock;
+  };
+
+  mock.mockReset = async () => {
+    const currentName = outerMock.getMockName();
+    await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReset'));
+    const asyncMockClearFn = mock.mockClear;
+    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
+    outerMockClear();
+    outerMockReset();
+    mock.mockClear = asyncMockClearFn;
+    outerMock.mockName(currentName);
+    return mock;
+  };
+
+  mock.mockRestore = async () => {
+    await runInterceptorScript<void>(browser, browserInterceptor.buildUnregistrationScript(channel));
+    outerMockClear();
+    mockStore.deleteMock(`electron.${channel}`);
+    return mock;
+  };
+
+  mock.mockReturnThis = async () => {
+    await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReturnThis'));
+    return mock;
+  };
+
+  mock.withImplementation = async (implFn, callbackFn) => {
+    const script = browserInterceptor.buildWithImplementationScript(
+      channel,
+      implFn as (...a: unknown[]) => unknown,
+      callbackFn as (...a: unknown[]) => unknown,
+    );
+    const result = await browser.executeAsync((s: string, done: (v: unknown) => void) => {
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('return (' + s + ')')() as () => Promise<unknown>;
+      Promise.resolve(fn()).then(done, (err: unknown) => {
+        done({ __wdioAsyncErr__: err instanceof Error ? err.message : String(err) });
+      });
+    }, script);
+    if (result && typeof result === 'object' && '__wdioAsyncErr__' in result) {
+      throw new Error((result as { __wdioAsyncErr__: string }).__wdioAsyncErr__);
+    }
+    return result;
+  };
+
+  log.debug(`[${channel}] Electron browser-mode mock created successfully`);
+  return mock;
 }
