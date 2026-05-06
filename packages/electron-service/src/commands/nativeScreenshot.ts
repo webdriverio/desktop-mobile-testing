@@ -75,7 +75,9 @@ export async function nativeScreenshot(
     throw new Error(`nativeScreenshot is not supported on ${process.platform}`);
   }
 
-  const png = readFileSync(out);
-  unlinkSync(out);
-  return png;
+  try {
+    return readFileSync(out);
+  } finally {
+    unlinkSync(out);
+  }
 }
