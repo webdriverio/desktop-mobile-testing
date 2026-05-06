@@ -3,7 +3,17 @@ import { createWorker } from 'tesseract.js';
 export type StructuralResult = { width: number; height: number; byteLength: number };
 
 export function assertValidPng(png: Buffer): StructuralResult {
-  if (png.length < 24 || png[0] !== 0x89 || png[1] !== 0x50) {
+  if (
+    png.length < 24 ||
+    png[0] !== 0x89 ||
+    png[1] !== 0x50 ||
+    png[2] !== 0x4e ||
+    png[3] !== 0x47 ||
+    png[4] !== 0x0d ||
+    png[5] !== 0x0a ||
+    png[6] !== 0x1a ||
+    png[7] !== 0x0a
+  ) {
     throw new Error('buffer is not a valid PNG (bad magic bytes)');
   }
   return {

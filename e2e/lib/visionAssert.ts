@@ -35,10 +35,10 @@ export async function visionYesNo(png: Buffer, question: string): Promise<boolea
     ],
   });
   const answer = (res.choices[0]?.message?.content ?? '').trim().toUpperCase();
-  if (!/^YES|^NO/.test(answer)) {
+  if (!/^(YES|NO)$/.test(answer)) {
     throw new Error(`vision model returned unparseable answer: "${answer}"`);
   }
-  return answer.startsWith('YES');
+  return answer === 'YES';
 }
 
 export async function visionAssert(png: Buffer, question: string): Promise<void> {

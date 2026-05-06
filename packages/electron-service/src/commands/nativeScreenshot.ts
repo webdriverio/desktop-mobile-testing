@@ -33,7 +33,9 @@ export async function nativeScreenshot(
 
       if (process.platform === 'darwin') {
         const b = win.getBounds();
-        spawnSync('screencapture', ['-x', '-R', `${b.x},${b.y},${b.width},${b.height}`, out]);
+        const r = spawnSync('screencapture', ['-x', '-R', `${b.x},${b.y},${b.width},${b.height}`, out]);
+        if (r.error) throw r.error;
+        if (r.status !== 0) throw new Error(`screencapture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
       } else if (process.platform === 'win32') {
         const hwnd = win.getNativeWindowHandle().readBigUInt64LE(0).toString();
         const ps =
@@ -47,7 +49,10 @@ export async function nativeScreenshot(
           `$g=[Drawing.Graphics]::FromImage($b); ` +
           `[W]::PrintWindow($h,$g.GetHdc(),2) | Out-Null; ` +
           `$b.Save('${out.replace(/\\/g, '\\\\')}', [Drawing.Imaging.ImageFormat]::Png)`;
-        spawnSync('powershell', ['-NoProfile', '-Command', ps]);
+        const r = spawnSync('powershell', ['-NoProfile', '-Command', ps]);
+        if (r.error) throw r.error;
+        if (r.status !== 0)
+          throw new Error(`PowerShell capture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
       } else {
         throw new Error(`nativeScreenshot is not supported on ${process.platform}`);
       }

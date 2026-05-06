@@ -347,19 +347,23 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
         let title = self.window.title().map_err(|e| {
             WebDriverErrorResponse::unknown_error(&format!("failed to get window title: {e}"))
         })?;
+        let our_pid = std::process::id();
 
         tokio::task::spawn_blocking(move || {
             let windows = xcap::Window::all().map_err(|e| {
                 WebDriverErrorResponse::unknown_error(&format!("xcap list windows failed: {e}"))
             })?;
 
-            let window = windows
+            // Restrict to windows owned by this process, then prefer a title match.
+            // PID filtering eliminates false positives from other processes that happen
+            // to share the same window title.
+            let our_windows: Vec<_> = windows.iter().filter(|w| w.pid().ok() == Some(our_pid)).collect();
+            let window = our_windows
                 .iter()
                 .find(|w| w.title().ok().as_deref() == Some(title.as_str()))
+                .or_else(|| our_windows.first())
                 .ok_or_else(|| {
-                    WebDriverErrorResponse::unknown_error(&format!(
-                        "no window found with title '{title}'"
-                    ))
+                    WebDriverErrorResponse::unknown_error("no window found for this process")
                 })?;
 
             let image = window.capture_image().map_err(|e| {
