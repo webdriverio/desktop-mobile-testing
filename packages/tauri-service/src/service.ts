@@ -271,7 +271,16 @@ export default class TauriWorkerService {
   }
 
   /**
-   * Initialize browser-only mode: navigate to dev server, inject IPC layer, expose API
+   * Initialize browser-only mode: navigate to dev server, inject IPC layer, expose API.
+   *
+   * Timing note: the IPC interceptor is injected after browser.url() resolves
+   * (i.e. after readyState === "complete"). Any invoke() calls the app makes
+   * during module init, DOMContentLoaded, or onload handlers will therefore
+   * run against the real (unpatched) __TAURI_INTERNALS__ and be missed by mocks.
+   * In practice this is only a problem for apps that call invoke() on startup
+   * before any user interaction. If your app does this, structure tests so that
+   * all mocks are created before the first navigation, or use a Vite plugin to
+   * import the injection script as a top-level module in your dev build.
    */
   private async initBrowserMode(browser: WebdriverIO.Browser): Promise<void> {
     log.debug('Initializing browser-only mode');
