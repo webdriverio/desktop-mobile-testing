@@ -60,22 +60,44 @@ export async function nativeScreenshot(
   } else if (process.platform === 'win32') {
     const hwnd = windowInfo.nativeHandle!;
     const outFwd = out.replace(/\\/g, '/');
-    // PW_RENDERFULLCONTENT (2) captures the DWM off-screen DX surface — the only reliable
-    // way to capture ANGLE/D3D11 Electron content when GPU compositing is active.
-    // When --disable-gpu-compositing is set, Chromium uses a software compositor and
-    // presents frames via GDI, so PrintWindow(0) / WM_PRINT works synchronously instead.
-    const printWindowFlag = windowInfo.gpuCompositing ? 2 : 0;
-    const ps =
-      `Add-Type -AssemblyName System.Drawing,System.Windows.Forms; ` +
-      `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
-      `public class W{[DllImport("user32.dll")]public static extern bool PrintWindow(IntPtr h,IntPtr d,uint f);` +
-      `[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
-      `public struct RECT{public int L,T,R,B;}}'; ` +
-      `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
-      `$b=New-Object Drawing.Bitmap ($r.R-$r.L),($r.B-$r.T); ` +
-      `$g=[Drawing.Graphics]::FromImage($b); ` +
-      `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,${printWindowFlag}) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
-      `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
+    let ps: string;
+    if (windowInfo.gpuCompositing) {
+      // PW_RENDERFULLCONTENT (2) captures the DWM off-screen DX surface — the only reliable
+      // way to capture ANGLE/D3D11 Electron content when GPU compositing is active.
+      ps =
+        `Add-Type -AssemblyName System.Drawing,System.Windows.Forms; ` +
+        `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
+        `public class W{[DllImport("user32.dll")]public static extern bool PrintWindow(IntPtr h,IntPtr d,uint f);` +
+        `[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
+        `public struct RECT{public int L,T,R,B;}}'; ` +
+        `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
+        `$b=New-Object Drawing.Bitmap ($r.R-$r.L),($r.B-$r.T); ` +
+        `$g=[Drawing.Graphics]::FromImage($b); ` +
+        `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
+        `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
+    } else {
+      // When --disable-gpu-compositing is set, Chromium's software compositor BitBlt's frames
+      // to the GDI screen buffer. PrintWindow(WM_PRINT=0) is ineffective for Chromium windows
+      // because Chromium's HWND procedure paints via BeginPaint/EndPaint rather than to the
+      // WM_PRINT HDC. CopyFromScreen reads the physical GDI framebuffer directly, which
+      // contains the software-composited content. We bring the window to the foreground first
+      // and sleep briefly to ensure the compositor has flushed its last frame to the screen.
+      ps =
+        `Add-Type -AssemblyName System.Drawing; ` +
+        `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
+        `public class W{[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out RECT r);` +
+        `[DllImport("user32.dll")]public static extern bool SetForegroundWindow(IntPtr h);` +
+        `[DllImport("user32.dll")]public static extern bool BringWindowToTop(IntPtr h);` +
+        `public struct RECT{public int L,T,R,B;}}'; ` +
+        `$h=[IntPtr]${hwnd}; $r=New-Object W+RECT; [W]::GetWindowRect($h,[ref]$r) | Out-Null; ` +
+        `[W]::BringWindowToTop($h) | Out-Null; [W]::SetForegroundWindow($h) | Out-Null; ` +
+        `Start-Sleep -Milliseconds 200; ` +
+        `$w=$r.R-$r.L; $th=$r.B-$r.T; ` +
+        `$b=New-Object Drawing.Bitmap $w,$th; ` +
+        `$g=[Drawing.Graphics]::FromImage($b); ` +
+        `$g.CopyFromScreen($r.L,$r.T,0,0,(New-Object Drawing.Size $w,$th)); $g.Dispose(); ` +
+        `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
+    }
     const r = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 30_000 });
     if (r.error) throw r.error;
     if (r.status !== 0) throw new Error(`PowerShell capture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);

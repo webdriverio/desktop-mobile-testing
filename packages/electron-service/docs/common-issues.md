@@ -100,7 +100,7 @@ export const config = {
 
 #### Solution
 
-Pass `--disable-gpu-compositing` in `appArgs`. This switches Chromium to a software (GDI-compatible) compositor, allowing `PrintWindow` to capture the window content via the classic WM\_PRINT message path. The service detects the flag automatically via `app.commandLine.hasSwitch('disable-gpu-compositing')` and picks the correct `PrintWindow` mode at runtime — no other code changes are required.
+Pass `--disable-gpu-compositing` in `appArgs`. This switches Chromium to a software compositor that BitBlt's frames to the GDI screen buffer. The service detects the flag automatically via `app.commandLine.hasSwitch('disable-gpu-compositing')` and switches to `CopyFromScreen` (reading the GDI framebuffer) instead of `PrintWindow(PW_RENDERFULLCONTENT)` — no other code changes are required.
 
 ```typescript
 // wdio.conf.ts
