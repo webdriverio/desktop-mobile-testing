@@ -312,9 +312,18 @@ export async function createElectronBrowserModeMock(
   };
 
   mock.mockRestore = async () => {
-    await runInterceptorScript<void>(browser, browserInterceptor.buildUnregistrationScript(channel));
+    // There is no original Electron API to restore in browser mode — the IPC interceptor
+    // is always synthetic. Deregistering the channel would make future ipcRenderer.invoke
+    // calls throw "unmocked channel", breaking restoreMocks: true across tests.
+    // Behave like mockReset: clear history and implementation but keep the channel alive.
+    const currentName = outerMock.getMockName();
+    await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReset'));
+    const asyncMockClearFn = mock.mockClear;
+    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
     outerMockClear();
-    mockStore.deleteMockByRef(mock);
+    outerMockReset();
+    mock.mockClear = asyncMockClearFn;
+    outerMock.mockName(currentName);
     return mock;
   };
 

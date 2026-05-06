@@ -886,4 +886,50 @@ describe('Electron Worker Service', () => {
       });
     });
   });
+
+  describe('browser mode', () => {
+    let browserModeBrowser: WebdriverIO.Browser;
+
+    beforeEach(() => {
+      browserModeBrowser = {
+        url: vi.fn().mockResolvedValue(undefined),
+        execute: vi.fn().mockResolvedValue(undefined),
+        overwriteCommand: vi.fn(),
+        electron: {},
+      } as unknown as WebdriverIO.Browser;
+    });
+
+    describe('patchBrowserUrl()', () => {
+      it('re-throws when the IPC injection script fails after navigation', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
+        await instance.before({}, [], browserModeBrowser);
+
+        (browserModeBrowser.execute as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+          new Error('Script injection blocked'),
+        );
+
+        await expect(browserModeBrowser.url('http://localhost:5173/settings')).rejects.toThrow(
+          'Script injection blocked',
+        );
+      });
+
+      it('resolves normally when the injection script succeeds after navigation', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
+        await instance.before({}, [], browserModeBrowser);
+
+        await expect(browserModeBrowser.url('http://localhost:5173/settings')).resolves.toBeUndefined();
+      });
+
+      it('does not run the injection script when url() is called without a href (get current URL)', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
+        await instance.before({}, [], browserModeBrowser);
+
+        const executeCallsBefore = (browserModeBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length;
+        await browserModeBrowser.url();
+        const executeCallsAfter = (browserModeBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length;
+
+        expect(executeCallsAfter).toBe(executeCallsBefore);
+      });
+    });
+  });
 });

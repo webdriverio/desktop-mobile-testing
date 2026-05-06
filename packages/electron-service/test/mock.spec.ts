@@ -520,16 +520,14 @@ describe('createElectronBrowserModeMock()', () => {
   });
 
   describe('mockRestore()', () => {
-    it('should remove the mock from the store by reference', async () => {
+    it('should keep the mock in the store — channel must remain registered for restoreMocks: true to be safe across tests', async () => {
       const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
-      mockStore.setMockWithKey(
-        'electron.my-channel\x000',
-        mock as unknown as Parameters<typeof mockStore.setMockWithKey>[1],
-      );
+      const storeKey = 'electron.my-channel\x000';
+      mockStore.setMockWithKey(storeKey, mock as unknown as Parameters<typeof mockStore.setMockWithKey>[1]);
 
       await mock.mockRestore();
 
-      expect(() => mockStore.getMock('electron.my-channel\x000')).toThrow('No mock registered');
+      expect(mockStore.getMock(storeKey)).toBe(mock);
     });
 
     it('should clear the outer mock call history on restore', async () => {
@@ -541,6 +539,14 @@ describe('createElectronBrowserModeMock()', () => {
       await mock.mockRestore();
 
       expect(mock.mock.calls).toHaveLength(0);
+    });
+
+    it('should preserve the mock name across restore', async () => {
+      const mock = await createElectronBrowserModeMock('my-channel', mockBrowser as unknown as WebdriverIO.Browser);
+
+      await mock.mockRestore();
+
+      expect(mock.getMockName()).toBe('electron.my-channel');
     });
   });
 });
