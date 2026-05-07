@@ -40,6 +40,8 @@ const result = await browser.tauri.execute('window.location.href');
 
 **Note:** Requires tauri-plugin-wdio to be installed. See [Plugin Setup](./plugin-setup.md).
 
+**Browser Mode:** Not available. `browser.tauri.execute()` requires a live Tauri backend and plugin bridge. Use `browser.execute()` for renderer-side code, or `browser.tauri.mock()` to intercept Tauri commands.
+
 ---
 
 ### `browser.tauri.mock(command)`
@@ -60,6 +62,26 @@ await mock.mockReturnValue('mocked file content');
 const content = await browser.tauri.execute(({ core }) => core.invoke('read_file'));
 expect(content).toBe('mocked file content');
 ```
+
+**Browser Mode:** Works in browser mode — this is the primary testing API in browser mode. The `command` argument is the Tauri command name (matching what the frontend passes to `invoke()`). Trigger the command via a UI interaction or `browser.execute(() => window.__TAURI_INTERNALS__.invoke('command-name'))`, then call `update()` and assert.
+
+```typescript
+// Browser mode — mock a Tauri command
+const mockReadFile = await browser.tauri.mock('read_file');
+await mockReadFile.mockResolvedValue('mocked file content');
+
+// Trigger the command (via UI or directly)
+await browser.execute(() => window.__TAURI_INTERNALS__.invoke('read_file'));
+
+// Sync call data and assert
+await mockReadFile.update();
+expect(mockReadFile).toHaveBeenCalledTimes(1);
+```
+
+See the [Browser Mode Guide](./browser-mode.md) for a full usage walkthrough.
+
+**See Also:**
+- [Browser Mode Guide](./browser-mode.md)
 
 ---
 
@@ -154,6 +176,8 @@ await browser.waitUntil(async () => {
 
 See [Deeplink Testing](./deeplink-testing.md) for full usage guide.
 
+**Browser Mode:** Not available. There is no Tauri process to receive the deeplink.
+
 ---
 
 ### `browser.tauri.switchWindow(label)`
@@ -179,6 +203,8 @@ await browser.tauri.switchWindow('main');
 
 **Note:** The window label must exist in your Tauri app. Use `browser.tauri.listWindows()` to get available labels.
 
+**Browser Mode:** Not available. Multi-window support requires a running Tauri app; there is no window-switching concept in browser mode.
+
 ---
 
 ### `browser.tauri.listWindows()`
@@ -192,6 +218,8 @@ Get a list of all available Tauri window labels in the application.
 const windows = await browser.tauri.listWindows();
 console.log(windows); // ['main', 'settings', 'dialog']
 ```
+
+**Browser Mode:** Not available. Throws for the same reason as `switchWindow()`.
 
 ---
 
