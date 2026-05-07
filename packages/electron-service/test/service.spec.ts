@@ -1005,6 +1005,82 @@ describe('Electron Worker Service', () => {
         expect((firefoxBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
         expect((firefoxBrowser.url as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
       });
+
+      it('re-injects only into Electron instances when root url() is called after navigation', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
+
+        const electronBrowser = {
+          url: vi.fn().mockResolvedValue(undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          requestedCapabilities: {
+            alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
+          },
+          electron: {},
+        } as unknown as WebdriverIO.Browser;
+
+        const firefoxBrowser = {
+          url: vi.fn().mockResolvedValue(undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          requestedCapabilities: { alwaysMatch: { browserName: 'firefox' } },
+          electron: {},
+        } as unknown as WebdriverIO.Browser;
+
+        const rootBrowser = {
+          instances: ['app1', 'ff1'],
+          getInstance: (name: string) => (name === 'app1' ? electronBrowser : firefoxBrowser),
+          execute: vi.fn().mockResolvedValue(undefined),
+          url: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          isMultiremote: true,
+          electron: {},
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        await instance.before({}, [], rootBrowser);
+
+        // Navigate via root browser (simulates user calling mrBrowser.url('...'))
+        const electronExecuteBefore = (electronBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length;
+        const firefoxExecuteBefore = (firefoxBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length;
+
+        await (rootBrowser as unknown as WebdriverIO.Browser).url('http://localhost:5173/new-page');
+
+        // Only the Electron instance gets the re-injection execute call
+        expect((electronBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(electronExecuteBefore + 1);
+        // Firefox instance gets no additional execute calls
+        expect((firefoxBrowser.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(firefoxExecuteBefore);
+      });
+
+      it('installs command overrides only on the root browser, not on individual Electron instances', async () => {
+        instance = new ElectronWorkerService({ mode: 'browser', devServerUrl: 'http://localhost:5173' }, {});
+
+        const electronBrowser = {
+          url: vi.fn().mockResolvedValue(undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          requestedCapabilities: {
+            alwaysMatch: { browserName: 'electron', 'wdio:electronServiceOptions': {} },
+          },
+          electron: {},
+        } as unknown as WebdriverIO.Browser;
+
+        const rootBrowser = {
+          instances: ['app1'],
+          getInstance: (name: string) => (name === 'app1' ? electronBrowser : undefined),
+          execute: vi.fn().mockResolvedValue(undefined),
+          url: vi.fn().mockResolvedValue(undefined),
+          overwriteCommand: vi.fn(),
+          isMultiremote: true,
+          electron: {},
+        } as unknown as WebdriverIO.MultiRemoteBrowser;
+
+        await instance.before({}, [], rootBrowser);
+
+        // Root browser gets overwriteCommand calls (for click, doubleClick, setValue, clearValue)
+        expect((rootBrowser.overwriteCommand as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0);
+        // Per-instance browser gets none — avoids double-wrap through root's override chain
+        expect((electronBrowser.overwriteCommand as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+      });
     });
 
     describe('root multiremote browser.electron.mock()', () => {

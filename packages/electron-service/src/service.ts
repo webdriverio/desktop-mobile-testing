@@ -216,6 +216,8 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
       const mrBrowser = browser as unknown as WebdriverIO.MultiRemoteBrowser;
       (browser as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
 
+      const electronInstances: WebdriverIO.Browser[] = [];
+
       for (const instanceName of mrBrowser.instances) {
         const instance = mrBrowser.getInstance(instanceName);
         const caps =
@@ -239,11 +241,14 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         (instance as unknown as Record<string, boolean>).__wdioElectronBrowserMode__ = true;
         instance.electron = this.getElectronBrowserModeAPI(instance);
         this.patchBrowserUrl(instance, injectionScript);
-        this.installCommandOverrides(instance);
+        electronInstances.push(instance);
       }
 
+      // Root-level element commands (mrBrowser.$('btn').click()) dispatch through the root's
+      // override chain — independent from per-instance chains. Installing overrides only on the
+      // root covers both root and per-instance interactions without double-wrapping.
       browser.electron = this.getElectronBrowserModeAPI(browser);
-      this.patchBrowserUrl(browser, injectionScript);
+      this.patchBrowserUrl(browser, injectionScript, electronInstances);
       this.installCommandOverrides(browser as unknown as WebdriverIO.Browser);
     } else {
       const devServerUrl = this.globalOptions.devServerUrl;
@@ -264,15 +269,27 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
    * Patch browser.url() so the IPC injection script is re-applied after every
    * navigation. A page load wipes window state, losing __wdio_mocks__ and the
    * ipcRenderer patch.
+   *
+   * When called for the root multiremote browser, `electronInstances` must be
+   * provided so re-injection targets only those browsers — root `execute()` would
+   * otherwise broadcast to every session, including non-Electron ones.
    */
-  private patchBrowserUrl(browser: WebdriverIO.Browser, injectionScript: string): void {
+  private patchBrowserUrl(
+    browser: WebdriverIO.Browser,
+    injectionScript: string,
+    electronInstances?: WebdriverIO.Browser[],
+  ): void {
     type UrlFn = (href?: string) => Promise<string | void>;
     const originalUrl = (browser.url as unknown as UrlFn).bind(browser);
     (browser as unknown as { url: UrlFn }).url = async (href?: string): Promise<string | void> => {
       const result = await originalUrl(href);
       if (href !== undefined) {
         try {
-          await browser.execute(injectionScript);
+          if (electronInstances) {
+            await Promise.all(electronInstances.map((inst) => inst.execute(injectionScript)));
+          } else {
+            await browser.execute(injectionScript);
+          }
         } catch (error) {
           log.warn('Failed to re-inject IPC script after navigation:', error);
           throw error;
