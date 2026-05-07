@@ -220,14 +220,16 @@ jobs:
             }
             return scenarios.map(s => `test:e2e:electron-${s}`).join(' ');
 
-      # Install ffmpeg on Windows for nativeScreenshot capture (DXGI Desktop Duplication
-      # via `ffmpeg -f ddagrab`). The Hyper-V virtual GPU on GitHub Actions doesn't back
-      # the GDI surface that Chromium presents to under DirectComposition, so all
-      # GDI-based captures (PrintWindow, CopyFromScreen, BitBlt) return blank.
-      - name: 🎬 Install ffmpeg (Windows nativeScreenshot capture)
+      # Install ffmpeg-full on Windows for nativeScreenshot capture (DXGI Desktop
+      # Duplication via `ffmpeg -f ddagrab`). The Hyper-V virtual GPU on GitHub Actions
+      # doesn't back the GDI surface that Chromium presents to under DirectComposition,
+      # so GDI-based captures (PrintWindow, CopyFromScreen, BitBlt) return blank.
+      # NOTE: the plain `ffmpeg` chocolatey package ships the *essentials* build which
+      # omits ddagrab; `ffmpeg-full` wraps BtbN's GPL build that includes it.
+      - name: 🎬 Install ffmpeg-full (Windows nativeScreenshot capture)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: choco install ffmpeg --no-progress -y
+        run: choco install ffmpeg-full --no-progress -y
 
       # Run the E2E tests using Turbo with the generated test commands
       # Each test builds its own apps with correct environment context
