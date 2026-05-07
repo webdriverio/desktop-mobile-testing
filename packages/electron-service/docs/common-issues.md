@@ -100,7 +100,9 @@ export const config = {
 
 #### Solution
 
-Pass `--disable-gpu-compositing` in `appArgs`. This switches Chromium to a software compositor that BitBlt's frames to the GDI screen buffer. The service detects the flag automatically via `app.commandLine.hasSwitch('disable-gpu-compositing')` and switches to `CopyFromScreen` (reading the GDI framebuffer) instead of `PrintWindow(PW_RENDERFULLCONTENT)` — no other code changes are required.
+Pass `--disable-gpu-compositing` in `appArgs` and ensure **`ffmpeg` is on `PATH`**. The service detects the flag automatically via `app.commandLine.hasSwitch('disable-gpu-compositing')` and switches its capture backend to `ffmpeg -f ddagrab` (DXGI Desktop Duplication API), which reads what DWM is actually presenting — so it works under WARP/Hyper-V where every GDI-based capture (`CopyFromScreen`, `PrintWindow(WM_PRINT)`, `BitBlt(GetWindowDC)`) returns a blank image because Chromium presents via DirectComposition rather than GDI.
+
+`ffmpeg` is preinstalled on the GitHub Actions `windows-2022` image. On other CI providers, install it before running the tests (e.g. `choco install ffmpeg`).
 
 ```typescript
 // wdio.conf.ts

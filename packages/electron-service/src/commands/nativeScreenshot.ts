@@ -58,13 +58,12 @@ export async function nativeScreenshot(
     if (r.error) throw r.error;
     if (r.status !== 0) throw new Error(`screencapture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
   } else if (process.platform === 'win32') {
-    const hwnd = windowInfo.nativeHandle!;
-    const outFwd = out.replace(/\\/g, '/');
-    let ps: string;
     if (windowInfo.gpuCompositing) {
       // PW_RENDERFULLCONTENT (2) captures the DWM off-screen DX surface — the only reliable
       // way to capture ANGLE/D3D11 Electron content when GPU compositing is active.
-      ps =
+      const hwnd = windowInfo.nativeHandle!;
+      const outFwd = out.replace(/\\/g, '/');
+      const ps =
         `Add-Type -AssemblyName System.Drawing,System.Windows.Forms; ` +
         `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
         `public class W{[DllImport("user32.dll")]public static extern bool PrintWindow(IntPtr h,IntPtr d,uint f);` +
@@ -75,36 +74,46 @@ export async function nativeScreenshot(
         `$g=[Drawing.Graphics]::FromImage($b); ` +
         `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
         `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
+      const r = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 30_000 });
+      if (r.error) throw r.error;
+      if (r.status !== 0) {
+        throw new Error(`PowerShell capture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
+      }
     } else {
-      // When --disable-gpu-compositing is set, Chromium's SoftwareOutputDeviceWin BitBlt's
-      // each frame to the window's HDC, so the content lives in the window's per-HWND DWM
-      // redirection bitmap. We BitBlt from GetWindowDC(hwnd) (full window incl. title bar)
-      // into a memory bitmap. CopyFromScreen / GetDC(NULL) is unreliable on Hyper-V virtual
-      // display adapters because the desktop redirection surface isn't fully backed when
-      // there's no hardware GPU; PrintWindow(WM_PRINT=0) doesn't work either because
-      // Chromium's HWND procedure paints via BeginPaint and ignores the WM_PRINT HDC.
-      const { width, height } = windowInfo.bounds;
-      ps =
-        `Add-Type -AssemblyName System.Drawing; ` +
-        `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;` +
-        `public class W{` +
-        `[DllImport("user32.dll")]public static extern IntPtr GetWindowDC(IntPtr h);` +
-        `[DllImport("user32.dll")]public static extern int ReleaseDC(IntPtr h,IntPtr d);` +
-        `[DllImport("gdi32.dll")]public static extern bool BitBlt(IntPtr d,int dx,int dy,int w,int h,IntPtr s,int sx,int sy,uint rop);` +
-        `}'; ` +
-        `$h=[IntPtr]${hwnd}; ` +
-        `$src=[W]::GetWindowDC($h); ` +
-        `$b=New-Object Drawing.Bitmap ${width},${height}; ` +
-        `$g=[Drawing.Graphics]::FromImage($b); ` +
-        `$dst=$g.GetHdc(); ` +
-        `[W]::BitBlt($dst,0,0,${width},${height},$src,0,0,0x00CC0020) | Out-Null; ` +
-        `$g.ReleaseHdc($dst); $g.Dispose(); ` +
-        `[W]::ReleaseDC($h,$src) | Out-Null; ` +
-        `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
+      // No-GPU path (CI / VMs): modern Chromium presents frames via DirectComposition
+      // even with --disable-gpu-compositing, so the rendered content is never written
+      // to any GDI surface. Every GDI-based capture (CopyFromScreen, GetWindowDC+BitBlt,
+      // PrintWindow(WM_PRINT)) returns a blank image. FFmpeg's ddagrab uses the DXGI
+      // Desktop Duplication API which reads what DWM is actually presenting, so it
+      // captures DComp-rendered content. ddagrab works on WARP (software D3D), which
+      // is what Hyper-V provides on GitHub Actions Windows runners. ffmpeg is
+      // preinstalled on the GitHub Actions windows-2022 image.
+      const { x, y, width, height } = windowInfo.bounds;
+      const r = spawnSync(
+        'ffmpeg',
+        [
+          '-loglevel',
+          'error',
+          '-y',
+          '-f',
+          'ddagrab',
+          '-framerate',
+          '60',
+          '-frames:v',
+          '1',
+          '-i',
+          'desktop',
+          '-vf',
+          `crop=${width}:${height}:${x}:${y}`,
+          out,
+        ],
+        { timeout: 30_000 },
+      );
+      if (r.error) throw r.error;
+      if (r.status !== 0) {
+        throw new Error(`ffmpeg ddagrab failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
+      }
     }
-    const r = spawnSync('powershell', ['-NoProfile', '-Command', ps], { timeout: 30_000 });
-    if (r.error) throw r.error;
-    if (r.status !== 0) throw new Error(`PowerShell capture failed (exit ${r.status}): ${r.stderr?.toString().trim()}`);
   } else {
     throw new Error(`nativeScreenshot is not supported on ${process.platform}`);
   }
