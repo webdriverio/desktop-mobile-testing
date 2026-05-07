@@ -220,35 +220,6 @@ jobs:
             }
             return scenarios.map(s => `test:e2e:electron-${s}`).join(' ');
 
-      # Install ffmpeg with ddagrab on Windows for nativeScreenshot capture.
-      # The Hyper-V virtual GPU on GitHub Actions doesn't back the GDI surface that
-      # Chromium presents to under DirectComposition, so all GDI-based captures
-      # (PrintWindow, CopyFromScreen, BitBlt) return blank. ddagrab uses DXGI Desktop
-      # Duplication API which works on WARP and reads what DWM is presenting.
-      # NOTE: chocolatey's `ffmpeg`/`ffmpeg-full` and BtbN's GPL build all SHIP without
-      # ddagrab (no --enable-d3d11va). GyanD's "full" build has it. Distributed as 7z;
-      # 7-Zip is preinstalled at "C:\Program Files\7-Zip\7z.exe" on windows-2022.
-      - name: 🎬 Install ffmpeg with ddagrab (Windows nativeScreenshot capture)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $url = 'https://github.com/GyanD/codexffmpeg/releases/download/8.0/ffmpeg-8.0-full_build.7z'
-          Invoke-WebRequest -Uri $url -OutFile ffmpeg.7z
-          & 'C:\Program Files\7-Zip\7z.exe' x ffmpeg.7z '-oC:\ffmpeg-build' -y | Out-Null
-          $binDir = (Get-ChildItem C:\ffmpeg-build -Directory | Select-Object -First 1).FullName + '\bin'
-          Add-Content -Path $env:GITHUB_PATH -Value $binDir
-          & "$binDir\ffmpeg.exe" -hide_banner -version | Select-Object -First 1
-          Write-Host '--- Verifying ddagrab is present ---'
-          $devices = & "$binDir\ffmpeg.exe" -hide_banner -devices 2>&1 | Out-String
-          if ($devices -match 'ddagrab') {
-            Write-Host 'OK: ddagrab indev present'
-          } else {
-            Write-Host '::error::ddagrab indev NOT present in this ffmpeg build'
-            Write-Host $devices
-            exit 1
-          }
-
       # Run the E2E tests using Turbo with the generated test commands
       # Each test builds its own apps with correct environment context
       - name: 🧪 Execute E2E Tests

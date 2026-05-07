@@ -100,9 +100,12 @@ export const config = {
 
 #### Solution
 
-Pass `--disable-gpu-compositing` in `appArgs` and ensure **`ffmpeg` is on `PATH`**. The service detects the flag automatically via `app.commandLine.hasSwitch('disable-gpu-compositing')` and switches its capture backend to `ffmpeg -f ddagrab` (DXGI Desktop Duplication API), which reads what DWM is actually presenting — so it works under WARP/Hyper-V where every GDI-based capture (`CopyFromScreen`, `PrintWindow(WM_PRINT)`, `BitBlt(GetWindowDC)`) returns a blank image because Chromium presents via DirectComposition rather than GDI.
+Pass **both** `--disable-gpu-compositing` and `--disable-direct-composition` in `appArgs`:
 
-`ffmpeg` is preinstalled on the GitHub Actions `windows-2022` image. On other CI providers, install it before running the tests (e.g. `choco install ffmpeg`).
+- `--disable-gpu-compositing` switches Chromium to its software compositor.
+- `--disable-direct-composition` disables the DirectComposition presenter so frames land in the window's GDI redirection bitmap instead of the DComp surface.
+
+Together they force a pure-GDI presentation path. The service detects the first flag via `app.commandLine.hasSwitch('disable-gpu-compositing')` and switches its capture backend from `PrintWindow(PW_RENDERFULLCONTENT)` to `BitBlt(GetWindowDC(hwnd))`, which reads the per-window redirection bitmap directly. **`--disable-direct-composition` is required**: without it Chromium continues to present via DComp even with software compositing, and every GDI-based capture returns blank.
 
 ```typescript
 // wdio.conf.ts

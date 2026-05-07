@@ -168,10 +168,13 @@ type MultiremoteCapabilities = {
 
 type StandardCapabilities = ElectronCapability[];
 
-// On CI, disable GPU compositing so PrintWindow(WM_PRINT) can capture the software-
-// composited window content. With hardware GPU, PrintWindow(PW_RENDERFULLCONTENT) is
-// used instead (see nativeScreenshot.ts), which requires DWM's DX surface sharing.
-const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing'] : [];
+// On CI (no hardware GPU), force Chromium to present via GDI so nativeScreenshot can
+// capture the rendered content. --disable-gpu-compositing switches to the software
+// compositor; --disable-direct-composition disables the DirectComposition presenter
+// so frames land in the window's GDI redirection bitmap, where GetWindowDC+BitBlt
+// can read them. With hardware GPU (developer machines), PrintWindow(PW_RENDERFULLCONTENT)
+// captures the DWM DX surface and these flags are not needed.
+const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing', '--disable-direct-composition'] : [];
 
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
