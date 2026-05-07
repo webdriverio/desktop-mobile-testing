@@ -94,18 +94,24 @@ export const config = {
 
 **Manual AppArmor workaround**: Run `sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` before running your tests. This command requires root privileges; if necessary, run it as the root user or use the `sudo` command.
 
-## `nativeScreenshot()` produces a black window on Windows CI / virtual machines
+## `nativeScreenshot()` is unreliable on Windows CI / virtual machines
 
-`browser.electron.nativeScreenshot()` uses `PrintWindow(PW_RENDERFULLCONTENT)` by default on Windows. This flag captures the DWM off-screen DirectX surface, which is the only reliable way to capture ANGLE/D3D11 Electron content. However, it requires DWM to have a hardware-backed DX shared surface — GitHub Actions Windows runners and most CI/virtual-machine environments only have a WARP software GPU, so DWM cannot fulfil the request and the call either deadlocks or returns a blank bitmap.
+`browser.electron.nativeScreenshot()` uses `PrintWindow(PW_RENDERFULLCONTENT)` to capture the DWM off-screen DirectX surface — the only path that reliably captures ANGLE/D3D11 Electron content. It requires DWM to have a hardware-backed DX shared surface, which is only present on machines with a real GPU. CI runners and most VM environments expose only WARP (software D3D), where the call deadlocks.
 
-#### Solution
+There is no good fallback. We tried, in order:
 
-Pass **both** `--disable-gpu-compositing` and `--disable-direct-composition` in `appArgs`:
+| Method | Result on WARP |
+|--------|---------------|
+| `PrintWindow(PW_RENDERFULLCONTENT)` | deadlocks |
+| `PrintWindow(WM_PRINT)` | blank — Chromium ignores the `WM_PRINT` HDC |
+| `CopyFromScreen` (`GetDC(NULL)` + `BitBlt`) | blank — Hyper-V's desktop redirection surface isn't backed |
+| `BitBlt(GetWindowDC(hwnd))` | blank — Chromium presents via DirectComposition, not GDI |
+| `+ --disable-direct-composition` Chromium flag | hangs — Chromium enters a paint-pending state |
+| `ffmpeg -f ddagrab` (DXGI Desktop Duplication) | works *if* you have an FFmpeg build with `--enable-d3d11va` — none of the standard Windows distributions (BtbN GPL, Gyan full, chocolatey `ffmpeg`/`ffmpeg-full`) ship with this enabled |
 
-- `--disable-gpu-compositing` switches Chromium to its software compositor.
-- `--disable-direct-composition` disables the DirectComposition presenter so frames land in the window's GDI redirection bitmap instead of the DComp surface.
+If you control the FFmpeg build you can use `ddagrab` and bypass GDI entirely. Otherwise, accept the limitation: skip the test on CI Windows, or only assert it on a self-hosted runner with real graphics.
 
-Together they force a pure-GDI presentation path. The service detects the first flag via `app.commandLine.hasSwitch('disable-gpu-compositing')` and switches its capture backend from `PrintWindow(PW_RENDERFULLCONTENT)` to `BitBlt(GetWindowDC(hwnd))`, which reads the per-window redirection bitmap directly. **`--disable-direct-composition` is required**: without it Chromium continues to present via DComp even with software compositing, and every GDI-based capture returns blank.
+When `--disable-gpu-compositing` is detected the service falls back to `BitBlt(GetWindowDC(hwnd))` instead of deadlocking — but as noted, that returns a blank PNG under WARP. The fallback exists so the call doesn't crash, not because the resulting image is useful.
 
 ```typescript
 // wdio.conf.ts

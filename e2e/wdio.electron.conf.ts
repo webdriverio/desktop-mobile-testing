@@ -168,13 +168,11 @@ type MultiremoteCapabilities = {
 
 type StandardCapabilities = ElectronCapability[];
 
-// On CI (no hardware GPU), force Chromium to present via GDI so nativeScreenshot can
-// capture the rendered content. --disable-gpu-compositing switches to the software
-// compositor; --disable-direct-composition disables the DirectComposition presenter
-// so frames land in the window's GDI redirection bitmap, where GetWindowDC+BitBlt
-// can read them. With hardware GPU (developer machines), PrintWindow(PW_RENDERFULLCONTENT)
-// captures the DWM DX surface and these flags are not needed.
-const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing', '--disable-direct-composition'] : [];
+// On Windows CI we can't reliably nativeScreenshot — see common-issues.md and the
+// skip in e2e/test/electron/native-screenshot.spec.ts. We still pass
+// --disable-gpu-compositing so PrintWindow(PW_RENDERFULLCONTENT) doesn't deadlock
+// under WARP if anyone re-enables the test.
+const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing'] : [];
 
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 

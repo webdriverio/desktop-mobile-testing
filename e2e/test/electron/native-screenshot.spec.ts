@@ -12,6 +12,17 @@ describe('electron native screenshot', () => {
     return;
   }
 
+  // GitHub Actions Windows runners have no hardware GPU (Hyper-V / WARP). Modern
+  // Chromium presents frames via DirectComposition, so every GDI capture path returns
+  // blank, and PrintWindow(PW_RENDERFULLCONTENT) deadlocks under WARP. The only
+  // reliable capture is DXGI Desktop Duplication (ffmpeg ddagrab) but no easily-
+  // installable ffmpeg distribution ships with that indev. Feature still works on
+  // dev machines with a real GPU; see docs/common-issues.md for the full rationale.
+  if (process.platform === 'win32' && process.env.CI) {
+    it.skip('skipped on Windows CI (no hardware GPU; see common-issues.md)', () => {});
+    return;
+  }
+
   after(async () => {
     await disposeOcr();
   });

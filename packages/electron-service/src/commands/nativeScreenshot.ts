@@ -76,13 +76,14 @@ export async function nativeScreenshot(
         `$hdc=$g.GetHdc(); [W]::PrintWindow($h,$hdc,2) | Out-Null; $g.ReleaseHdc($hdc); $g.Dispose(); ` +
         `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
     } else {
-      // No-GPU path (CI / VMs without hardware GPU): the caller must launch Electron with
-      // --disable-gpu-compositing AND --disable-direct-composition. Together these force
-      // Chromium to use the software compositor and present via GDI BitBlt to the window's
-      // HDC, putting the rendered content in the per-window DWM redirection bitmap.
-      // GetWindowDC(hwnd) reads that bitmap directly (full window incl. title bar).
-      // Without --disable-direct-composition, Chromium presents via DComp and GDI captures
-      // return blank; PW_RENDERFULLCONTENT can't be used because it deadlocks under WARP.
+      // No-GPU path: --disable-gpu-compositing is set (typically because the machine has
+      // no hardware GPU and PrintWindow(PW_RENDERFULLCONTENT) would deadlock under WARP).
+      // We BitBlt from GetWindowDC(hwnd) into a memory bitmap. CAVEAT: modern Chromium
+      // presents via DirectComposition even with software compositing, so on most CI/VM
+      // setups this returns a blank image. We still take the capture rather than throwing,
+      // so callers see the limitation as "blank PNG" instead of "feature crashes" — but
+      // if you're testing nativeScreenshot under WARP, expect to skip it (see
+      // docs/common-issues.md).
       const { width, height } = windowInfo.bounds;
       ps =
         `Add-Type -AssemblyName System.Drawing; ` +
