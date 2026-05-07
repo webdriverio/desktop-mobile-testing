@@ -313,11 +313,8 @@ export async function createElectronBrowserModeMock(
     implState = null;
     const currentName = outerMock.getMockName();
     await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReset'));
-    const asyncMockClearFn = mock.mockClear;
-    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
     outerMockClear();
     outerMockReset();
-    mock.mockClear = asyncMockClearFn;
     outerMock.mockName(currentName);
     return mock;
   };
@@ -330,11 +327,8 @@ export async function createElectronBrowserModeMock(
     // Behave like mockReset: clear history and implementation but keep the channel alive.
     const currentName = outerMock.getMockName();
     await runInterceptorScript<void>(browser, browserInterceptor.buildInnerInvocationScript(channel, 'mockReset'));
-    const asyncMockClearFn = mock.mockClear;
-    (mock as unknown as { mockClear: () => void }).mockClear = outerMockClear;
     outerMockClear();
     outerMockReset();
-    mock.mockClear = asyncMockClearFn;
     outerMock.mockName(currentName);
     return mock;
   };
