@@ -31,6 +31,14 @@ export const WDIO_MOCK_SETUP_SCRIPT = `  window.__wdio_call_id__ = window.__wdio
       _calls.push(args);
       _invocationCallOrder.push(window.__wdio_call_id__++);
       var impl = _implQueue.length > 0 ? _implQueue.shift() : _defaultImpl;
+      if (impl !== null && impl !== undefined && typeof impl === 'object' && impl.__wdioType) {
+        if (impl.__wdioType === 'resolve') {
+          _results.push({ type: 'return', value: impl.__wdioVal });
+          return Promise.resolve(impl.__wdioVal);
+        }
+        _results.push({ type: 'throw', value: impl.__wdioVal });
+        return Promise.reject(impl.__wdioVal);
+      }
       if (impl !== undefined) {
         try {
           var val = impl.apply(this, args);
@@ -42,13 +50,11 @@ export const WDIO_MOCK_SETUP_SCRIPT = `  window.__wdio_call_id__ = window.__wdio
         }
       } else if (_defaultRejectedValue !== NOT_SET) {
         var rv = _defaultRejectedValue;
-        var rejectedPromise = Promise.reject(rv);
-        _results.push({ type: 'return', value: rejectedPromise });
-        return rejectedPromise;
+        _results.push({ type: 'throw', value: rv });
+        return Promise.reject(rv);
       } else if (_defaultResolvedValue !== NOT_SET) {
-        var p = Promise.resolve(_defaultResolvedValue);
-        _results.push({ type: 'return', value: p });
-        return p;
+        _results.push({ type: 'return', value: _defaultResolvedValue });
+        return Promise.resolve(_defaultResolvedValue);
       } else if (_returnThis) {
         _results.push({ type: 'return', value: this });
         return this;
@@ -80,14 +86,14 @@ export const WDIO_MOCK_SETUP_SCRIPT = `  window.__wdio_call_id__ = window.__wdio
       _defaultRejectedValue = NOT_SET; _returnThis = false; return mockFn;
     };
     mockFn.mockResolvedValueOnce = function(val) {
-      _implQueue.push(function() { return Promise.resolve(val); }); return mockFn;
+      _implQueue.push({ __wdioType: 'resolve', __wdioVal: val }); return mockFn;
     };
     mockFn.mockRejectedValue = function(val) {
       _defaultImpl = undefined; _defaultRejectedValue = val; _defaultReturnValue = NOT_SET;
       _defaultResolvedValue = NOT_SET; _returnThis = false; return mockFn;
     };
     mockFn.mockRejectedValueOnce = function(val) {
-      _implQueue.push(function() { return Promise.reject(val); }); return mockFn;
+      _implQueue.push({ __wdioType: 'reject', __wdioVal: val }); return mockFn;
     };
     mockFn.mockClear = function() {
       _calls = []; _results = []; _invocationCallOrder = [];

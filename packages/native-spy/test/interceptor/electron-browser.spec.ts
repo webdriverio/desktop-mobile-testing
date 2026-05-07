@@ -156,6 +156,86 @@ describe('ElectronAdapter.buildBrowserIpcInjectionScript', () => {
       expect(mock.calls).toEqual([]);
       expect(mock.results).toEqual([]);
     });
+
+    describe('async result serialization', () => {
+      it('should record actual value in results for mockResolvedValue', () => {
+        const script = adapter.buildBrowserIpcInjectionScript();
+        const window = runInBrowserContext(script);
+        const spy = window.__wdio_spy__ as Record<string, unknown>;
+        const mockFn = (spy.fn as () => Record<string, unknown>)();
+        (mockFn.mockResolvedValue as (v: unknown) => void)({ data: 42 });
+        const returned = (mockFn as unknown as (...a: unknown[]) => Promise<unknown>)();
+        returned.catch(() => {});
+        const mock = mockFn.mock as Record<string, Array<{ type: string; value: unknown }>>;
+        expect(mock.results[0]).toEqual({ type: 'return', value: { data: 42 } });
+      });
+
+      it('should record actual value in results for mockRejectedValue', () => {
+        const script = adapter.buildBrowserIpcInjectionScript();
+        const window = runInBrowserContext(script);
+        const spy = window.__wdio_spy__ as Record<string, unknown>;
+        const mockFn = (spy.fn as () => Record<string, unknown>)();
+        (mockFn.mockRejectedValue as (v: unknown) => void)('err-reason');
+        const returned = (mockFn as unknown as (...a: unknown[]) => Promise<unknown>)();
+        returned.catch(() => {});
+        const mock = mockFn.mock as Record<string, Array<{ type: string; value: unknown }>>;
+        expect(mock.results[0]).toEqual({ type: 'throw', value: 'err-reason' });
+      });
+
+      it('should record actual value in results for mockResolvedValueOnce', () => {
+        const script = adapter.buildBrowserIpcInjectionScript();
+        const window = runInBrowserContext(script);
+        const spy = window.__wdio_spy__ as Record<string, unknown>;
+        const mockFn = (spy.fn as () => Record<string, unknown>)();
+        (mockFn.mockResolvedValueOnce as (v: unknown) => void)({ data: 99 });
+        const returned = (mockFn as unknown as (...a: unknown[]) => Promise<unknown>)();
+        returned.catch(() => {});
+        const mock = mockFn.mock as Record<string, Array<{ type: string; value: unknown }>>;
+        expect(mock.results[0]).toEqual({ type: 'return', value: { data: 99 } });
+      });
+
+      it('should record actual value in results for mockRejectedValueOnce', () => {
+        const script = adapter.buildBrowserIpcInjectionScript();
+        const window = runInBrowserContext(script);
+        const spy = window.__wdio_spy__ as Record<string, unknown>;
+        const mockFn = (spy.fn as () => Record<string, unknown>)();
+        (mockFn.mockRejectedValueOnce as (v: unknown) => void)('once-err');
+        const returned = (mockFn as unknown as (...a: unknown[]) => Promise<unknown>)();
+        returned.catch(() => {});
+        const mock = mockFn.mock as Record<string, Array<{ type: string; value: unknown }>>;
+        expect(mock.results[0]).toEqual({ type: 'throw', value: 'once-err' });
+      });
+
+      it('should fall back to mockResolvedValue after the queue is consumed', () => {
+        const script = adapter.buildBrowserIpcInjectionScript();
+        const window = runInBrowserContext(script);
+        const spy = window.__wdio_spy__ as Record<string, unknown>;
+        const mockFn = (spy.fn as () => Record<string, unknown>)();
+        (mockFn.mockResolvedValue as (v: unknown) => void)('default');
+        (mockFn.mockResolvedValueOnce as (v: unknown) => void)('once');
+        const invoke = mockFn as unknown as (...a: unknown[]) => Promise<unknown>;
+        invoke().catch(() => {});
+        invoke().catch(() => {});
+        const mock = mockFn.mock as Record<string, Array<{ type: string; value: unknown }>>;
+        expect(mock.results[0]).toEqual({ type: 'return', value: 'once' });
+        expect(mock.results[1]).toEqual({ type: 'return', value: 'default' });
+      });
+
+      it('should fall back to mockRejectedValue after the queue is consumed', () => {
+        const script = adapter.buildBrowserIpcInjectionScript();
+        const window = runInBrowserContext(script);
+        const spy = window.__wdio_spy__ as Record<string, unknown>;
+        const mockFn = (spy.fn as () => Record<string, unknown>)();
+        (mockFn.mockRejectedValue as (v: unknown) => void)('default-err');
+        (mockFn.mockRejectedValueOnce as (v: unknown) => void)('once-err');
+        const invoke = mockFn as unknown as (...a: unknown[]) => Promise<unknown>;
+        invoke().catch(() => {});
+        invoke().catch(() => {});
+        const mock = mockFn.mock as Record<string, Array<{ type: string; value: unknown }>>;
+        expect(mock.results[0]).toEqual({ type: 'throw', value: 'once-err' });
+        expect(mock.results[1]).toEqual({ type: 'throw', value: 'default-err' });
+      });
+    });
   });
 });
 
