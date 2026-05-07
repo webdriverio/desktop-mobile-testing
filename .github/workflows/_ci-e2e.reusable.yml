@@ -220,16 +220,26 @@ jobs:
             }
             return scenarios.map(s => `test:e2e:electron-${s}`).join(' ');
 
-      # Install ffmpeg-full on Windows for nativeScreenshot capture (DXGI Desktop
-      # Duplication via `ffmpeg -f ddagrab`). The Hyper-V virtual GPU on GitHub Actions
-      # doesn't back the GDI surface that Chromium presents to under DirectComposition,
-      # so GDI-based captures (PrintWindow, CopyFromScreen, BitBlt) return blank.
-      # NOTE: the plain `ffmpeg` chocolatey package ships the *essentials* build which
-      # omits ddagrab; `ffmpeg-full` wraps BtbN's GPL build that includes it.
-      - name: 🎬 Install ffmpeg-full (Windows nativeScreenshot capture)
+      # Install ffmpeg with ddagrab on Windows for nativeScreenshot capture.
+      # The Hyper-V virtual GPU on GitHub Actions doesn't back the GDI surface that
+      # Chromium presents to under DirectComposition, so all GDI-based captures
+      # (PrintWindow, CopyFromScreen, BitBlt) return blank. ddagrab uses DXGI Desktop
+      # Duplication API which works on WARP and reads what DWM is presenting.
+      # NOTE: chocolatey's `ffmpeg` and `ffmpeg-full` packages do NOT include ddagrab
+      # (essentials build / years-stale wrapper, both pre-FFmpeg-6.1). Download BtbN's
+      # GPL build directly — verified to include the `ddagrab` indev.
+      - name: 🎬 Install ffmpeg with ddagrab (Windows nativeScreenshot capture)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: choco install ffmpeg-full --no-progress -y
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip'
+          Invoke-WebRequest -Uri $url -OutFile ffmpeg.zip
+          Expand-Archive -Path ffmpeg.zip -DestinationPath C:\ffmpeg-build
+          $binDir = (Get-ChildItem C:\ffmpeg-build -Directory | Select-Object -First 1).FullName + '\bin'
+          Add-Content -Path $env:GITHUB_PATH -Value $binDir
+          & "$binDir\ffmpeg.exe" -version
+          & "$binDir\ffmpeg.exe" -hide_banner -f ddagrab -h 2>&1 | Select-Object -First 3
 
       # Run the E2E tests using Turbo with the generated test commands
       # Each test builds its own apps with correct environment context
