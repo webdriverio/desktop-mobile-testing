@@ -15,6 +15,7 @@ import { execute } from './commands/executeCdp.js';
 import { isMockFunction } from './commands/isMockFunction.js';
 import { mock } from './commands/mock.js';
 import { mockAll } from './commands/mockAll.js';
+import { nativeScreenshot } from './commands/nativeScreenshot.js';
 import { resetAllMocks } from './commands/resetAllMocks.js';
 import { restoreAllMocks } from './commands/restoreAllMocks.js';
 import { triggerDeeplink } from './commands/triggerDeeplink.js';
@@ -395,5 +396,8 @@ function getElectronAPI(this: ServiceConfig, browser: WebdriverIO.Browser, cdpBr
     resetAllMocks: getMethod(resetAllMocks.bind(this)),
     restoreAllMocks: getMethod(restoreAllMocks.bind(this)),
     triggerDeeplink: getMethod(triggerDeeplink.bind(this), false), // doesn't require CDP
+    nativeScreenshot: getMethod((options?: { windowHandle?: string }) =>
+      nativeScreenshot(browser, cdpBridge as ElectronCdpBridge, options),
+    ),
   } as unknown as BrowserExtension['electron'];
 }

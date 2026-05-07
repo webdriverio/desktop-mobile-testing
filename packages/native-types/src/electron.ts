@@ -112,6 +112,19 @@ export interface ElectronServiceAPI {
    * ```
    */
   triggerDeeplink: (url: string) => Promise<void>;
+
+  /**
+   * Capture the native OS window as a PNG including title bar and window decorations.
+   * Uses `screencapture` on macOS and `PrintWindow` via PowerShell on Windows.
+   * Throws on Linux.
+   *
+   * @example
+   * ```js
+   * const png = await browser.electron.nativeScreenshot();
+   * fs.writeFileSync('screenshot.png', png);
+   * ```
+   */
+  nativeScreenshot: (options?: { windowHandle?: string }) => Promise<Buffer>;
 }
 
 /**

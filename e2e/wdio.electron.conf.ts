@@ -168,6 +168,12 @@ type MultiremoteCapabilities = {
 
 type StandardCapabilities = ElectronCapability[];
 
+// On Windows CI we can't reliably nativeScreenshot — see common-issues.md and the
+// skip in e2e/test/electron/native-screenshot.spec.ts. We still pass
+// --disable-gpu-compositing so PrintWindow(PW_RENDERFULLCONTENT) doesn't deadlock
+// under WARP if anyone re-enables the test.
+const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing'] : [];
+
 let capabilities: MultiremoteCapabilities | StandardCapabilities;
 
 if (envContext.isMultiremote) {
@@ -178,7 +184,7 @@ if (envContext.isMultiremote) {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
           ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
-          appArgs: ['--foo', '--bar=baz', '--browser=A'],
+          appArgs: ['--foo', '--bar=baz', '--browser=A', ...ciAppArgs],
           apparmorAutoInstall: 'sudo',
           restoreMocks: true,
           captureMainProcessLogs: true,
@@ -193,7 +199,7 @@ if (envContext.isMultiremote) {
         browserName: 'electron',
         'wdio:electronServiceOptions': {
           ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
-          appArgs: ['--foo', '--bar=baz', '--browser=B'],
+          appArgs: ['--foo', '--bar=baz', '--browser=B', ...ciAppArgs],
           apparmorAutoInstall: 'sudo',
           restoreMocks: true,
           captureMainProcessLogs: true,
@@ -211,7 +217,7 @@ if (envContext.isMultiremote) {
       browserName: 'electron',
       'wdio:electronServiceOptions': {
         ...(envContext.isScript ? { appEntryPoint } : { appBinaryPath }),
-        appArgs: ['foo', 'bar=baz'],
+        appArgs: ['foo', 'bar=baz', ...ciAppArgs],
         apparmorAutoInstall: 'sudo',
         restoreMocks: true,
         captureMainProcessLogs: true,

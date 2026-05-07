@@ -94,6 +94,43 @@ export const config = {
 
 **Manual AppArmor workaround**: Run `sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` before running your tests. This command requires root privileges; if necessary, run it as the root user or use the `sudo` command.
 
+## `nativeScreenshot()` is unreliable on Windows CI / virtual machines
+
+`browser.electron.nativeScreenshot()` uses `PrintWindow(PW_RENDERFULLCONTENT)` to capture the DWM off-screen DirectX surface — the only path that reliably captures ANGLE/D3D11 Electron content. It requires DWM to have a hardware-backed DX shared surface, which is only present on machines with a real GPU. CI runners and most VM environments expose only WARP (software D3D), where the call deadlocks.
+
+There is no good fallback. We tried, in order:
+
+| Method | Result on WARP |
+|--------|---------------|
+| `PrintWindow(PW_RENDERFULLCONTENT)` | deadlocks |
+| `PrintWindow(WM_PRINT)` | blank — Chromium ignores the `WM_PRINT` HDC |
+| `CopyFromScreen` (`GetDC(NULL)` + `BitBlt`) | blank — Hyper-V's desktop redirection surface isn't backed |
+| `BitBlt(GetWindowDC(hwnd))` | blank — Chromium presents via DirectComposition, not GDI |
+| `+ --disable-direct-composition` Chromium flag | hangs — Chromium enters a paint-pending state |
+| `ffmpeg -f ddagrab` (DXGI Desktop Duplication) | works *if* you have an FFmpeg build with `--enable-d3d11va` — none of the standard Windows distributions (BtbN GPL, Gyan full, chocolatey `ffmpeg`/`ffmpeg-full`) ship with this enabled |
+
+If you control the FFmpeg build you can use `ddagrab` and bypass GDI entirely. Otherwise, accept the limitation: skip the test on CI Windows, or only assert it on a self-hosted runner with real graphics.
+
+When `--disable-gpu-compositing` is detected the service falls back to `BitBlt(GetWindowDC(hwnd))` instead of deadlocking — but as noted, that returns a blank PNG under WARP. The fallback exists so the call doesn't crash, not because the resulting image is useful.
+
+```typescript
+// wdio.conf.ts
+const ciAppArgs = process.env.CI ? ['--disable-gpu-compositing'] : [];
+
+export const config = {
+  capabilities: [
+    {
+      browserName: 'electron',
+      'wdio:electronServiceOptions': {
+        appArgs: [...ciAppArgs],
+      },
+    },
+  ],
+};
+```
+
+On developer machines with a real GPU the flag is omitted, so `PW_RENDERFULLCONTENT` is used and captures GPU-composited content correctly.
+
 ### TypeError: logger is not a function
 
 > Still applies in v10. The package was renamed from `wdio-electron-service` to `@wdio/electron-service`, but the import-time initialization order didn't change — the same workaround is needed.

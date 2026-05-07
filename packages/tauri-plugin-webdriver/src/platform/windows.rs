@@ -343,6 +343,73 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
         self.take_screenshot().await
     }
 
+    async fn take_native_screenshot(&self) -> Result<Vec<u8>, WebDriverErrorResponse> {
+        let title = self.window.title().map_err(|e| {
+            WebDriverErrorResponse::unknown_error(&format!("failed to get window title: {e}"))
+        })?;
+        let our_pid = std::process::id();
+
+        tokio::task::spawn_blocking(move || {
+            let windows = xcap::Window::all().map_err(|e| {
+                WebDriverErrorResponse::unknown_error(&format!("xcap list windows failed: {e}"))
+            })?;
+
+            // Prefer windows owned by this process, then fall back to title-only match.
+            // The title-only fallback handles CI environments where EnumWindows may not
+            // associate windows with our PID (e.g. virtual/headless display sessions).
+            let our_windows: Vec<_> = windows.iter().filter(|w| w.pid().ok() == Some(our_pid)).collect();
+            let window = if !our_windows.is_empty() {
+                our_windows
+                    .iter()
+                    .find(|w| w.title().ok().as_deref() == Some(title.as_str()))
+                    .or_else(|| our_windows.first())
+                    .copied()
+            } else {
+                // Title is matched case-insensitively after trimming, since the platform
+                // sometimes appends marker text (e.g. "[Webdriver]" suffix) that Tauri's
+                // own title() doesn't include.
+                let want = title.trim().to_lowercase();
+                windows.iter().find(|w| {
+                    w.title()
+                        .ok()
+                        .map(|t| t.trim().to_lowercase().contains(&want))
+                        .unwrap_or(false)
+                })
+            }
+            .ok_or_else(|| {
+                let visible: Vec<String> = windows
+                    .iter()
+                    .map(|w| {
+                        format!(
+                            "(pid={:?},title={:?})",
+                            w.pid().ok(),
+                            w.title().ok().unwrap_or_default()
+                        )
+                    })
+                    .collect();
+                WebDriverErrorResponse::unknown_error(&format!(
+                    "no window found (our_pid={our_pid}, want_title={title:?}, all_visible=[{}])",
+                    visible.join(", ")
+                ))
+            })?;
+
+            let image = window.capture_image().map_err(|e| {
+                WebDriverErrorResponse::unknown_error(&format!("xcap capture failed: {e}"))
+            })?;
+
+            let mut buf = std::io::Cursor::new(Vec::<u8>::new());
+            image::DynamicImage::ImageRgba8(image)
+                .write_to(&mut buf, image::ImageFormat::Png)
+                .map_err(|e| {
+                    WebDriverErrorResponse::unknown_error(&format!("PNG encode failed: {e}"))
+                })?;
+
+            Ok::<Vec<u8>, WebDriverErrorResponse>(buf.into_inner())
+        })
+        .await
+        .map_err(|e| WebDriverErrorResponse::unknown_error(&format!("task join error: {e}")))?
+    }
+
     // =========================================================================
     // Print
     // =========================================================================

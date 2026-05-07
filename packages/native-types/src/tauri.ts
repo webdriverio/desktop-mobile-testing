@@ -260,6 +260,18 @@ export interface TauriServiceAPI {
    * ```
    */
   listWindows: () => Promise<string[]>;
+
+  /**
+   * Capture the native OS window as a PNG including title bar and window decorations.
+   * Only supported with the `embedded` driver provider. Throws on Linux.
+   *
+   * @example
+   * ```js
+   * const png = await browser.tauri.nativeScreenshot();
+   * fs.writeFileSync('screenshot.png', png);
+   * ```
+   */
+  nativeScreenshot: (options?: { windowLabel?: string }) => Promise<Buffer>;
 }
 
 /**
