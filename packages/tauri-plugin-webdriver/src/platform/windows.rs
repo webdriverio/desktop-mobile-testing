@@ -365,12 +365,32 @@ impl<R: Runtime + 'static> PlatformExecutor<R> for WindowsExecutor<R> {
                     .or_else(|| our_windows.first())
                     .copied()
             } else {
-                windows
-                    .iter()
-                    .find(|w| w.title().ok().as_deref() == Some(title.as_str()))
+                // Title is matched case-insensitively after trimming, since the platform
+                // sometimes appends marker text (e.g. "[Webdriver]" suffix) that Tauri's
+                // own title() doesn't include.
+                let want = title.trim().to_lowercase();
+                windows.iter().find(|w| {
+                    w.title()
+                        .ok()
+                        .map(|t| t.trim().to_lowercase().contains(&want))
+                        .unwrap_or(false)
+                })
             }
             .ok_or_else(|| {
-                WebDriverErrorResponse::unknown_error("no window found for this process")
+                let visible: Vec<String> = windows
+                    .iter()
+                    .map(|w| {
+                        format!(
+                            "(pid={:?},title={:?})",
+                            w.pid().ok(),
+                            w.title().ok().unwrap_or_default()
+                        )
+                    })
+                    .collect();
+                WebDriverErrorResponse::unknown_error(&format!(
+                    "no window found (our_pid={our_pid}, want_title={title:?}, all_visible=[{}])",
+                    visible.join(", ")
+                ))
             })?;
 
             let image = window.capture_image().map_err(|e| {
