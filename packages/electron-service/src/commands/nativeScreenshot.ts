@@ -97,7 +97,7 @@ export async function nativeScreenshot(
         `$b=New-Object Drawing.Bitmap ${width},${height}; ` +
         `$g=[Drawing.Graphics]::FromImage($b); ` +
         `$dst=$g.GetHdc(); ` +
-        `[W]::BitBlt($dst,0,0,${width},${height},$src,0,0,0x00CC0020u) | Out-Null; ` +
+        `[W]::BitBlt($dst,0,0,${width},${height},$src,0,0,0x00CC0020) | Out-Null; ` +
         `$g.ReleaseHdc($dst); $g.Dispose(); ` +
         `[W]::ReleaseDC($h,$src) | Out-Null; ` +
         `$b.Save('${outFwd}',[Drawing.Imaging.ImageFormat]::Png)`;
