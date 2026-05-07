@@ -14,6 +14,16 @@ describe('tauri native screenshot', () => {
     return;
   }
 
+  // GitHub Actions Windows runners run in a Hyper-V VM with no real graphical session.
+  // EnumWindows (and xcap, which wraps it) doesn't enumerate the WebView2 window in this
+  // environment — it returns only the GH Actions runner agent and one nameless window
+  // owned by a different PID. The capture call itself can't find the target window.
+  // Same root cause as the Electron skip; see packages/electron-service/docs/common-issues.md.
+  if (process.platform === 'win32' && process.env.CI) {
+    it.skip('skipped on Windows CI (no graphical session; EnumWindows misses the Tauri window)', () => {});
+    return;
+  }
+
   if (driverProvider !== 'embedded') {
     it.skip(`skipped: nativeScreenshot requires the embedded provider (current: ${driverProvider ?? 'unknown'})`, () => {});
     return;
