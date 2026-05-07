@@ -1078,7 +1078,9 @@ describe('Electron Worker Service', () => {
 
         // Root browser gets overwriteCommand calls (for click, doubleClick, setValue, clearValue)
         expect((rootBrowser.overwriteCommand as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0);
-        // Per-instance browser gets none — avoids double-wrap through root's override chain
+        // Per-instance browser gets no direct overwriteCommand call: WDIO's multiremote
+        // overwriteCommand wrapper propagates to all instances' __elementOverrides__ internally,
+        // so a separate call on each instance would double-wrap element commands.
         expect((electronBrowser.overwriteCommand as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
       });
     });

@@ -244,9 +244,11 @@ export default class ElectronWorkerService extends ServiceConfig implements Serv
         electronInstances.push(instance);
       }
 
-      // Root-level element commands (mrBrowser.$('btn').click()) dispatch through the root's
-      // override chain — independent from per-instance chains. Installing overrides only on the
-      // root covers both root and per-instance interactions without double-wrapping.
+      // WDIO's multiremote overwriteCommand wrapper forwards the call to origOverwriteCommand
+      // with all per-instance browsers as the `instances` argument. The underlying implementation
+      // then registers the override on every instance's __elementOverrides__ directly, so both
+      // mrBrowser.$('btn').click() and mrBrowser.getInstance('a').$('btn').click() go through
+      // the override. Calling it on each instance separately would double-wrap element commands.
       browser.electron = this.getElectronBrowserModeAPI(browser);
       this.patchBrowserUrl(browser, injectionScript, electronInstances);
       this.installCommandOverrides(browser as unknown as WebdriverIO.Browser);
